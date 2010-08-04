@@ -1,0 +1,8 @@
+ottawa,on	865000
+liverpool,uk	435000
+guelph,on	126000
+saskatoon,sk	220000
+toronto,on	2480000
+barcelona,spain	1580000
+perkasie,pa	8636
+west bountiful,ut	5337

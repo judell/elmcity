@@ -1,0 +1,162 @@
+<h1>Resources for __ID__</h1>
+
+<h2>1. Renderings of your data</h2>
+
+<p>(Note that all renderings can be <a href="http://blog.jonudell.net/elmcity-project-faq/#viewingcategories">viewed by category</a> if your feeds are <a href="http://blog.jonudell.net/elmcity-project-faq/#categorizing">categorized</a> on a per-feed and/or per-event basis.)</p>
+
+
+<h3>HTML</h3>
+
+<p>URL: <a href="/services/__ID__/html">/services/__ID__/html</a></p>
+
+<p>
+This is the default HTML rendering for your hub. If you want to use it as is, you can link to it from one of your pages, or include it in one of your pages via an IFRAME.
+</p>
+
+<p>
+The default rendering is controlled by a default template, a default CSS file, and a default banner image. They are:
+</p>
+
+<p>
+1a. template (for where hubs): <a href="http://elmcity.blob.core.windows.net/admin/events.tmpl">http://elmcity.blob.core.windows.net/admin/events.tmpl</a>
+</p>
+
+<p>
+1b. template (for what hubs): <a href="http://elmcity.blob.core.windows.net/admin/what_events.tmpl">http://elmcity.blob.core.windows.net/admin/what_events.tmpl</a>
+</p>
+
+<p>
+2. CSS: <a href="http://elmcity.blob.core.windows.net/admin/elmcity.css">http://elmcity.blob.core.windows.net/admin/elmcity.css</a>
+</p>
+
+<p>
+3. banner (only for where hubs): <a href="http://elmcity.blob.core.windows.net/admin/keene-night-360.jpg">http://elmcity.blob.core.windows.net/admin/keene-night-360.jpg</a>
+</p>
+
+<p>
+If you want to change the default rendering, you can use your own template and/or CSS file and/or banner image. To do that, create the resources and point to them from these metadata variables:
+</p>
+
+<p>
+1. template=http://...
+</p>
+
+<p>
+2. css=http://...
+</p>
+
+<p>
+3. img=http://...
+</p>
+
+<h3>XML</h3>
+
+<p>URL: <a href="/services/__ID__/xml">/services/__ID__/xml</a></p>
+
+<p>
+Your events in XML. 
+</p>
+
+<h3>JSON</h3>
+
+<p>URL: <a href="/services/__ID__/json">/services/__ID__/json</a></p>
+
+<p>
+Your events in JSON
+</p>
+
+<h3>ICS</h3>
+
+<p>URL: <a href="/services/__ID__/ics">/services/__ID__/ics</a></p>
+
+<p>
+Your events in ICS (iCalendar).
+</p>
+
+<h3>RSS</h3>
+
+<p>URL: <a href="/services/__ID__/rss">/services/__ID__/rss</a></p>
+
+<p>
+Your events in RSS. Among other uses, this enables sites like WordPress.com, which don't allow the JavaScript tricks needed to include other formats, but can show RSS feeds, to display events.
+</p>
+
+<h3>Today's events</h3>
+
+<p>URL: <a href="/services/__ID__/today_as_html">/services/__ID__/today_as_html</a></p>
+
+<p>
+A default HTML rendering of just today's events. Can be sourced into an iframe, like so:
+</p>
+
+<p>
+&lt;iframe width="70%" height="300" src="/services/__ID__/today_as_html">&lt;/iframe>
+</p>
+
+<p>
+<iframe width="70%" height="300" src="/services/__ID__/today_as_html"></iframe>
+</p>
+
+<p>URL: <a href="/services/__ID__/jswidget">/services/__ID__/jswidget</a></p>
+
+<p>
+A default HTML rendering of just today's events. Can be sourced like so:
+</p>
+
+<p>
+&lt;script  src="/services/__ID__/jswidget">&lt;/script>
+</p>
+
+
+<h2>2. Feeds</h2>
+
+<p>URL: <a href="http://delicious.com/__ID__/trusted+ics+feed">http://delicious.com/__ID__/trusted+ics+feed</a></p>
+
+<p>
+This delicious query shows you the iCalendar feeds you have bookmarked and tagged for inclusion in your aggregation.
+</p>
+
+
+<h2>3. Stats</h2>
+
+<p>URL: <a href="/services/__ID__/stats">/services/__ID__/stats</a></p>
+
+<p>
+A report showing how many events were loaded from your various sources on the last run of the aggregator.
+</p>
+
+<h2>4. Metadata</h2>
+
+<p>URL: <a href="/services/__ID__/metadata">/services/__ID__/metadata</a></p>
+
+<p>
+A view of your hub's metadata. 
+</p>
+
+<h2>5. Tags</h2>
+
+<h3>Tags as HTML</h3>
+
+<p>URL: <a href="/services/__ID__/tags_html">/services/__ID__/tags_html</a></p>
+
+<p>
+A report showing which categories you're using, and how many events are in each category.
+</p>
+
+
+<h3>Tags as JSON</h3>
+
+<p>URL: <a href="/services/__ID__/tags_json">/services/__ID__/tags_json</a></p>
+
+<p>
+Same report as JSON.
+</p>
+
+<h2>6. Search (applies only to where hubs)</h2>
+
+<p>URL: <a href="/services/__ID__/search">/services/__ID__/search</a></p>
+
+<p>
+Output from an experimental search robot that tries to find web pages for your location that contain event information that <i>isn't</i> available in iCalendar format. It's intended to help curators find source that could be publishing iCalendar but aren't. See <a href="http://blog.jonudell.net/2009/03/13/searching-for-calendar-information/">Searching for calendar information</a> for more on this.
+</p>
+

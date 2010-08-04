@@ -1,0 +1,13 @@
+a:link { text-decoration: none; color:#000066 }
+a:visited { text-decoration: none; color:#000066 }
+a:hover { text-decoration: underline; color:#000066 }
+a:active { text-decoration: none; color:black  }
+
+body { 
+font-family: verdana,arial,sans-serif; 
+font-size:10pt;
+margin-left:..5in;
+margin-right:.5in;
+} 
+
+

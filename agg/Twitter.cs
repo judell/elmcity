@@ -1,0 +1,148 @@
+﻿/* ********************************************************************************
+ *
+ * Copyright 2010 Microsoft Corporation
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 
+ * Unless required by applicable law or agreed to in writing, software distributed 
+ * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the 
+ * specific language governing permissions and limitations under the License. 
+ *
+ * *******************************************************************************/
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using ElmcityUtils;
+
+namespace CalendarAggregator
+{
+
+    public class TwitterDirectMessage
+    {
+        public string id { get; set; }
+        public string sender_screen_name { get; set; }
+        public string recipient_screen_name { get; set; }
+        public string text { get; set; }
+
+        public TwitterDirectMessage() { }
+
+        public TwitterDirectMessage(string id, string sender_screen_name, string recipient_screen_name, string text)
+        {
+            this.id = id;
+            this.sender_screen_name = sender_screen_name;
+            this.recipient_screen_name = recipient_screen_name;
+            this.text = text;
+        }
+
+        /* ObjectUtils.DictObjToObj eliminates the need for idioms like this:
+          
+          public TwitterDirectMessage(Dictionary<string, object> dict_obj)
+       {
+           this.id = (string) dict_obj["id"];
+           this.sender_screen_name = (string) dict_obj["sender_screen_name"];
+           this.recipient_screen_name = (string) dict_obj["recipient_screen_name"];
+           this.text = (string) dict_obj["text"];
+       }*/
+    }
+
+    // see http://blog.jonudell.net/2009/10/21/to-elmcity-from-curator-message-start/
+    public class TwitterApi
+    {
+        private static string ts_table = "twitter";
+        private static string pk_directs = "direct_messages";
+        private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
+
+        public static List<TwitterDirectMessage> GetDirectMessagesFromAzure()
+        {
+            {
+                var q = string.Format("$filter=(PartitionKey eq '{0}')", pk_directs);
+                var qdicts = (List<Dictionary<string, object>>)ts.QueryEntities(ts_table, q).response;
+                var messages = new List<TwitterDirectMessage>();
+                foreach (var qdict in qdicts)
+                {
+                    var message = (TwitterDirectMessage)ObjectUtils.DictObjToObj(qdict, new TwitterDirectMessage().GetType());
+                    messages.Add(message);
+                }
+                return messages;
+            }
+        }
+
+        public static int StoreDirectMessagesToAzure()
+        {
+            var messages = GetDirectMessagesFromTwitter(0);
+            foreach (var message in messages)
+            {
+                var dict = ObjectUtils.ObjToDictObj(message);
+                TableStorage.UpdateDictToTableStore(dict, table: ts_table, partkey: pk_directs, rowkey: message.id);
+            }
+            return messages.Count;
+        }
+
+
+        public static List<TwitterDirectMessage> GetDirectMessagesFromTwitter(int count)
+        {
+            if (count == 0)
+                count = Configurator.twitter_max_direct_messages;
+            var url = String.Format("http://twitter.com/direct_messages.xml?count={0}", count);
+            var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+            var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
+            if (response.status != HttpStatusCode.OK)
+            {
+                GenUtils.LogMsg("warning", "Twitter.GetDirectMessages", response.status.ToString() + ", " + response.message);
+                return default(List<TwitterDirectMessage>);
+            }
+            var xdoc = XmlUtils.XdocFromXmlBytes(response.bytes);
+            var messages = from message in xdoc.Descendants("direct_message")
+                           select new TwitterDirectMessage()
+                           {
+                               id = message.Descendants("id").First().Value,
+                               sender_screen_name = message.Descendants("sender_screen_name").First().Value,
+                               recipient_screen_name = message.Descendants("recipient_screen_name").First().Value,
+                               text = message.Descendants("text").First().Value
+                           };
+            return messages.ToList();
+        }
+
+        public static List<TwitterDirectMessage> GetNewTwitterDirectMessages()
+        {
+
+            var new_messages = new List<TwitterDirectMessage>();
+            try
+            {
+                var stored_messages = GetDirectMessagesFromAzure();
+                var fetched_messages = GetDirectMessagesFromTwitter(0);
+                var stored_ids = from message in stored_messages select message.id;
+                var fetched_ids = from message in fetched_messages select message.id;
+                var new_ids = fetched_ids.Except(stored_ids).ToList();
+                foreach (var new_id in new_ids)
+                    new_messages.Add(fetched_messages.Find(msg => msg.id == new_id));
+                if (new_messages.Count > 0)
+                    StoreDirectMessagesToAzure();
+            }
+            catch (Exception e)
+            {
+                GenUtils.LogMsg("exception", "GetNewTwitterDirectMessages", e.Message + e.StackTrace);
+            }
+            return new_messages;
+        }
+
+        public static HttpResponse FollowTwitterAccount(string account)
+        {
+            var url = String.Format("http://twitter.com/friendships/create/{0}.xml", account);
+            var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+            request.Method = "POST";
+            var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
+            return response;
+        }
+
+        public static List<TwitterDirectMessage> GetNewTwitterDirectMessagesFromId(string id)
+        {
+            var messages = GetNewTwitterDirectMessages();
+            return messages.FindAll(msg => msg.sender_screen_name == id);
+        }
+    }
+}

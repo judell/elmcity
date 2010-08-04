@@ -1,0 +1,100 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"> 
+<html>
+<head>
+<title>__TITLE__</title>
+<link type="text/css" rel="stylesheet" href="__CSSURL__">
+<link type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/themes/smoothness/jquery-ui.css" rel="stylesheet" />
+<script type="text/javascript" src="http://elmcity.blob.core.windows.net/admin/jquery-1.3.2.js"></script>
+<script type="text/javascript" src="http://elmcity.blob.core.windows.net/admin/ui.core.js"></script>
+<script type="text/javascript" src="http://elmcity.blob.core.windows.net/admin/ui.datepicker.js"></script>
+<script type="text/javascript" src="http://elmcity.blob.core.windows.net/admin/elmcity.js"></script>
+</head>
+<body>
+
+<h1>__TITLE__</h1>
+
+<div style="position:fixed;right:20px;top:100px;" id="datepicker" ></div>
+
+<div>Sources: <a href="javascript:toggle('sources')">iCalendar feeds</a>. How to <a href="javascript:toggle('contribute')">contribute</a>.</div>
+
+<div id="sources" style="width: 60%; margin-top: 10px; display:none; border-style:solid; border-width:thin; padding:8px">
+
+__SOURCES__
+
+</div>
+
+<div id="contribute" style="display:none">
+
+<p><b>How to contribute</b></p>
+<p>
+Events posted to any of the calendars in the list of sources will show up here.
+</p>
+<p>
+If your online calendar isn't on the list and you'd like to include it, <a href="mailto:__CONTACT__?subject=online+calendars">just ask</a>.
+</p>
+<p>
+If you don't already publish an online calendar, there are easy and inexpensive or free ways to do it.
+</p>
+<p>
+If you maintain a calendar in almost any popular calendar program, you can publish your calendar in a way that enables the information to flow here and elsewhere. Here's <a href="http://jonudell.net/examples/calpub-howto.html">how to do that</a> using Google Calendar, Outlook, Apple iCal, and Windows Live Calendar.
+</p>
+<p>
+Questions? <a href="mailto:__CONTACT__">Ask</a> and we'll answer.
+</p>
+
+<p><b>How to include events on your website</b></p>
+<p>
+If you'd like to include just today's events, do this:
+</p>
+
+<p style="font-size:smaller">
+&lt;script src="http://elmcity.cloudapp.net/services/__ID__/jswidget">&lt;/script>
+</p>
+
+<p>
+Or this:
+</p>
+
+<p style="font-size:smaller">
+&lt;iframe src="http://elmcity.cloudapp.net/services/__ID__/today_as_html">&lt;/iframe>
+</p>
+
+
+<p>To include all events, do this:</p>
+<p style="font-size:smaller">
+&lt;iframe src="http://elmcity.cloudapp.net/services/__ID__/html">&lt;/iframe>
+</p>
+
+<p>
+Questions? <a href="mailto:__CONTACT__?subject=online+calendars">Ask</a> and we'll answer.
+</p>
+
+<p style="text-align:right">
+<a href="javascript:hide('contribute')">close window</a>
+</p>
+
+</div>
+
+<p>
+
+<!-- begin events -->
+
+<div class="events">
+
+__EVENTS__
+
+</div>
+
+<!-- end events -->
+
+</p>
+
+<hr>
+<p class="contact">
+
+<a href="mailto:__CONTACT__">questions and comments</a>
+</p>
+
+</body>
+</html>
+

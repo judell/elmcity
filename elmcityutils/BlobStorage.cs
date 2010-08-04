@@ -1,0 +1,302 @@
+/* ********************************************************************************
+ *
+ * Copyright 2010 Microsoft Corporation
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 
+ * Unless required by applicable law or agreed to in writing, software distributed 
+ * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the 
+ * specific language governing permissions and limitations under the License. 
+ *
+ * *******************************************************************************/
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Xml;
+
+namespace ElmcityUtils
+{
+    // packaging for responses from blob operations
+    public class BlobStorageResponse
+    {
+        public HttpResponse HttpResponse { get; set; }
+        public object response { get; set; }
+
+        public BlobStorageResponse(HttpResponse http_response, IEnumerable<Dictionary<string, string>> response)
+        {
+            this.HttpResponse = http_response;
+            this.response = response;
+        }
+
+        public BlobStorageResponse(HttpResponse http_response)
+        {
+            this.HttpResponse = http_response;
+            this.response = null;
+        }
+
+    }
+
+    // http-oriented alternative to azure sdk blob storage interface
+    [Serializable]
+    public class BlobStorage
+    {
+        private string azure_storage_account;
+        private string azure_blob_host;
+        private string azure_b64_secret;
+
+        public const string PREFIX_METADATA = "x-ms-meta-"; //http://msdn.microsoft.com/en-us/library/dd179404.aspx
+        private const string PREFIX_STORAGE = "x-ms-";
+        private const string NEW_LINE = "\x0A"; // http://msdn.microsoft.com/en-us/library/dd179428.aspx
+        private const bool DEBUG = true;
+        private const string TIME_FORMAT = "ddd, dd MMM yyyy HH:mm:ss";
+
+        private string[] container_elements = { "Name", "Url" };
+        private string[] blob_elements = { "Name", "Url" };
+
+        public BlobStorage(string azure_storage_account, string azure_blob_host,
+                string azure_b64_secret)
+        {
+            this.azure_storage_account = azure_storage_account;
+            this.azure_blob_host = azure_blob_host;
+            this.azure_b64_secret = azure_b64_secret;
+        }
+
+        public static BlobStorage MakeDefaultBlobStorage()
+        {
+            return new BlobStorage(Configurator.azure_storage_account,
+                  Configurator.azure_storage_account + "." + Configurator.azure_blob_domain,
+                  Configurator.azure_b64_secret);
+        }
+
+        public static BlobStorageResponse WriteToAzureBlob(BlobStorage bs, string containername, string blobname, string content_type, byte[] bytes)
+        {
+            if (BlobStorage.ExistsContainer(containername) == false)
+                bs.CreateContainer(containername, true, new Hashtable());
+            var headers = new Hashtable();
+            BlobStorageResponse bs_response;
+            bs_response = bs.PutBlob(containername, blobname, headers, bytes, content_type);
+            return bs_response;
+        }
+
+        // waits and retries if container is being deleted
+        public BlobStorageResponse CreateContainer(string containername, bool is_public, Hashtable headers)
+        {
+            var completed_delegate = new GenUtils.Actions.CompletedDelegate<BlobStorageResponse, Object>(CompletedIfContainerIsNotBeingDeleted);
+            return GenUtils.Actions.Retry<BlobStorageResponse>(delegate() { return MaybeCreateContainer(containername, is_public, (Hashtable)headers.Clone()); }, completed_delegate, completed_delegate_object: null, wait_secs: StorageUtils.wait_secs, max_tries: StorageUtils.max_tries, timeout_secs: StorageUtils.timeout_secs);
+        }
+
+        public static bool CompletedIfContainerIsNotBeingDeleted(BlobStorageResponse response, Object o)
+        {
+            if (response == null)
+                return false;
+            var xml_response = response.HttpResponse.DataAsString();
+            if (xml_response.Contains("ContainerBeingDeleted"))
+                return false;
+            else
+                return true;
+        }
+
+        // fails if container is being deleted
+        public BlobStorageResponse MaybeCreateContainer(string containername, bool is_public, Hashtable headers)
+        {
+            if (is_public)
+                headers.Add("x-ms-blob-public-access", "blob");
+            headers.Add("x-ms-blob-type", "BlockBlob");
+            HttpResponse http_response = DoBlobStoreRequest(containername, blobname: null, method: "PUT", headers: headers, data: null, content_type: null, query_string: "?restype=container");
+            return new BlobStorageResponse(http_response);
+        }
+
+        // retries until deleted
+        public BlobStorageResponse DeleteContainer(string containername)
+        {
+            var completed_delegate = new GenUtils.Actions.CompletedDelegate<BlobStorageResponse, Object>(CompletedIfContainerIsGone);
+            return GenUtils.Actions.Retry<BlobStorageResponse>(delegate() { return MaybeDeleteContainer(containername); }, completed_delegate, completed_delegate_object: containername, wait_secs: StorageUtils.wait_secs, max_tries: StorageUtils.max_tries, timeout_secs: StorageUtils.timeout_secs);
+        }
+
+        public static bool CompletedIfContainerIsGone(BlobStorageResponse response, object o)
+        {
+            if (response == null)
+                return false;
+            string container;
+            try
+            {
+                container = (String)o;
+            }
+            catch (Exception e)
+            {
+                GenUtils.LogMsg("exception", "CompletedIfContainerIsGone", e.Message + e.StackTrace);
+                throw new Exception("CompletedObjectDelegateException");
+            }
+
+            if (!ExistsContainer(container))
+                return true;
+            else
+                return false;
+        }
+
+        public BlobStorageResponse MaybeDeleteContainer(string containername)
+        {
+            try
+            {
+                HttpResponse http_response = DoBlobStoreRequest(containername, blobname: null, method: "DELETE", headers: new Hashtable(), data: null, content_type: null, query_string: "?restype=container");
+                return new BlobStorageResponse(http_response);
+            }
+            catch (Exception e)
+            {
+                GenUtils.LogMsg("exception", "MaybeDeleteContainer: " + containername, e.Message + e.StackTrace);
+                return default(BlobStorageResponse);
+            }
+        }
+
+        public BlobStorageResponse ListContainers()
+        {
+            HttpResponse http_response = DoBlobStoreRequest(containername: null, blobname: null, method: "GET", headers: new Hashtable(), data: null, content_type: null, query_string: "?comp=list");
+            IEnumerable<Dictionary<string, string>> dicts = EnumOfDictsFromAzureBlobResponse(http_response, "//Containers/Container", container_elements);
+            return new BlobStorageResponse(http_response, dicts);
+        }
+
+        public static bool ExistsContainer(string containername)
+        {
+            var url = MakeAzureBlobUri(containername.ToLower(), "");
+            var response = HttpUtils.FetchUrl(url);
+            return (response.status == HttpStatusCode.OK);
+        }
+
+        public BlobStorageResponse ListBlobs(string containername)
+        {
+            HttpResponse http_response = DoBlobStoreRequest(containername, blobname: null, method: "GET", headers: new Hashtable(), data: null, content_type: null, query_string: "?comp=list");
+            var dicts = EnumOfDictsFromAzureBlobResponse(http_response, "//Blobs/Blob", blob_elements);
+            return new BlobStorageResponse(http_response, dicts);
+        }
+
+        public static bool ExistsBlob(string containername, string blobname)
+        {
+            var uri = MakeAzureBlobUri(containername, blobname);
+            return ExistsBlob(uri);
+        }
+
+        public static bool ExistsBlob(Uri uri)
+        {
+            var response = HttpUtils.FetchUrl(uri);
+            return (response.status == HttpStatusCode.OK);
+        }
+
+        public BlobStorageResponse PutBlob(string containername, string blobname, Hashtable headers, byte[] data, string content_type)
+        {
+            headers.Add("x-ms-blob-type", "BlockBlob");
+            HttpResponse http_response = DoBlobStoreRequest(containername, blobname, method: "PUT", headers: headers, data: data, content_type: content_type, query_string: null);
+            return new BlobStorageResponse(http_response);
+        }
+
+        public BlobStorageResponse GetBlobProperties(string containername, string blobname)
+        {
+            HttpResponse http_response = DoBlobStoreRequest(containername, blobname, method: "HEAD", headers: new Hashtable(), data: null, content_type: null, query_string: null);
+            return new BlobStorageResponse(http_response);
+        }
+
+        public BlobStorageResponse DeleteBlob(string containername, string blobname)
+        {
+            HttpResponse http_response = DoBlobStoreRequest(containername, blobname, method: "DELETE", headers: new Hashtable(), data: null, content_type: null, query_string: null);
+            return new BlobStorageResponse(http_response);
+        }
+
+        // see http://msdn.microsoft.com/en-us/library/dd179428.aspx for authentication details
+        public HttpResponse DoBlobStoreRequest(string containername, string blobname, string method, Hashtable headers, byte[] data, string content_type, string query_string)
+        {
+            try
+            {
+                if (containername != null) containername = containername.ToLower();
+                string path = "/";
+
+                if (containername != null)
+                {
+                    path = path + containername;
+                    if (blobname != null)
+                        path = path + "/" + blobname;
+                }
+
+                StorageUtils.AddDateHeader(headers);
+                StorageUtils.AddVersionHeader(headers);
+
+                string auth_header = StorageUtils.MakeSharedKeyLiteHeader(StorageUtils.services.blob, this.azure_storage_account, this.azure_b64_secret, method, path, query_string, content_type, headers);
+                headers["Authorization"] = "SharedKeyLite " + this.azure_storage_account + ":" + auth_header;
+
+                Uri uri = new Uri(string.Format("http://{0}{1}{2}", this.azure_blob_host, path, query_string));
+
+                return StorageUtils.DoStorageRequest(method, headers, data, content_type, uri);
+            }
+            catch (Exception e)
+            {
+                GenUtils.LogMsg("exception", "DoBlobStoreRequest", e.Message + e.StackTrace);
+                return default(HttpResponse);
+            }
+        }
+
+        // read atom response, select desired elements, return enum of dict<str,str>
+        public IEnumerable<Dictionary<string, string>> EnumOfDictsFromAzureBlobResponse(HttpResponse response, string xpath, string[] elements)
+        {
+            XmlDocument doc = XmlUtils.XmlDocumentFromHttpResponse(response);
+            XmlNodeList nodes = doc.SelectNodes(xpath);
+            foreach (XmlNode node in nodes)
+            {
+                var dict = new Dictionary<string, string>();
+                foreach (string element in elements)
+                {
+                    dict[element] = node.SelectSingleNode(element).FirstChild.Value;
+                }
+                yield return dict;
+            }
+        }
+
+        public BlobStorageResponse SerializeObjectToAzureBlob(object o, string container, string blobname)
+        {
+            IFormatter serializer = new BinaryFormatter();
+            var ms = new MemoryStream();
+            serializer.Serialize(ms, o);
+            var buffer = new byte[ms.Length];
+            ms.Seek(0, SeekOrigin.Begin);
+            ms.Read(buffer, 0, (int)ms.Length);
+            return this.PutBlob(container, blobname, new Hashtable(), buffer, "");
+        }
+
+        public static object DeserializeObjectFromUri(Uri uri)
+        {
+            try
+            {
+                var buffer = HttpUtils.FetchUrl(uri).bytes;
+                return DeserializeObjectFromBytes(buffer);
+            }
+            catch (Exception e)
+            {
+                GenUtils.LogMsg("exception", "DeserializeObjectFromUri: " + uri.ToString(), e.Message);
+                throw;
+            }
+        }
+
+        public static object DeserializeObjectFromBytes(byte[] buffer)
+        {
+            IFormatter serializer = new BinaryFormatter();
+            var ms = new MemoryStream(buffer);
+            var o = serializer.Deserialize(ms);
+            return o;
+        }
+
+        public static Uri MakeAzureBlobUri(string container, string name)
+        {
+            string url = string.Format("{0}/{1}/{2}",
+                Configurator.azure_blobhost,
+                container.ToLower(), // http://msdn.microsoft.com/en-us/library/dd135715.aspx
+                name);
+            return new Uri(url);
+        }
+
+    }
+
+}
