@@ -12,6 +12,7 @@
  *
  * *******************************************************************************/
 
+using ElmcityUtils;
 using System.Linq;
 using NUnit.Framework;
 
@@ -40,9 +41,14 @@ namespace CalendarAggregator
         [Test]
         public void CanRetrieveDirectMessagesFromTwitter()
         {
+            var response = TwitterApi.SendTwitterDirectMessage("elmcity_azure", "test");
+            var xdoc = XmlUtils.XdocFromXmlBytes(response.bytes);
+            var ids = from message in xdoc.Descendants("direct_message")
+                     select message.Descendants("id").First().Value.ToString();
             var messages = TwitterApi.GetDirectMessagesFromTwitter(1);
             var msg = messages.First();
             Assert.That(msg.recipient_screen_name == Configurator.twitter_account);
+            TwitterApi.DeleteTwitterDirectMessage(ids.First());
         }
     }
 }

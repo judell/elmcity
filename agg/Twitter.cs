@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using ElmcityUtils;
 
 namespace CalendarAggregator
@@ -71,15 +72,10 @@ namespace CalendarAggregator
             }
         }
 
-        public static int StoreDirectMessagesToAzure()
+        private static TableStorageResponse StoreDirectMessageToAzure(TwitterDirectMessage message)
         {
-            var messages = GetDirectMessagesFromTwitter(0);
-            foreach (var message in messages)
-            {
-                var dict = ObjectUtils.ObjToDictObj(message);
-                TableStorage.UpdateDictToTableStore(dict, table: ts_table, partkey: pk_directs, rowkey: message.id);
-            }
-            return messages.Count;
+            var dict = ObjectUtils.ObjToDictObj(message);
+            return TableStorage.UpdateDictToTableStore(dict, table: ts_table, partkey: pk_directs, rowkey: message.id);
         }
 
 
@@ -87,7 +83,7 @@ namespace CalendarAggregator
         {
             if (count == 0)
                 count = Configurator.twitter_max_direct_messages;
-            var url = String.Format("http://twitter.com/direct_messages.xml?count={0}", count);
+            var url = String.Format("http://api.twitter.com/direct_messages.xml?count={0}", count);
             var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
             var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
             if (response.status != HttpStatusCode.OK)
@@ -119,9 +115,14 @@ namespace CalendarAggregator
                 var fetched_ids = from message in fetched_messages select message.id;
                 var new_ids = fetched_ids.Except(stored_ids).ToList();
                 foreach (var new_id in new_ids)
-                    new_messages.Add(fetched_messages.Find(msg => msg.id == new_id));
-                if (new_messages.Count > 0)
-                    StoreDirectMessagesToAzure();
+                {
+                    var new_message = fetched_messages.Find(msg => msg.id == new_id);
+                    new_messages.Add(new_message);
+                    StoreDirectMessageToAzure(new_message);
+                    var query = String.Format ( "$filter=(RowKey eq '{0}')", new_id);
+                    if (ts.ExistsEntity("twitter", query))
+                      DeleteTwitterDirectMessage(new_id);
+                }
             }
             catch (Exception e)
             {
@@ -130,9 +131,29 @@ namespace CalendarAggregator
             return new_messages;
         }
 
+        public static HttpResponse SendTwitterDirectMessage(string recipient, string text)
+        {
+            var url = "http://api.twitter.com/direct_messages/new.xml";
+            var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+            request.ServicePoint.Expect100Continue = false; // http://a-kicker-n.blogspot.com/2009/03/how-to-disable-passing-of-http-header.html
+            request.Method = "POST";
+            var data = Encoding.UTF8.GetBytes(String.Format("user={0}&text={1}", recipient, text));
+            var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, data);
+            return response;
+        }
+
+        public static HttpResponse DeleteTwitterDirectMessage(string id)
+        {
+            var url = String.Format("http://api.twitter.com/direct_messages/destroy/{0}.xml", id);
+            var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+            request.Method = "POST";
+            var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
+            return response;
+        }
+
         public static HttpResponse FollowTwitterAccount(string account)
         {
-            var url = String.Format("http://twitter.com/friendships/create/{0}.xml", account);
+            var url = String.Format("http://api.twitter.com/friendships/create/{0}.xml", account);
             var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
             request.Method = "POST";
             var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
