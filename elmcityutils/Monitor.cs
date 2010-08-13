@@ -15,8 +15,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Xml;
+using System.Xml.Linq;
 using Microsoft.WindowsAzure.Diagnostics;
 
 namespace ElmcityUtils
@@ -288,4 +291,53 @@ namespace ElmcityUtils
             }
         }
     }
+
+	public static class IIS_FailedRequestLogs
+	{
+		public static void TransferToSqlAzure()
+		{
+			GenUtils.LogMsg("info", "IIS_FailedRequestLogs.TransferToSqlAzure", null);
+			var bs = BlobStorage.MakeDefaultBlobStorage();
+			var containername = "wad-iis-failedreqlogfiles";
+			var failed_req_dicts = (List<Dictionary<string, string>>)bs.ListBlobs(containername).response;
+			failed_req_dicts = failed_req_dicts.FindAll(blob => (blob["Name"].EndsWith("xsl") == false));
+			var failed_req_blobs = failed_req_dicts.Select(blob => blob["Name"]);
+
+			var model_name = "iis_failed_request";
+			var conn_str = GenUtils.MakeEntityConnectionString(model_name);
+			var entities = new iis_failed_request_entities(conn_str);
+
+			foreach ( var blobname in failed_req_blobs )
+				{
+				var response = bs.GetBlob(containername, blobname).HttpResponse;
+				var xdoc = XmlUtils.XdocFromXmlBytes(response.bytes);
+				var failed_request = xdoc.Root;
+				XNamespace evt_ns = "http://schemas.microsoft.com/win/2004/08/events/event";
+				var system = failed_request.Descendants(evt_ns + "System").First();
+				var time_created_str = system.Element(evt_ns + "TimeCreated").Attribute("SystemTime").Value;
+				var iis_failed_request = new iis_failed_request();
+				iis_failed_request.computer = system.Element(evt_ns + "Computer").Value;
+				iis_failed_request.created = DateTime.Parse(time_created_str);
+				iis_failed_request.reason = failed_request.Attribute("failureReason").Value;
+				iis_failed_request.duration = Convert.ToInt16(failed_request.Attribute("timeTaken").Value);
+				iis_failed_request.status = Convert.ToInt16(failed_request.Attribute("statusCode").Value);
+				iis_failed_request.url = failed_request.Attribute("url").Value;
+
+				entities.AddObject(entitySetName: model_name, entity: iis_failed_request);
+				var db_result = entities.SaveChanges();
+
+				if (db_result != 1)
+					GenUtils.LogMsg("warning", "IIS_FailedRequestLogs.TransferToSqlAzure expected 1 saved change but got " + db_result.ToString(), null);
+
+				var bs_result = bs.DeleteBlob(containername, blobname);
+				var status = bs_result.HttpResponse.status;
+				if ( status != System.Net.HttpStatusCode.Accepted )
+					GenUtils.LogMsg("warning", "IIS_FailedRequestLogs.TransferToSqlAzure expected Accepted but got " + status.ToString(), null);
+			}
+		}
+	}
+
+	public static class IIS_Logs
+	{
+	}
 }
