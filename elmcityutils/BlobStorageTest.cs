@@ -56,7 +56,7 @@ namespace ElmcityUtils
         public void ListContainersIncludesKnownContainer()
         {
             CreateNewPublicContainerIsSuccessful();
-            var e = (IEnumerable<Dictionary<string, string>>)bs.ListContainers().response;
+			var e = (IEnumerable<Dictionary<string, string>>)bs.ListContainers().response;
             var l = e.ToList();
             var found = l.Exists(d => d["Name"] == containername.ToLower());
             Assert.IsTrue(found);

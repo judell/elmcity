@@ -16,6 +16,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -29,7 +30,7 @@ namespace ElmcityUtils
         public HttpResponse HttpResponse { get; set; }
         public object response { get; set; }
 
-        public BlobStorageResponse(HttpResponse http_response, IEnumerable<Dictionary<string, string>> response)
+        public BlobStorageResponse(HttpResponse http_response, List<Dictionary<string, string>> response)
         {
             this.HttpResponse = http_response;
             this.response = response;
@@ -157,24 +158,50 @@ namespace ElmcityUtils
 
         public BlobStorageResponse ListContainers()
         {
-            HttpResponse http_response = DoBlobStoreRequest(containername: null, blobname: null, method: "GET", headers: new Hashtable(), data: null, content_type: null, query_string: "?comp=list");
-            IEnumerable<Dictionary<string, string>> dicts = EnumOfDictsFromAzureBlobResponse(http_response, "//Containers/Container", container_elements);
-            return new BlobStorageResponse(http_response, dicts);
+            return ListContainers(path: null);
         }
 
-        public static bool ExistsContainer(string containername)
+		public BlobStorageResponse ListContainers(string path)
+		{
+			var qs = "?restype=container&comp=list";
+			HttpResponse http_response = DoBlobStoreRequest(containername: path, blobname: null, method: "GET", headers: new Hashtable(), data: null, content_type: null, query_string: qs );
+			String next_marker = null;
+			var dicts = new List<Dictionary<string, string>>();
+			do
+			{
+				foreach (var dict in DictsFromBlobStorageResponse(http_response, "//Containers/Container", container_elements, ref next_marker))
+					dicts.Add(dict);
+			}
+			while (next_marker != null);
+
+			return new BlobStorageResponse(http_response, dicts);
+		}
+
+		public static bool ExistsContainer(string containername)
         {
             var url = MakeAzureBlobUri(containername.ToLower(), "");
             var response = HttpUtils.FetchUrl(url);
             return (response.status == HttpStatusCode.OK);
         }
 
-        public BlobStorageResponse ListBlobs(string containername)
-        {
-            HttpResponse http_response = DoBlobStoreRequest(containername, blobname: null, method: "GET", headers: new Hashtable(), data: null, content_type: null, query_string: "?comp=list");
-            var dicts = EnumOfDictsFromAzureBlobResponse(http_response, "//Blobs/Blob", blob_elements);
-            return new BlobStorageResponse(http_response, dicts);
-        }
+		public BlobStorageResponse ListBlobs(string containername)
+		{
+			HttpResponse http_response;
+			String next_marker = null;
+			var dicts = new List<Dictionary<string, string>>();
+			do
+			{
+				var qs = "?comp=list&restype=container&maxresults=1000";
+				if (!String.IsNullOrEmpty(next_marker))
+					qs += "&marker=" + next_marker;
+				http_response = DoBlobStoreRequest(containername, blobname: null, method: "GET", headers: new Hashtable(), data: null, content_type: null, query_string: qs);
+				foreach (var dict in DictsFromBlobStorageResponse(http_response, "//Blobs/Blob", blob_elements, ref next_marker))
+					dicts.Add(dict);
+			}
+			while (next_marker != null);
+
+			return new BlobStorageResponse(http_response, dicts);
+		}
 
         public static bool ExistsBlob(string containername, string blobname)
         {
@@ -207,16 +234,22 @@ namespace ElmcityUtils
             return new BlobStorageResponse(http_response);
         }
 
+		public BlobStorageResponse GetBlob(string containername, string blobname)
+		{
+			HttpResponse http_response = DoBlobStoreRequest(containername, blobname, method: "GET", headers: new Hashtable(), data: null, content_type: null, query_string: null);
+			return new BlobStorageResponse(http_response);
+		}
+
         // see http://msdn.microsoft.com/en-us/library/dd179428.aspx for authentication details
         public HttpResponse DoBlobStoreRequest(string containername, string blobname, string method, Hashtable headers, byte[] data, string content_type, string query_string)
         {
             try
             {
-                if (containername != null) containername = containername.ToLower();
                 string path = "/";
 
                 if (containername != null)
                 {
+					containername = containername.ToLower();
                     path = path + containername;
                     if (blobname != null)
                         path = path + "/" + blobname;
@@ -240,19 +273,26 @@ namespace ElmcityUtils
         }
 
         // read atom response, select desired elements, return enum of dict<str,str>
-        public IEnumerable<Dictionary<string, string>> EnumOfDictsFromAzureBlobResponse(HttpResponse response, string xpath, string[] elements)
+        public List<Dictionary<string, string>> DictsFromBlobStorageResponse(HttpResponse response, string xpath, string[] elements, ref string next_marker)
         {
-            XmlDocument doc = XmlUtils.XmlDocumentFromHttpResponse(response);
+			var dicts = new List<Dictionary<string, string>>();
+			var doc = XmlUtils.XmlDocumentFromHttpResponse(response);
             XmlNodeList nodes = doc.SelectNodes(xpath);
             foreach (XmlNode node in nodes)
             {
                 var dict = new Dictionary<string, string>();
-                foreach (string element in elements)
-                {
-                    dict[element] = node.SelectSingleNode(element).FirstChild.Value;
-                }
-                yield return dict;
+				foreach (string element in elements)
+				{
+					dict[element] = node.SelectSingleNode(element).FirstChild.Value;
+				}
+				dicts.Add(dict);
             }
+
+			XmlNode next_marker_node = doc.SelectSingleNode("//NextMarker");
+			if ( next_marker_node != null && next_marker_node.HasChildNodes )
+				next_marker = next_marker_node.FirstChild.Value;
+
+			return dicts;
         }
 
         public BlobStorageResponse SerializeObjectToAzureBlob(object o, string container, string blobname)
