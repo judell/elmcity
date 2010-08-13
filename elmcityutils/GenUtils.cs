@@ -13,6 +13,9 @@
  * *******************************************************************************/
 
 using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Data.EntityClient;
 using System.Net;
 
 namespace ElmcityUtils
@@ -101,5 +104,24 @@ namespace ElmcityUtils
                 return timed_out;
             }
         }
+
+		public static string  MakeEntityConnectionString(string model_name)
+		{
+			var sql_builder = new SqlConnectionStringBuilder();
+
+			sql_builder.DataSource = "tcp:" + Configurator.sql_azure_host;
+			sql_builder.InitialCatalog = "elmcity";
+			sql_builder.UserID = Configurator.sql_azure_user;
+			sql_builder.Password = Configurator.sql_azure_pass;
+
+			string sql_provider_string = sql_builder.ToString();
+
+			var entity_builder = new EntityConnectionStringBuilder();
+			entity_builder.Provider = "System.Data.SqlClient";
+			entity_builder.ProviderConnectionString = sql_provider_string;
+
+			entity_builder.Metadata = String.Format(@"res://*/{0}.csdl|res://*/{0}.ssdl|res://*/{0}.msl", model_name);
+			return entity_builder.ToString();
+		}
     }
 }
