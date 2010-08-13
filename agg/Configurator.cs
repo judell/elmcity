@@ -92,7 +92,7 @@ namespace CalendarAggregator
         // unencapsulated for now
 
         public const string delicious_blocked_message = "you have been blocked";
-        public const string delicious_curated_hubs_query = "https://api.del.icio.us/posts/recent?tag=calendarcuration&count=100";
+        public const string delicious_curated_hubs_query = "https://api.del.icio.us/v1/posts/recent?tag=calendarcuration&count=100";
 
         public const string delicious_curation_tag = "calendarcuration";
         public const string delicious_trusted_ics_feed = "trusted+ics+feed";
