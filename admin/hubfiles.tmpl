@@ -62,8 +62,123 @@ Your events in XML.
 <p>URL: <a href="/services/__ID__/json">/services/__ID__/json</a></p>
 
 <p>
-Your events in JSON
+Your events in JSON. Here are some widgets made, using the JSONP mechanism, from these URLs:
 </p>
+
+<p>
+http://elmcity.cloudapp.net/services/elmcity/json?jsonp=music&count=5&view=music
+</p>
+
+<p>
+http://elmcity.cloudapp.net/services/elmcity/json?jsonp=government&count=5&view=government
+</p>
+
+<p>
+http://elmcity.cloudapp.net/services/elmcity/json?jsonp=recreation&count=5&view=recreation
+</p>
+
+<script>
+var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function get_evt_date(dt)
+ { 
+ var date = days[dt.getDay()] + ' ' + months[dt.getMonth()] + ' ' + dt.getDate();
+ return date;
+ }
+
+function get_evt_time(evt,dt)
+ { 
+ var hours = dt.getHours().toString();
+ if ( hours.length == 1 ) hours = '0' + hours;
+ var minutes = dt.getMinutes().toString();
+ if ( minutes == '0' ) minutes = '00';
+ var time = '';
+ if ( evt["allday"] || ( hours == '00' && minutes == '00' ) )
+   time = '';
+ else
+   time = hours + ':' + minutes;
+ return time;
+ }
+
+function make_dict(obj)
+ {
+ var events_by_date = new Object();
+ for ( i = 0; i < obj.length; i++ )
+  {
+  var evt = obj[i];
+  var expr = evt["dtstart"].replace(/\/Date\((\d+)\)\//gi, "new Date($1)");
+  var dt = eval(expr); 
+  evt_date = evt['evt_date'] = get_evt_date(dt);
+  evt_time = evt['evt_time'] = get_evt_time(evt,dt);
+  if ( evt_date in events_by_date )
+	events_by_date[evt_date].push(evt);
+  else
+    events_by_date[evt_date] = [evt];
+  }
+ return events_by_date;
+ }
+
+function music(obj)
+ {
+ eventlist(obj,'music')
+ }
+
+function government(obj)
+ {
+ eventlist(obj,'government')
+ }
+
+function recreation(obj)
+ {
+ eventlist(obj,'recreation')
+ }
+
+
+function eventlist(obj,id)
+ {
+  var events_by_date = make_dict(obj);
+  var s = '';
+  for ( var datekey in events_by_date )
+  {
+    s += '<div class="Date">' + datekey + '</div>';
+    var list = events_by_date[datekey];
+    for ( i = 0; i < list.length; i++ )
+      {
+      var evt = list[i];
+      s += '<div class="Event">';
+      s += '<span class="Time">' + evt['evt_time'] + '</span> ';
+      s += '<span class="Title"><a href="' + evt["url"] + '" title="source: ' + evt["source"] + '">' + evt["title"] + '</a>';
+      s += '<span class="Source"> (' + evt['source'] + ')</span>';
+      s += '</div>';
+      }
+    }
+ document.getElementById(id).innerHTML += s;
+ }
+</script>
+
+<table>
+<tr>
+<td>
+<div class="EventList" id="music" />
+<div class="EventListTitle">keene: music</div>
+<script src="http://elmcity.cloudapp.net/services/elmcity/json?jsonp=music&count=5&view=music"></script>
+</td>
+<td>
+<div class="EventList" id="government" />
+<div class="EventListTitle">keene: government</div>
+<script src="http://elmcity.cloudapp.net/services/elmcity/json?jsonp=government&count=5&view=government"></script>
+</td>
+<td>
+<div class="EventList" id="recreation"/>
+<div class="EventListTitle">keene: recreation</div>
+<script src="http://elmcity.cloudapp.net/services/elmcity/json?jsonp=recreation&count=5&view=recreation"></script>
+</td>
+</tr>
+</table>
+
+
 
 <h3>ICS</h3>
 
