@@ -19,6 +19,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
+using System.Web;
 
 namespace ElmcityUtils
 {
@@ -83,8 +84,15 @@ namespace ElmcityUtils
             }
 
             string_to_sign += "/" + azure_storage_account + path;
-            if (query_string != null && query_string.StartsWith("?comp"))
-                string_to_sign += query_string;
+			
+			//if (query_string != null && query_string.StartsWith("?comp"))
+			//	string_to_sign += query_string;
+			
+			if (!String.IsNullOrEmpty(query_string) && query_string.Contains("comp="))
+			{
+				var qscoll = HttpUtility.ParseQueryString(query_string);
+				string_to_sign += "?comp=" + qscoll["comp"];
+			}
 
             return SignAuthString(azure_b64_key, string_to_sign);
         }
