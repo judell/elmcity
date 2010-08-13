@@ -75,7 +75,13 @@ namespace CalendarAggregator
         private static TableStorageResponse StoreDirectMessageToAzure(TwitterDirectMessage message)
         {
             var dict = ObjectUtils.ObjToDictObj(message);
-            return TableStorage.UpdateDictToTableStore(dict, table: ts_table, partkey: pk_directs, rowkey: message.id);
+            return TableStorage.UpdateDictToTableStore
+				(
+				dict, 
+				table: ts_table, 
+				partkey: pk_directs, 
+				rowkey: message.id
+				);
         }
 
 
