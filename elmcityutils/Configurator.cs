@@ -24,6 +24,9 @@ namespace ElmcityUtils
         public const string appdomain = "YOUR_NAME.cloudapp.net"; 
         public const string azure_compute_account = "YOUR_NAME";
         public const string azure_storage_account = "YOUR_NAME";
+		public const string sql_azure_host = "YOUR_HOST";
+		public const string sql_azure_user = "YOUR_NAME";
+		public const string sql_azure_pass = "YOUR_PASS";
         //---
 
         public const string azure_blob_domain = "blob.core.windows.net";
