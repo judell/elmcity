@@ -683,9 +683,9 @@ namespace CalendarAggregator
 
         #endregion
 
-        #region other
+		#region other
 
-        public static string MakeLengthLimitedExceptionMessage(Exception e)
+		public static string MakeLengthLimitedExceptionMessage(Exception e)
         {
             var trace = new System.Diagnostics.StackTrace(e, fNeedFileInfo: true);
             var index = Math.Min(e.Message.Length, 500);
