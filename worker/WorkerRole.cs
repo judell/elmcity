@@ -121,8 +121,6 @@ namespace WorkerRole
                 {
                     GenUtils.LogMsg("info", "waking", null);
 
-                    RecacheHubIdsToAzure();  // acquire new hubs added since last cycle
-
                     ids = delicious.LoadHubIdsFromAzureTable();
 
                     twitter_direct_messages = TwitterApi.GetNewTwitterDirectMessages(); // get new control messages
@@ -700,6 +698,8 @@ All events {8}, population {9}, events/person {10:f}
             GenUtils.LogMsg("info", "DeliciousAdmin", null);
             try
             {
+                RecacheHubIdsToAzure();  // acquire new hubs added since last cycle
+
                 var ids = delicious.LoadHubIdsFromAzureTable();
 
                 foreach (var id in ids )
