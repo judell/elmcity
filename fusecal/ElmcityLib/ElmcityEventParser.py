@@ -84,7 +84,7 @@ class EventParser:
             ical_evt.Start = DDay.iCal.DataTypes.iCalDateTime(utc_dtstart);
           else:        
             ical_evt.Start = DDay.iCal.DataTypes.iCalDateTime(dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second)
-          ical_evt.UID = CalendarAggregator.Event.MakeEventGuid()
+          ical_evt.UID = CalendarAggregator.Event.MakeEventUid(ical_evt)
         serializer = DDay.iCal.Serialization.iCalendarSerializer(cal)
         self.LogMsg("info", "BuildICS: serializing %s filtered events" % len(self.events), None )
         self.ics = serializer.SerializeToString()
