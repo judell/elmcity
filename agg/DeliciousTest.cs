@@ -187,7 +187,7 @@ namespace CalendarAggregator
 
 
         [Test]
-        public static void FetchHubsIsSuccessful()
+        public void FetchHubsIsSuccessful()
         {
             var master_delicious = new Delicious(Configurator.delicious_master_account, Configurator.delicious_master_password);
             var list = master_delicious.FetchHubIdsFromDelicious();
