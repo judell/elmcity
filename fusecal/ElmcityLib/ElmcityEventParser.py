@@ -24,7 +24,6 @@ try:
 
 except:
   IPY = False
-  print "CPY"
 
 class Event:
 
@@ -57,7 +56,6 @@ class EventParser:
 
   if IPY:
     def LogMsg(self,category=None, message=None, details=None):
-      #print '%s, %s, %s' % ( category, message, details )
       ElmcityUtils.GenUtils.LogMsg(category, message, details)
   else:
     def LogMsg(self,category=None, message=None, details=None):
@@ -94,7 +92,8 @@ class EventParser:
   else:
     def BuildICS(self):
       self.ApplyFilter()
-      self.LogMsg("info", "BuildICS: will emit %s filtered events" % len(self.events), None)
+      for evt in self.events:
+        print evt
 
   def ParseDateTime(self, date_string, format):
     if IPY:
