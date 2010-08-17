@@ -111,4 +111,3 @@ class LibraryThingParser(ElmcityEventParser.EventParser):
 def test():
   parser = LibraryThingParser(url='http://www.librarything.com/rss/events/location/toronto',tz_source='eastern')
   parser.Parse()
-  print parser.ics

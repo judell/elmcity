@@ -65,8 +65,8 @@ class LibraryInsightParser(ElmcityEventParser.EventParser):
 def test():
   parser = LibraryInsightParser(url='http://www.libraryinsight.com/calendar.asp?jx=ea')
   parser.Parse()
-  print parser.ics
-  return parser.ics
+
+
 
 
 

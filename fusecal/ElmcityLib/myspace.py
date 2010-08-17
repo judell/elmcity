@@ -95,7 +95,6 @@ class MySpaceParser(ElmcityEventParser.EventParser):
 def test():
   parser = MySpaceParser(url='http://www.myspace.com/jatobamusic',filter='Vermont',tz_source='eastern')
   parser.Parse()
-  print parser.ics
 
 
 
