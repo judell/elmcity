@@ -166,7 +166,7 @@ namespace CalendarAggregator
 
             var html = sb.ToString();
 
-            html = Utils.RegexReplace(html, "</*(em|strong|b|i|center)>", "");
+            html = GenUtils.RegexReplace(html, "</*(em|strong|b|i|center)>", "");
 
             var data = Encoding.UTF8.GetBytes(html.ToString());
 
