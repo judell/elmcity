@@ -59,7 +59,7 @@ namespace CalendarAggregator
         {
             var es_count = this.es.events.Count;
             var html = cr.RenderHtml();
-            var html_count = Utils.RegexCountSubstrings(html, event_html_header);
+            var html_count = GenUtils.RegexCountSubstrings(html, event_html_header);
             Assert.AreEqual(es_count, html_count);
             Assert.AreEqual(2, html_count);
         }
@@ -69,7 +69,7 @@ namespace CalendarAggregator
         {
             var es_count = es.events.Count;
             var html = cr.RenderHtml(null, EventStoreTest.test_category, 0);
-            var html_count = Utils.RegexCountSubstrings(html, event_html_header);
+            var html_count = GenUtils.RegexCountSubstrings(html, event_html_header);
             Assert.AreEqual(1, html_count);
         }
 
