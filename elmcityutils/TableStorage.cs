@@ -372,6 +372,12 @@ namespace ElmcityUtils
             return dicts.Count == 1;
         }
 
+		public bool ExistsEntity(string tablename, string partition_key, string row_key)
+		{
+			var query = String.Format("$filter=(PartitionKey eq '{0}' and RowKey eq '{1}')", partition_key, row_key);
+			return ExistsEntity(tablename, query);
+		}
+
         // generic table request
         public HttpResponse DoTableStoreRequest(string request_path, string query_string, string method, Hashtable headers, byte[] data)
         {
