@@ -88,7 +88,7 @@ namespace WebRole
         private static string test_id = "";
 #endif
 
-        public static string version = "786";
+        public static string version = "802";
 
         public static string pagetitle = "the elmcity project";
 
