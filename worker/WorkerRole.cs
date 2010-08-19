@@ -91,6 +91,8 @@ namespace WorkerRole
 
                 Utils.ScheduleTimer(DeliciousAdmin, minutes: CalendarAggregator.Configurator.delicious_admin_interval_hours * 60, name: "DeliciousAdmin", startnow: false);
 
+				Utils.ScheduleTimer(TestRunnerAdmin, minutes: CalendarAggregator.Configurator.testrunner_interval_hours * 60, name: "TestRunnerAdmin", startnow: false);
+
                 Utils.ScheduleTimer(ReloadMonitorCounters, minutes: CalendarAggregator.Configurator.worker_reload_interval_hours * 60, name: "WorkerReloadCounters", startnow: false);
 
                 monitor = ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
@@ -702,19 +704,20 @@ All events {8}, population {9}, events/person {10:f}
 
                 var ids = delicious.LoadHubIdsFromAzureTable();
 
-                foreach (var id in ids )
-                {
-                    var fr_delicious = new FeedRegistry(id);
-                    fr_delicious.LoadFeedsFromDelicious();
+				foreach (var id in ids)
+				{
+					var fr_delicious = new FeedRegistry(id);
 
-                    PurgeDeletedFeeds(fr_delicious, id);
+					fr_delicious.LoadFeedsFromDelicious();
 
-                    UpdateFeedsToAzure(fr_delicious, id);
+					PurgeDeletedFeeds(fr_delicious, id);
 
-                    UpdateFeedCountToAzure(id);
+					UpdateFeedsToAzure(fr_delicious, id);
 
-                    UpdateMetadataToAzure(id);
-                }
+					UpdateFeedCountToAzure(id);
+
+					UpdateMetadataToAzure(id);
+				}
             }
             catch ( Exception e )
             {
@@ -722,11 +725,25 @@ All events {8}, population {9}, events/person {10:f}
             }
         }
 
+		public static void TestRunnerAdmin(object o, ElapsedEventArgs args)
+		{
+			GenUtils.LogMsg("info", "TestRunnerAdmin", null);
+			try
+			{
+				GenUtils.RunTests("CalendarAggregator");
+				GenUtils.RunTests("ElmcityUtils");
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
+			}
+		}
+
         public static void IronPythonAdmin(object o, ElapsedEventArgs e)
         {
             try
             {
-                PythonUtils.InstallPythonElmcityLibrary(ts);
+                // PythonUtils.InstallPythonElmcityLibrary(ts); // won't work because ipy holds references to imports
                 var url = CalendarAggregator.Configurator.iron_python_admin_script_url;
                 var s = HttpUtils.FetchUrl(url).DataAsString();
                 var source = python.CreateScriptSourceFromString(s, SourceCodeKind.Statements);
