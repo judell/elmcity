@@ -14,6 +14,7 @@ class HelloWorldParser(ElmcityEventParser.EventParser):
     evt = ElmcityEventParser.Event()
     evt.title = "Hello World"
     evt.start = datetime.datetime.now()
+    evt.url = ''
     self.events.append(evt)
 
 def test():
