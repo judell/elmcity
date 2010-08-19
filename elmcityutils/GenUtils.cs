@@ -13,10 +13,14 @@
  * *******************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Data.EntityClient;
+using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace ElmcityUtils
 {
@@ -123,5 +127,112 @@ namespace ElmcityUtils
 			entity_builder.Metadata = String.Format(@"res://*/{0}.csdl|res://*/{0}.ssdl|res://*/{0}.msl", model_name);
 			return entity_builder.ToString();
 		}
+
+		static public void RunTests(string dll_name)
+		{
+			GenUtils.LogMsg("info", "GenUtils.RunTests", "starting");
+			var ts = TableStorage.MakeDefaultTableStorage();
+			var a = System.Reflection.Assembly.Load(dll_name);
+			var types = a.GetExportedTypes().ToList();
+			var test_classes = types.FindAll(type => type.Name.EndsWith("Test")).ToList();
+			test_classes.Sort((x, y) => x.Name.CompareTo(y.Name));
+			foreach (Type test_class in test_classes)  // e.g. DeliciousTest
+			{
+				object o = Activator.CreateInstance(test_class);
+
+				var members = test_class.GetMembers().ToList();
+				members.Sort((x, y) => x.Name.CompareTo(y.Name));
+
+				foreach (var member in members)
+				{
+					var attrs = member.GetCustomAttributes(false).ToList();
+					var is_test = attrs.Exists(attr => attr.GetType() == typeof(NUnit.Framework.TestAttribute));
+					if (is_test == false)
+						continue;
+
+					var entity = new Dictionary<string, object>();
+					var partition_key = test_class.FullName;
+					var row_key = member.Name;
+					entity["PartitionKey"] = partition_key;
+					entity["RowKey"] = row_key;
+
+					try
+					{
+						test_class.InvokeMember(member.Name, invokeAttr: BindingFlags.InvokeMethod, binder: null, target: o, args: null);
+						entity["outcome"] = "OK";
+						entity["reason"] = "";
+					}
+					catch (Exception e)
+					{
+						var msg = e.Message + e.StackTrace;
+						entity["outcome"] = "Fail";
+						entity["reason"] = e.InnerException.Message + e.InnerException.StackTrace;
+					}
+
+					var tablename = Configurator.test_results_tablename;
+					if (ts.ExistsEntity(tablename, partition_key, row_key))
+						ts.MergeEntity(tablename, partition_key, row_key, entity);
+					else
+						ts.InsertEntity(tablename, entity);
+				}
+			}
+			GenUtils.LogMsg("info", "GenUtils.RunTests", "done");
+		}
+
+		#region regex
+
+		public static string RegexReplace(string input, string pattern, string replacement)
+		{
+			Regex re = new Regex(pattern, RegexOptions.Singleline);
+			return re.Replace(input, replacement);
+		}
+
+		public static List<string> RegexFindAll(string input, string pattern)
+		{
+			Regex re = new Regex(pattern);
+			var groups = re.Match(input).Groups;
+			var values = new List<string>();
+			foreach (Group g in groups)
+				values.Add(g.Value);
+			return values;
+		}
+
+		public static List<string> RegexFindKeyValue(string input)
+		{
+			var pattern = @"\s*(\w+)=(.+)\s*";
+			var groups = RegexFindAll(input, pattern);
+			var list = new List<string>();
+			if (groups[0] == input)
+			{
+				list.Add(groups[1]);
+				list.Add(groups[2]);
+			}
+			return list;
+		}
+
+		public static Dictionary<string, string> RegexFindKeysAndValues(List<string> keys, string input)
+		{
+			string regex = @"(category|url)=([^\b\s\n]+)";
+			Regex reg = new System.Text.RegularExpressions.Regex(regex);
+			string keystrings = String.Join("|", keys.ToArray());
+			var metadict = new Dictionary<string, string>();
+			Match m = reg.Match(input);
+			while (m.Success)
+			{
+				var key_value = RegexFindKeyValue(m.Groups[0].ToString());
+				metadict.Add(key_value[0], key_value[1]);
+				m = m.NextMatch();
+			}
+			return metadict;
+		}
+
+		public static int RegexCountSubstrings(string input, string pattern)
+		{
+			Regex re = new Regex(pattern);
+			var chunks = re.Split(input);
+			return chunks.Count() - 1;
+		}
+
+		#endregion regex
     }
 }
