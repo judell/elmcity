@@ -301,8 +301,6 @@ namespace CalendarAggregator
             Utils.Wait(Configurator.delicious_delay_seconds);
             var http_response = HttpUtils.FetchUrlNoRedirect(url);
 
-            string domain = string.Format("http://delicious.com/{0}/", id);
-
             // bail if not found
 
             if (http_response.headers.ContainsKey("Location") == false)
@@ -316,7 +314,7 @@ namespace CalendarAggregator
 
                 // form corresponding rss url
 
-                var url_id = location.Replace("http://delicious.com/url/", "");
+                var url_id = location.Replace("http://www.delicious.com/url/", "");
                 url = new Uri(string.Format("http://feeds.delicious.com/v2/rss/url/{0}", url_id));
 
                 Utils.Wait(Configurator.delicious_delay_seconds);
@@ -329,13 +327,14 @@ namespace CalendarAggregator
 
                 var xdoc = XmlUtils.XdocFromXmlBytes(http_response.bytes);
 
+				string domain = string.Format("http://www.delicious.com/{0}/", id);
                 var categories = from category in xdoc.Descendants("category")
                                  where category.Attribute("domain").Value.ToLower() == domain.ToLower()
                                  select new { category.Value };
 
                 foreach (var category in categories)
                 {
-                    var key_value = Utils.RegexFindKeyValue(category.Value);
+                    var key_value = GenUtils.RegexFindKeyValue(category.Value);
                     if (key_value.Count == 2)
                         dict[key_value[0]] = key_value[1].Replace('+', ' ');
                 }
@@ -407,7 +406,7 @@ namespace CalendarAggregator
                 {
                     var page = http_response.DataAsString();
                     // looking for, e.g.: <span id="tagScopeCount">37</span>
-                    var str_count = Utils.RegexFindAll(page, @"<span id=\""tagScopeCount\"">(\d+)")[1];
+                    var str_count = GenUtils.RegexFindAll(page, @"<span id=\""tagScopeCount\"">(\d+)")[1];
                     count = Convert.ToInt32(str_count);
                 }
             }
