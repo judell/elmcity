@@ -323,21 +323,106 @@ namespace ElmcityUtils
 				iis_failed_request.status = Convert.ToInt16(failed_request.Attribute("statusCode").Value);
 				iis_failed_request.url = failed_request.Attribute("url").Value;
 
-				entities.AddObject(entitySetName: model_name, entity: iis_failed_request);
-				var db_result = entities.SaveChanges();
+				try
+				{
+					entities.AddObject(entitySetName: model_name, entity: iis_failed_request);
+					var db_result = entities.SaveChanges();
 
-				if (db_result != 1)
-					GenUtils.LogMsg("warning", "IIS_FailedRequestLogs.TransferToSqlAzure expected 1 saved change but got " + db_result.ToString(), null);
+					if (db_result != 1)
+						GenUtils.LogMsg("warning", "IIS_FailedRequestLogs.TransferToSqlAzure expected 1 saved change but got " + db_result.ToString(), null);
+				}
+				catch (Exception ex_db)
+				{
+					GenUtils.LogMsg("exception", "IIS_FailedRequestLogs.TransferToSqlAzure SaveChanges", ex_db.Message + ex_db.StackTrace);
+				}
 
-				var bs_result = bs.DeleteBlob(containername, blobname);
-				var status = bs_result.HttpResponse.status;
-				if ( status != System.Net.HttpStatusCode.Accepted )
-					GenUtils.LogMsg("warning", "IIS_FailedRequestLogs.TransferToSqlAzure expected Accepted but got " + status.ToString(), null);
+				try
+				{
+
+					var bs_result = bs.DeleteBlob(containername, blobname);
+					var status = bs_result.HttpResponse.status;
+					if (status != System.Net.HttpStatusCode.Accepted)
+						GenUtils.LogMsg("warning", "IIS_FailedRequestLogs.TransferToSqlAzure expected Accepted but got " + status.ToString(), null);
+				}
+				catch (Exception bs_db)
+				{
+					GenUtils.LogMsg("exception", "IIS_FailedRequestLogs.TransferToSqlAzure DeleteBlob", bs_db.Message + bs_db.StackTrace);
+				}
+				
 			}
 		}
 	}
 
 	public static class IIS_Logs
 	{
+		public static void TransferToSqlAzure()
+		{
+			GenUtils.LogMsg("info", "IIS_Logs.TransferToSqlAzure", null);
+			var bs = BlobStorage.MakeDefaultBlobStorage();
+			var containername = "wad-iis-logfiles";
+			var req_dicts = (List<Dictionary<string, string>>)bs.ListBlobs(containername).response;
+			var req_blobs = req_dicts.Select(blob => blob["Name"]);
+
+			var model_name = "iis_log_entry";
+			var conn_str = GenUtils.MakeEntityConnectionString(model_name);
+			var entities = new iis_log_entry_entities(conn_str);
+
+			foreach (var blobname in req_blobs)
+			{
+				var response = bs.GetBlob(containername, blobname).HttpResponse;
+				var log_str = response.DataAsString();
+				var lines = log_str.Split('\n').ToList();
+				var comments = lines.FindAll(line => line.StartsWith("#"));
+				var empty_or_truncated = lines.FindAll(line => line.Length < 10);
+				lines = lines.Except(comments).Except(empty_or_truncated).ToList();
+				foreach (var line in lines)
+				{
+					var iis_log_entry = new iis_log_entry();
+					var tmpline = GenUtils.RegexReplace(line, " +", "\t");
+					var fields = tmpline.Split('\t');
+					iis_log_entry.datetime = DateTime.Parse(fields[0] + "T" + fields[1] + ".000Z"); // datetime
+					iis_log_entry.server = fields[3]; // server
+					iis_log_entry.verb = fields[5]; // verb
+					iis_log_entry.url = fields[7] != "-" ? fields[6] + "?" + fields[7] : fields[6]; // url
+					iis_log_entry.ip = fields[10]; // ip
+					iis_log_entry.http_version = fields[11]; // http ver
+					iis_log_entry.user_agent = fields[12]; // user agent
+					iis_log_entry.referrer = fields[14]; // referrer
+					iis_log_entry.status = Convert.ToInt16(fields[16]); // status
+					iis_log_entry.w32_status = Convert.ToInt32(fields[18]); // w32 status
+					iis_log_entry.sent_bytes = Convert.ToInt32(fields[19]); // sent bytes
+					iis_log_entry.recv_bytes = Convert.ToInt32(fields[20]); // recv bytes
+					iis_log_entry.time_taken = Convert.ToInt32(fields[21]); // time taken
+
+					entities.AddObject(entitySetName: model_name, entity: iis_log_entry);
+				}
+
+				int db_result = -1;
+
+				try
+				{
+					db_result = entities.SaveChanges();
+					if (db_result != lines.Count)
+						GenUtils.LogMsg("warning", "IIS_Logs.TransferToSqlAzure expected " + lines.Count.ToString() + " changes but got " + db_result.ToString(), null);
+				}
+				catch (Exception ex_db)
+				{
+					GenUtils.LogMsg("exception", "IIS_Logs.TransferToSqlAzure SaveChanges", ex_db.Message + ex_db.StackTrace);
+				}
+
+				try
+				{
+					var bs_result = bs.DeleteBlob(containername, blobname);
+					var bs_status = bs_result.HttpResponse.status;
+					if (bs_status != System.Net.HttpStatusCode.Accepted)
+						GenUtils.LogMsg("warning", "IIS_Logs.TransferToSqlAzure expected Accepted but got " + bs_status.ToString(), null);
+				}
+				catch (Exception bs_db)
+				{
+					GenUtils.LogMsg("exception", "IIS_Logs.TransferToSqlAzure DeleteBlob", bs_db.Message + bs_db.StackTrace);
+				}
+			}
+			
+		}
 	}
 }
