@@ -264,7 +264,8 @@ namespace CalendarAggregator
             Assert.That(dict.ContainsKey("venue") && dict["venue"] == test_venue_service);
             Assert.That(dict.ContainsKey("venue_url") && dict["venue_url"] == test_venue_url);
         }
-
+		
+		/* idle for now
         [Test]
         public void FetchVenueMetadataIsSuccessful()
         {
@@ -284,6 +285,7 @@ namespace CalendarAggregator
             Assert.That(dict.ContainsKey("venue") && dict["venue"] == test_venue_service);
             Assert.That(dict.ContainsKey("venue_url") && dict["venue_url"] == test_venue_url);
         }
+		 */
 
 
         #endregion venues
