@@ -302,7 +302,7 @@ namespace CalendarAggregator
                 feedtext = response.DataAsString();
 
                 // because not needed, and dday.ical doesn't allow legal (but very old) dates
-                feedtext = Utils.RegexReplace(feedtext, "\nCREATED:[^\n]+", "");
+                feedtext = GenUtils.RegexReplace(feedtext, "\nCREATED:[^\n]+", "");
 
                 // special favor for matt gillooly :-)
                 if (this.id == "localist")
@@ -320,7 +320,7 @@ namespace CalendarAggregator
         {
             try
             {
-                fr.stats[feedurl].prodid = Utils.RegexFindAll(feedtext, "PRODID:(.+)")[1];
+                fr.stats[feedurl].prodid = GenUtils.RegexFindAll(feedtext, "PRODID:(.+)")[1];
             }
             catch
             {
@@ -479,7 +479,7 @@ namespace CalendarAggregator
 
                 // or if Description has url=Url
 
-                var metadata_from_description = Utils.RegexFindKeysAndValues(Configurator.ical_description_metakeys, evt.Description);
+                var metadata_from_description = GenUtils.RegexFindKeysAndValues(Configurator.ical_description_metakeys, evt.Description);
 
                 if (metadata_from_description.ContainsKey("url"))
                     evt.Url = metadata_from_description["url"];
@@ -548,7 +548,7 @@ namespace CalendarAggregator
                     else
                         html += string.Format(@"<a href=""{0}"">{1}</a> (<a title=""iCalendar feed"" href=""{2}"">*</a>), ", home_url, source, feedurl);
                 }
-                html = Utils.RegexReplace(html, ", $", "");
+                html = GenUtils.RegexReplace(html, ", $", "");
                 html += @"<p style=""text-align:right""><a href=""javascript:hide('sources')"">close window</a></p>";
             }
             catch (Exception e)
@@ -586,13 +586,13 @@ namespace CalendarAggregator
             //if (feed_metadict.ContainsKey("tz"))
             //    tz_dest = tz_source = feed_metadict["tz"];
 
-            groups = Utils.RegexFindAll(str_url, "(libraryinsight.com)(.+)");
+            groups = GenUtils.RegexFindAll(str_url, "(libraryinsight.com)(.+)");
             if (groups.Count == 3)
             {
                 str_final_url = String.Format(Configurator.fusecal_service, Uri.EscapeUriString(str_url), filter, tz_source, tz_dest);
             }
 
-            groups = Utils.RegexFindAll(str_url, "(librarything.com/local/place/)(.+)");
+            groups = GenUtils.RegexFindAll(str_url, "(librarything.com/local/place/)(.+)");
             if (groups.Count == 3)
             {
                 var place = groups[2];
@@ -602,7 +602,7 @@ namespace CalendarAggregator
                 str_final_url = String.Format(Configurator.fusecal_service, lt_url, filter, tz_source, tz_dest);
             }
 
-            groups = Utils.RegexFindAll(str_url, "(myspace.com/)(.+)");
+            groups = GenUtils.RegexFindAll(str_url, "(myspace.com/)(.+)");
             if (groups.Count == 3)
             {
                 var musician = groups[2];
@@ -969,7 +969,7 @@ namespace CalendarAggregator
                 GenUtils.LogMsg("info", url, null);
                 var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
                 var str_data = HttpUtils.DoHttpWebRequest(request, data: null).DataAsString();
-                str_data = Utils.RegexReplace(str_data, "<description>[^<]+</description>", "");
+                str_data = GenUtils.RegexReplace(str_data, "<description>[^<]+</description>", "");
                 byte[] bytes = Encoding.UTF8.GetBytes(str_data);
                 return XmlUtils.XdocFromXmlBytes(bytes);
             }
