@@ -189,6 +189,12 @@ namespace CalendarAggregator
         private static string _process_monitor_table
         { get { return GetSettingValue("process_monitor_table"); } }
 
+		public static int testrunner_interval_hours
+		{ get { return _testrunner_interval_hours; } }
+
+		private static int _testrunner_interval_hours
+		{ get { return Convert.ToInt32(GetSettingValue("testrunner_interval_hours")); } }
+
         #endregion
 
         // non-encapsulated (for now) settings
@@ -286,7 +292,7 @@ namespace CalendarAggregator
         private static DateTime _WEE_HOURS_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 1, minute: 30);
 
         public const int max_radius = 15;         // limit for where hubs
-        public const int default_radius = 10;     // default for where hubs
+        public const int default_radius = 5;     // default for where hubs
         public const int default_population = 1;  // in case pop lookup fails
 
         public const string default_tz = "Eastern";
