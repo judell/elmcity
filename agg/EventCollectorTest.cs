@@ -164,6 +164,17 @@ END:VCALENDAR";
             Assert.That(es.events[0].title != "");
         }
 
+		[Test]
+		public void UpcomingCanCallApi()
+		{
+			string method = "event.search";
+			var collector = new Collector(test_calinfo);
+			var xdoc = collector.CallUpcomingApi(method, test_upcoming_args);
+			var stat = from element in xdoc.Descendants("rsp")
+					   select element.Attribute("stat").Value;
+			Assert.That(stat.First().ToString() == "ok");
+		}
+
         [Test]
         public void UpcomingQueryYieldsNonzeroEvents()
         {
