@@ -36,7 +36,6 @@ class MySpaceParser(ElmcityEventParser.EventParser):
 
       start = self.ExpandTodayAndTomorrow(start)   # normalize to, e.g., Thu, July 08 10:00 PM
 
-      #tstart = time.strptime(start, '%a, %B %d @ %I:%M %p')
       dtstart = self.ParseDateTime(start, '%a, %B %d @ %I:%M %p')
 
 
