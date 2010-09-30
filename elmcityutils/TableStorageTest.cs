@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Linq;
 using NUnit.Framework;
 
 namespace ElmcityUtils
@@ -32,6 +33,9 @@ namespace ElmcityUtils
         public static Int64 test_int64 = 64;
         public static String test_str = "test_str";
         public static bool test_bool = false;
+
+		private static int short_wait = 5;
+		private static int long_wait = 30;
 
         public static Dictionary<string, object> test_dict = new Dictionary<string, object>()
          {
@@ -53,9 +57,9 @@ namespace ElmcityUtils
         public void CreateTableIsSuccessful()
         {
             ts.DeleteTable(test_table);
-            HttpUtils.Wait(30);
+            HttpUtils.Wait(long_wait);
             ts.CreateTable(test_table);
-            HttpUtils.Wait(3);
+            HttpUtils.Wait(short_wait);
             Assert.IsTrue((bool)ts.ExistsTable(test_table).response);
         }
 
@@ -64,9 +68,9 @@ namespace ElmcityUtils
         {
             ts.DeleteTable(test_table);
             ts.DeleteTable(test_table_2);
-            HttpUtils.Wait(30);
+            HttpUtils.Wait(long_wait);
             ts.CreateTable(test_table);
-            HttpUtils.Wait(3);
+            HttpUtils.Wait(short_wait);
             Assert.IsTrue((bool)ts.ExistsTable(test_table).response);
             var count = (int)ts.CountTables().response;
             ts.CreateTable(test_table_2);
@@ -78,7 +82,7 @@ namespace ElmcityUtils
         public void CreateEntityIsSuccessful()
         {
             ts.DeleteEntity(test_table, test_partition, test_row);
-            HttpUtils.Wait(3);
+            HttpUtils.Wait(short_wait);
             if ((bool)ts.ExistsTable(test_table).response == false)
                 ts.CreateTable(test_table);
             var entity = new Dictionary<string, object>();
@@ -93,7 +97,7 @@ namespace ElmcityUtils
         public void SecureCreateEntityIsSuccessful()
         {
             secure_ts.DeleteEntity(test_table, test_partition, test_row);
-            HttpUtils.Wait(3);
+            HttpUtils.Wait(short_wait);
             if ((bool)secure_ts.ExistsTable(test_table).response == false)
                 secure_ts.CreateTable(test_table);
             var entity = new Dictionary<string, object>();
@@ -129,13 +133,41 @@ namespace ElmcityUtils
                 CreateEntityIsSuccessful();
             var ts_response = ts.QueryEntities(test_table, test_query);
             var dicts = (List<Dictionary<string, object>>)ts_response.response;
-            Assert.That(dicts.Count == 1);
-            Assert.That((String)dicts[0]["TestStr"] == test_str);
-            Assert.That((Int32)dicts[0]["TestInt32"] == test_int32);
-            Assert.That((Int64)dicts[0]["TestInt64"] == test_int64);
-            Assert.That(((DateTime)dicts[0]["TestDt"]).ToUniversalTime().Ticks == test_dt.Ticks);
-            Assert.That((bool)dicts[0]["TestBool"] == test_bool);
+			AssertEntity(dicts);
         }
+
+		private static void AssertEntity(List<Dictionary<string, object>> dicts)
+		{
+			Assert.That(dicts.Count == 1);
+			Assert.That((String)dicts[0]["TestStr"] == test_str);
+			Assert.That((Int32)dicts[0]["TestInt32"] == test_int32);
+			Assert.That((Int64)dicts[0]["TestInt64"] == test_int64);
+			Assert.That(((DateTime)dicts[0]["TestDt"]).ToUniversalTime().Ticks == test_dt.Ticks);
+			Assert.That((bool)dicts[0]["TestBool"] == test_bool);
+		}
+
+		[Test]
+		public void QueryAllEntitiesAsDictsIsSuccessful()
+		{
+			if (ts.ExistsEntity(test_table, test_query) == false)
+				CreateEntityIsSuccessful();
+			var ts_response = ts.QueryAllEntities(test_table, test_query, TableStorage.QueryAllReturnType.as_dicts);
+			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			AssertEntity(dicts);
+		}
+
+		[Test]
+		public void QueryAllEntitiesAsStringIsSuccessful()
+		{
+			if (ts.ExistsEntity(test_table, test_query) == false)
+				CreateEntityIsSuccessful();
+			var ts_response = ts.QueryAllEntities(test_table, test_query, TableStorage.QueryAllReturnType.as_string);
+			var feed_xml = (string)ts_response.response;
+			var xdoc = XmlUtils.XdocFromXmlBytes(System.Text.Encoding.UTF8.GetBytes(feed_xml));
+			var entries = from entry in xdoc.Descendants(StorageUtils.atom_namespace + "entry") select entry;
+			Assert.AreEqual(1, entries.Count());
+
+		}
 
         [Test]
         public void QueryForSingleEntityIsSuccessful()
@@ -160,8 +192,11 @@ namespace ElmcityUtils
             if (ts.ExistsEntity(test_table, test_query) == false)
                 CreateEntityIsSuccessful();
             var ts_response = ts.DeleteEntity(test_table, test_partition, test_row);
-            HttpUtils.Wait(2);
+            HttpUtils.Wait(short_wait);
             ts_response = ts.DeleteEntity(test_table, test_partition, test_row);
+			Assert.IsNotNull(ts_response);
+			Assert.IsNotNull(ts_response.http_response);
+			Assert.IsNotNull(ts_response.http_response.status);
             Assert.AreEqual(HttpStatusCode.NotFound, ts_response.http_response.status);
         }
 
@@ -206,7 +241,7 @@ namespace ElmcityUtils
         [Test]
         public void WriteLogMessageIsSuccessful()
         {
-            var ts_response = GenUtils.LogMsg("test", "test_message", "test_data");
+            var ts_response = this.ts.WriteLogMessage("test", "test_message", "test_data");
             Assert.AreEqual(HttpStatusCode.Created, ts_response.http_response.status);
         }
 
