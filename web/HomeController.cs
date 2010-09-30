@@ -14,10 +14,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
 using System.Web;
 using System.Web.Mvc;
-using System.Web.Mvc.Ajax;
 using WebRole;
 using System.Timers;
 using System.Text;
@@ -37,7 +38,7 @@ namespace WebRole.Controllers
         {
             while (ElmcityApp.loaded == false)
             {
-                GenUtils.LogMsg("info", "HomeController", "waiting for reload");
+                ElmcityApp.logger.LogMsg("info", "HomeController", "waiting for reload");
                 Utils.Wait(5);
             }
         }
@@ -45,7 +46,7 @@ namespace WebRole.Controllers
         [OutputCache(Duration = CalendarAggregator.Configurator.home_page_output_cache_duration, VaryByParam = "None")]
         public ActionResult index()
         {
-            HttpUtils.LogHttpRequest(this.ControllerContext);
+            ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
             ViewData["title"] = ElmcityApp.pagetitle;
             ViewData["where_summary"] = make_where_summary();
             ViewData["what_summary"] = make_what_summary();
@@ -56,16 +57,15 @@ namespace WebRole.Controllers
         [OutputCache(Duration = CalendarAggregator.Configurator.home_page_output_cache_duration, VaryByParam = "None")]
         public ActionResult hubfiles(string id)
         {
-            HttpUtils.LogHttpRequest(this.ControllerContext);
+            ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
             ViewData["title"] = ElmcityApp.pagetitle;
             ViewData["id"] = id;
             return View();
-
         }
 
         public ActionResult snapshot()
         {
-            HttpUtils.LogHttpRequest(this.ControllerContext);
+            ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
             ViewData["title"] = String.Format("{0}: diagnostic snapshot", ElmcityApp.pagetitle);
             ViewData["snapshot"] = ElmcityUtils.Counters.DisplaySnapshotAsText();
@@ -75,7 +75,7 @@ namespace WebRole.Controllers
 
         public ActionResult viewer(string url, string source)
         {
-            HttpUtils.LogHttpRequest(this.ControllerContext);
+            ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
             ViewData["title"] = String.Format("{0}: viewing {1}",
                 ElmcityApp.pagetitle, url);
             ViewData["view"] = CalendarRenderer.Viewer(url, source);
@@ -84,7 +84,7 @@ namespace WebRole.Controllers
 
         public ActionResult py(string arg1, string arg2, string arg3)
         {
-            HttpUtils.LogHttpRequest(this.ControllerContext);
+            ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
             if ( this.AuthenticateAsSelf() )
             {
             var script_url = "http://elmcity.blob.core.windows.net/admin/_generic.py";
@@ -101,7 +101,7 @@ namespace WebRole.Controllers
 
         public ActionResult reload()
         {
-            HttpUtils.LogHttpRequest(this.ControllerContext);
+            ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
             
             if (!this.AuthenticateAsSelf())
                 return new EmptyResult();
@@ -111,14 +111,20 @@ namespace WebRole.Controllers
             try
             {
                 ElmcityApp.reload(o, e);
-                GenUtils.LogMsg("info", "HomeController reload", null);
+                ElmcityApp.logger.LogMsg("info", "HomeController reload", null);
             }
             catch (Exception ex)
             {
-                GenUtils.LogMsg("exception", "HomeController reload", ex.Message + ex.StackTrace);
+                ElmcityApp.logger.LogMsg("exception", "HomeController reload", ex.Message + ex.StackTrace);
             }
             return View();
         }
+
+		public ActionResult delicious_check(string id)
+		{
+			ViewData["result"] = Delicious.DeliciousCheck(id);
+			return View();
+		}
 
         private string make_where_summary()
         {
