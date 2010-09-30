@@ -113,7 +113,7 @@ namespace CalendarAggregator
 
         public static void SearchLocation(string id, string where)
         {
-            Console.WriteLine("search_location: " + where);
+            //Console.WriteLine("search_location: " + where);
             dict = new Dictionary<string, SearchResult>();
             foreach (var qualifier in qualifiers)
             {
@@ -186,7 +186,7 @@ namespace CalendarAggregator
                 else
                     search_url = new Uri(string.Format(url_template + offset_template, query, offset));
 
-                Console.WriteLine(search_url);
+                //Console.WriteLine(search_url);
 
                 var page = HttpUtils.FetchUrl(search_url).DataAsString();
                 JObject o = (JObject)JsonConvert.DeserializeObject(page);
@@ -201,7 +201,7 @@ namespace CalendarAggregator
                           "live"
                           );
 
-                Console.WriteLine("Results: " + results.Count());
+                //Console.WriteLine("Results: " + results.Count());
 
                 Dictify(results);
 
@@ -229,7 +229,7 @@ namespace CalendarAggregator
                             "google"
                             );
 
-                Console.WriteLine("Results: " + results.Count());
+                //Console.WriteLine("Results: " + results.Count());
 
                 Dictify(results);
 
