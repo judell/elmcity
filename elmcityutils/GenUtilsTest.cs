@@ -19,158 +19,181 @@ namespace ElmcityUtils
 
     public class GenUtilsTest
     {
+		private int retries;
 
-        public GenUtilsTest()
-        {
-        }
+		private bool CompletedIfIntIsTwo(int i, object o)
+		{
+			return i == 2;
+		}
 
-        private bool CompletedIfIntIsTwo(int i, object o)
-        {
-            return i == 2;
-        }
+		private bool CompletedIfObjectIsSeven(int i, object o)
+		{
+			return (int)o == 7;
+		}
 
-        private bool CompletedIfObjectIsSeven(int i, object o)
-        {
-            return (int)o == 7;
-        }
+		private bool CompletedNever(int i, object o)
+		{
+			return false;
+		}
 
-        private bool CompletedNever(int i, object o)
-        {
-            return false;
-        }
+		private bool CompletedIfIntIsOdd(int i, object o)
+		{
+			return i % 2 != 0;
+		}
 
-        private bool CompletedIfIntIsOdd(int i, object o)
-        {
-            return i % 2 != 0;
-        }
+		private bool CompletedIfIntEndsWithZero(int i, object o)
+		{
+			retries++;
+			if (retries == 1)
+				return false;
+			String s = Convert.ToString(i);
+			return s.EndsWith("0");
+		}
 
-        private int Twice(int i)
-        {
-            return i * 2;
-        }
+		private int Twice(int i)
+		{
+			retries++;
+			return i * 2;
+		}
 
-        private int RandomEvenNumber(int i)
-        {
-            var random = new Random(DateTime.Now.Millisecond * i);
-            var j = random.Next();
-            HttpUtils.Wait(1);
-            while (j % 2 != 0)
-            {
-                HttpUtils.Wait(1);
-                j = random.Next();
-            }
-            Console.WriteLine("RandomEvenNumber: " + j);
-            return j;
-        }
+		private int RandomEvenNumber()
+		{
+			retries++;
+			var ticks_as_str = Convert.ToString(System.DateTime.Now.Ticks);
+			var seed_string = ticks_as_str.Substring(ticks_as_str.Length - 4, 4);
+			var random = new Random(Convert.ToInt32(seed_string));
+			var i = random.Next();
+			while (i % 2 != 0)
+				i = random.Next();
+			return i;
+		}
 
-        private int ExceptionIfOdd(int i)
-        {
-            if (i % 2 != 0)
-                throw new Exception("OddNumberException");
-            return i;
-        }
+		private int ExceptionIfOdd(int i)
+		{
+			if (i % 2 != 0)
+				throw new Exception("OddNumberException");
+			return i;
+		}
 
-        [Test]
-        public void RetrySucceedsOnFirstTry()
-        {
-            var completed_delegate = new GenUtils.Actions.CompletedDelegate<int, object>(CompletedIfIntIsTwo);
-            var r = GenUtils.Actions.Retry<int>(delegate() { return Twice(1); }, completed_delegate, completed_delegate_object: null, wait_secs: 0, max_tries: 1, timeout_secs: TimeSpan.FromSeconds(10000));
-            Assert.AreEqual(2, r);
-        }
+		[Test]
+		public void RetrySucceedsOnFirstTry()
+		{
+			retries = 0;
+			var completed_delegate =
+				new GenUtils.Actions.CompletedDelegate<int, object>(CompletedIfIntIsTwo);
+			var r = GenUtils.Actions.Retry<int>(
+				delegate() { return Twice(1); },
+				completed_delegate,
+				completed_delegate_object: null,
+				wait_secs: 0,
+				max_tries: 1,
+				timeout_secs: TimeSpan.FromSeconds(10000));
+			Assert.AreEqual(2, r);
+			Assert.AreEqual(1, retries);
+		}
 
-        [Test]
-        public void RetrySucceedsOnSecondTry()
-        {
-        }
+		[Test]
+		public void RetrySucceedsOnSubsequentTry()
+		{
+			retries = 0;
+			var completed_delegate =
+				new GenUtils.Actions.CompletedDelegate<int, object>(CompletedIfIntEndsWithZero);
+			var r = GenUtils.Actions.Retry<int>(
+				delegate() { return RandomEvenNumber(); },
+				completed_delegate,
+				completed_delegate_object: null,
+				wait_secs: 0,
+				max_tries: 10000,
+				timeout_secs: TimeSpan.FromSeconds(10000));
+			Assert.That(Convert.ToString(r).EndsWith("0"));
+			Assert.That(retries > 1);
+		}
 
-        [Test]
-        public void RetryFailsWhenPassedFailingObject()
-        {
-            var completed_delegate = new GenUtils.Actions.CompletedDelegate<int, object>(CompletedIfObjectIsSeven);
-            try
-            {
-                var r = GenUtils.Actions.Retry<int>(delegate() { return Twice(1); }, completed_delegate, completed_delegate_object: -7, wait_secs: 0, max_tries: 3, timeout_secs: TimeSpan.FromSeconds(10000));
-            }
-            catch (Exception e)
-            {
-                var exceeded_tries = (e == GenUtils.Actions.RetryExceededMaxTries);
-                var timed_out = (e == GenUtils.Actions.RetryTimedOut);
-                Assert.That(exceeded_tries || timed_out);
-            }
+		[Test]
+		public void RetryFailsWhenPassedFailingObject()
+		{
+			var completed_delegate =
+				new GenUtils.Actions.CompletedDelegate<int, object>(CompletedIfObjectIsSeven);
+			try
+			{
+				var r = GenUtils.Actions.Retry<int>(
+					delegate() { return Twice(1); },
+					completed_delegate,
+					completed_delegate_object: -7,
+					wait_secs: 0,
+					max_tries: 3,
+					timeout_secs: TimeSpan.FromSeconds(10000));
+			}
+			catch (Exception e)
+			{
+				var exceeded_tries = (e == GenUtils.Actions.RetryExceededMaxTries);
+				var timed_out = (e == GenUtils.Actions.RetryTimedOut);
+				Assert.That(exceeded_tries || timed_out);
+			}
 
-        }
+		}
 
-        [Test]
-        public void RetryExceedsMaxTries()
-        {
-            var completed_delegate = new GenUtils.Actions.CompletedDelegate<int, object>(CompletedNever);
-            try
-            {
-                var r = GenUtils.Actions.Retry<int>(delegate() { return Twice(1); }, completed_delegate, completed_delegate_object: null, wait_secs: 0, max_tries: 3, timeout_secs: TimeSpan.FromSeconds(10000));
-            }
-            catch (Exception e)
-            {
-                Assert.AreEqual(GenUtils.Actions.RetryExceededMaxTries, e);
-            }
-        }
+		[Test]
+		public void RetryEndsAfterTimeout()
+		{
+			var completed_delegate =
+				new GenUtils.Actions.CompletedDelegate<int, object>(CompletedNever);
+			try
+			{
+				var r = GenUtils.Actions.Retry<int>(
+					delegate() { return RandomEvenNumber(); },
+					completed_delegate,
+					completed_delegate_object: null,
+					wait_secs: 1,
+					max_tries: 100,
+					timeout_secs: TimeSpan.FromSeconds(5));
+			}
+			catch (Exception e)
+			{
+				Assert.AreEqual(GenUtils.Actions.RetryTimedOut, e);
+			}
+		}
 
-        [Test]
-        public void RetryWithLongWaitExceedsTimeout()
-        {
-            var completed_delegate = new GenUtils.Actions.CompletedDelegate<int, object>(CompletedNever);
-            try
-            {
-                var r = GenUtils.Actions.Retry<int>(delegate() { return Twice(1); }, completed_delegate, completed_delegate_object: null, wait_secs: 2, max_tries: 100, timeout_secs: TimeSpan.FromSeconds(3));
-            }
-            catch (Exception e)
-            {
-                Assert.AreEqual(GenUtils.Actions.RetryTimedOut, e);
-            }
-        }
+		[Test]
+		public void RetryEndsAfterMaxTriesExceeded()
+		{
+			var completed_delegate =
+				new GenUtils.Actions.CompletedDelegate<int, object>(CompletedNever);
+			try
+			{
+				var r = GenUtils.Actions.Retry<int>(
+					delegate() { return RandomEvenNumber(); },
+					completed_delegate,
+					completed_delegate_object: null,
+					wait_secs: 1,
+					max_tries: 5,
+					timeout_secs: TimeSpan.FromSeconds(100));
+			}
+			catch (Exception e)
+			{
+				Assert.AreEqual(GenUtils.Actions.RetryExceededMaxTries, e);
+			}
+		}
 
-        [Test]
-        public void RetryWithLongWaitExceedsMaxTries()
-        {
-            var completed_delegate = new GenUtils.Actions.CompletedDelegate<int, object>(CompletedNever);
-            try
-            {
-                var r = GenUtils.Actions.Retry<int>(delegate() { return Twice(1); }, completed_delegate, completed_delegate_object: null, wait_secs: 2, max_tries: 2, timeout_secs: TimeSpan.FromSeconds(10000));
-            }
-            catch (Exception e)
-            {
-                Assert.AreEqual(GenUtils.Actions.RetryExceededMaxTries, e);
-            }
-        }
-
-        [Test]
-        public void RetryEndsAfterTimeout()
-        {
-            var completed_delegate = new GenUtils.Actions.CompletedDelegate<int, object>(CompletedIfIntIsOdd);
-            try
-            {
-                var r = GenUtils.Actions.Retry<int>(delegate() { return RandomEvenNumber(1); }, completed_delegate, completed_delegate_object: null, wait_secs: 0, max_tries: 100, timeout_secs: TimeSpan.FromSeconds(5));
-            }
-            catch (Exception e)
-            {
-                Assert.AreEqual(GenUtils.Actions.RetryTimedOut, e);
-            }
-        }
-
-        [Test]
-        public void RetryTransmitsException()
-        {
-            var completed_delegate = new GenUtils.Actions.CompletedDelegate<int, object>(CompletedNever);
-            try
-            {
-                var r = GenUtils.Actions.Retry<int>(delegate() { return ExceptionIfOdd(1); }, completed_delegate, completed_delegate_object: null, wait_secs: 0, max_tries: 100, timeout_secs: TimeSpan.FromSeconds(5));
-            }
-            catch (Exception e)
-            {
-                Assert.AreEqual("OddNumberException", e.Message);
-            }
-
-        }
-
-    }
-
+		[Test]
+		public void RetryTransmitsException()
+		{
+			var completed_delegate =
+				new GenUtils.Actions.CompletedDelegate<int, object>(CompletedNever);
+			try
+			{
+				var r = GenUtils.Actions.Retry<int>(
+					delegate() { return ExceptionIfOdd(1); },
+					completed_delegate,
+					completed_delegate_object: null,
+					wait_secs: 0,
+					max_tries: 100,
+					timeout_secs: TimeSpan.FromSeconds(5));
+			}
+			catch (Exception e)
+			{
+				Assert.AreEqual("OddNumberException", e.Message);
+			}
+		}
+	}
 }

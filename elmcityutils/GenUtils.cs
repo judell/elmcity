@@ -24,92 +24,96 @@ using System.Text.RegularExpressions;
 
 namespace ElmcityUtils
 {
-    public class GenUtils
-    {
+	public class GenUtils
+	{
+		private static TableStorage default_ts = TableStorage.MakeDefaultTableStorage();
 
-        private static TableStorage default_ts = TableStorage.MakeDefaultTableStorage(); // for logging
-        private static string hostname = Dns.GetHostName(); // for status/error reporting
+		public static void LogMsg(string type, string title, string blurb, TableStorage ts)
+		{
+			if (ts == null) ts = default_ts;
+			title = MakeLogMsgTitle(title);
+			ts.WriteLogMessage(type, title, blurb);
+		}
 
-        public static TableStorageResponse LogMsg(string type, string title, string blurb)
-        {
-            return LogMsg(type, title, blurb, default_ts);
-        }
+		public static string MakeLogMsgTitle(string title)
+		{
+			string hostname = Dns.GetHostName(); 
+			var procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
+			title = string.Format("{0} {1} {2}", hostname, procname, title);
+			return title;
+		}
 
-        delegate TableStorageResponse LogWriterDelegate(string type, string title, string blurb);
+		public static void LogMsg(string type, string title, string blurb)
+		{
+			LogMsg(type, title, blurb, default_ts);
+		}
 
-        public static TableStorageResponse LogMsg(string type, string title, string blurb, TableStorage ts)
-        {
-            if (ts == null) ts = default_ts;
-            var logger = new LogWriterDelegate(ts.WriteLogMessage);
-            var procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
-            title = string.Format("{0} {1} {2}", hostname, procname, title);
-            var result = logger.BeginInvoke(type, title, blurb, null, null);
-            return logger.EndInvoke(result);
-        }
+		public class Actions
+		{
+			public static Exception RetryExceededMaxTries = new Exception("RetryExceededMaxTries");
+			public static Exception RetryTimedOut = new Exception("RetryTimedOut");
 
-        public class Actions
-        {
-            public static Exception RetryExceededMaxTries = new Exception("RetryExceededMaxTries");
-            public static Exception RetryTimedOut = new Exception("RetryTimedOut");
+			public delegate T RetryDelegate<T>();
 
-            public delegate T RetryDelegate<T>();
+			public delegate bool CompletedDelegate<T, Object>(T result, Object o);
 
-            public delegate bool CompletedDelegate<T, Object>(T result, Object o);
+			public static T Retry<T>(RetryDelegate<T> Action, CompletedDelegate<T, Object> Completed, 
+				Object completed_delegate_object, int wait_secs, int max_tries, TimeSpan timeout_secs)
+			{
+				T result = default(T);
+				DateTime start = DateTime.UtcNow;
+				int tries = 0;
+				var method_name = Action.Method.Name;
+				while (TimeToGiveUp(start, timeout_secs, tries, max_tries) == false)
+				{
+					try
+					{
+						tries++;
+						result = Action.Invoke();
+						if (Completed(result, completed_delegate_object) == true)
+							return result;
+					}
+					catch (Exception e)
+					{
+						LogMsg("exception", "RetryDelegate: " + method_name, 
+							e.Message + e.StackTrace);
+						throw e;
+					}
+					HttpUtils.Wait(wait_secs);
+				}
 
-            public static T Retry<T>(RetryDelegate<T> Action, CompletedDelegate<T, Object> Completed, Object completed_delegate_object, int wait_secs, int max_tries, TimeSpan timeout_secs)
-            {
-                T result = default(T);
-                DateTime start = DateTime.UtcNow;
-                int tries = 0;
-                var method_name = Action.Method.Name;
-                while (TimeToGiveUp(start, timeout_secs, tries, max_tries) == false)
-                {
-                    try
-                    {
-                        tries++;
-                        result = Action.Invoke();
-                        if (Completed(result, completed_delegate_object) == true)
-                            return result;
-                    }
-                    catch (Exception e)
-                    {
-                        GenUtils.LogMsg("exception", "RetryDelegate: " + method_name, e.Message + e.StackTrace);
-                        throw e;
-                    }
-                    HttpUtils.Wait(wait_secs);
-                }
+				if (TimedOut(start, timeout_secs))
+					throw RetryTimedOut;
 
-                if (TimedOut(start, timeout_secs))
-                    throw RetryTimedOut;
+				if (ExceededTries(tries, max_tries))
+					throw RetryExceededMaxTries;
 
-                if (ExceededTries(tries, max_tries))
-                    throw RetryExceededMaxTries;
+				return result;  // default(T)
+			}
 
-                return result;  // default(T)
-            }
+			private static bool TimeToGiveUp(DateTime start, TimeSpan timeout_secs, 
+				int tries, int max_tries)
+			{
+				var timed_out = TimedOut(start, timeout_secs);
+				var exceeded_tries = ExceededTries(tries, max_tries);
+				bool result = (timed_out || exceeded_tries);
+				return result;
+			}
 
-            private static bool TimeToGiveUp(DateTime start, TimeSpan timeout_secs, int tries, int max_tries)
-            {
-                var timed_out = TimedOut(start, timeout_secs);
-                var exceeded_tries = ExceededTries(tries, max_tries);
-                bool result = (timed_out || exceeded_tries);
-                return result;
-            }
+			private static bool ExceededTries(int tries, int max_tries)
+			{
+				var exceeded_tries = tries > max_tries;
+				return exceeded_tries;
+			}
 
-            private static bool ExceededTries(int tries, int max_tries)
-            {
-                var exceeded_tries = tries > max_tries;
-                return exceeded_tries;
-            }
+			private static bool TimedOut(DateTime start, TimeSpan timeout_seconds)
+			{
+				var timed_out = DateTime.UtcNow > start + timeout_seconds;
+				return timed_out;
+			}
+		}
 
-            private static bool TimedOut(DateTime start, TimeSpan timeout_seconds)
-            {
-                var timed_out = DateTime.UtcNow > start + timeout_seconds;
-                return timed_out;
-            }
-        }
-
-		public static string  MakeEntityConnectionString(string model_name)
+		public static string MakeEntityConnectionString(string model_name)
 		{
 			var sql_builder = new SqlConnectionStringBuilder();
 
@@ -130,7 +134,7 @@ namespace ElmcityUtils
 
 		static public void RunTests(string dll_name)
 		{
-			GenUtils.LogMsg("info", "GenUtils.RunTests", "starting");
+			LogMsg("info", "GenUtils.RunTests", "starting");
 			var ts = TableStorage.MakeDefaultTableStorage();
 			var a = System.Reflection.Assembly.Load(dll_name);
 			var types = a.GetExportedTypes().ToList();
@@ -176,8 +180,52 @@ namespace ElmcityUtils
 						ts.InsertEntity(tablename, entity);
 				}
 			}
-			GenUtils.LogMsg("info", "GenUtils.RunTests", "done");
+			LogMsg("info", "GenUtils.RunTests", "done");
 		}
+
+		#region datetime
+
+		static public string DateTimeForAzureTableQuery(DateTime dt)
+		{
+			return dt.ToString("yyyy-mm-ddThh:mm:ss");
+		}
+
+		#endregion
+
+		#region config
+
+		// try getting value from source-of-truth azure table, else non-defaults if overridden in azure config.
+		// why? 
+		// 1. dry (don't repeat yourself, in this case by not writing down settings twice, for worker and web role
+		// 2. testing: tests run outside azure environment can use same defaults as used within
+
+		// the source of truth for settings is in an azure table called settings
+		public static Dictionary<string, string> GetSettingsFromAzureTable()
+		{
+			var settings = new Dictionary<string, string>();
+			var query = "$filter=PartitionKey eq 'settings'";
+			var ts = TableStorage.MakeSecureTableStorage();
+			var ts_response = ts.QueryEntities("settings", query).response;
+			var dicts = (List<Dictionary<string, object>>)ts_response;
+			foreach (var dict in dicts)
+			{
+				var dict_of_str = ObjectUtils.DictObjToDictStr(dict);
+				var name = "";
+				try
+				{
+					name = dict_of_str["RowKey"];
+					var value = dict_of_str["value"];
+					settings[name] = value;
+				}
+				catch (Exception e)
+				{
+					LogMsg("exception", "Configurator.GetSettings: " + name, e.Message + e.StackTrace);
+				}
+			}
+			return settings;
+		}
+
+		#endregion
 
 		#region regex
 
@@ -234,5 +282,5 @@ namespace ElmcityUtils
 		}
 
 		#endregion regex
-    }
+	}
 }
