@@ -16,9 +16,18 @@ using System;
 using System.Collections.Generic;
 using IronPython.Hosting;
 using Microsoft.Scripting;
+using System.Security;
+using System.Security.Policy;
 
 namespace ElmcityUtils
 {
+
+	[Serializable]
+	public class PythonArgs : MarshalByRefObject
+	{
+		public IronPython.Runtime.List args;
+	}
+
     public static class PythonUtils
     {
 
@@ -64,10 +73,20 @@ namespace ElmcityUtils
         public static string RunIronPython(string str_script_url, List<string> args)
         {
             GenUtils.LogMsg("info", "Utils.run_ironpython: " + str_script_url, args[0] + "," + args[1] + "," + args[2]);
+			//var app_domain_name = "ironpython";
             var result = "";
             try
             {
-                var python = Python.CreateEngine();
+				/*
+				string domain_id = app_domain_name;
+				var setup = new AppDomainSetup();
+				setup.ApplicationName = app_domain_name;
+				setup.ApplicationBase = AppDomain.CurrentDomain.BaseDirectory;
+				var python_domain = AppDomain.CreateDomain(domain_id, securityInfo: null, info: setup);
+				 */
+				var options = new Dictionary<string, object>();
+				options["LightweightScopes"] = true;
+				var python = Python.CreateEngine(options);
                 var paths = new List<string>();
                 paths.Add("./Lib");        // standard python lib
                 paths.Add("./Lib/site-packages");
@@ -80,10 +99,12 @@ namespace ElmcityUtils
                 var source = python.CreateScriptSourceFromString(s, SourceCodeKind.Statements);
                 var scope = python.CreateScope();
                 var sys = python.GetSysModule();
-                sys.SetVariable("argv", ipy_args);
+				//sys.SetVariable("argv", new PythonArgs() { args = ipy_args } );
+				sys.SetVariable("argv", args);
                 source.Execute(scope);
                 result = scope.GetVariable("result").ToString();
                 python.Runtime.Shutdown();
+				//AppDomain.Unload(python_domain);
             }
             catch (Exception e)
             {
