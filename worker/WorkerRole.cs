@@ -24,10 +24,6 @@ using CalendarAggregator;
 using DDay.iCal;
 using DDay.iCal.Serialization;
 using ElmcityUtils;
-using IronPython.Hosting;
-using IronPython.Runtime;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
 using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
 
@@ -36,7 +32,7 @@ namespace WorkerRole
     public class WorkerRole : RoleEntryPoint
     {
 #if false // true if testing, false if not testing
-        private static int startup_delay = 300; // add delay if want to focus on webrole
+        private static int startup_delay = 100000000; // add delay if want to focus on webrole
         private static List<string> testids = new List<string>() { "elmcity" };
         private static List<string> testfeeds = new List<string>();
         private static bool testing = true;
@@ -50,14 +46,13 @@ namespace WorkerRole
         private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
         private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
         private static Delicious delicious = Delicious.MakeDefaultDelicious();
+		private static Logger logger = new Logger();
 
         private static string blobhost = ElmcityUtils.Configurator.azure_blobhost;
         private static List<string> ids;
         private static Dictionary<string, int> feedcounts = new Dictionary<string, int>();
 
         private static List<TwitterDirectMessage> twitter_direct_messages;
-
-        public static ScriptEngine python = Python.CreateEngine();
 
         private static ElmcityUtils.Monitor monitor;
 
@@ -69,7 +64,7 @@ namespace WorkerRole
 
                 var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
                 
-                 config.Logs.ScheduledTransferLogLevelFilter = LogLevel.Verbose;
+                config.Logs.ScheduledTransferLogLevelFilter = LogLevel.Verbose;
                 config.Logs.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_log_transfer_minutes);
 
                 config.WindowsEventLog.DataSources.Add("System!*");
@@ -81,7 +76,7 @@ namespace WorkerRole
 
                 RoleEnvironment.Changing += RoleEnvironmentChanging;
 
-                GenUtils.LogMsg("info", "worker: OnStart", null);
+                logger.LogMsg("info", "worker: OnStart", null);
 
                 PythonUtils.InstallPythonStandardLibrary(ts);
 
@@ -99,7 +94,7 @@ namespace WorkerRole
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "Worker.OnStart", e.Message + e.StackTrace);
+                logger.LogMsg("exception", "Worker.OnStart", e.Message + e.StackTrace);
             }
             return base.OnStart();
         }
@@ -121,13 +116,15 @@ namespace WorkerRole
             {
                 while (true)
                 {
-                    GenUtils.LogMsg("info", "waking", null);
+                    logger.LogMsg("info", "waking", null);
+
+					PythonUtils.RunIronPython(CalendarAggregator.Configurator.iron_python_run_script_url, new List<string>() { "", "", "" });
 
                     ids = delicious.LoadHubIdsFromAzureTable();
 
                     twitter_direct_messages = TwitterApi.GetNewTwitterDirectMessages(); // get new control messages
 
-                    MaybeAdjustIdsForTesting();
+					ids = MaybeAdjustIdsForTesting(ids);
 
                     foreach (var id in ids)
                     {
@@ -144,19 +141,19 @@ namespace WorkerRole
                         StopTask(id);
                     }
 
-                    GenUtils.LogMsg("info", "sleeping", null);
+                    logger.LogMsg("info", "sleeping", null);
                     Utils.Wait(CalendarAggregator.Configurator.scheduler_check_interval_minutes * 60);
                 }
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "Worker.Run", e.Message + e.StackTrace);
+                logger.LogMsg("exception", "Worker.Run", e.Message + e.StackTrace);
             }
         }
 
         public void ProcessHub(string id, Calinfo calinfo)
         {
-            GenUtils.LogMsg("info", "processing hub: " + id, null);
+            logger.LogMsg("info", "processing hub: " + id, null);
 
             var fr = new FeedRegistry(id);
 
@@ -188,23 +185,23 @@ namespace WorkerRole
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "main loop: " + id, e.Message + e.StackTrace);
+                logger.LogMsg("exception", "main loop: " + id, e.Message + e.StackTrace);
             }
 
-            GenUtils.LogMsg("info", "done processing: " + id, null);
+            logger.LogMsg("info", "done processing: " + id, null);
 
         }
 
         private static void UpdateMetadataToAzure(string id)
         {
-            GenUtils.LogMsg("info", "UpdateMetadataToAzure", null);
+            logger.LogMsg("info", "UpdateMetadataToAzure", null);
             try
             {
                 delicious.StoreMetadataForIdToAzure(id, true, new Dictionary<string, string>());
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "StoreMetadataForIdToAzure", e.Message + e.StackTrace);
+                logger.LogMsg("exception", "StoreMetadataForIdToAzure", e.Message + e.StackTrace);
             }
         }
 
@@ -216,7 +213,7 @@ namespace WorkerRole
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "RecacheHubIdsToAzure", e.Message + e.StackTrace);
+                logger.LogMsg("exception", "RecacheHubIdsToAzure", e.Message + e.StackTrace);
             }
         }
 
@@ -247,7 +244,7 @@ namespace WorkerRole
 
             if (start_requests.Count > 0)
             {
-                GenUtils.LogMsg("info", "Received start message from " + id, null);
+                logger.LogMsg("info", "Received start message from " + id, null);
                 started = true;
             }
             else
@@ -265,7 +262,7 @@ namespace WorkerRole
 
             if (lock_response.http_response.status != HttpStatusCode.Created)
             {
-                GenUtils.LogMsg("warning", "LockId", "expected to create lock but could not");
+                logger.LogMsg("warning", "LockId", "expected to create lock but could not");
                 return false;
             }
             else
@@ -274,14 +271,14 @@ namespace WorkerRole
 
         private static void UpdateFeedCountToAzure(string id)
         {
-            GenUtils.LogMsg("info", "UpdateFeedCountToAzure", null);
+            logger.LogMsg("info", "UpdateFeedCountToAzure", null);
             try
             {
                 var response = Delicious.FetchFeedCountForIdWithTags(id, CalendarAggregator.Configurator.delicious_trusted_ics_feed);
 
-                if (response.success == false)
+                if (response.outcome != Delicious.MetadataQueryOutcome.Success)
                 {
-                    GenUtils.LogMsg("warning", "FetchFeedCountForIdWithTags: " + id, "no response");
+                    logger.LogMsg("warning", "FetchFeedCountForIdWithTags: " + id, response.outcome.ToString());
                     return;
                 }
 
@@ -289,7 +286,7 @@ namespace WorkerRole
 
                 if (feedcounts.ContainsKey(id) && feedcounts[id] != count)
                 {
-                    GenUtils.LogMsg("info", "feedcount changed for " + id, null);
+                    logger.LogMsg("info", "feedcount changed for " + id, null);
                     Scheduler.InitTaskForId(id);
                 }
 
@@ -303,31 +300,31 @@ namespace WorkerRole
 
         private static void PurgeDeletedFeeds(FeedRegistry fr_delicious, string id)
         {
-            GenUtils.LogMsg("info", "PurgeDeletedFeeds", null);
+            logger.LogMsg("info", "PurgeDeletedFeeds", null);
             try
             {
                 delicious.PurgeDeletedFeedFromAzure(fr_delicious, id);
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "PurgeDeletedFeed", e.Message + e.StackTrace);
+                logger.LogMsg("exception", "PurgeDeletedFeed", e.Message + e.StackTrace);
             }
         }
 
         private static void UpdateFeedsToAzure(FeedRegistry fr_delicious, string id)
         {
-            GenUtils.LogMsg("info", "UpdateFeedsToAzure", null);
+            logger.LogMsg("info", "UpdateFeedsToAzure", null);
             try
             {
                 delicious.StoreFeedsAndMaybeMetadataToAzure(fr_delicious, id);
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "UpdateFeedsToAzure", e.Message + e.StackTrace);
+                logger.LogMsg("exception", "UpdateFeedsToAzure", e.Message + e.StackTrace);
             }
         }
 
-        private static void MaybeAdjustIdsForTesting()
+        private static List<string> MaybeAdjustIdsForTesting(List<string> ids)
         {
             if (testids.Count > 0)
             {
@@ -339,6 +336,8 @@ namespace WorkerRole
 
             if (ids.Count == 1 && ids[0] == "")  // bench the worker
                 ids = new List<string>();
+
+			return ids;
         }
 
         public static void RenderHtmlXmlJson(string id, Calinfo calinfo)
@@ -351,7 +350,7 @@ namespace WorkerRole
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "SaveAsXml: " + id, e.Message + e.StackTrace);
+                logger.LogMsg("exception", "SaveAsXml: " + id, e.Message + e.StackTrace);
             }
 
             try
@@ -360,7 +359,7 @@ namespace WorkerRole
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "SaveAsJson: " + id, e.Message + e.StackTrace);
+                logger.LogMsg("exception", "SaveAsJson: " + id, e.Message + e.StackTrace);
             }
 
             try
@@ -369,7 +368,7 @@ namespace WorkerRole
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "SaveAsHtml: " + id, e.Message + e.StackTrace);
+                logger.LogMsg("exception", "SaveAsHtml: " + id, e.Message + e.StackTrace);
             }
 
         }
@@ -387,13 +386,13 @@ namespace WorkerRole
             try
             {
 
-                GenUtils.LogMsg("info", "DoIcal: " + id, null);
+                logger.LogMsg("info", "DoIcal: " + id, null);
                 Collector coll = new Collector(calinfo);
                 coll.CollectIcal(fr, ical, test:testing, nosave:false);
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "DoIcal: " + id, e.Message + e.StackTrace);
+                logger.LogMsg("exception", "DoIcal: " + id, e.Message + e.StackTrace);
             }
         }
 
@@ -440,7 +439,7 @@ namespace WorkerRole
         private static void SaveWhereStats(FeedRegistry fr, Calinfo calinfo)
         {
             var id = calinfo.delicious_account;
-            GenUtils.LogMsg("info", "SaveWhereStats: " + id, null);
+            logger.LogMsg("info", "SaveWhereStats: " + id, null);
             NonIcalStats estats = GetNonIcalStats(id, "eventful_stats.json");
             NonIcalStats ustats = GetNonIcalStats(id, "upcoming_stats.json");
             NonIcalStats ebstats = GetNonIcalStats(id, "eventbrite_stats.json");
@@ -485,7 +484,7 @@ namespace WorkerRole
         private static void SaveWhatStats(FeedRegistry fr, Calinfo calinfo)
         {
             var id = calinfo.delicious_account;
-            GenUtils.LogMsg("info", "SaveWhatStats: " + id, null);
+            logger.LogMsg("info", "SaveWhatStats: " + id, null);
             Dictionary<string, IcalStats> istats = GetIcalStats(id);
             string report = "";
             report = MakeTableHeader(report);
@@ -608,14 +607,14 @@ All events {8}, population {9}, events/person {10:f}
             }
             catch (Exception ex)
             {
-                GenUtils.LogMsg("exception", feedurl + "," + istats[feedurl].source + " :  stats not ready", ex.Message);
+                logger.LogMsg("exception", feedurl + "," + istats[feedurl].source + " :  stats not ready", ex.Message);
             }
         }
 
         public static void MergeIcs(Calinfo calinfo)
         {
             var id = calinfo.delicious_account;
-            GenUtils.LogMsg("info", "MergeIcs: " + id, null);
+            logger.LogMsg("info", "MergeIcs: " + id, null);
             var suffixes = calinfo.hub_type == "where" ? new List<string>() { "ical", "eventful", "upcoming" } : new List<string>() { "ical" };
             try
             {
@@ -641,7 +640,7 @@ All events {8}, population {9}, events/person {10:f}
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "MergeIcs: " + id, e.Message + e.StackTrace);
+                logger.LogMsg("exception", "MergeIcs: " + id, e.Message + e.StackTrace);
             }
         }
 
@@ -670,7 +669,7 @@ All events {8}, population {9}, events/person {10:f}
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "GetEventAndVenueStats: " + container + " " + name, e.Message + e.StackTrace);
+                logger.LogMsg("exception", "GetEventAndVenueStats: " + container + " " + name, e.Message + e.StackTrace);
             }
             return stats;
         }
@@ -697,12 +696,13 @@ All events {8}, population {9}, events/person {10:f}
 
         public static void DeliciousAdmin(object o, ElapsedEventArgs args)
         {
-            GenUtils.LogMsg("info", "DeliciousAdmin", null);
+            logger.LogMsg("info", "DeliciousAdmin", null);
             try
             {
                 RecacheHubIdsToAzure();  // acquire new hubs added since last cycle
 
-                var ids = delicious.LoadHubIdsFromAzureTable();
+				var ids = delicious.LoadHubIdsFromAzureTable();
+				ids = MaybeAdjustIdsForTesting(ids);
 
 				foreach (var id in ids)
 				{
@@ -710,7 +710,7 @@ All events {8}, population {9}, events/person {10:f}
 
 					fr_delicious.LoadFeedsFromDelicious();
 
-					PurgeDeletedFeeds(fr_delicious, id);
+					//PurgeDeletedFeeds(fr_delicious, id);
 
 					UpdateFeedsToAzure(fr_delicious, id);
 
@@ -721,13 +721,13 @@ All events {8}, population {9}, events/person {10:f}
             }
             catch ( Exception e )
             {
-                GenUtils.LogMsg("exception", "DeliciousAdmin", e.Message + e.StackTrace);
+                logger.LogMsg("exception", "DeliciousAdmin", e.Message + e.StackTrace);
             }
         }
 
 		public static void TestRunnerAdmin(object o, ElapsedEventArgs args)
 		{
-			GenUtils.LogMsg("info", "TestRunnerAdmin", null);
+			logger.LogMsg("info", "TestRunnerAdmin", null);
 			try
 			{
 				GenUtils.RunTests("CalendarAggregator");
@@ -735,7 +735,7 @@ All events {8}, population {9}, events/person {10:f}
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
+				logger.LogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
 			}
 		}
 
@@ -744,16 +744,13 @@ All events {8}, population {9}, events/person {10:f}
             try
             {
                 // PythonUtils.InstallPythonElmcityLibrary(ts); // won't work because ipy holds references to imports
-                var url = CalendarAggregator.Configurator.iron_python_admin_script_url;
-                var s = HttpUtils.FetchUrl(url).DataAsString();
-                var source = python.CreateScriptSourceFromString(s, SourceCodeKind.Statements);
-                var scope = python.CreateScope();
-                source.Execute(scope);
-                GenUtils.LogMsg("info", "IronPythonAdmin", null);
+				logger.LogMsg("info", "IronPythonAdmin", null);
+				PythonUtils.RunIronPython(CalendarAggregator.Configurator.iron_python_admin_script_url, new List<string>() { "", "", "" });
+
             }
             catch (Exception ex)
             {
-                GenUtils.LogMsg("exception", "IronPythonAdmin", ex.Message + ex.StackTrace);
+                logger.LogMsg("exception", "IronPythonAdmin", ex.Message + ex.StackTrace);
             }
         }
 
