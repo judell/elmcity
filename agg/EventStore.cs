@@ -120,6 +120,7 @@ namespace CalendarAggregator
     [Serializable]
     public class EventStore
     {
+
         public string id { get; set; }
 
         public Calinfo calinfo { get; set; }
