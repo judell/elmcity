@@ -130,7 +130,7 @@ namespace CalendarAggregator
         {
             //var dict = Delicious.FetchFeedsForIdWithTagsFromDelicious(delicious_account, test_tag);
             var response = Delicious.FetchFeedMetadataFromDeliciousForFeedurlAndId(test_feedurl, delicious_account);
-            Assert.IsTrue(response.success);
+			Assert.AreEqual(Delicious.MetadataQueryOutcome.Success, response.outcome);
             var dict = response.dict_response;
             AssertMetadata(dict, "url", test_feed_linkback);
         }
@@ -139,7 +139,7 @@ namespace CalendarAggregator
         public void CountFeedsReturnsNonZero()
         {
             var response = Delicious.FetchFeedCountForIdWithTags(test_account_name, Configurator.delicious_trusted_ics_feed);
-            Assert.IsTrue(response.success);
+			Assert.AreEqual(Delicious.MetadataQueryOutcome.Success, response.outcome);
             var count = response.int_response;
             Assert.Greater(count, 0);
         }
@@ -159,7 +159,7 @@ namespace CalendarAggregator
         public void FetchFeedMetadataIsSuccessful()
         {
             var response = Delicious.FetchFeedMetadataFromDeliciousForFeedurlAndId(test_feedurl, delicious_account);
-            Assert.IsTrue(response.success);
+			Assert.AreEqual(Delicious.MetadataQueryOutcome.Success, response.outcome);
             var dict = response.dict_response;
             AssertMetadata(dict, test_feed_key, test_feed_value);
         }
@@ -225,7 +225,7 @@ namespace CalendarAggregator
         public void FetchHubMetadataIsSuccessful()
         {
             var response = Delicious.FetchMetadataForIdFromDelicious(delicious_account);
-            Assert.IsTrue(response.success);
+			Assert.AreEqual(Delicious.MetadataQueryOutcome.Success, response.outcome);
             var dict = response.dict_response;
             AssertMetadata(dict, test_hub_key, test_hub_value);
         }
@@ -257,7 +257,7 @@ namespace CalendarAggregator
         public void LoadVenueMetaDataSuccessful()
         {
             var response = Delicious.FetchVenueMetadataFromDeliciousForVenueUrlAndId(test_venue_url, test_account_name);
-            Assert.IsTrue(response.success);
+			Assert.AreEqual(Delicious.MetadataQueryOutcome.Success, response.outcome);
             var metadict = response.dict_response;
             delicious.StoreVenueMetadataToAzureTableForIdAndVenueUrl(test_account_name, metadict, test_venue_url);
             var dict = delicious.LoadVenueMetadataFromAzureTableForIdAndVenueUrl(test_account_name, test_venue_url);
