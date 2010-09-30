@@ -28,6 +28,7 @@ namespace CalendarAggregator
 
     public class CalendarRenderer
     {
+
         private string id;
         private Calinfo calinfo;
         private BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
