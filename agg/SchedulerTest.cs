@@ -99,8 +99,8 @@ namespace CalendarAggregator
         [Test]
         public void LockIdSucceedsWhenLockRecordDoesNotExist()
         {
-            Scheduler.UnlockId(testid);
-            var ts_response = Scheduler.LockId(testid);
+            var ts_response = Scheduler.UnlockId(testid);
+            ts_response = Scheduler.LockId(testid);
             Assert.AreEqual(HttpStatusCode.Created, ts_response.http_response.status);
             Assert.AreEqual(true, Scheduler.IsLockedId(testid));
         }
@@ -108,8 +108,8 @@ namespace CalendarAggregator
         [Test]
         public void LockIdFailsWhenLockRecordExists()
         {
-            Scheduler.UnlockId(testid);
-            var ts_response = Scheduler.LockId(testid);
+            var ts_response = Scheduler.UnlockId(testid);
+            ts_response = Scheduler.LockId(testid);
             ts_response = Scheduler.LockId(testid);
             Assert.AreEqual(HttpStatusCode.Conflict, ts_response.http_response.status);
         }
@@ -118,23 +118,24 @@ namespace CalendarAggregator
         [Test]
         public void IsAbandonedIfLockedAndNotRunning()
         {
-            Scheduler.InitTaskForId(testid);
-            var task = Scheduler.FetchTaskForId(testid);
-            task.running = false;
-            Scheduler.StoreTaskForId(task, testid);
-            Scheduler.LockId(testid);
-            Assert.AreEqual(true, Scheduler.IsAbandoned(testid, interval));
+				Scheduler.InitTaskForId(testid);
+				var task = Scheduler.FetchTaskForId(testid);
+				task.running = false;
+				Scheduler.StoreTaskForId(task, testid);
+				Scheduler.LockId(testid);
+				Assert.AreEqual(true, Scheduler.IsAbandoned(testid, interval));
         }
 
         [Test]
         public void IsAbandonedIfBeyondInterval()
         {
-            Scheduler.InitTaskForId(testid);
-            var task = Scheduler.FetchTaskForId(testid);
-            var more_than_interval = new System.TimeSpan(0, (Configurator.where_aggregate_interval_hours * 60) + 60, 0);
-            task.start = DateTime.Now.ToUniversalTime() - more_than_interval;  // started more than 8hrs ago
-            Scheduler.StoreTaskForId(task, testid);
-            Assert.AreEqual(true, Scheduler.IsAbandoned(testid, interval));
+
+				Scheduler.InitTaskForId(testid);
+				var task = Scheduler.FetchTaskForId(testid);
+				var more_than_interval = new System.TimeSpan(0, (Configurator.where_aggregate_interval_hours * 60) + 60, 0);
+				task.start = DateTime.Now.ToUniversalTime() - more_than_interval;  // started more than 8hrs ago
+				Scheduler.StoreTaskForId(task, testid);
+				Assert.AreEqual(true, Scheduler.IsAbandoned(testid, interval));
         }
 
         [Test]
