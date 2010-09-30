@@ -30,20 +30,20 @@ namespace CalendarAggregator
         public HttpResponse http_response { get; set; }
         public Dictionary<string, string> dict_response { get; set; }
         public int int_response { get; set; }
-        public bool success { get; set; }
+        public Delicious.MetadataQueryOutcome outcome { get; set; }
 
-        public DeliciousResponse(HttpResponse http_response, Dictionary<string, string> dict_response, bool success)
+        public DeliciousResponse(HttpResponse http_response, Dictionary<string, string> dict_response, Delicious.MetadataQueryOutcome outcome)
         {
             this.http_response = http_response;
             this.dict_response = dict_response;
-            this.success = success;
+			this.outcome = outcome;
         }
 
-        public DeliciousResponse(HttpResponse http_response, int int_response, bool success)
+        public DeliciousResponse(HttpResponse http_response, int int_response, Delicious.MetadataQueryOutcome outcome)
         {
             this.http_response = http_response;
             this.int_response = int_response;
-            this.success = success;
+			this.outcome = outcome;
         }
 
     }
@@ -52,9 +52,10 @@ namespace CalendarAggregator
     // caching the results to azure, and retrieving results from the azure cache
     public class Delicious
     {
+
         public const string eventful_url_template = "http://eventful.com/users/USERNAME/created/events";
         public const string apibase = "https://api.del.icio.us/v1";
-        public const string deliciousbase = "http://delicious.com/";
+        //public const string deliciousbase = "http://www.delicious.com/";
         private string username;
         private string password;
         private TableStorage ts;
@@ -122,7 +123,7 @@ namespace CalendarAggregator
             // this response should at least include url=http://... so all events in the feed have
             // a default link
             var response = FetchFeedMetadataFromDeliciousForFeedurlAndId(feedurl, id);
-            if (response.success == false) // delicious failed, don't overwrite cached info in azure table
+            if (response.outcome != MetadataQueryOutcome.Success) // delicious failed, don't overwrite cached info in azure table
                 return;
             var dict = response.dict_response;
             dict = Utils.DictTryAddValue(dict, "feedurl", feedurl);
@@ -223,8 +224,12 @@ namespace CalendarAggregator
             var hrefs = from e in xdoc.Descendants("post")
                         select e.Attribute("href");
 
-            foreach (string href in hrefs)
-                ids.Add(href.Replace(deliciousbase, ""));
+			foreach (string href in hrefs)
+			{
+				var re = new Regex("/([^/]+)/*$");
+				var id = re.Match(href).Groups[1].ToString();
+				ids.Add(id);
+			}
 
             return ids;
 
@@ -266,17 +271,19 @@ namespace CalendarAggregator
         {
             var metadata_url = string.Format("http://delicious.com/{0}/metadata", id);
             var response = FetchMetadataFromDeliciousForUrlAndId(metadata_url, id);
-            if (response.success == false)
+            if (response.outcome != MetadataQueryOutcome.Success )
                 return response;
             var dict = response.dict_response;
             var response2 = FetchFeedCountForIdWithTags(id, Configurator.delicious_trusted_ics_feed);
-            if (response2.success == false)
+			if (response2.outcome != MetadataQueryOutcome.Success) 
                 return response2;
             var count = response2.int_response;
             // expand the delicious metadata with this computed value for the hub's count of feeds
             dict["feed_count"] = count.ToString();
-            return new DeliciousResponse(response2.http_response, dict_response: dict, success: response2.success);
+            return new DeliciousResponse(response2.http_response, dict_response: dict, outcome: response2.outcome);
         }
+
+		public enum MetadataQueryOutcome { Success, Error, NoRedirect, HttpRequestFailed, NotBookmarkedOrTagged, Blocked }
 
         // this implements the delicious "Look up an URL" feature, which interactively looks like
         // a 1-step process but behind the scenes involves redirection.
@@ -304,7 +311,9 @@ namespace CalendarAggregator
             // bail if not found
 
             if (http_response.headers.ContainsKey("Location") == false)
-                return new DeliciousResponse(http_response, dict, success: false);
+                return new DeliciousResponse(http_response, dict, outcome: MetadataQueryOutcome.NoRedirect);
+
+			MetadataQueryOutcome outcome = MetadataQueryOutcome.Success;
 
             // now follow location header to internal url
 
@@ -321,7 +330,7 @@ namespace CalendarAggregator
                 http_response = HttpUtils.FetchUrl(url);
 
                 if (http_response.status != HttpStatusCode.OK) // bail if delicious failed
-                    return new DeliciousResponse(http_response, dict, success: false);
+                    return new DeliciousResponse(http_response, dict, outcome: MetadataQueryOutcome.HttpRequestFailed);
 
                 // read metadata (if any)
 
@@ -339,17 +348,26 @@ namespace CalendarAggregator
                         dict[key_value[0]] = key_value[1].Replace('+', ' ');
                 }
 
-                if (dict.Keys.Count == 0 && metadata_url.EndsWith("metadata"))
-                    GenUtils.LogMsg("error", "FetchMetadataFromDeliciousForUrlAndId: " + id, "metadata url not yet indexed by delicious?");
+				if (dict.Keys.Count == 0 && metadata_url.EndsWith("metadata"))
+				{
+					outcome = MetadataQueryOutcome.NotBookmarkedOrTagged;
+					GenUtils.LogMsg("info", "FetchMetadataFromDeliciousForUrlAndId: " + id, "metadata url not found or has no tags");
+				}
             }
             catch (Exception e)
             {
+				outcome = MetadataQueryOutcome.Error;
                 GenUtils.LogMsg("exception", "FetchMetadataFromDeliciousForUrlAndId: " + metadata_url, e.Message + e.StackTrace);
             }
 
-            var success = (http_response.DataAsString().Contains(Configurator.delicious_blocked_message) ? false : true);
+            var blocked = (http_response.DataAsString().Contains(Configurator.delicious_blocked_message) ? true : false );
+			if (blocked)
+			{
+				outcome = MetadataQueryOutcome.Blocked;
+				GenUtils.LogMsg("warning", Configurator.delicious_blocked_message, null);
+			}
 
-            return new DeliciousResponse(http_response, dict, success: success);
+            return new DeliciousResponse(http_response, dict, outcome: outcome);
 
             /* e.g.:
             <item>
@@ -370,10 +388,22 @@ namespace CalendarAggregator
              */
         }
 
+		/*
+		public static DeliciousResponse FetchMetadataFromDeliciousForUrlAndId(string metadata_url, string id)
+		{
+			var completed_delegate = new GenUtils.Actions.CompletedDelegate<DeliciousResponse, Object>(CompletedIfOutcomeIsSuccess);
+			return GenUtils.Actions.Retry<DeliciousResponse>(delegate() { return _FetchMetadataFromDeliciousForUrlAndId(metadata_url, id); }, completed_delegate, completed_delegate_object: null, wait_secs: 5, max_tries: 10, timeout_secs: TimeSpan.FromSeconds(100));
+		}*/
+
+		public static bool CompletedIfOutcomeIsSuccess(DeliciousResponse r, Object o)
+		{
+			return (r.outcome == MetadataQueryOutcome.Success);
+		}
+
         public void StoreMetadataForIdToAzure(string id, bool merge, Dictionary<string, string> extra)
         {
             var response = FetchMetadataForIdFromDelicious(id);
-            if (response.success == false)
+            if (response.outcome != MetadataQueryOutcome.Success)
             {
                 GenUtils.LogMsg("warning", "StoreMetadataForIdToAzure: " + id, "could not fetch");
                 return;
@@ -393,28 +423,30 @@ namespace CalendarAggregator
              *       method's 100-item limit.
              */
             int count = 0;
-            bool success = true;
+			var outcome = Delicious.MetadataQueryOutcome.Success;
             HttpResponse http_response = new HttpResponse(HttpStatusCode.Unused, message: "FetchFeedCountForIdWithTags", bytes: new byte[0], headers: new Dictionary<string, string>());
             try
             {
                 var url = new Uri(string.Format("{0}/{1}/{2}", Configurator.delicious_base, id, tags));
                 Utils.Wait(Configurator.delicious_delay_seconds);
                 http_response = HttpUtils.FetchUrl(url);
-                if (http_response.status != HttpStatusCode.OK || http_response.DataAsString().Contains(Configurator.delicious_blocked_message))
-                    success = false;
-                else
-                {
-                    var page = http_response.DataAsString();
-                    // looking for, e.g.: <span id="tagScopeCount">37</span>
-                    var str_count = GenUtils.RegexFindAll(page, @"<span id=\""tagScopeCount\"">(\d+)")[1];
-                    count = Convert.ToInt32(str_count);
-                }
+				if (http_response.status != HttpStatusCode.OK)
+					outcome = MetadataQueryOutcome.HttpRequestFailed;
+				else if (http_response.DataAsString().Contains(Configurator.delicious_blocked_message))
+					outcome = MetadataQueryOutcome.Blocked;
+				else
+				{
+					var page = http_response.DataAsString();
+					// looking for, e.g.: <span id="tagScopeCount">37</span>
+					var str_count = GenUtils.RegexFindAll(page, @"<span id=\""tagScopeCount\"">(\d+)")[1];
+					count = Convert.ToInt32(str_count);
+				}
             }
             catch (Exception e)
             {
                 GenUtils.LogMsg("exception", "delicious.count_feeds", e.Message + e.StackTrace);
             }
-            return new DeliciousResponse(http_response, int_response: count, success: success);
+            return new DeliciousResponse(http_response, int_response: count, outcome: outcome);
         }
 
         #endregion metadata for ids
@@ -568,6 +600,80 @@ namespace CalendarAggregator
         }
 
         #endregion contributors
+
+		public static string DeliciousCheck(string id)
+		{
+			var html = "";
+
+			if (String.IsNullOrEmpty(id))
+				return html;
+
+			var r = FetchMetadataForIdFromDelicious(id);
+
+			if (r.outcome == MetadataQueryOutcome.HttpRequestFailed || r.outcome == MetadataQueryOutcome.Error || r.outcome == MetadataQueryOutcome.Blocked)
+			{
+				html = String.Format("<p>Unable to look up http://delicious.com/{0}/metadata. Reason: {1}", id, r.outcome.ToString());
+				return html;
+			}
+
+			if ( r.outcome == MetadataQueryOutcome.NotBookmarkedOrTagged )
+			{
+				html = String.Format("<p>There is either no delicious bookmark for http://delicious.com/{0}/metadata in the delicious account {0}, or the bookmark exists but has no tags.", id);
+				return html;
+			}
+
+			if ( r.outcome == MetadataQueryOutcome.Success && ! r.dict_response.ContainsKey("where") && ! r.dict_response.ContainsKey("what"))
+			{
+				html = String.Format(
+@"<p>Found a delicious bookmark for http://delicious.com/{0}/metadata but
+did not find a where= or what= tag. If you're creating a place hub you 
+need a tag that says where=city,st or you you're creating a topic hub you need 
+a tag that says what=topic",
+					id);
+				return html;
+			}
+
+			if ( r.outcome == MetadataQueryOutcome.Success && r.dict_response.ContainsKey("where") || ! r.dict_response.ContainsKey("what"))
+			{
+				html = "<table>";
+				html += String.Format(
+ @"<p>Found a delicious bookmark for http://delicious.com/{0}/metadata with 
+this information: ",
+					 id);
+				foreach (var key in r.dict_response.Keys)
+					html += String.Format("<tr><td>{0}</td><td>{1}</td></tr>", key, r.dict_response[key]);
+				html += "</table>";
+
+				var d = Delicious.MakeDefaultDelicious();
+
+				var azure_metadata = d.LoadMetadataForIdFromAzureTable(id);
+				if (azure_metadata.Keys.Count > 0)
+				{
+					html += "<p>Here is the permanent record, along with extra info added by the elmcity service: ";
+					html += "<table>";
+					foreach (var key in azure_metadata.Keys)
+						html += String.Format("<tr><td>{0}</td><td>{1}</td></tr>", key, azure_metadata[key]);
+					html += "</table>";
+				}
+
+				var feeds = d.LoadFeedsFromAzureTableForId(id);
+				if (feeds.Keys.Count > 0)
+				{
+					html += "<p>Here are the trusted iCalendar feeds: ";
+					html += "<table>";
+					foreach (var key in feeds.Keys)
+						html += String.Format("<tr><td>{0}</td><td>{1}</td></tr>", feeds[key], key);
+					html += "</table>";
+				}
+
+				return html;
+			}
+
+			GenUtils.LogMsg("warning", "DeliciousCheck", "unexpected case");
+			TwitterApi.SendTwitterDirectMessage(Configurator.delicious_master_account, "DeliciousCheck: unexpected case for: " + id);
+			html = "<p>Sorry, there was a problem. It has been logged and will be investigated.";
+			return html;
+		}
 
         public static Dictionary<string, string> LinkTitleDictFromDeliciousRssQuery(string account, string rssbase, string tags)
         /*   
