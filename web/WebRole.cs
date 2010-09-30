@@ -41,8 +41,6 @@ namespace WebRole
 
             RoleEnvironment.Changing += RoleEnvironmentChanging;
 
-            ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
-
             return base.OnStart();
         }
 
