@@ -103,7 +103,7 @@ namespace CalendarAggregator
 
             var json = cr.RenderTagCloudAsJson();
 
-            Console.WriteLine(json);
+            //Console.WriteLine(json);
 
             JArray objects = (JArray)JsonConvert.DeserializeObject(json);
 
