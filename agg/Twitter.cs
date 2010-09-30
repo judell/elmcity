@@ -53,9 +53,22 @@ namespace CalendarAggregator
     // see http://blog.jonudell.net/2009/10/21/to-elmcity-from-curator-message-start/
     public class TwitterApi
     {
+
         private static string ts_table = "twitter";
         private static string pk_directs = "direct_messages";
         private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
+		private static Dictionary<string, string> settings = null;
+		
+		private static byte[] CallTwitterApi(OAuthTwitter.Method method, string api_url, string post_data)
+		{
+			if (settings == null)
+				settings = GenUtils.GetSettingsFromAzureTable();
+			var oauth_twitter = new ElmcityUtils.OAuthTwitter();
+			oauth_twitter.token = settings["twitter_access_token"];
+			oauth_twitter.token_secret = settings["twitter_access_token_secret"];
+			string xml = oauth_twitter.oAuthWebRequest(method, api_url, post_data);
+			return Encoding.UTF8.GetBytes(xml);
+		}
 
         public static List<TwitterDirectMessage> GetDirectMessagesFromAzure()
         {
@@ -90,14 +103,16 @@ namespace CalendarAggregator
             if (count == 0)
                 count = Configurator.twitter_max_direct_messages;
             var url = String.Format("http://api.twitter.com/direct_messages.xml?count={0}", count);
-            var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
-            var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
-            if (response.status != HttpStatusCode.OK)
-            {
-                GenUtils.LogMsg("warning", "Twitter.GetDirectMessages", response.status.ToString() + ", " + response.message);
-                return default(List<TwitterDirectMessage>);
-            }
-            var xdoc = XmlUtils.XdocFromXmlBytes(response.bytes);
+            
+			//var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+          	//var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
+            //if (response.status != HttpStatusCode.OK)
+            //{
+            //    GenUtils.LogMsg("warning", "Twitter.GetDirectMessages", response.status.ToString() + ", " + response.message);
+            //    return default(List<TwitterDirectMessage>);
+           // }
+			var xml = CallTwitterApi(OAuthTwitter.Method.GET, url, String.Empty);
+            var xdoc = XmlUtils.XdocFromXmlBytes(xml);
             var messages = from message in xdoc.Descendants("direct_message")
                            select new TwitterDirectMessage()
                            {
@@ -137,33 +152,36 @@ namespace CalendarAggregator
             return new_messages;
         }
 
-        public static HttpResponse SendTwitterDirectMessage(string recipient, string text)
+        public static string SendTwitterDirectMessage(string recipient, string text)
         {
             var url = "http://api.twitter.com/direct_messages/new.xml";
-            var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
-            request.ServicePoint.Expect100Continue = false; // http://a-kicker-n.blogspot.com/2009/03/how-to-disable-passing-of-http-header.html
-            request.Method = "POST";
-            var data = Encoding.UTF8.GetBytes(String.Format("user={0}&text={1}", recipient, text));
-            var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, data);
-            return response;
+            //var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+            //request.ServicePoint.Expect100Continue = false; // http://a-kicker-n.blogspot.com/2009/03/how-to-disable-passing-of-http-header.html
+            //request.Method = "POST";
+            var post_data = String.Format("user={0}&text={1}", recipient, text);
+            //var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, data);
+			var xml = CallTwitterApi(OAuthTwitter.Method.POST, url, post_data);
+			return Encoding.UTF8.GetString(xml);
         }
 
-        public static HttpResponse DeleteTwitterDirectMessage(string id)
+        public static string DeleteTwitterDirectMessage(string id)
         {
             var url = String.Format("http://api.twitter.com/direct_messages/destroy/{0}.xml", id);
-            var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
-            request.Method = "POST";
-            var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
-            return response;
+			var xml = CallTwitterApi(OAuthTwitter.Method.POST, url, String.Empty);
+            //var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+            //request.Method = "POST";
+            //var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
+			return Encoding.UTF8.GetString(xml);
         }
 
-        public static HttpResponse FollowTwitterAccount(string account)
+        public static string FollowTwitterAccount(string account)
         {
             var url = String.Format("http://api.twitter.com/friendships/create/{0}.xml", account);
-            var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
-            request.Method = "POST";
-            var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
-            return response;
+			var xml = CallTwitterApi(OAuthTwitter.Method.POST, url, String.Empty);
+            //var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+            //request.Method = "POST";
+            //var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
+			return Encoding.UTF8.GetString(xml);
         }
 
         public static List<TwitterDirectMessage> GetNewTwitterDirectMessagesFromId(string id)

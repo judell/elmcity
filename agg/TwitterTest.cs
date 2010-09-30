@@ -15,6 +15,7 @@
 using ElmcityUtils;
 using System.Linq;
 using NUnit.Framework;
+using System.Text;
 
 namespace CalendarAggregator
 {
@@ -25,9 +26,8 @@ namespace CalendarAggregator
         [Test]
         public void CannotRefollow()
         {
-            var response = TwitterApi.FollowTwitterAccount("judell");
-            var message = response.DataAsString();
-            Assert.That(message.Contains("already on your list"));
+            var xml = TwitterApi.FollowTwitterAccount("judell");
+            Assert.That(xml.Contains("already on your list"));
         }
 
         [Test]
@@ -41,8 +41,8 @@ namespace CalendarAggregator
         [Test]
         public void CanRetrieveDirectMessagesFromTwitter()
         {
-            var response = TwitterApi.SendTwitterDirectMessage("elmcity_azure", "test");
-            var xdoc = XmlUtils.XdocFromXmlBytes(response.bytes);
+            var xml = TwitterApi.SendTwitterDirectMessage("elmcity_azure", "test");
+            var xdoc = XmlUtils.XdocFromXmlBytes(Encoding.UTF8.GetBytes(xml));
             var ids = from message in xdoc.Descendants("direct_message")
                      select message.Descendants("id").First().Value.ToString();
             var messages = TwitterApi.GetDirectMessagesFromTwitter(1);
