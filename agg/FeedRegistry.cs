@@ -108,11 +108,13 @@ namespace CalendarAggregator
         private DateTime _whenchecked;
     }
 
-    // encapsulates an IcalStats and a Dictionary<string,string> e.g.:
+    // encapsulates an IcalStats and a Dictionary<string,IcalStats> e.g.:
     // key=feedurl: http://www.google.com/calendar/ical/9g7s7kfol4mgvodlscb9aiq4g0@group.calendar.google.com/public/basic.ics
-    // value=source: Ann Arbor Rowing Club
+    // value = IcalStats object
     public class FeedRegistry
     {
+
+		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
         private string id;
         public Dictionary<string, IcalStats> stats
         {
@@ -198,5 +200,26 @@ namespace CalendarAggregator
             string json = HttpUtils.FetchUrl(url).DataAsString();
             return JsonConvert.DeserializeObject<Dictionary<string, IcalStats>>(json);
         }
+
+		public TableStorageResponse SaveStatsToAzure()
+		{
+			var entity = new Dictionary<string, object>();
+			entity["PartitionKey"] = entity["RowKey"] = this.id;
+			var events_loaded = 0;
+			foreach (var feedurl in this.feeds.Keys)
+			{
+				if (this.stats.ContainsKey(feedurl))
+				{
+					var ical_stats = this.stats[feedurl];
+					events_loaded += ical_stats.loaded;
+				}
+				else
+				{
+					GenUtils.LogMsg("warning", "FeedRegistry.SaveStatsToAzure", "stats dict does not contain expected feedurl " + feedurl);
+				}
+			}
+			entity["ical_events"] = events_loaded;
+			return this.ts.MergeEntity("metadata", this.id, this.id, entity);
+		}
     }
 }
