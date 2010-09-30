@@ -56,7 +56,8 @@ class EventParser:
 
   if IPY:
     def LogMsg(self,category=None, message=None, details=None):
-      ElmcityUtils.GenUtils.LogMsg(category, message, details)
+      logger = ElmcityUtils.Logger()
+      logger.LogMsg(category, message, details)
   else:
     def LogMsg(self,category=None, message=None, details=None):
       print '%s, %s, %s' % ( category, message, details )

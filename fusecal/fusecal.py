@@ -9,6 +9,8 @@ clr.AddReference("System")
 clr.AddReference("mscorlib")
 import System
 
+logger = ElmcityUtils.Logger()
+
 def Dispatch(url=None,filter=None,tz_source=None,tz_dest=None):
  
   if ( filter is "" ):
@@ -40,16 +42,16 @@ def Dispatch(url=None,filter=None,tz_source=None,tz_dest=None):
 
 args = 'args: (%s) ' % ','.join(sys.argv)
 
-ElmcityUtils.GenUtils.LogMsg("info", '(fusecal.py)', ','.join(sys.path))
+logger.LogMsg("info", '(fusecal.py)', ','.join(sys.path))
 
 try: 
   url = sys.argv[0]  
   filter = sys.argv[1]
   tz_source = sys.argv[2]
-  ElmcityUtils.GenUtils.LogMsg("info", '(fusecal) url %s, filter %s, tz_source %s' % ( url, filter, tz_source), None)
+  logger.LogMsg("info", '(fusecal) url %s, filter %s, tz_source %s' % ( url, filter, tz_source), None)
   result = Dispatch(url=url, filter=filter, tz_source=tz_source)
 except:
-  ElmcityUtils.GenUtils.LogMsg("exception", traceback.format_exc(), None)
+  logger.LogMsg("exception", traceback.format_exc(), None)
 
  
 
