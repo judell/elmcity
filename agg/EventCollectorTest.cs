@@ -181,7 +181,7 @@ END:VCALENDAR";
             string method = "event.search";
             var collector = new Collector(test_calinfo);
             var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method, test_upcoming_args);
-            Console.WriteLine(events.Count());
+            //Console.WriteLine(events.Count());
             Assert.That(events.Count() > 0);
         }
 
@@ -192,7 +192,7 @@ END:VCALENDAR";
             var collector = new Collector(test_calinfo);
             var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method, test_upcoming_args);
             var es = new ZonedEventStore(test_calinfo, null);
-            Console.WriteLine(events.Count());
+            //Console.WriteLine(events.Count());
             var evt = events.First();
             string str_dtstart = evt.Attribute("utc_start").Value;
             var dtstart = Utils.DateTimeFromDateStr(str_dtstart);
