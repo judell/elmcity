@@ -6,10 +6,11 @@ clr.AddReference("mscorlib")
 import System
 
 clr.AddReference("CalendarAggregator")
+import CalendarAggregator
 from CalendarAggregator import *
-from CalendarAggregator.Configurator import Calinfos
 
 clr.AddReference("ElmcityUtils")
+import ElmcityUtils 
 from ElmcityUtils import *
 
 metatable = 'metadata'
@@ -21,11 +22,9 @@ ts = TableStorage.MakeDefaultTableStorage()
 
 ids = delicious.LoadHubIdsFromAzureTable()
 
-calinfos = Calinfos
-
 def message(msg):
   msg = msg.replace('\n','')
-  ts.WriteLogMessage(msg, "", None)
+  GenUtils.LogMsg(msg, '', '')
   return msg
 
 def delete_dict(dict):
@@ -78,7 +77,7 @@ def dump_metadata():
 
   dump_metadata_result += "# metadata for ids\n\n"
   for id in ids:
-    message('_admin: dump_metadata metadata: %s' % id)
+#    message('_admin: dump_metadata metadata: %s' % id)
     dump_metadata_result += "%s\n\n" % id
     q = "$filter=(PartitionKey eq '%s' and RowKey eq '%s' )" % ( id, id )
     r = ts.QueryEntities(metatable,q)
@@ -87,7 +86,7 @@ def dump_metadata():
 
   dump_metadata_result += "# tasks for ids\n\n"
   for id in ids:
-    message('_admin: dump_metadata task: %s' % id)
+#    message('_admin: dump_metadata task: %s' % id)
     dump_metadata_result += "%s\n\n" % id
     q = "$filter=(PartitionKey eq 'master' and RowKey eq '%s' )" % ( id )
     r = ts.QueryEntities(tasktable,q)
@@ -96,7 +95,7 @@ def dump_metadata():
 
   dump_metadata_result += "# locks for ids\n\n"
   for id in ids:
-    message('_admin: dump_metadata lock: %s' % id)
+#    message('_admin: dump_metadata lock: %s' % id)
     dump_metadata_result += "%s\n\n" % id
     q = "$filter=(PartitionKey eq 'lock' and RowKey eq '%s' )" % ( id )
     r = ts.QueryEntities(tasktable,q)
@@ -105,7 +104,7 @@ def dump_metadata():
 
   dump_metadata_result += "# feeds for ids\n\n"
   for id in ids:
-    message('_admin: dump_metadata feed: %s' % id)
+#    message('_admin: dump_metadata feed: %s' % id)
     dump_metadata_result += "%s\n\n" % id
     q = "$filter=(PartitionKey eq '%s' and feedurl ne '' )" % ( id )
     r = ts.QueryEntities(metatable,q)
@@ -114,7 +113,7 @@ def dump_metadata():
 
   dump_metadata_result += "# venues for ids\n\n"
   for id in ids:
-    message('_admin: dump_metadata venue: %s' % id)
+#    message('_admin: dump_metadata venue: %s' % id)
     dump_metadata_result += "%s\n\n" % id
     q = "$filter=(PartitionKey eq '%s_venues')" % ( id )
     r = ts.QueryEntities(metatable,q)
@@ -129,7 +128,7 @@ def list_blobs():
   message('_admin: eccblobs start')
   list_blobs_result = ''
   for id in ids:
-    message('_admin: list_blobs: %s' % id)
+#    message('_admin: list_blobs: %s' % id)
     list_blobs_result += "\n%s\n" % id
     r = bs.ListBlobs(id)
     for dict in r.response:
@@ -161,10 +160,16 @@ def rebuild_search_output():
 
 def follow_curators():
   for id in ids:
+    print "follow_curators: " + id
     calinfo = Calinfo(id)
     twitterer = calinfo.twitter_account
     if twitterer is not None:
      r = TwitterApi.FollowTwitterAccount(twitterer)
+
+try:
+  follow_curators()
+except:
+  message('_admin: error in follow_curators')
 
 try:
   dump_metadata() # -> dump_metadata.txt
@@ -176,18 +181,14 @@ try:
 except:
   message('_admin: error in list_blobs')
 
-try:
-  rebuild_search_output()
-except:
-  message('_admin: error in rebuild_search_output')
+#try:
+#  rebuild_search_output()
+#except:
+#  message('_admin: error in rebuild_search_output')
 
 try:
   snapshot_feeds_and_metadata_for_ids()
 except:
   message('_admin: error in snapshot_feeds_and_metadata_for_ids')
 
-try:
-  follow_curators()
-except:
-  message('_admin: error in follow_curators')
 
