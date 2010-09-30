@@ -191,7 +191,8 @@ namespace ElmcityUtils
 			var dicts = new List<Dictionary<string, string>>();
 			do
 			{
-				var qs = "?comp=list&restype=container&maxresults=1000";
+				var qs = "?comp=list&restype=container&maxresults=5000";
+				//var qs = "?comp=list&restype=container";
 				if (!String.IsNullOrEmpty(next_marker))
 					qs += "&marker=" + next_marker;
 				http_response = DoBlobStoreRequest(containername, blobname: null, method: "GET", headers: new Hashtable(), data: null, content_type: null, query_string: qs);
@@ -289,8 +290,10 @@ namespace ElmcityUtils
             }
 
 			XmlNode next_marker_node = doc.SelectSingleNode("//NextMarker");
-			if ( next_marker_node != null && next_marker_node.HasChildNodes )
+			if (next_marker_node != null && next_marker_node.HasChildNodes)
 				next_marker = next_marker_node.FirstChild.Value;
+			else
+				next_marker = null;
 
 			return dicts;
         }
