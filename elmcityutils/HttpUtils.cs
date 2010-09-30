@@ -14,6 +14,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -71,6 +72,7 @@ namespace ElmcityUtils
     // basic http-related operations
     public static class HttpUtils
     {
+
         // equivalent of curl --head
         public static HttpResponse HeadFetchUrl(Uri url)
         {
@@ -152,21 +154,28 @@ namespace ElmcityUtils
         {
             try
             {
-                string message = "";
                 request.ContentLength = 0;
 
                 if (data != null && data.Length > 0)
                 {
                     request.ContentLength = data.Length;
                     var bw = new BinaryWriter(request.GetRequestStream());
-                    bw.Write(data);
+					bw.Write(data);
                     bw.Flush();
                     bw.Close();
                 }
+			}
+			catch (Exception ex_write)
+			{
+			GenUtils.LogMsg("exception", "DoHttpWebRequest: writing data", ex_write.Message + ex_write.InnerException.Message + ex_write.StackTrace);
+			throw;
+			}
 
+			try
+			{
                 var response = (HttpWebResponse)request.GetResponse2();
                 var status = response.StatusCode;
-                message = response.StatusDescription;
+                string message = response.StatusDescription;
                 var headers = new Dictionary<string, string>();
                 foreach (string key in response.Headers.Keys)
                     headers[key] = response.Headers[key];
@@ -177,37 +186,48 @@ namespace ElmcityUtils
 
                 return new HttpResponse(status, message, return_data, headers);
             }
-            catch (Exception e)
+            catch (Exception ex_read)
             {
-                GenUtils.LogMsg("exception", "DoHttpWebRequest", e.Message + e.StackTrace);
-                return default(HttpResponse);
+				GenUtils.LogMsg("exception", "DoHttpWebRequest: reading data", ex_read.Message + ex_read.InnerException.Message + ex_read.StackTrace);
+                Console.WriteLine("exception", "DoHttpWebRequest: reading data: " + ex_read.Message + ex_read.InnerException.Message + ex_read.StackTrace);
+				throw;
             }
         }
 
         private static byte[] GetResponseData(HttpWebResponse response)
         {
-            Stream response_stream = response.GetResponseStream();
-            Encoding encoding;
-            var charset = response.CharacterSet ?? "";
-            switch (charset.ToLower())
-            {
-                case "utf-8":
-                    encoding = Encoding.UTF8;
-                    break;
-                default:
-                    encoding = Encoding.Default;
-                    break;
-            }
-            if (response.ContentLength > 0)
-            {
-                var reader = new BinaryReader(response_stream);
-                return reader.ReadBytes((int)response.ContentLength);
-            }
-            else // empty or unspecified, read zero or more bytes
-            {
-                var reader = new StreamReader(response_stream);
-                return encoding.GetBytes(reader.ReadToEnd());
-            }
+			try
+			{
+				//NUnit.Framework.Assert.IsNotNull(response);
+				Stream response_stream = response.GetResponseStream();
+				//NUnit.Framework.Assert.IsNotNull(response_stream);
+				Encoding encoding;
+				var charset = response.CharacterSet ?? "";
+				switch (charset.ToLower())
+				{
+					case "utf-8":
+						encoding = Encoding.UTF8;
+						break;
+					default:
+						encoding = Encoding.Default;
+						break;
+				}
+				if (response.ContentLength > 0)
+				{
+					var reader = new BinaryReader(response_stream);
+					return reader.ReadBytes((int)response.ContentLength);
+				}
+				else // empty or unspecified, read zero or more bytes
+				{
+					var reader = new StreamReader(response_stream);
+					return encoding.GetBytes(reader.ReadToEnd());
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "HttpUtils.GetResponseData", e.Message + e.StackTrace);
+				throw;
+			}
         }
 
 
@@ -266,16 +286,7 @@ namespace ElmcityUtils
             System.Threading.Thread.Sleep(seconds * 1000);
         }
 
-        delegate TableStorageResponse HttpRequestLoggerDelegate(System.Web.Mvc.ControllerContext c);
-
-        public static TableStorageResponse LogHttpRequest(System.Web.Mvc.ControllerContext c)
-        {
-            var logger = new HttpRequestLoggerDelegate(HttpRequestLogger);
-            var result = logger.BeginInvoke(c, callback: null, @object: null);
-            return logger.EndInvoke(result);
-        }
-
-        public static TableStorageResponse HttpRequestLogger(System.Web.Mvc.ControllerContext c)
+        public static void LogHttpRequest(System.Web.Mvc.ControllerContext c)
         {
             string requestor_ip_addr = "none";
             string requestor_dns_name = "none";
@@ -288,14 +299,31 @@ namespace ElmcityUtils
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "HttpRequestLogger", e.Message + e.StackTrace);
+                GenUtils.LogMsg("exception", "LogHttpRequest", e.Message + e.StackTrace);
             }
 
             var msg = string.Format("{0} {1} ",
                 requestor_dns_name,
                 url);
-            return GenUtils.LogMsg("info", msg, null);
+
+            GenUtils.LogMsg("info", msg, null);
         }
+
+		public static bool CompletedIfStatusOK(HttpResponse r, Object o)
+		{
+			return r.status == HttpStatusCode.OK;
+		}
+
+		public static HttpResponse RetryExpectingOK(HttpWebRequest request, byte[] data, int wait_secs, int max_tries, TimeSpan timeout_secs)
+		{
+			return GenUtils.Actions.Retry<HttpResponse>(
+				delegate() { return DoHttpWebRequest(request, data); },
+				CompletedIfStatusOK,
+				completed_delegate_object: null,
+				wait_secs: wait_secs,
+				max_tries: max_tries,
+				timeout_secs: timeout_secs);
+		}
 
         /*
         // unused, for pshb
