@@ -25,7 +25,8 @@ namespace CalendarAggregator
 
     public static class Configurator
     {
-        private static Dictionary<string, string> settings = new Dictionary<string, string>();
+
+		private static Dictionary<string, string> settings = new Dictionary<string, string>();
 
         // encapsulated settings
 
@@ -252,6 +253,9 @@ namespace CalendarAggregator
         // parser for, e.g., myspace or librarything
         public static string fusecal_dispatcher = ElmcityUtils.Configurator.azure_blobhost + "/admin/fusecal.py";
 
+		// things to do each time the worker's Run method loops
+		public static string iron_python_run_script_url = ElmcityUtils.Configurator.azure_blobhost + "/admin/_run.py";
+
         // used to report populations (and event densities) for where hubs
         public const string census_city_population_estimates = "http://www.census.gov/popest/cities/files/SUB-EST2008-ALL.csv";
 
@@ -325,7 +329,7 @@ namespace CalendarAggregator
         public const int services_output_cache_duration = 60 * 10;   // 10 min
 
         // routine admin tasks, run from worker on a scheduled basis, are in this python script
-        public static Uri iron_python_admin_script_url = new Uri("http://" + ElmcityUtils.Configurator.azure_blob_domain + "/admin/_admin.py");
+        public static string iron_python_admin_script_url = ElmcityUtils.Configurator.azure_blobhost + "/admin/_admin.py";
 
         // part of experimental pshb implementation, idle for now
         //public static string pubsubhubub_uri = "http://pubsubhubbub.appspot.com/";
@@ -398,65 +402,39 @@ namespace CalendarAggregator
 {"wy","wyoming"}
 };
 
-        // try getting value from source-of-truth azure table, else non-defaults if overridden in azure config.
-        // why? 
-        // 1. dry (don't repeat yourself, in this case by not writing down settings twice, for worker and web role
-        // 2. testing: tests run outside azure environment can use same defaults as used within
-        private static string GetSettingValue(string setting_name)
-        {
-            // GenUtils.LogMsg("info", "GetSettingValue", setting_name);
-            string setting_value = null;
+		// try getting value from source-of-truth azure table, else non-defaults if overridden in azure config.
+		// why? 
+		// 1. dry (don't repeat yourself, in this case by not writing down settings twice, for worker and web role
+		// 2. testing: tests run outside azure environment can use same defaults as used within
+		private static string GetSettingValue(string setting_name)
+		{
+			// GenUtils.LogMsg("info", "GetSettingValue", setting_name);
+			string setting_value = null;
 
-            if (settings.Count == 0)
-                GetSettingsFromAzureTable();
+			if (settings.Count == 0)
+				settings = GenUtils.GetSettingsFromAzureTable();
 
-            if (settings.ContainsKey(setting_name))
-                setting_value = settings[setting_name];
+			if (settings.ContainsKey(setting_name))
+				setting_value = settings[setting_name];
 
-            if (setting_value == null)
-            {
-                try
-                {
-                    if (RoleEnvironment.IsAvailable)
-                        setting_value = RoleEnvironment.GetConfigurationSettingValue(setting_name);
-                }
-                catch (Exception e)
-                {
-                    GenUtils.LogMsg("exception", "GetSettingValue", e.Message + e.StackTrace);
-                }
-            }
+			if (setting_value == null)
+			{
+				try
+				{
+					if (RoleEnvironment.IsAvailable)
+						setting_value = RoleEnvironment.GetConfigurationSettingValue(setting_name);
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", "GetSettingValue", e.Message + e.StackTrace);
+				}
+			}
 
-            if (setting_value == null)
-                GenUtils.LogMsg("info", "GetSettingValue: " + setting_name, " is null");
+			if (setting_value == null)
+				GenUtils.LogMsg("info", "GetSettingValue: " + setting_name, " is null");
 
-            return setting_value;
-        }
-
-        // the source of truth for settings is in an azure table called settings
-        public static Dictionary<string, string> GetSettingsFromAzureTable()
-        {
-            settings = new Dictionary<string, string>();
-            var query = "$filter=PartitionKey eq 'settings'";
-            var ts = TableStorage.MakeSecureTableStorage();
-            var ts_response = ts.QueryEntities("settings", query).response;
-            var dicts = (List<Dictionary<string, object>>)ts_response;
-            foreach (var dict in dicts)
-            {
-                var dict_of_str = ObjectUtils.DictObjToDictStr(dict);
-                var name = "";
-                try
-                {
-                    name = dict_of_str["RowKey"];
-                    var value = dict_of_str["value"];
-                    settings[name] = value;
-                }
-                catch (Exception e)
-                {
-                    GenUtils.LogMsg("exception", "Configurator.GetSettings: " + name, e.Message + e.StackTrace);
-                }
-            }
-            return settings;
-        }
+			return setting_value;
+		}
 
         private static Delicious delicious = Delicious.MakeDefaultDelicious();
 
@@ -497,6 +475,7 @@ namespace CalendarAggregator
     [Serializable] // because included in the pickled event store
     public class Calinfo
     {
+
         // todo: use an enumeration instead of string values "what" and "where"
         public string hub_type
         { get { return _hub_type; } }
