@@ -40,6 +40,7 @@ namespace CalendarAggregator
     // to start, stop, check if running
     public static class Scheduler
     {
+
         public static DateTime dtzero { get { return _dtzero; } }
         private static DateTime _dtzero = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -62,14 +63,21 @@ namespace CalendarAggregator
             return (task.id == id);
         }
 
+		public static bool ExistsLockRecordForId(string id)
+		{
+			var q = string.Format(task_query_template, lock_pk, id);
+			var dict_obj = TableStorage.QueryForSingleEntityAsDictObj(ts, tasktable, q);
+			return dict_obj.Keys.Count != 0;
+         }
+
         public static void InitTaskForId(string id)
         {
-            Scheduler.UnlockId(id);
+            var ts_response = Scheduler.UnlockId(id);
 
             var task = new Task(id, start: dtzero, stop: dtzero, running: false);
             var dict_obj = ObjectUtils.ObjToDictObj(task);
 
-            var ts_response = TableStorage.UpdateDictToTableStore(dict_obj, table: tasktable, partkey: master_pk, rowkey: id);
+			ts_response = TableStorage.UpdateDictToTableStore(dict_obj, table: tasktable, partkey: master_pk, rowkey: id);
             GenUtils.LogMsg("info", "Scheduler.InitTaskForId: " + id, ts_response.http_response.status.ToString());
         }
 
@@ -153,9 +161,13 @@ namespace CalendarAggregator
             return ts.ExistsEntity(tasktable, q);
         }
 
-        public static void UnlockId(string id)
+        public static TableStorageResponse UnlockId(string id)
         {
-            var ts_response = ts.DeleteEntity(tasktable, lock_pk, id);
+			TableStorageResponse ts_response = default(TableStorageResponse);
+			if (ExistsLockRecordForId(id))
+				ts_response = ts.DeleteEntity(tasktable, lock_pk, id);
+
+			return ts_response;
         }
 
         public static bool IsAbandoned(string id, TimeSpan interval)
