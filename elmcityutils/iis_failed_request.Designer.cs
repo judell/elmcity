@@ -11,7 +11,7 @@
 [assembly: global::System.Data.Objects.DataClasses.EdmSchemaAttribute()]
 
 // Original file name:
-// Generation date: 8/13/2010 1:54:50 PM
+// Generation date: 9/2/2010 12:40:04 PM
 namespace ElmcityUtils
 {
     
@@ -87,20 +87,20 @@ namespace ElmcityUtils
         /// </summary>
         /// <param name="id">Initial value of ID.</param>
         /// <param name="url">Initial value of url.</param>
-        /// <param name="status">Initial value of status.</param>
         /// <param name="duration">Initial value of duration.</param>
         /// <param name="created">Initial value of created.</param>
         /// <param name="computer">Initial value of computer.</param>
+        /// <param name="status">Initial value of status.</param>
         [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
-        public static iis_failed_request Createiis_failed_request(int id, string url, int status, int duration, global::System.DateTime created, string computer)
+        public static iis_failed_request Createiis_failed_request(int id, string url, int duration, global::System.DateTime created, string computer, string status)
         {
             iis_failed_request iis_failed_request = new iis_failed_request();
             iis_failed_request.ID = id;
             iis_failed_request.url = url;
-            iis_failed_request.status = status;
             iis_failed_request.duration = duration;
             iis_failed_request.created = created;
             iis_failed_request.computer = computer;
+            iis_failed_request.status = status;
             return iis_failed_request;
         }
         /// <summary>
@@ -185,33 +185,6 @@ namespace ElmcityUtils
         [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
         partial void OnreasonChanged();
         /// <summary>
-        /// There are no comments for property status in the schema.
-        /// </summary>
-        [global::System.Data.Objects.DataClasses.EdmScalarPropertyAttribute(IsNullable=false)]
-        [global::System.Runtime.Serialization.DataMemberAttribute()]
-        [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
-        public int status
-        {
-            get
-            {
-                return this._status;
-            }
-            set
-            {
-                this.OnstatusChanging(value);
-                this.ReportPropertyChanging("status");
-                this._status = global::System.Data.Objects.DataClasses.StructuralObject.SetValidValue(value);
-                this.ReportPropertyChanged("status");
-                this.OnstatusChanged();
-            }
-        }
-        [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
-        private int _status;
-        [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
-        partial void OnstatusChanging(int value);
-        [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
-        partial void OnstatusChanged();
-        /// <summary>
         /// There are no comments for property duration in the schema.
         /// </summary>
         [global::System.Data.Objects.DataClasses.EdmScalarPropertyAttribute(IsNullable=false)]
@@ -292,5 +265,32 @@ namespace ElmcityUtils
         partial void OncomputerChanging(string value);
         [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
         partial void OncomputerChanged();
+        /// <summary>
+        /// There are no comments for property status in the schema.
+        /// </summary>
+        [global::System.Data.Objects.DataClasses.EdmScalarPropertyAttribute(IsNullable=false)]
+        [global::System.Runtime.Serialization.DataMemberAttribute()]
+        [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
+        public string status
+        {
+            get
+            {
+                return this._status;
+            }
+            set
+            {
+                this.OnstatusChanging(value);
+                this.ReportPropertyChanging("status");
+                this._status = global::System.Data.Objects.DataClasses.StructuralObject.SetValidValue(value, false);
+                this.ReportPropertyChanged("status");
+                this.OnstatusChanged();
+            }
+        }
+        [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
+        private string _status;
+        [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
+        partial void OnstatusChanging(string value);
+        [global::System.CodeDom.Compiler.GeneratedCode("System.Data.Entity.Design.EntityClassGenerator", "4.0.0.0")]
+        partial void OnstatusChanged();
     }
 }

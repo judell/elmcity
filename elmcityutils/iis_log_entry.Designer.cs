@@ -11,7 +11,7 @@
 [assembly: global::System.Data.Objects.DataClasses.EdmSchemaAttribute()]
 
 // Original file name:
-// Generation date: 8/13/2010 1:54:50 PM
+// Generation date: 9/2/2010 12:40:04 PM
 namespace ElmcityUtils
 {
     
