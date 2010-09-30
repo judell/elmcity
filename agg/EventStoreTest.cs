@@ -79,7 +79,7 @@ namespace CalendarAggregator
             zoneless.AddEvent(in_evt1_zoneless.title, in_evt1_zoneless.url, in_evt1_zoneless.source, in_evt1_zoneless.dtstart, in_evt1_zoneless.dtend, false, in_evt1_zoneless.categories);
             Assert.AreEqual(2, zoneless.events.Count);
             var response = bs.SerializeObjectToAzureBlob(zoneless, test_container, zoneless.objfile);
-            Console.WriteLine(response.HttpResponse.DataAsString());
+            //Console.WriteLine(response.HttpResponse.DataAsString());
             Assert.AreEqual(HttpStatusCode.Created, response.HttpResponse.status);
         }
 
@@ -155,7 +155,7 @@ namespace CalendarAggregator
             zoned.AddEvent(in_evt1_zoned.title, in_evt1_zoned.url, in_evt1_zoned.source, in_evt1_zoned.dtstart, in_evt1_zoned.dtend, in_evt1_zoned.allday);
             Assert.AreEqual(2, zoned.events.Count);
             var response = bs.SerializeObjectToAzureBlob(zoned, test_container, zoned.objfile);
-            Console.WriteLine(response.HttpResponse.DataAsString());
+            //Console.WriteLine(response.HttpResponse.DataAsString());
             Assert.AreEqual(HttpStatusCode.Created, response.HttpResponse.status);
         }
 
