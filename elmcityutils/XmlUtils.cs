@@ -22,7 +22,8 @@ namespace ElmcityUtils
 {
     public static class XmlUtils
     {
-        public static XmlDocument XmlDocumentFromHttpResponse(HttpResponse response)
+
+		public static XmlDocument XmlDocumentFromHttpResponse(HttpResponse response)
         {
             var sr = new MemoryStream(response.bytes);
             XmlDocument doc = new XmlDocument();
