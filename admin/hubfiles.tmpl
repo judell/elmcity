@@ -10,7 +10,7 @@
 <p>URL: <a href="/services/__ID__/html">/services/__ID__/html</a></p>
 
 <p>
-This is the default HTML rendering for your hub. If you want to use it as is, you can link to it from one of your pages, or include it in one of your pages via an IFRAME.
+This is the default HTML rendering for your hub. If you want to use it as is, you can link to it from one of your pages, or include it in one of your pages via an IFRAME. For an example of the IFRAME method, see <a href="http://www.berkeleyside.com/events-calendar/">berkeleyside</a>. Advantages: Tells a lot about each event, links to the event's upstream source. Disadvantages: Scrolling inside the IFRAME is awkward.
 </p>
 
 <p>
@@ -32,6 +32,7 @@ The default rendering is controlled by a default template, a default CSS file, a
 <p>
 3. banner (only for where hubs): <a href="http://elmcity.blob.core.windows.net/admin/keene-night-360.jpg">http://elmcity.blob.core.windows.net/admin/keene-night-360.jpg</a>
 </p>
+
 
 <p>
 If you want to change the default rendering, you can use your own template and/or CSS file and/or banner image. To do that, create the resources and point to them from these metadata variables:
@@ -56,6 +57,44 @@ If you want to change the default rendering, you can use your own template and/o
 <p>
 Your events in XML. 
 </p>
+
+
+<h3>ICS</h3>
+
+<p>URL: <a href="/services/__ID__/ics">/services/__ID__/ics</a></p>
+
+<p>
+Your events in ICS (iCalendar).
+</p>
+
+<p>
+Here's an example of how to embed your iCalendar feed using Google Calendar, as seen on the <a href="http://inmenlo.com/events-calendar/">InMenlo</a> site.
+</p>
+
+<p>
+The code:
+</p>
+
+<p>
+&lt;iframe scrolling="no" height="300" frameborder="0" width="500" style="border-width: 0pt;" src="http://www.google.com/calendar/hosted/inmenlo.com/embed?showTitle=0&amp;showCalendars=0&amp;mode=AGENDA&amp;height=300&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=vj2cb6p3fq5jidup23rfu8vnor7472d2%40import.calendar.google.com&amp;color=%23AB8B00&amp;ctz=America%2FLos_Angeles">&lt;/iframe>
+</p>
+
+<p>
+The behavior:
+</p>
+
+<p>
+<iframe scrolling="no" height="300" frameborder="0" width="560" style="border-width: 0pt;" src="http://www.google.com/calendar/hosted/inmenlo.com/embed?showTitle=0&amp;showCalendars=0&amp;mode=AGENDA&amp;height=300&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=vj2cb6p3fq5jidup23rfu8vnor7472d2%40import.calendar.google.com&amp;color=%23AB8B00&amp;ctz=America%2FLos_Angeles"></iframe>
+</p>
+
+<p>
+Advantages: Easy to customize, various views available, can display in user's timezone if that is not the same as the location's timezone. Disadvantages: Tells less at a glance about each event, doesn't make event URLs into links. 
+</p>
+
+<p>
+To make this happen, import http://elmcity.cloudapp.net/services/__ID__/ics into Google Calendar, do Settings -> Calendar Settings -> Calendars -> Embed -> Customize. Pick your options, then capture the generated IFRAME code and stick it into your page.
+</p>
+
 
 <h3>JSON</h3>
 
@@ -178,15 +217,6 @@ function eventlist(obj,id)
 </tr>
 </table>
 
-
-
-<h3>ICS</h3>
-
-<p>URL: <a href="/services/__ID__/ics">/services/__ID__/ics</a></p>
-
-<p>
-Your events in ICS (iCalendar).
-</p>
 
 <h3>RSS</h3>
 
