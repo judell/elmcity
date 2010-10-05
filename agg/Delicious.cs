@@ -438,7 +438,7 @@ namespace CalendarAggregator
 				{
 					var page = http_response.DataAsString();
 					// looking for, e.g.: <span id="tagScopeCount">37</span>
-					var str_count = GenUtils.RegexFindGroups(page, @"<span id=\""tagScopeCount\"">(\d+)")[1];
+					var str_count = GenUtils.RegexFindGroups(page, @"<span id=""tagScopeCount"">(\d+)")[1];
 					count = Convert.ToInt32(str_count);
 				}
             }
