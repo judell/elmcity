@@ -332,7 +332,7 @@ namespace CalendarAggregator
 		{
 			try
 			{
-				fr.stats[feedurl].prodid = GenUtils.RegexFindAll(feedtext, "PRODID:(.+)")[1];
+				fr.stats[feedurl].prodid = GenUtils.RegexFindGroups(feedtext, "PRODID:(.+)")[1];
 			}
 			catch
 			{
@@ -598,13 +598,13 @@ namespace CalendarAggregator
 			//if (feed_metadict.ContainsKey("tz"))
 			//    tz_dest = tz_source = feed_metadict["tz"];
 
-			groups = GenUtils.RegexFindAll(str_url, "(libraryinsight.com)(.+)");
+			groups = GenUtils.RegexFindGroups(str_url, "(libraryinsight.com)(.+)");
 			if (groups.Count == 3)
 			{
 				str_final_url = String.Format(Configurator.fusecal_service, Uri.EscapeUriString(str_url), filter, tz_source, tz_dest);
 			}
 
-			groups = GenUtils.RegexFindAll(str_url, "(librarything.com/local/place/)(.+)");
+			groups = GenUtils.RegexFindGroups(str_url, "(librarything.com/local/place/)(.+)");
 			if (groups.Count == 3)
 			{
 				var place = groups[2];
@@ -614,7 +614,7 @@ namespace CalendarAggregator
 				str_final_url = String.Format(Configurator.fusecal_service, lt_url, filter, tz_source, tz_dest);
 			}
 
-			groups = GenUtils.RegexFindAll(str_url, "(myspace.com/)(.+)");
+			groups = GenUtils.RegexFindGroups(str_url, "(myspace.com/)(.+)");
 			if (groups.Count == 3)
 			{
 				var musician = groups[2];

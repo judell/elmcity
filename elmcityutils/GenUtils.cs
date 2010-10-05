@@ -235,7 +235,7 @@ namespace ElmcityUtils
 			return re.Replace(input, replacement);
 		}
 
-		public static List<string> RegexFindAll(string input, string pattern)
+		public static List<string> RegexFindGroups(string input, string pattern)
 		{
 			Regex re = new Regex(pattern);
 			var groups = re.Match(input).Groups;
@@ -248,7 +248,7 @@ namespace ElmcityUtils
 		public static List<string> RegexFindKeyValue(string input)
 		{
 			var pattern = @"\s*(\w+)=(.+)\s*";
-			var groups = RegexFindAll(input, pattern);
+			var groups = RegexFindGroups(input, pattern);
 			var list = new List<string>();
 			if (groups[0] == input)
 			{

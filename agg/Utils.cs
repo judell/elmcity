@@ -203,7 +203,7 @@ namespace CalendarAggregator
 
 		public static string DateFromDateKey(string datekey)
 		{
-			var values = GenUtils.RegexFindAll(datekey, EventStore.datekey_pattern);
+			var values = GenUtils.RegexFindGroups(datekey, EventStore.datekey_pattern);
 			var yyyy = Convert.ToInt32(values[1]);
 			var MMM = Convert.ToInt32(values[2]);
 			var dd = Convert.ToInt32(values[3]);
@@ -345,7 +345,7 @@ namespace CalendarAggregator
 		{
 			var city_or_town = "";
 			var state_abbrev = "";
-			var groups = GenUtils.RegexFindAll(where, @"(.+)([\s+,])([^\s]+)");
+			var groups = GenUtils.RegexFindGroups(where, @"(.+)([\s+,])([^\s]+)");
 			if (groups.Count > 1)
 			{
 				city_or_town = groups[1];
@@ -472,8 +472,8 @@ namespace CalendarAggregator
 			if (resp.status == HttpStatusCode.OK)
 			{
 				var xml = HttpUtils.FetchUrl(url).DataAsString();
-				lat = GenUtils.RegexFindAll(xml, "<Latitude>([^<]+)")[1];
-				lon = GenUtils.RegexFindAll(xml, "<Longitude>([^<]+)")[1];
+				lat = GenUtils.RegexFindGroups(xml, "<Latitude>([^<]+)")[1];
+				lon = GenUtils.RegexFindGroups(xml, "<Longitude>([^<]+)")[1];
 			}
 			return new string[] { lat, lon };
 		}
@@ -689,7 +689,7 @@ namespace CalendarAggregator
 			var error = "";
 			if (page.Contains("Congratulations") == false)
 			{
-				error = GenUtils.RegexFindAll(page, "Error was: ([^<]+)")[1];
+				error = GenUtils.RegexFindGroups(page, "Error was: ([^<]+)")[1];
 			}
 			return error;
 		}

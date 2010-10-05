@@ -132,7 +132,7 @@ namespace CalendarAggregator
         {
             var pattern = EventStore.datekey_pattern;
             var s = "d11112233";
-            var values = GenUtils.RegexFindAll(s, pattern);
+            var values = GenUtils.RegexFindGroups(s, pattern);
             Assert.AreEqual(s, values[0]);
             Assert.AreEqual("1111", values[1]);
         }
