@@ -18,7 +18,10 @@ namespace ElmcityUtils
     using NUnit.Framework;
 
     public class GenUtilsTest
-    {
+	{
+
+	#region retry
+
 		private int retries;
 
 		private bool CompletedIfIntIsTwo(int i, object o)
@@ -195,5 +198,44 @@ namespace ElmcityUtils
 				Assert.AreEqual("OddNumberException", e.Message);
 			}
 		}
+
+	#endregion retry
+
+	#region regex
+
+		[Test]
+		public void RegexFindsThreeGroupsLiteral()
+		{
+			var pat = "a (b) c (d) e";
+			var groups = GenUtils.RegexFindGroups("a b c d e", pat);
+			Assert.AreEqual(3, groups.Count);
+		}
+
+		[Test]
+		public void RegexDoesNotFindThreeGroupsLiteral()
+		{
+			var pat = "a (b) c (d) e";
+			var groups = GenUtils.RegexFindGroups("a b c D e", pat);
+			Assert.AreNotEqual(3, groups.Count);
+		}
+
+		[Test]
+		public void RegexFindsThreeGroupsAbstract()
+		{
+			var pat = @"a (http://.+\s*) c (\d+) e";
+			var groups = GenUtils.RegexFindGroups("a http://foo.com?x=y c 19423 e", pat);
+			Assert.AreEqual(3, groups.Count);
+		}
+
+		[Test]
+		public void RegexDoesNotFindThreeGroupsAbstract()
+		{
+			var pat = @"a (http://.+\s*) c (\d+) e";
+			var groups = GenUtils.RegexFindGroups("a ftp://foo.com?x=y c 19423 e", pat);
+			Assert.AreNotEqual(3, groups.Count);
+		}
+
+
+	#endregion regex
 	}
 }
