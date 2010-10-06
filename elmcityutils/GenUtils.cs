@@ -235,7 +235,9 @@ namespace ElmcityUtils
 			return re.Replace(input, replacement);
 		}
 
-		public static List<string> RegexFindGroups(string input, string pattern)
+		public static List<string> RegexFindGroups(
+			string input, 
+			string pattern)
 		{
 			Regex re = new Regex(pattern);
 			var groups = re.Match(input).Groups;
@@ -247,7 +249,7 @@ namespace ElmcityUtils
 
 		public static List<string> RegexFindKeyValue(string input)
 		{
-			var pattern = @"\s*(\w+)=(.+)\s*";
+			var pattern = @"\s*(\w+)=([^\s]+)\s*";
 			var groups = RegexFindGroups(input, pattern);
 			var list = new List<string>();
 			if (groups[0] == input)
@@ -260,9 +262,9 @@ namespace ElmcityUtils
 
 		public static Dictionary<string, string> RegexFindKeysAndValues(List<string> keys, string input)
 		{
-			string regex = @"(category|url)=([^\b\s\n]+)";
-			Regex reg = new System.Text.RegularExpressions.Regex(regex);
 			string keystrings = String.Join("|", keys.ToArray());
+			string regex = String.Format(@"({0})=([^\s]+)", keystrings);
+			Regex reg = new Regex(regex);
 			var metadict = new Dictionary<string, string>();
 			Match m = reg.Match(input);
 			while (m.Success)

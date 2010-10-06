@@ -15,6 +15,7 @@
 namespace ElmcityUtils
 {
     using System;
+	using System.Collections.Generic;
     using NUnit.Framework;
 
     public class GenUtilsTest
@@ -204,7 +205,7 @@ namespace ElmcityUtils
 	#region regex
 
 		[Test]
-		public void RegexFindsThreeGroupsLiteral()
+		public void FindsThreeGroupsLiteral()
 		{
 			var pat = "a (b) c (d) e";
 			var groups = GenUtils.RegexFindGroups("a b c d e", pat);
@@ -212,7 +213,7 @@ namespace ElmcityUtils
 		}
 
 		[Test]
-		public void RegexDoesNotFindThreeGroupsLiteral()
+		public void DoesNotFindThreeGroupsLiteral()
 		{
 			var pat = "a (b) c (d) e";
 			var groups = GenUtils.RegexFindGroups("a b c D e", pat);
@@ -220,7 +221,7 @@ namespace ElmcityUtils
 		}
 
 		[Test]
-		public void RegexFindsThreeGroupsAbstract()
+		public void FindsThreeGroupsAbstract()
 		{
 			var pat = @"a (http://.+\s*) c (\d+) e";
 			var groups = GenUtils.RegexFindGroups("a http://foo.com?x=y c 19423 e", pat);
@@ -228,13 +229,48 @@ namespace ElmcityUtils
 		}
 
 		[Test]
-		public void RegexDoesNotFindThreeGroupsAbstract()
+		public void DoesNotFindThreeGroupsAbstract()
 		{
 			var pat = @"a (http://.+\s*) c (\d+) e";
 			var groups = GenUtils.RegexFindGroups("a ftp://foo.com?x=y c 19423 e", pat);
 			Assert.AreNotEqual(3, groups.Count);
 		}
 
+		[Test]
+		public void FindsTwoKeyValuePairs()
+		{
+			var text = @"
+Four score and seven years ago our fathers brought forth, 
+upon this continent, a new nation, conceived in Liberty, 
+and dedicated to the proposition that all men are created equal.
+
+url=http://americancivilwar.com/north/lincoln.html
+category=government,speech
+";
+			var keys = new List<string>() { "url", "category" };
+			var dict = GenUtils.RegexFindKeysAndValues(keys, text);
+			Assert.AreEqual(dict.Keys.Count, 2);
+			Assert.AreEqual(dict["url"], "http://americancivilwar.com/north/lincoln.html");
+			Assert.AreEqual(dict["category"], "government,speech");
+		}
+
+		[Test]
+		public void DoesNotFindTwoKeyValuePairs()
+		{
+			var text = @"
+Four score and seven years ago our fathers brought forth, 
+upon this continent, a new nation, conceived in Liberty, 
+and dedicated to the proposition that all men are created equal.
+
+url = http://americancivilwar.com/north/lincoln.html
+category=government,speech
+";
+			var keys = new List<string>() { "url", "category" };
+			var dict = GenUtils.RegexFindKeysAndValues(keys, text);
+			Assert.AreEqual(dict.Keys.Count, 1);
+			Assert.IsFalse(dict.ContainsKey("url"));
+			Assert.That(dict.ContainsKey("category"));
+		}
 
 	#endregion regex
 	}
