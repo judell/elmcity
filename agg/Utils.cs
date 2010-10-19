@@ -280,16 +280,18 @@ namespace CalendarAggregator
 		public static System.TimeZoneInfo TzinfoFromName(string name)
 		{
 			name = name.ToLower();
-			var suffix = " standard time";
-			System.TimeZoneInfo tzinfo;
+			name = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
+			name = name + " Standard Time";
+			TimeZoneInfo tzinfo;
 			try
 			{
-				tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById(name + suffix);
-				tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById(tzinfo.StandardName);
+				//tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById(name + suffix);
+				//tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById(tzinfo.StandardName);
+				tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById(name);
 			}
 			catch (Exception e)
 			{
-				tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById("eastern" + suffix);
+				tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
 				GenUtils.LogMsg("exception", "no such tz: " + name, e.Message);
 			}
 
