@@ -81,6 +81,19 @@ namespace WebRole.Controllers
             ViewData["view"] = CalendarRenderer.Viewer(url, source);
             return View();
         }
+		
+		public ActionResult ics_from_xcal(string url, string source, string tzname, string use_utc_str)
+		{
+			bool use_utc;
+			use_utc = String.IsNullOrEmpty(use_utc_str) == false && use_utc_str == "1";
+			
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var tzinfo = Utils.TzinfoFromName(tzname);
+			var ics = Utils.IcsFromRssPlusXcal(url, source, tzinfo, use_utc);
+			ViewData["ics"] = ics;
+			return View();
+		}
+
 
         public ActionResult py(string arg1, string arg2, string arg3)
         {

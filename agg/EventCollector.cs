@@ -242,6 +242,9 @@ namespace CalendarAggregator
 					// allow the "fusecal" service to hook in if it can
 					var _feedurl = MaybeRedirectFeedUrl(feedurl);
 
+					// allow ics_from_xcal to hook in if it can
+					_feedurl = MaybeXcalToIcsFeedUrl(_feedurl);
+
 					var feedtext = "";
 
 					try
@@ -630,6 +633,23 @@ namespace CalendarAggregator
 				return str_final_url;
 			}
 
+		}
+
+		// alter feed url if it should be transformed from rss+xcal to ics
+		public string MaybeXcalToIcsFeedUrl(string str_url)
+		{
+			string str_final_url = str_url;
+			var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(str_url, this.calinfo.delicious_account);
+			var source = feed_metadict["source"];
+			var tzname = feed_metadict["tz"];
+			if (feed_metadict.ContainsKey("xcal"))
+			{
+				str_final_url = String.Format(Configurator.ics_from_xcal_service, // ics_from_xcal?url={0}&tzname={1}&source={2}";
+						Uri.EscapeDataString(str_url),
+						tzname,
+						source);
+			}
+		return str_final_url;
 		}
 
 		// get the filter= property from metadata
@@ -1113,7 +1133,7 @@ namespace CalendarAggregator
 			ical_evt.UID = Event.MakeEventUid(ical_evt);
 		}
 
-		private static DDay.iCal.Components.Event MakeTmpEvt(Utils.DateTimeWithZone dtstart, string title, string event_url, string source, bool allday, bool use_utc)
+		public static DDay.iCal.Components.Event MakeTmpEvt(Utils.DateTimeWithZone dtstart, string title, string event_url, string source, bool allday, bool use_utc)
 		{
 			iCalendar ical = new iCalendar();
 			DDay.iCal.Components.Event evt = new DDay.iCal.Components.Event(ical);
