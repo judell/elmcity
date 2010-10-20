@@ -23,6 +23,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Timers;
 using System.Xml;
+using System.Xml.Linq;
 using DDay.iCal.DataTypes;
 using ElmcityUtils;
 using LINQtoCSV;
@@ -625,6 +626,41 @@ namespace CalendarAggregator
 			var s = String.Format("{0} UTC {1} {2} {3}",
 				   str_timestamp, dict["type"], dict["message"], dict["data"]);
 			return s;
+		}
+
+		#endregion
+
+		#region xcal
+
+		static public string IcsFromRssPlusXcal(string rss_plus_xcal_url, string source, TimeZoneInfo tzinfo, bool use_utc)
+		{
+			XNamespace xcal = "urn:ietf:params:xml:ns:xcal";
+			//var uri = new Uri("http://events.pressdemocrat.com/search?city=Santa+Rosa&new=n&rss=1&srad=90&svt=text&swhat=&swhen=&swhere=");
+			var rss = HttpUtils.FetchUrl(new Uri(rss_plus_xcal_url));
+			var xdoc = XmlUtils.XdocFromXmlBytes(rss.bytes);
+			var itemquery = from items in xdoc.Descendants("item") select items;
+			var ical = new DDay.iCal.iCalendar();
+			//var tzinfo = Utils.TzinfoFromName("pacific");
+			var timezone = DDay.iCal.Components.iCalTimeZone.FromSystemTimeZone(tzinfo);
+			ical.AddChild(timezone);
+			
+			foreach (var item in itemquery)
+			{
+				var title = item.Element("title").Value;
+				var url = item.Element("link").Value;
+				var dtstart = Utils.DateTimeFromDateStr(item.Element(xcal + "dtstart").Value);
+				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
+				var location = item.Element(xcal + "location").Value;
+				var evt = Collector.MakeTmpEvt(dtstart_with_zone, title, url, source, allday: false, use_utc: use_utc);
+				evt.Summary = title;
+				evt.Url = url;
+				evt.Location = location;
+				evt.DTStart = dtstart;
+				Collector.AddEventToDDayIcal(ical, evt);
+			}
+			var serializer = new DDay.iCal.Serialization.iCalendarSerializer(ical);
+			var ics_text = serializer.SerializeToString();
+			return ics_text;
 		}
 
 		#endregion
