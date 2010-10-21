@@ -22,6 +22,8 @@ ts = TableStorage.MakeDefaultTableStorage()
 
 ids = delicious.LoadHubIdsFromAzureTable()
 
+calinfos = CalendarAggregator.Configurator.Calinfos
+
 def message(msg):
   msg = msg.replace('\n','')
   GenUtils.LogMsg(msg, '', '')
@@ -142,7 +144,7 @@ def datetime_is_older_than(dt,days):
 
 def rebuild_search_output():
   message('_admin: rebuild_search_output start')
-  for id in [x for x in ids if calinfos[x].type == 'where']:
+  for id in [x for x in ids if calinfos[x].hub_type == 'where']:
     needs_update = False
     r = bs.GetBlobProperties(id, '%s.search.html' % id)
     exists = bs.ExistsBlob(id, id + '.search.html')
@@ -181,10 +183,10 @@ try:
 except:
   message('_admin: error in list_blobs')
 
-#try:
-#  rebuild_search_output()
-#except:
-#  message('_admin: error in rebuild_search_output')
+try:
+  rebuild_search_output()
+except:
+  message('_admin: error in rebuild_search_output')
 
 try:
   snapshot_feeds_and_metadata_for_ids()
