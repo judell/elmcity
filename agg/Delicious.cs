@@ -303,7 +303,7 @@ namespace CalendarAggregator
 
             // lookup url in delicious
 
-            var url = new Uri(string.Format("http://delicious.com/url/view?url={0}", metadata_url));
+            var url = new Uri(string.Format("http://www.delicious.com/url/view?url={0}", metadata_url));
 
             Utils.Wait(Configurator.delicious_delay_seconds);
             var http_response = HttpUtils.FetchUrlNoRedirect(url);
