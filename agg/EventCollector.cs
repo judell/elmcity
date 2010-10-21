@@ -239,11 +239,13 @@ namespace CalendarAggregator
 
 					iCalendar ical;
 
+					var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.calinfo.delicious_account);
+
 					// allow the "fusecal" service to hook in if it can
-					var _feedurl = MaybeRedirectFeedUrl(feedurl);
+					var _feedurl = MaybeRedirectFeedUrl(feedurl, feed_metadict);
 
 					// allow ics_from_xcal to hook in if it can
-					_feedurl = MaybeXcalToIcsFeedUrl(_feedurl);
+					_feedurl = MaybeXcalToIcsFeedUrl(_feedurl, feed_metadict);
 
 					var feedtext = "";
 
@@ -269,7 +271,7 @@ namespace CalendarAggregator
 							GenUtils.LogMsg("warning", msg, null);
 							continue;
 							//loop_state.Break();
-						}
+						}  
 
 						foreach (DDay.iCal.Components.Event evt in ical.Events)
 							ProcessIcalEvent(fr, es, utc_midnight_in_tz, then, feedurl, source, evt, ical);
@@ -585,13 +587,12 @@ namespace CalendarAggregator
 
 		// alter feed url if it should be handled by the internal "fusecal" service
 		// todo: make this table-driven from an azure table
-		public string MaybeRedirectFeedUrl(string str_url)
+		public string MaybeRedirectFeedUrl(string str_url, Dictionary<string,string> feed_metadict)
 		{
 			List<string> groups;
 
 			string str_final_url = null;
 
-			var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(str_url, this.calinfo.delicious_account);
 			var filter = GetFusecalFilter(feed_metadict);
 
 			var tz_source = this.calinfo.tzname;
@@ -636,18 +637,24 @@ namespace CalendarAggregator
 		}
 
 		// alter feed url if it should be transformed from rss+xcal to ics
-		public string MaybeXcalToIcsFeedUrl(string str_url)
+		public string MaybeXcalToIcsFeedUrl(string str_url, Dictionary<string,string> feed_metadict)
 		{
 			string str_final_url = str_url;
-			var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(str_url, this.calinfo.delicious_account);
-			var source = feed_metadict["source"];
-			var tzname = feed_metadict["tz"];
-			if (feed_metadict.ContainsKey("xcal"))
+			try
 			{
-				str_final_url = String.Format(Configurator.ics_from_xcal_service, // ics_from_xcal?url={0}&tzname={1}&source={2}";
-						Uri.EscapeDataString(str_url),
-						tzname,
-						source);
+				var tzname = this.calinfo.tzname;
+				var source = feed_metadict["source"];
+				if (feed_metadict.ContainsKey("xcal"))
+				{
+					str_final_url = String.Format(Configurator.ics_from_xcal_service, // ics_from_xcal?url={0}&tzname={1}&source={2}";
+							Uri.EscapeDataString(str_url),
+							tzname,
+							source);
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "MaybeXcalToIcsFeedUrl", e.Message + e.StackTrace);
 			}
 		return str_final_url;
 		}
