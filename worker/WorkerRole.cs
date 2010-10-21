@@ -192,7 +192,7 @@ namespace WorkerRole
 
         }
 
-        private static void UpdateMetadataToAzure(string id)
+        public static void UpdateMetadataToAzure(string id)
         {
             logger.LogMsg("info", "UpdateMetadataToAzure", null);
             try
@@ -269,7 +269,7 @@ namespace WorkerRole
                 return true;
         }
 
-        private static void UpdateFeedCountToAzure(string id)
+        public static void UpdateFeedCountToAzure(string id)
         {
             logger.LogMsg("info", "UpdateFeedCountToAzure", null);
             try
@@ -311,7 +311,7 @@ namespace WorkerRole
             }
         }
 
-        private static void UpdateFeedsToAzure(FeedRegistry fr_delicious, string id)
+        public static void UpdateFeedsToAzure(FeedRegistry fr_delicious, string id)
         {
             logger.LogMsg("info", "UpdateFeedsToAzure", null);
             try
