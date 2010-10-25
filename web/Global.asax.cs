@@ -100,13 +100,13 @@ namespace WebRole
 
 		public static Logger logger = new Logger();
 
-        public static string version =  "867";
+        public static string version =  "876";
 
         public static string pagetitle = "the elmcity project";
 
         // on startup, and then periodically, a calinfo and a renderer is constructed for each hub
         public static Dictionary<string, Calinfo> calinfos;
-        public static Dictionary<string, CalendarRenderer> renderers;
+		public static Dictionary<string, CalendarRenderer> renderers = new Dictionary<string, CalendarRenderer>();
 
         public static ElmcityUtils.Monitor monitor;        // gather/report diagnostic info
 
@@ -145,7 +145,6 @@ namespace WebRole
 
         private static void _reload()
         {
-            renderers = new Dictionary<string, CalendarRenderer>();
             ElmcityApp.logger.LogMsg("info", "_reload", null);
             string current_id = "";
 
@@ -189,7 +188,11 @@ namespace WebRole
 
                     var calinfo = calinfos[id];
                     var cr = new CalendarRenderer(calinfo);
-                    renderers.Add(id, cr);
+
+					if (renderers.ContainsKey(id))
+						renderers[id] = cr;
+					else
+						renderers.Add(id, cr);
 
                     if (BlobStorage.ExistsBlob(id, id + ".html")) // there has been at least one aggregation
                         ready_ids.Add(id);
