@@ -22,33 +22,34 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net;
 
+
 namespace CalendarAggregator
 {
-    // see http://blog.jonudell.net/2009/03/13/searching-for-calendar-information/
-    public class SearchResult
-    {
-        public string url;
-        public string title;
-        public string content;
+	// see http://blog.jonudell.net/2009/03/13/searching-for-calendar-information/
+	public class SearchResult
+	{
+		public string url;
+		public string title;
+		public string content;
 		public FindingEngine engine;
 
 		public enum FindingEngine { google, bing, google_and_bing };
 
-        public SearchResult(string url, string title, string content, FindingEngine engine)
-        {
-            this.url = url;
-            this.title = title;
-            this.content = content;
+		public SearchResult(string url, string title, string content, FindingEngine engine)
+		{
+			this.url = url;
+			this.title = title;
+			this.content = content;
 			this.engine = engine;
-        }
-    }
+		}
+	}
 
 
-    public static class Search
-    {
-        private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
+	public static class Search
+	{
+		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 
-        private static List<string> qualifiers = new List<string>() 
+		private static List<string> qualifiers = new List<string>() 
             {
                 "every",
                 "first",
@@ -62,7 +63,7 @@ namespace CalendarAggregator
                 "last",
             };
 
-        private static List<string> days = new List<string>() 
+		private static List<string> days = new List<string>() 
             {
                 "monday",
                 "tuesday",
@@ -73,11 +74,11 @@ namespace CalendarAggregator
                 "sunday"
             };
 
-        public static Dictionary<string,object> SearchLocation(string id, string where)
-        {
-            var final_results_dict = new Dictionary<string, SearchResult>();
+		public static Dictionary<string, object> SearchLocation(string id, string where)
+		{
+			var final_results_dict = new Dictionary<string, SearchResult>();
 			var stats_dict = new Dictionary<string, object>();
-			stats_dict["unverified"] = new List<string>();
+			stats_dict["search_terms_not_in_blurb"] = new Dictionary<string, int>();
 			var engines = Enum.GetValues(typeof(SearchResult.FindingEngine));
 
 			foreach (var engine in engines)
@@ -89,12 +90,12 @@ namespace CalendarAggregator
 
 			var html = RenderResultsAsHtml(where, final_results_dict, stats_dict);
 
-            var data = Encoding.UTF8.GetBytes(html.ToString());
+			var data = Encoding.UTF8.GetBytes(html.ToString());
 
-            bs.PutBlob(id, id + ".search.html", new Hashtable(), data, "text/html");
+			bs.PutBlob(id, id + ".search.html", new Hashtable(), data, "text/html");
 
-			 return stats_dict;
-        }
+			return stats_dict;
+		}
 
 		private static void CountResults(Dictionary<string, SearchResult> final_results_dict, Dictionary<string, object> stats_dict)
 		{
@@ -113,7 +114,7 @@ namespace CalendarAggregator
 			stats_dict[engine_name] = count;
 		}
 
-		private static string RenderResultsAsHtml(string where, Dictionary<string, SearchResult> final_results_dict, Dictionary<string,object> stats_dict)
+		private static string RenderResultsAsHtml(string where, Dictionary<string, SearchResult> final_results_dict, Dictionary<string, object> stats_dict)
 		{
 			var sb = new StringBuilder();
 
@@ -127,9 +128,9 @@ namespace CalendarAggregator
 
 			foreach (var engine in Enum.GetValues(typeof(SearchResult.FindingEngine)))
 			{
-				sb.Append ( String.Format("<div>{0}: {1}</div>", engine, stats_dict[engine.ToString()]) );
+				sb.Append(String.Format("<div>{0}: {1}</div>", engine, stats_dict[engine.ToString()]));
 			}
-										 
+
 			var count = 0;
 			//var max = final_results_dict.Keys.Count();
 			//var cutoff = Convert.ToInt32(max - (max * 0.01)); // skip last 1%
@@ -157,7 +158,7 @@ namespace CalendarAggregator
 			return html;
 		}
 
-		private static void PerformSearches(string where, Dictionary<string, SearchResult> final_results_dict, Dictionary<string,object> stats_dict)
+		private static void PerformSearches(string where, Dictionary<string, SearchResult> final_results_dict, Dictionary<string, object> stats_dict)
 		{
 			foreach (var qualifier in qualifiers)
 			{
@@ -189,89 +190,91 @@ namespace CalendarAggregator
 			}
 		}
 
-        public static List<SearchResult> BingSearch(string search_expression, Dictionary<string,object> stats_dict)
-        {
-            var url_template = "http://api.search.live.net/json.aspx?AppId=8F9BDD3C8AAD34D18AFE5099AE3894CE02BC1CF6&Market=en-US&Sources=Web&Adult=Strict&Query={0}&Web.Count=50";
-            var offset_template = "&Web.Offset={1}";
+		public static List<SearchResult> BingSearch(string search_expression, Dictionary<string, object> stats_dict)
+		{
+			var url_template = "http://api.search.live.net/json.aspx?AppId=8F9BDD3C8AAD34D18AFE5099AE3894CE02BC1CF6&Market=en-US&Sources=Web&Adult=Strict&Query={0}&Web.Count=50";
+			var offset_template = "&Web.Offset={1}";
 			var results_list = new List<SearchResult>();
-            Uri search_url;
-            int[] offsets = { 0, 50, 100, 150 };
-            foreach (var offset in offsets)
-            {
-                if (offset == 0)
-                    search_url = new Uri(string.Format(url_template, search_expression));
-                else
-                    search_url = new Uri(string.Format(url_template + offset_template, search_expression, offset));
+			Uri search_url;
+			int[] offsets = { 0, 50, 100, 150 };
+			foreach (var offset in offsets)
+			{
+				if (offset == 0)
+					search_url = new Uri(string.Format(url_template, search_expression));
+				else
+					search_url = new Uri(string.Format(url_template + offset_template, search_expression, offset));
 
 				var page = new WebClient().DownloadString(search_url);
 
 				JObject o = (JObject)JsonConvert.DeserializeObject(page);
 
-                var results_query =
-                    from result in o["SearchResponse"]["Web"]["Results"].Children()
-                    select new SearchResult
-                          (
-                          url: result.Value<string>("Url").ToString(),
-                          title: result.Value<string>("Title").ToString(),
-                          content: result.Value<string>("Description").ToString(),
-                          engine: SearchResult.FindingEngine.bing
-                          );
+				var results_query =
+					from result in o["SearchResponse"]["Web"]["Results"].Children()
+					select new SearchResult
+						  (
+						  url: result.Value<string>("Url").ToString(),
+						  title: result.Value<string>("Title").ToString(),
+						  content: result.Value<string>("Description").ToString(),
+						  engine: SearchResult.FindingEngine.bing
+						  );
 
 				foreach (var result in results_query)
 					results_list.Add(result);
-            }
+			}
 
 			return results_list;
-        }
+		}
 
-		public static List<SearchResult> GoogleSearch(string search_expression, Dictionary<string,object> stats_dict)
-        {
-            var url_template = "http://ajax.googleapis.com/ajax/services/search/web?v=1.0&rsz=large&safe=active&q={0}&start={1}";
-            Uri search_url;
+		public static List<SearchResult> GoogleSearch(string search_expression, 
+			Dictionary<string, object> stats_dict)
+		{
+			var url_template = "http://ajax.googleapis.com/ajax/services/search/web?v=1.0&rsz=large&safe=active&q={0}&start={1}";
+			Uri search_url;
 			var results_list = new List<SearchResult>();
-            int[] offsets = { 0, 8, 16, 24, 32, 40, 48 };
-            foreach (var offset in offsets)
-            {
-                search_url = new Uri(string.Format(url_template, search_expression, offset));
+			int[] offsets = { 0, 8, 16, 24, 32, 40, 48 };
+			foreach (var offset in offsets)
+			{
+				search_url = new Uri(string.Format(url_template, search_expression, offset));
 
 				var page = new WebClient().DownloadString(search_url);
 
-                JObject o = (JObject)JsonConvert.DeserializeObject(page);
+				JObject o = (JObject)JsonConvert.DeserializeObject(page);
 
-                var results_query =
-                    from result in o["responseData"]["results"].Children()
-                    select new SearchResult(
-                            url: result.Value<string>("url").ToString(),
-                            title: result.Value<string>("title").ToString(),
-                            content: result.Value<string>("content").ToString(),
-                            engine: SearchResult.FindingEngine.google
-                            );
+				var results_query =
+					from result in o["responseData"]["results"].Children()
+					select new SearchResult(
+							url: result.Value<string>("url").ToString(),
+							title: result.Value<string>("title").ToString(),
+							content: result.Value<string>("content").ToString(),
+							engine: SearchResult.FindingEngine.google
+							);
 
 				foreach (var result in results_query)
 					results_list.Add(result);
-            }
+			}
 
 			return results_list;
-        }
+		}
 
-        private static void DictifyResults(List<SearchResult> results_list, Dictionary<string, SearchResult> final_results_dict, Dictionary<string,object> stats_dict)
-        {
-            foreach (var search_result in results_list)
-            {
-                if (VerifyFoundContent(search_result.url, search_result.content, stats_dict) == false) continue;
+		private static void DictifyResults(List<SearchResult> results_list, Dictionary<string, SearchResult> final_results_dict, Dictionary<string, object> stats_dict)
+		{
+			foreach (var search_result in results_list)
+			{
+				//if (VerifyFoundContent(search_result.url, search_result.content, stats_dict) == false) continue;
+				VerifyFoundContent(search_result.url, search_result.content, stats_dict);
 
-                if ( ! final_results_dict.ContainsKey(search_result.url) )  // found first by either engine
-                {
+				if (!final_results_dict.ContainsKey(search_result.url))  // found first by either engine
+				{
 					final_results_dict.Add(search_result.url, search_result);
-                }
-                else                                                        // found again, maybe by other engine
-                {
+				}
+				else                                                        // found again, maybe by other engine
+				{
 					MaybeUpdateFindingEngine(final_results_dict, search_result, stats_dict);
-                }
-            }
-        }
+				}
+			}
+		}
 
-		private static void MaybeUpdateFindingEngine(Dictionary<string, SearchResult> final_results_dict, SearchResult search_result, Dictionary<string,object> stats_dict)
+		private static void MaybeUpdateFindingEngine(Dictionary<string, SearchResult> final_results_dict, SearchResult search_result, Dictionary<string, object> stats_dict)
 		{
 			var temp_result = final_results_dict[search_result.url];
 			var already_found_by = temp_result.engine;
@@ -286,24 +289,27 @@ namespace CalendarAggregator
 			}
 		}
 
-        private static bool VerifyFoundContent(string url, string content, Dictionary<string,object> stats_dict)
-        {
-            bool daymatch = false;
-            bool qualifiermatch = false;
-            content = content.ToLower();
-            foreach (var day in days)
-                if (content.Contains(day))
-                    daymatch = true;
-            foreach (var qualifier in qualifiers)
-                if (content.Contains(qualifier))
-                    qualifiermatch = true;
-            var verified = (daymatch == true && qualifiermatch == true);
+		private static bool VerifyFoundContent(string url, string content, Dictionary<string, object> stats_dict)
+		{
+			bool daymatch = false;
+			bool qualifiermatch = false;
+			content = content.ToLower();
+			foreach (var day in days)
+				if (content.Contains(day))
+					daymatch = true;
+			foreach (var qualifier in qualifiers)
+				if (content.Contains(qualifier))
+					qualifiermatch = true;
+			var verified = (daymatch == true && qualifiermatch == true);
 			if (verified == false)
 			{
-				var unverified_list = (List<string>) stats_dict["unverified"];
-				unverified_list.Add(url);
-				}
+				var dict = (Dictionary<string, int>)stats_dict["search_terms_not_in_blurb"];
+				if (dict.ContainsKey(url))
+					dict[url] += 1;
+				else
+					dict.Add(url, 1);
+			}
 			return verified;
-        }
-    }
+		}
+	}
 }
