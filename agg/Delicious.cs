@@ -126,8 +126,8 @@ namespace CalendarAggregator
             if (response.outcome != MetadataQueryOutcome.Success) // delicious failed, don't overwrite cached info in azure table
                 return;
             var dict = response.dict_response;
-            dict = Utils.DictTryAddValue(dict, "feedurl", feedurl);
-            dict = Utils.DictTryAddValue(dict, "source", fr.feeds[feedurl]);
+            dict = GenUtils.DictTryAddStringValue(dict, "feedurl", feedurl);
+            dict = GenUtils.DictTryAddStringValue(dict, "source", fr.feeds[feedurl]);
             TableStorage.UpdateDictToTableStore(ObjectUtils.DictStrToDictObj(dict), ts_table, id, rowkey);
         }
 
@@ -469,8 +469,8 @@ namespace CalendarAggregator
         {
             string pk = id + "_" + "venues";
             string rk = Utils.MakeSafeRowkeyFromUrl(venue_url);
-            metadict = Utils.DictTryAddValue(metadict, "id", id);
-            metadict = Utils.DictTryAddValue(metadict, "venue_url", venue_url);
+            metadict = GenUtils.DictTryAddStringValue(metadict, "id", id);
+            metadict = GenUtils.DictTryAddStringValue(metadict, "venue_url", venue_url);
             var metadict_obj = ObjectUtils.DictStrToDictObj(metadict);
             TableStorage.UpmergeDictToTableStore(metadict_obj, table: ts_table, partkey: pk, rowkey: rk);
             return LoadVenueMetadataFromAzureTableForIdAndVenueUrl(id, venue_url);
@@ -496,7 +496,7 @@ namespace CalendarAggregator
         {
             string rowkey = Utils.MakeSafeRowkeyFromUrl(excluded_url);
             var dict = new Dictionary<string, string>();
-            dict = Utils.DictTryAddValue(dict, "excluded_url", excluded_url);
+            dict = GenUtils.DictTryAddStringValue(dict, "excluded_url", excluded_url);
             var dict_obj = ObjectUtils.DictStrToDictObj(dict);
             TableStorage.UpdateDictToTableStore(dict_obj, table: ts_table, partkey: id, rowkey: rowkey);
         }

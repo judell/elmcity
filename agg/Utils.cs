@@ -681,15 +681,6 @@ namespace CalendarAggregator
 			return msg;
 		}
 
-		public static Dictionary<string, string> DictTryAddValue(Dictionary<string, string> dict, string key, string value)
-		{
-			if (dict.ContainsKey(key))
-				dict[key] = value;
-			else
-				dict.Add(key, value);
-			return dict;
-		}
-
 		public static string DictTryGetValueAsStr(Dictionary<string, string> dict, string key)
 		{
 			if (dict.ContainsKey(key))

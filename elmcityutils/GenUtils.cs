@@ -284,5 +284,27 @@ namespace ElmcityUtils
 		}
 
 		#endregion regex
+
+		#region dict
+
+		public static Dictionary<string, string> DictTryAddStringValue(Dictionary<string, string> dict, string key, string value)
+		{
+			if (dict.ContainsKey(key))
+				dict[key] = value;
+			else
+				dict.Add(key, value);
+			return dict;
+		}
+
+		public static Dictionary<string, int> DictTryIncrementIntValue(Dictionary<string, int> dict, string key, int value)
+		{
+			if (dict.ContainsKey(key))
+				dict[key] = dict[key] + 1;
+			else
+				dict.Add(key, 1);
+			return dict;
+		}
+
+		#endregion
 	}
 }
