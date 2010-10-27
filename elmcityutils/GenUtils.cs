@@ -305,6 +305,14 @@ namespace ElmcityUtils
 			return dict;
 		}
 
+		public static string DictTryGetValueAsStr(Dictionary<string, string> dict, string key)
+		{
+			if (dict.ContainsKey(key))
+				return dict[key].ToString();
+			else
+				return "";
+		}
+
 		#endregion
 	}
 }

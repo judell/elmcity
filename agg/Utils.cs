@@ -582,7 +582,7 @@ namespace CalendarAggregator
 			var dict_str = new Dictionary<string, string>();
 			foreach (var dict in dicts)
 			{
-				dict_str = DictObjToDictStr(dict);
+				dict_str = ObjectUtils.DictObjToDictStr(dict);
 				entries.Add(dict_str);
 			}
 			var new_ticks = dict_str["RowKey"];
@@ -681,14 +681,6 @@ namespace CalendarAggregator
 			return msg;
 		}
 
-		public static string DictTryGetValueAsStr(Dictionary<string, string> dict, string key)
-		{
-			if (dict.ContainsKey(key))
-				return dict[key].ToString();
-			else
-				return "";
-		}
-
 		public static void PrintDict(Dictionary<string, string> dict)
 		{
 			foreach (var key in dict.Keys)
@@ -721,22 +713,6 @@ namespace CalendarAggregator
 				error = GenUtils.RegexFindGroups(page, "Error was: ([^<]+)")[1];
 			}
 			return error;
-		}
-
-		public static Dictionary<string, string> DictObjToDictStr(Dictionary<string, object> dictobj)
-		{
-			Dictionary<string, string> dictstr = new Dictionary<string, string>();
-			foreach (string key in dictobj.Keys)
-				dictstr.Add(key, dictobj[key].ToString());
-			return dictstr;
-		}
-
-		public static Dictionary<string, object> DictStrToDictObj(Dictionary<string, string> dictstr)
-		{
-			Dictionary<string, object> dictobj = new Dictionary<string, object>();
-			foreach (var key in dictstr.Keys)
-				dictobj.Add(key, (object)dictstr[key]);
-			return dictobj;
 		}
 
 		public static Random _random = new Random();
