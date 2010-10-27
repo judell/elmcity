@@ -37,6 +37,13 @@ namespace ElmcityUtils
 			this.tablename = tablename;
 		}
 
+		public Monitor(int interval_minutes, string tablename, TableStorage ts)
+		{
+			this.interval_minutes = interval_minutes;
+			this.tablename = tablename;
+			this.ts = ts;
+		}
+
 		public static Monitor TryStartMonitor(int interval_minutes, string tablename)
 		{
 			Monitor monitor = null;
@@ -117,6 +124,11 @@ namespace ElmcityUtils
 	public static class Counters
 	{
 		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
+
+		public static void SetTs(TableStorage ts)
+		{
+			Counters.ts = ts;
+		}
 
 		// use the counter_paths
 		public static void AddCountersToConfig(DiagnosticMonitorConfiguration config, string excluded_specifier_prefix)
