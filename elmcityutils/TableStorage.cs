@@ -120,6 +120,13 @@ namespace ElmcityUtils
 				Configurator.azure_b64_secret, scheme: "http");
 		}
 
+		public static TableStorage MakeTableStorage(string storage_account, string table_domain, string b64_secret)
+		{
+			return new TableStorage(storage_account,
+				storage_account + "." + table_domain,
+				b64_secret, scheme: "http");
+		}
+
 		public static TableStorage MakeSecureTableStorage()
 		{
 			return new TableStorage(Configurator.azure_storage_account,
