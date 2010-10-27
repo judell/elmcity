@@ -678,6 +678,20 @@ namespace CalendarAggregator
 		private void AddTimezoneToDDayICal(DDay.iCal.iCalendar ical)
 		{
 			var timezone = DDay.iCal.Components.iCalTimeZone.FromSystemTimeZone(this.calinfo.tzinfo);
+
+			if (timezone.TimeZoneInfos.Count == 0)
+			{
+				var dday_tzinfo_standard = new DDay.iCal.Components.iCalTimeZoneInfo();
+				dday_tzinfo_standard.Name = "STANDARD";
+				dday_tzinfo_standard.TimeZoneName = this.calinfo.tzinfo.StandardName;
+				dday_tzinfo_standard.Start = new DateTime(1970, 1, 1);
+				var utcOffset = this.calinfo.tzinfo.BaseUtcOffset;
+				dday_tzinfo_standard.TZOffsetFrom = new DDay.iCal.DataTypes.UTC_Offset(utcOffset);
+				dday_tzinfo_standard.TZOffsetTo = new DDay.iCal.DataTypes.UTC_Offset(utcOffset);
+				// Add the "standard" time rule to the time zone
+				timezone.AddChild(dday_tzinfo_standard);
+			}
+
 			ical.AddChild(timezone);
 		}
 
