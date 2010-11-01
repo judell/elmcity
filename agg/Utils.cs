@@ -107,18 +107,18 @@ namespace CalendarAggregator
 
 		}
 
-		public static DateTimeWithZone UtcDateTimeFromiCalDateTime(iCalDateTime idt, System.TimeZoneInfo tzinfo)
+		public static DateTimeWithZone DtWithZoneFromICalDateTime(iCalDateTime idt, System.TimeZoneInfo tzinfo)
 		{
-			return UtcFromIdtAndTzinfo(idt, tzinfo);
+			return DtWithZoneFromIdtAndTzinfo(idt, tzinfo);
 		}
 
-		public static DateTimeWithZone UtcFromDtAndTzinfo(DateTime dt, TimeZoneInfo tzinfo)
+		public static DateTimeWithZone DtWithZoneFromDtAndTzinfo(DateTime dt, TimeZoneInfo tzinfo)
 		{
 			var idt = new iCalDateTime(dt);
-			return UtcFromIdtAndTzinfo(idt, tzinfo);
+			return DtWithZoneFromIdtAndTzinfo(idt, tzinfo);
 		}
 
-		private static DateTimeWithZone UtcFromIdtAndTzinfo(iCalDateTime idt, System.TimeZoneInfo tzinfo)
+		private static DateTimeWithZone DtWithZoneFromIdtAndTzinfo(iCalDateTime idt, System.TimeZoneInfo tzinfo)
 		{
 			DateTimeWithZone dt_with_tz;
 			DateTime dt;
