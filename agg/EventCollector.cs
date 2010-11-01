@@ -305,7 +305,7 @@ namespace CalendarAggregator
 			}
 			else
 			{
-				/* disable validation for now, until icalvalid.cloudapp.net is back online
+				// disable validation for now, until icalvalid.cloudapp.net is back online
 				try
 				{
 					fr.stats[feedurl].score = Utils.DDay_Validate(_feedurl);
@@ -314,7 +314,7 @@ namespace CalendarAggregator
 				{
 					GenUtils.LogMsg("exception", "DDay_Validate: " + e.Message, _feedurl);
 				}
-				 */
+				 //
 
 				feedtext = response.DataAsString();
 
@@ -605,7 +605,7 @@ namespace CalendarAggregator
 			groups = GenUtils.RegexFindGroups(str_url, "(libraryinsight.com)(.+)");
 			if (groups.Count == 3)
 			{
-				str_final_url = String.Format(Configurator.fusecal_service, Uri.EscapeUriString(str_url), filter, tz_source, tz_dest);
+				str_final_url = String.Format(Configurator.fusecal_service, Uri.EscapeDataString(str_url), filter, tz_source, tz_dest);
 			}
 
 			groups = GenUtils.RegexFindGroups(str_url, "(librarything.com/local/place/)(.+)");
@@ -613,7 +613,7 @@ namespace CalendarAggregator
 			{
 				var place = groups[2];
 				var radius = this.calinfo.radius;
-				var lt_url = Uri.EscapeUriString(string.Format("http://www.librarything.com/rss/events/location/{0}/distance={1}",
+				var lt_url = Uri.EscapeDataString(string.Format("http://www.librarything.com/rss/events/location/{0}/distance={1}",
 					place, radius));
 				str_final_url = String.Format(Configurator.fusecal_service, lt_url, filter, tz_source, tz_dest);
 			}
@@ -622,7 +622,7 @@ namespace CalendarAggregator
 			if (groups.Count == 3)
 			{
 				var musician = groups[2];
-				var ms_url = Uri.EscapeUriString(string.Format("http://www.myspace.com/{0}", musician));
+				var ms_url = Uri.EscapeDataString(string.Format("http://www.myspace.com/{0}", musician));
 				str_final_url = String.Format(Configurator.fusecal_service, ms_url, filter, tz_source, tz_dest);
 			}
 
@@ -675,17 +675,17 @@ namespace CalendarAggregator
 		}
 
 		// add VTIMEZONE to intermediate or final ics outputs
-		private void AddTimezoneToDDayICal(DDay.iCal.iCalendar ical)
+		public static void AddTimezoneToDDayICal(DDay.iCal.iCalendar ical, TimeZoneInfo tzinfo)
 		{
-			var timezone = DDay.iCal.Components.iCalTimeZone.FromSystemTimeZone(this.calinfo.tzinfo);
+			var timezone = DDay.iCal.Components.iCalTimeZone.FromSystemTimeZone(tzinfo);
 
 			if (timezone.TimeZoneInfos.Count == 0)
 			{
 				var dday_tzinfo_standard = new DDay.iCal.Components.iCalTimeZoneInfo();
 				dday_tzinfo_standard.Name = "STANDARD";
-				dday_tzinfo_standard.TimeZoneName = this.calinfo.tzinfo.StandardName;
+				dday_tzinfo_standard.TimeZoneName = tzinfo.StandardName;
 				dday_tzinfo_standard.Start = new DateTime(1970, 1, 1);
-				var utcOffset = this.calinfo.tzinfo.BaseUtcOffset;
+				var utcOffset = tzinfo.BaseUtcOffset;
 				dday_tzinfo_standard.TZOffsetFrom = new DDay.iCal.DataTypes.UTC_Offset(utcOffset);
 				dday_tzinfo_standard.TZOffsetTo = new DDay.iCal.DataTypes.UTC_Offset(utcOffset);
 				// Add the "standard" time rule to the time zone
@@ -1135,7 +1135,7 @@ namespace CalendarAggregator
 		private iCalendar NewCalendarWithTimezone()
 		{
 			var ical = new iCalendar();
-			AddTimezoneToDDayICal(ical);
+			AddTimezoneToDDayICal(ical, this.calinfo.tzinfo);
 			return ical;
 		}
 
@@ -1163,6 +1163,26 @@ namespace CalendarAggregator
 			evt.Location = event_url;
 			evt.Description = source;
 			evt.DTStart = (use_utc) ? dtstart.UniversalTime : dtstart.LocalTime;
+			evt.IsAllDay = allday;
+			evt.UID = Event.MakeEventUid(evt);
+			return evt;
+		}
+
+		public static DDay.iCal.Components.Event MakeTmpEvt(Utils.DateTimeWithZone dtstart, Utils.DateTimeWithZone dtend, TimeZoneInfo tzinfo, string tzid, string title, string url, string location, string description, bool allday, bool use_utc)
+		{
+			iCalendar ical = new iCalendar();
+			AddTimezoneToDDayICal(ical, tzinfo);
+			DDay.iCal.Components.Event evt = new DDay.iCal.Components.Event(ical);
+			evt.Summary = title;
+			evt.Url = url;
+			evt.Location = location;
+			evt.Description = description;
+			evt.DTStart = (use_utc) ? dtstart.UniversalTime : dtstart.LocalTime;
+			evt.DTStart.TZID = tzid;
+			evt.DTStart.iCalendar = ical;
+			evt.DTEnd = (use_utc) ? dtend.UniversalTime : dtend.LocalTime;
+			evt.DTEnd.iCalendar = ical;
+			evt.DTEnd.TZID = tzid;
 			evt.IsAllDay = allday;
 			evt.UID = Event.MakeEventUid(evt);
 			return evt;
