@@ -198,7 +198,17 @@ namespace CalendarAggregator
 
         #endregion
 
-        // non-encapsulated (for now) settings
+		#region boolean settings
+
+		public static bool do_ical_validation
+		{ get { return _do_ical_validation; } }
+
+		private static bool _do_ical_validation
+		{ get { return (bool)(GetSettingValue("do_ical_validation") == "true"); } }
+
+		#endregion
+
+		// non-encapsulated (for now) settings
 
         public const int azure_log_max_minutes = 500;
         public const int reverse_dns_timeout_seconds = 3;
