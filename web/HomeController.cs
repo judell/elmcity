@@ -82,14 +82,24 @@ namespace WebRole.Controllers
             return View();
         }
 		
-		public ActionResult ics_from_xcal(string url, string source, string tzname, string use_utc_str)
+		public ActionResult ics_from_xcal(string url, string source, string tzname, string use_utc)
 		{
-			bool use_utc;
-			use_utc = String.IsNullOrEmpty(use_utc_str) == false && use_utc_str == "1";
+			var utc = String.IsNullOrEmpty(use_utc) == false && use_utc == "1";
 			
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			var tzinfo = Utils.TzinfoFromName(tzname);
-			var ics = Utils.IcsFromRssPlusXcal(url, source, tzinfo, use_utc);
+			var ics = Utils.IcsFromRssPlusXcal(url, source, tzinfo, utc);
+			ViewData["ics"] = ics;
+			return View();
+		}
+
+		public ActionResult ics_from_vcal(string url, string source, string tzname, string use_utc)
+		{
+			var utc = String.IsNullOrEmpty(use_utc) == false && use_utc == "1";
+
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var tzinfo = Utils.TzinfoFromName(tzname);
+			var ics = Utils.IcsFromAtomPlusVCalAsContent(url, source, tzinfo, utc);
 			ViewData["ics"] = ics;
 			return View();
 		}

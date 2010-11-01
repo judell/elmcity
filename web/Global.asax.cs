@@ -100,7 +100,7 @@ namespace WebRole
 
 		public static Logger logger = new Logger();
 
-        public static string version =  "876";
+        public static string version =  "893";
 
         public static string pagetitle = "the elmcity project";
 
@@ -268,6 +268,13 @@ namespace WebRole
 				"ics_from_xcal",
 				"ics_from_xcal",
 				 new { controller = "Home", action = "ics_from_xcal" }
+				);
+
+			// parse atom+vcal, return ics
+			routes.MapRoute(
+				"ics_from_vcal",
+				"ics_from_vcal",
+				 new { controller = "Home", action = "ics_from_vcal" }
 				);
 
             // this pattern covers most uses. gets events for a given hub id in many formats. allows

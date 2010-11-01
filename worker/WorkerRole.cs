@@ -619,6 +619,7 @@ All events {8}, population {9}, events/person {10:f}
             try
             {
                 var metadict = delicious.LoadMetadataForIdFromAzureTable(id);
+
                 var all_ical = new iCalendar();
 				Collector.AddTimezoneToDDayICal(all_ical, calinfo.tzinfo);
 				foreach (var tz in all_ical.TimeZones)
