@@ -463,7 +463,7 @@ namespace WorkerRole
             foreach (var feedurl in fr.feeds.Keys)
             {
                 var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
-                var homeurl = Utils.DictTryGetValueAsStr(feed_metadict, "url");
+                var homeurl = GenUtils.DictTryGetValueAsStr(feed_metadict, "url");
                 DoStatsRow(istats, ref report, ref futurecount, feedurl, homeurl);
             }
 
@@ -620,6 +620,9 @@ All events {8}, population {9}, events/person {10:f}
             {
                 var metadict = delicious.LoadMetadataForIdFromAzureTable(id);
                 var all_ical = new iCalendar();
+				Collector.AddTimezoneToDDayICal(all_ical, calinfo.tzinfo);
+				foreach (var tz in all_ical.TimeZones)
+					tz.TZID = calinfo.tzinfo.Id;
 
                 foreach (var suffix in suffixes)
                 {
@@ -627,6 +630,8 @@ All events {8}, population {9}, events/person {10:f}
                     var feedtext = HttpUtils.FetchUrl(url).DataAsString();
                     var sr = new StringReader(feedtext);
                     var ical = iCalendar.LoadFromStream(sr);
+					foreach (var tz in ical.TimeZones)
+						tz.TZID = calinfo.tzinfo.Id;
                     all_ical.MergeWith(ical);
                 }
 

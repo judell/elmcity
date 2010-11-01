@@ -271,7 +271,7 @@ namespace CalendarAggregator
 							GenUtils.LogMsg("warning", msg, null);
 							continue;
 							//loop_state.Break();
-						}  
+						}
 
 						foreach (DDay.iCal.Components.Event evt in ical.Events)
 							ProcessIcalEvent(fr, es, utc_midnight_in_tz, then, feedurl, source, evt, ical);
@@ -302,31 +302,32 @@ namespace CalendarAggregator
 				var msg = "could not fetch " + source;
 				GenUtils.LogMsg("warning", msg, null);
 				fr.stats[feedurl].dday_error = msg;
+				return String.Empty;
 			}
-			else
+
+			if (Configurator.do_ical_validation)
 			{
-				// disable validation for now, until icalvalid.cloudapp.net is back online
 				try
 				{
-					fr.stats[feedurl].score = Utils.DDay_Validate(_feedurl);
+					var score = fr.stats[feedurl].score = Utils.DDay_Validate(_feedurl);
+					GenUtils.LogMsg("info", "DDay_Validate: " + score, null);
 				}
 				catch (Exception e)
 				{
 					GenUtils.LogMsg("exception", "DDay_Validate: " + e.Message, _feedurl);
 				}
-				 //
-
-				feedtext = response.DataAsString();
-
-				// because not needed, and dday.ical doesn't allow legal (but very old) dates
-				feedtext = GenUtils.RegexReplace(feedtext, "\nCREATED:[^\n]+", "");
-
-				// special favor for matt gillooly :-)
-				if (this.id == "localist")
-					feedtext = feedtext.Replace("\\;", ";");
-
-				EnsureProdId(fr, feedurl, feedtext);
 			}
+
+			feedtext = response.DataAsString();
+
+			// because not needed, and dday.ical doesn't allow legal (but very old) dates
+			feedtext = GenUtils.RegexReplace(feedtext, "\nCREATED:[^\n]+", "");
+
+			// special favor for matt gillooly :-)
+			if (this.id == "localist")
+				feedtext = feedtext.Replace("\\;", ";");
+
+			EnsureProdId(fr, feedurl, feedtext);
 
 			return feedtext;
 		}
@@ -437,8 +438,8 @@ namespace CalendarAggregator
 			Utils.DateTimeWithZone dtend;
 			var tzinfo = this.calinfo.tzinfo;
 
-			dtstart = Utils.UtcDateTimeFromiCalDateTime(evt.DTStart, tzinfo);
-			dtend = (evt.DTEnd == null) ? new Utils.DateTimeWithZone(DateTime.MinValue, tzinfo) : Utils.UtcDateTimeFromiCalDateTime(evt.DTEnd, this.calinfo.tzinfo);
+			dtstart = Utils.DtWithZoneFromICalDateTime(evt.DTStart, tzinfo);
+			dtend = (evt.DTEnd == null) ? new Utils.DateTimeWithZone(DateTime.MinValue, tzinfo) : Utils.DtWithZoneFromICalDateTime(evt.DTEnd, this.calinfo.tzinfo);
 
 			if (evt.Categories != null && evt.Categories.Count() > 0)
 			{
@@ -448,7 +449,9 @@ namespace CalendarAggregator
 			else
 				es.AddEvent(evt.Summary, evt.Url.ToString(), source, dtstart, dtend, evt.IsAllDay);
 
-			AddEventToDDayIcal(ical_ical, evt);
+			//var evt_tmp = MakeTmpEvt(dtstart, title, event_url, source, all_day, use_utc: true);
+			var evt_tmp = MakeTmpEvt(dtstart, dtend, this.calinfo.tzinfo, this.calinfo.tzinfo.Id, title: evt.Summary, url: evt.Url.ToString(), location: evt.Location, description: source, allday: evt.IsAllDay, use_utc: evt.DTStart.IsUniversalTime);
+			AddEventToDDayIcal(ical_ical, evt_tmp);
 
 			fr.stats[feedurl].loaded++;
 		}
@@ -587,7 +590,7 @@ namespace CalendarAggregator
 
 		// alter feed url if it should be handled by the internal "fusecal" service
 		// todo: make this table-driven from an azure table
-		public string MaybeRedirectFeedUrl(string str_url, Dictionary<string,string> feed_metadict)
+		public string MaybeRedirectFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
 		{
 			List<string> groups;
 
@@ -637,7 +640,7 @@ namespace CalendarAggregator
 		}
 
 		// alter feed url if it should be transformed from rss+xcal to ics
-		public string MaybeXcalToIcsFeedUrl(string str_url, Dictionary<string,string> feed_metadict)
+		public string MaybeXcalToIcsFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
 		{
 			string str_final_url = str_url;
 			try
@@ -656,7 +659,7 @@ namespace CalendarAggregator
 			{
 				GenUtils.LogMsg("exception", "MaybeXcalToIcsFeedUrl", e.Message + e.StackTrace);
 			}
-		return str_final_url;
+			return str_final_url;
 		}
 
 		// get the filter= property from metadata
@@ -784,7 +787,9 @@ namespace CalendarAggregator
 
 			estats.eventcount++;
 
-			var evt_tmp = MakeTmpEvt(dtstart_with_tz, title, event_url, source, all_day, use_utc: false);
+			//var evt_tmp = MakeTmpEvt(dtstart_with_tz, title, event_url, source, all_day, use_utc: false);
+			var evt_tmp = MakeTmpEvt(dtstart_with_tz, Utils.DateTimeWithZone.MinValue(this.calinfo.tzinfo), this.calinfo.tzinfo, this.calinfo.tzinfo.Id, title, url: event_url, location: event_url, description: source, allday: all_day, use_utc: false);
+
 
 			AddEventToDDayIcal(eventful_ical, evt_tmp);
 
@@ -894,7 +899,9 @@ namespace CalendarAggregator
 
 			ustats.eventcount++;
 
-			var evt_tmp = MakeTmpEvt(dtstart, title, event_url, source, all_day, use_utc: true);
+			//var evt_tmp = MakeTmpEvt(dtstart, title, event_url, source, all_day, use_utc: true);
+			var evt_tmp = MakeTmpEvt(dtstart, Utils.DateTimeWithZone.MinValue(this.calinfo.tzinfo), this.calinfo.tzinfo, this.calinfo.tzinfo.Id, title, url: event_url, location: event_url, description: source, allday: all_day, use_utc: true);
+
 
 			AddEventToDDayIcal(upcoming_ical, evt_tmp);
 
@@ -992,11 +999,13 @@ namespace CalendarAggregator
 
 			var start_dt_str = XmlUtils.GetXeltValue(evt, ElmcityUtils.Configurator.no_ns, "start_date");
 			var start_dt = Utils.DateTimeFromDateStr(start_dt_str);
+			var start_dt_with_zone = new Utils.DateTimeWithZone(start_dt, this.calinfo.tzinfo);
 			var all_day = start_dt.Hour == 0 && start_dt.Minute == 0;
 
 			ebstats.eventcount++;
 
-			var evt_tmp = MakeTmpEvt(dtstart, title, event_url, source, all_day, use_utc: true);
+			//var evt_tmp = MakeTmpEvt(dtstart, title, event_url, source, all_day, use_utc: true);
+			var evt_tmp = MakeTmpEvt(start_dt_with_zone, Utils.DateTimeWithZone.MinValue(this.calinfo.tzinfo), this.calinfo.tzinfo, this.calinfo.tzinfo.Id, title, url: event_url, location: event_url, description: source, allday: all_day, use_utc: true);
 
 			AddEventToDDayIcal(eventbrite_ical, evt_tmp);
 
@@ -1081,7 +1090,8 @@ namespace CalendarAggregator
 
 			fbstats.eventcount++;
 
-			var evt_tmp = MakeTmpEvt(dtstart, title, event_url, source, all_day, use_utc: false);
+			//var evt_tmp = MakeTmpEvt(dtstart, title, event_url, source, all_day, use_utc: false);
+			var evt_tmp = MakeTmpEvt(dtstart, Utils.DateTimeWithZone.MinValue(this.calinfo.tzinfo), this.calinfo.tzinfo, this.calinfo.tzinfo.Id, title, url: event_url, location: event_url, description: source, allday: all_day, use_utc: false);
 
 			AddEventToDDayIcal(facebook_ical, evt_tmp);
 
@@ -1175,14 +1185,19 @@ namespace CalendarAggregator
 			DDay.iCal.Components.Event evt = new DDay.iCal.Components.Event(ical);
 			evt.Summary = title;
 			evt.Url = url;
-			evt.Location = location;
-			evt.Description = description;
+			if (location != null)
+				evt.Location = location;
+			if (description != null)
+				evt.Description = description;
 			evt.DTStart = (use_utc) ? dtstart.UniversalTime : dtstart.LocalTime;
 			evt.DTStart.TZID = tzid;
 			evt.DTStart.iCalendar = ical;
-			evt.DTEnd = (use_utc) ? dtend.UniversalTime : dtend.LocalTime;
-			evt.DTEnd.iCalendar = ical;
-			evt.DTEnd.TZID = tzid;
+			if (! dtend.Equals(Utils.DateTimeWithZone.MinValue(tzinfo)))
+			{
+				evt.DTEnd = (use_utc) ? dtend.UniversalTime : dtend.LocalTime;
+				evt.DTEnd.iCalendar = ical;
+				evt.DTEnd.TZID = tzid;
+			}
 			evt.IsAllDay = allday;
 			evt.UID = Event.MakeEventUid(evt);
 			return evt;
@@ -1198,7 +1213,7 @@ namespace CalendarAggregator
 
 		public bool IsCurrentOrFutureDTStartInTz(iCalDateTime ical_dtstart)
 		{
-			var utc_dtstart = Utils.UtcDateTimeFromiCalDateTime(ical_dtstart, this.calinfo.tzinfo);
+			var utc_dtstart = Utils.DtWithZoneFromICalDateTime(ical_dtstart, this.calinfo.tzinfo);
 			var utc_last_midnight = Utils.MidnightInTz(this.calinfo.tzinfo);
 			return utc_dtstart.UniversalTime >= utc_last_midnight.UniversalTime;
 		}
