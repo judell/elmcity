@@ -247,6 +247,9 @@ namespace CalendarAggregator
 					// allow ics_from_xcal to hook in if it can
 					_feedurl = MaybeXcalToIcsFeedUrl(_feedurl, feed_metadict);
 
+					// allow ics_from_vcal to hook in if it can
+					_feedurl = MaybeVcalToIcsFeedUrl(_feedurl, feed_metadict);
+
 					var feedtext = "";
 
 					try
@@ -643,16 +646,30 @@ namespace CalendarAggregator
 		public string MaybeXcalToIcsFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
 		{
 			string str_final_url = str_url;
+			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_xcal_service, feed_metadict, trigger_key: "xcal", str_final_url: str_final_url);
+			return str_final_url;
+		}
+
+		// alter feed url if it should be transformed from atom+vcal to ics
+		public string MaybeVcalToIcsFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
+		{
+			string str_final_url = str_url;
+			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_vcal_service, feed_metadict, trigger_key: "vcal", str_final_url: str_final_url);
+			return str_final_url;
+		}
+
+		private string RedirectFeedUrl(string str_url, string service_url, Dictionary<string, string> feed_metadict, string trigger_key, string str_final_url)
+		{
 			try
 			{
 				var tzname = this.calinfo.tzname;
 				var source = feed_metadict["source"];
-				if (feed_metadict.ContainsKey("xcal"))
+				if (feed_metadict.ContainsKey(trigger_key))
 				{
-					str_final_url = String.Format(Configurator.ics_from_xcal_service, // ics_from_xcal?url={0}&tzname={1}&source={2}";
+					str_final_url = String.Format(service_url,  // e.g. ics_from_xcal?url={0}&tzname={1}&source={2}&use_utc={3}";
 							Uri.EscapeDataString(str_url),
 							tzname,
-							source);
+							"0");
 				}
 			}
 			catch (Exception e)
@@ -1190,11 +1207,13 @@ namespace CalendarAggregator
 			if (description != null)
 				evt.Description = description;
 			evt.DTStart = (use_utc) ? dtstart.UniversalTime : dtstart.LocalTime;
+			evt.DTStart.IsUniversalTime = (use_utc ? true : false);
 			evt.DTStart.TZID = tzid;
 			evt.DTStart.iCalendar = ical;
 			if (! dtend.Equals(Utils.DateTimeWithZone.MinValue(tzinfo)))
 			{
 				evt.DTEnd = (use_utc) ? dtend.UniversalTime : dtend.LocalTime;
+				evt.DTStart.IsUniversalTime = (use_utc ? true : false);
 				evt.DTEnd.iCalendar = ical;
 				evt.DTEnd.TZID = tzid;
 			}

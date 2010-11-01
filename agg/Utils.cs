@@ -165,6 +165,13 @@ namespace CalendarAggregator
 			return dt;
 		}
 
+		public static DateTime DateTimeFromICalDateStr(string str_dt)
+		{
+			Regex re = new Regex(@"(\d{4,4})(\d{2,2})(\d{2,2})T(\d{2,2})(\d{2,2})", RegexOptions.None);
+			DateTime dt = ParseDateTime(str_dt, re);
+			return dt;
+		}
+
 		private static DateTime ParseDateTime(string str_dt, Regex re)
 		{
 			Match m = re.Match(str_dt);
@@ -651,11 +658,43 @@ namespace CalendarAggregator
 				var dtstart = Utils.DateTimeFromDateStr(item.Element(xcal + "dtstart").Value);
 				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
 				var location = item.Element(xcal + "location").Value;
-				var evt = Collector.MakeTmpEvt(dtstart_with_zone, title, url, source, allday: false, use_utc: use_utc);
-				evt.Summary = title;
-				evt.Url = url;
-				evt.Location = location;
-				evt.DTStart = dtstart;
+				//var evt = Collector.MakeTmpEvt(dtstart_with_zone, title, url, source, allday: false, use_utc: use_utc);
+				//var evt = Collector.MakeTmpEvt(dtstart_with_zone,  Utils.DateTimeWithZone.MinValue(tzinfo), title, source, allday: false, use_utc: use_utc);
+				var evt = Collector.MakeTmpEvt(dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url:url, location: location, description: source, allday: false, use_utc: false);
+				Collector.AddEventToDDayIcal(ical, evt);
+			}
+			var serializer = new DDay.iCal.Serialization.iCalendarSerializer(ical);
+			var ics_text = serializer.SerializeToString();
+			return ics_text;
+		}
+		
+		#endregion
+
+		#region vcal
+
+		static public string IcsFromAtomPlusVCalAsContent(string atom_plus_vcal_url, string source, TimeZoneInfo tzinfo, bool use_utc)
+		{
+			//var uri = new Uri("http://www.techhui.com/events/event/feed");
+			var ns = StorageUtils.atom_namespace;
+		
+			var atom = HttpUtils.FetchUrl(new Uri(atom_plus_vcal_url));
+			var xdoc = XmlUtils.XdocFromXmlBytes(atom.bytes);
+			var entryquery = from items in xdoc.Descendants(ns + "entry") select items;
+			var ical = new DDay.iCal.iCalendar();
+			//var tzinfo = Utils.TzinfoFromName("pacific");
+			var timezone = DDay.iCal.Components.iCalTimeZone.FromSystemTimeZone(tzinfo);
+			ical.AddChild(timezone);
+
+			foreach (var entry in entryquery)
+			{
+				var title = entry.Element(ns+"title").Value;
+				var url = entry.Element(ns+"link").Attribute("href").Value;
+				var dtstart_str = entry.Descendants(ns + "dtstart").First().Value;
+				var dtstart = Utils.DateTimeFromICalDateStr(dtstart_str);
+				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
+				var location = entry.Descendants(ns + "location").First().Value;
+				//var evt = Collector.MakeTmpEvt(dtstart_with_zone, title, url, source, allday: false, use_utc: use_utc);
+				var evt = Collector.MakeTmpEvt(dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, allday: false, use_utc: use_utc);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
 			var serializer = new DDay.iCal.Serialization.iCalendarSerializer(ical);
