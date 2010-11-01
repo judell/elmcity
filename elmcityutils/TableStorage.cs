@@ -89,8 +89,8 @@ namespace ElmcityUtils
 		const string NextPartitionKeyHeaderName = "x-ms-continuation-NextPartitionKey";
 		const string NextRowKeyHeaderName = "x-ms-continuation-NextRowKey";
 
-		static private XNamespace ts_data_namespace = "http://schemas.microsoft.com/ado/2007/08/dataservices";
-		static private XNamespace ts_metadata_namespace = "http://schemas.microsoft.com/ado/2007/08/dataservices/metadata";
+		static private XNamespace odata_namespace = "http://schemas.microsoft.com/ado/2007/08/dataservices";
+		static private XNamespace odata_metadata_namespace = "http://schemas.microsoft.com/ado/2007/08/dataservices/metadata";
 
 		public const string ISO_FORMAT_UTC = "yyyy-MM-ddTHH:mm:ss.fffffffZ";
 
@@ -498,7 +498,7 @@ encoding=""utf-8"" standalone=""yes""?>
   <content type=""application/xml"">
   {5}
   </content>
-</entry>", ts_data_namespace, ts_metadata_namespace, StorageUtils.atom_namespace, updated, id, content);
+</entry>", odata_namespace, odata_metadata_namespace, StorageUtils.atom_namespace, updated, id, content);
 			var payload_bytes = Encoding.UTF8.GetBytes(payload);
 			return payload_bytes;
 		}
@@ -556,66 +556,7 @@ encoding=""utf-8"" standalone=""yes""?>
 
 		private static List<Dictionary<string, object>> GetTsDicts(HttpResponse http_response)
 		{
-			//Console.WriteLine("GetTsDicts: http_response null? " + ( http_response == null).ToString());
-			//Console.WriteLine("GetTsDicts: http_response.bytes null? " + (http_response.bytes == null).ToString());
-
-			var dicts = new List<Dictionary<string, object>>();
-
-			if (http_response.bytes.Length > 0)
-			{
-				var xdoc = XmlUtils.XdocFromXmlBytes(http_response.bytes);
-				IEnumerable<XElement> query;
-				query = from propbags in xdoc.Descendants(ts_metadata_namespace + "properties") select propbags;
-				dicts = UnpackPropBags(query);
-			}
-			return dicts;
-		}
-
-		// walk and unpack an enumeration of <m:properties> elements
-		private static List<Dictionary<string, object>> UnpackPropBags(IEnumerable<XElement> query)
-		{
-			var dicts = new List<Dictionary<string, object>>();
-			foreach (XElement propbag in query)
-			{
-				var dict = new Dictionary<string, object>();
-				IEnumerable<XElement> query2 = from props in propbag.Descendants() select props;
-				foreach (XElement prop in query2)
-				{
-					object value = prop.Value;
-					var attrs = prop.Attributes();
-					foreach (var attr in attrs)
-					{
-						if (attr.Name.LocalName == "type")
-						{
-							switch (attr.Value)
-							{
-								case "Edm.DateTime":
-									value = Convert.ToDateTime(prop.Value);
-									break;
-
-								case "Edm.Int32":
-									value = Convert.ToInt32(prop.Value);
-									break;
-
-								case "Edm.Int64":
-									value = Convert.ToInt64(prop.Value);
-									break;
-
-								case "Edm.Float":
-									value = float.Parse(prop.Value);
-									break;
-
-								case "Edm.Boolean":
-									value = Convert.ToBoolean(prop.Value);
-									break;
-							}
-						}
-					}
-					dict.Add(prop.Name.LocalName, value);
-				}
-				dicts.Add(dict);
-			}
-			return dicts;
+			return GenUtils.GetOdataDicts(http_response.bytes);
 		}
 
 	}
