@@ -689,7 +689,7 @@ namespace CalendarAggregator
 
 		public static string ValidationUrlFromFeedUrl(string feed_url)
 		{
-			return Configurator.remote_ical_validator + Uri.EscapeUriString(feed_url);
+			return Configurator.remote_ical_validator + Uri.EscapeDataString(feed_url);
 		}
 
 		public static string DDay_Validate(string feed_url)
