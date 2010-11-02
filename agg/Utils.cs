@@ -647,9 +647,7 @@ namespace CalendarAggregator
 			var xdoc = XmlUtils.XdocFromXmlBytes(rss.bytes);
 			var itemquery = from items in xdoc.Descendants("item") select items;
 			var ical = new DDay.iCal.iCalendar();
-			//var tzinfo = Utils.TzinfoFromName("pacific");
-			var timezone = DDay.iCal.Components.iCalTimeZone.FromSystemTimeZone(tzinfo);
-			ical.AddChild(timezone);
+			Collector.AddTimezoneToDDayICal(ical, tzinfo);
 			
 			foreach (var item in itemquery)
 			{
@@ -681,9 +679,7 @@ namespace CalendarAggregator
 			var xdoc = XmlUtils.XdocFromXmlBytes(atom.bytes);
 			var entryquery = from items in xdoc.Descendants(ns + "entry") select items;
 			var ical = new DDay.iCal.iCalendar();
-			//var tzinfo = Utils.TzinfoFromName("pacific");
-			var timezone = DDay.iCal.Components.iCalTimeZone.FromSystemTimeZone(tzinfo);
-			ical.AddChild(timezone);
+			Collector.AddTimezoneToDDayICal(ical, tzinfo);
 
 			foreach (var entry in entryquery)
 			{

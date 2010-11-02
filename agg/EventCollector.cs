@@ -646,7 +646,7 @@ namespace CalendarAggregator
 		public string MaybeXcalToIcsFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
 		{
 			string str_final_url = str_url;
-			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_xcal_service, feed_metadict, trigger_key: "xcal", str_final_url: str_final_url);
+			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_xcal_service, feed_metadict, trigger_key: "xcal", use_utc: "0", str_final_url: str_final_url);
 			return str_final_url;
 		}
 
@@ -654,11 +654,11 @@ namespace CalendarAggregator
 		public string MaybeVcalToIcsFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
 		{
 			string str_final_url = str_url;
-			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_vcal_service, feed_metadict, trigger_key: "vcal", str_final_url: str_final_url);
+			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_vcal_service, feed_metadict, trigger_key: "vcal", use_utc: "1", str_final_url: str_final_url);
 			return str_final_url;
 		}
 
-		private string RedirectFeedUrl(string str_url, string service_url, Dictionary<string, string> feed_metadict, string trigger_key, string str_final_url)
+		private string RedirectFeedUrl(string str_url, string service_url, Dictionary<string, string> feed_metadict, string trigger_key, string use_utc, string str_final_url)
 		{
 			try
 			{
@@ -669,7 +669,8 @@ namespace CalendarAggregator
 					str_final_url = String.Format(service_url,  // e.g. ics_from_xcal?url={0}&tzname={1}&source={2}&use_utc={3}";
 							Uri.EscapeDataString(str_url),
 							tzname,
-							"0");
+							source,
+							use_utc);
 				}
 			}
 			catch (Exception e)
