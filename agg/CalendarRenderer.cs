@@ -553,7 +553,7 @@ namespace CalendarAggregator
             else
                 fr.AddFeed(str_feedurl, source);
             var es = new ZonedEventStore(calinfo, qualifier);
-            var collector = new Collector(calinfo);
+			var collector = new Collector(calinfo, GenUtils.GetSettingsFromAzureTable());
             collector.CollectIcal(fr, es, test: false, nosave: true);
             var zes = ZonelessEventStore.ZonedToZoneless(es, calinfo, qualifier);
             var cr = new CalendarRenderer(calinfo);

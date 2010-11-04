@@ -101,8 +101,8 @@ namespace CalendarAggregator
 
 	public class Collector
 	{
-
 		private Calinfo calinfo;
+		private Dictionary<string, string> settings;
 		private Apikeys apikeys = new Apikeys();
 		private string id;
 		private BlobStorage bs;
@@ -153,9 +153,10 @@ namespace CalendarAggregator
 		private Dictionary<string, Dictionary<string, string>> per_feed_metadata_cache;
 
 		// public methods used by worker to collect events from all source flavors
-		public Collector(Calinfo calinfo)
+		public Collector(Calinfo calinfo, Dictionary<string,string> settings)
 		{
 			this.calinfo = calinfo;
+			this.settings = settings;
 			this.id = calinfo.delicious_account;
 			this.bs = BlobStorage.MakeDefaultBlobStorage();
 			this.delicious = Delicious.MakeDefaultDelicious();
@@ -1211,13 +1212,15 @@ namespace CalendarAggregator
 			evt.DTStart.IsUniversalTime = (use_utc ? true : false);
 			evt.DTStart.TZID = tzid;
 			evt.DTStart.iCalendar = ical;
+			/* disable until dday.ical bug found/fixed
 			if (! dtend.Equals(Utils.DateTimeWithZone.MinValue(tzinfo)))
 			{
 				evt.DTEnd = (use_utc) ? dtend.UniversalTime : dtend.LocalTime;
 				evt.DTStart.IsUniversalTime = (use_utc ? true : false);
-				evt.DTEnd.iCalendar = ical;
 				evt.DTEnd.TZID = tzid;
+				evt.DTEnd.iCalendar = ical;
 			}
+			 */
 			evt.IsAllDay = allday;
 			evt.UID = Event.MakeEventUid(evt);
 			return evt;

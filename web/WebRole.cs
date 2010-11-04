@@ -41,6 +41,8 @@ namespace WebRole
 
             RoleEnvironment.Changing += RoleEnvironmentChanging;
 
+			GenUtils.LogMsg("info", "Webrole: OnStart", null);
+
             return base.OnStart();
         }
 

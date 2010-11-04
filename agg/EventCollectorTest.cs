@@ -40,6 +40,8 @@ namespace CalendarAggregator
         private static int radius = Configurator.default_radius;
         private string test_upcoming_args = string.Format("location={0},{1}&radius={2}&min_date={3}", lookup_lat, lookup_lon, radius, min_date);
 
+		private Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
+
         private string sample_ics = @"BEGIN:VCALENDAR
 PRODID:-//Google Inc//Google Calendar 70.9054//EN
 VERSION:2.0
@@ -99,7 +101,7 @@ END:VCALENDAR";
             var evt = ical.Events[0];
             var ical_now = new iCalDateTime(DateTime.Now.ToUniversalTime());
             Assert.That(evt.GetOccurrences(ical_now).Count == 0);
-            var collector = new Collector(test_calinfo);
+			var collector = new Collector(test_calinfo, settings);
             Assert.IsTrue(collector.IsCurrentOrFutureDTStartInTz(evt.DTStart));
         }
 
@@ -113,7 +115,7 @@ END:VCALENDAR";
             StringReader sr = new StringReader(ics);
             var ical = iCalendar.LoadFromStream(sr);
             var evt = ical.Events[0];
-            var collector = new Collector(test_calinfo);
+			var collector = new Collector(test_calinfo, settings);
             Assert.IsFalse(collector.IsCurrentOrFutureDTStartInTz(evt.DTStart));
         }
 
@@ -132,7 +134,7 @@ END:VCALENDAR";
             List<Occurrence> occurrences = evt.GetOccurrences(now, then);
             Assert.That(occurrences.Count > 1);
             var period = occurrences[1].Period;
-            var collector = new Collector(test_calinfo);
+			var collector = new Collector(test_calinfo, settings);
             Assert.That(collector.IsCurrentOrFutureDTStartInTz(period.StartTime));
         }
 
@@ -140,7 +142,7 @@ END:VCALENDAR";
         public void EventfulQueryYieldsNonzeroVenues()
         {
             string method = "venues/search";
-            var collector = new Collector(test_calinfo);
+			var collector = new Collector(test_calinfo, settings);
             var xdoc = collector.CallEventfulApi(method, test_eventful_args);
             var venues = from venue in xdoc.Descendants("venue") select venue;
             Assert.That(venues.Count() > 0);
@@ -149,7 +151,7 @@ END:VCALENDAR";
         [Test]
         public void EventfulQueryYieldsNonzeroEvents()
         {
-            var collector = new Collector(test_calinfo);
+			var collector = new Collector(test_calinfo, settings);
             var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args);
             Assert.That(events.Count() > 0);
         }
@@ -157,7 +159,7 @@ END:VCALENDAR";
         [Test]
         public void EventfulQueryYieldsValidFirstEvent()
         {
-            var collector = new Collector(test_calinfo);
+			var collector = new Collector(test_calinfo, settings);
             var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args);
             var es = new ZonedEventStore(test_calinfo, null);
             collector.AddEventfulEvent(es, test_venue, events.First());
@@ -168,7 +170,7 @@ END:VCALENDAR";
 		public void UpcomingCanCallApi()
 		{
 			string method = "event.search";
-			var collector = new Collector(test_calinfo);
+			var collector = new Collector(test_calinfo, settings);
 			var xdoc = collector.CallUpcomingApi(method, test_upcoming_args);
 			var stat = from element in xdoc.Descendants("rsp")
 					   select element.Attribute("stat").Value;
@@ -179,7 +181,7 @@ END:VCALENDAR";
         public void UpcomingQueryYieldsNonzeroEvents()
         {
             string method = "event.search";
-            var collector = new Collector(test_calinfo);
+			var collector = new Collector(test_calinfo, settings);
             var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method, test_upcoming_args);
             //Console.WriteLine(events.Count());
             Assert.That(events.Count() > 0);
@@ -189,7 +191,7 @@ END:VCALENDAR";
         public void UpcomingQueryYieldsValidFirstEvent()
         {
             string method = "event.search";
-            var collector = new Collector(test_calinfo);
+			var collector = new Collector(test_calinfo, settings);
             var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method, test_upcoming_args);
             var es = new ZonedEventStore(test_calinfo, null);
             //Console.WriteLine(events.Count());
