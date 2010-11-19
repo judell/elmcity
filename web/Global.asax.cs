@@ -100,7 +100,7 @@ namespace WebRole
 
 		public static Logger logger = new Logger();
 
-        public static string version =  "900";
+        public static string version =  "912";
 
         public static string pagetitle = "the elmcity project";
 
@@ -150,6 +150,8 @@ namespace WebRole
 
             try
             {
+				ElmcityController.settings = GenUtils.GetSettingsFromAzureTable();
+
                 if (testing) // reduce the list to a single test id
                 {
                     calinfos = new Dictionary<string, Calinfo>();

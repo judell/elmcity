@@ -241,15 +241,9 @@ namespace CalendarAggregator
 					iCalendar ical;
 
 					var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.calinfo.delicious_account);
+					var _feedurl = MaybeRedirect(feedurl, feed_metadict);
 
-					// allow the "fusecal" service to hook in if it can
-					var _feedurl = MaybeRedirectFeedUrl(feedurl, feed_metadict);
-
-					// allow ics_from_xcal to hook in if it can
-					_feedurl = MaybeXcalToIcsFeedUrl(_feedurl, feed_metadict);
-
-					// allow ics_from_vcal to hook in if it can
-					_feedurl = MaybeVcalToIcsFeedUrl(_feedurl, feed_metadict);
+					MaybeValidate(fr, feedurl, _feedurl);
 
 					var feedtext = "";
 
@@ -284,6 +278,7 @@ namespace CalendarAggregator
 					catch (Exception e)
 					{
 						GenUtils.LogMsg("exception", "CollectIcal: " + id, e.Message + e.StackTrace);
+						fr.stats[feedurl].dday_error = e.Message;
 					}
 				}
 				//)
@@ -292,6 +287,48 @@ namespace CalendarAggregator
 				if (nosave == false) // why ever true? see CalendarRenderer.Viewer 
 					SerializeStatsAndIntermediateOutputs(fr, es, ical_ical, new NonIcalStats(), EventFlavor.ical);
 			}
+		}
+
+		private static void MaybeValidate(FeedRegistry fr, string feedurl, string _feedurl)
+		{
+			if (Configurator.do_ical_validation)
+			{
+				try
+				{
+					var score = Utils.DDay_Validate(_feedurl);
+					var rounded_score = fr.stats[feedurl].score = Double.Parse(score).ToString("00");
+					GenUtils.LogMsg("info", "DDay_Validate: " + score, null);
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", "DDay_Validate: " + e.Message, _feedurl);
+				}
+			}
+		}
+
+		private TableStorageResponse StoreRedirectedUrl(string feedurl, string redirected_url, Dictionary<string, string> feed_metadict)
+		{
+			string rowkey = Utils.MakeSafeRowkeyFromUrl(feedurl);
+			feed_metadict["redirected_url"] = redirected_url;
+			return TableStorage.UpdateDictToTableStore(ObjectUtils.DictStrToDictObj(feed_metadict), Delicious.ts_table, this.id, rowkey);
+		}
+
+		public string MaybeRedirect(string feedurl, Dictionary<string, string> feed_metadict)
+		{
+
+			// allow the "fusecal" service to hook in if it can
+			var _feedurl = MaybeRedirectFeedUrl(feedurl, feed_metadict);
+
+			// allow ics_from_xcal to hook in if it can
+			_feedurl = MaybeXcalToIcsFeedUrl(_feedurl, feed_metadict);
+
+			// allow ics_from_vcal to hook in if it can
+			_feedurl = MaybeVcalToIcsFeedUrl(_feedurl, feed_metadict);
+
+			if (_feedurl != feedurl)
+				StoreRedirectedUrl(feedurl, _feedurl, feed_metadict);
+
+			return _feedurl;
 		}
 
 		private string GetFeedTextFromRedirectedFeedUrl(FeedRegistry fr, string source, string feedurl, string _feedurl)
@@ -305,21 +342,7 @@ namespace CalendarAggregator
 			{
 				var msg = "could not fetch " + source;
 				GenUtils.LogMsg("warning", msg, null);
-				fr.stats[feedurl].dday_error = msg;
 				return String.Empty;
-			}
-
-			if (Configurator.do_ical_validation)
-			{
-				try
-				{
-					var score = fr.stats[feedurl].score = Utils.DDay_Validate(_feedurl);
-					GenUtils.LogMsg("info", "DDay_Validate: " + score, null);
-				}
-				catch (Exception e)
-				{
-					GenUtils.LogMsg("exception", "DDay_Validate: " + e.Message, _feedurl);
-				}
 			}
 
 			feedtext = response.DataAsString();

@@ -265,6 +265,9 @@ namespace CalendarAggregator
             html = html.Replace("__ID__", this.id);
             html = html.Replace("__CSSURL__", this.calinfo.css);
             html = html.Replace("__TITLE__", this.calinfo.title);
+			html = html.Replace("__CONTRIBUTE__", this.calinfo.contribute_url.ToString());
+
+			html = html.Replace("__WIDTH__", this.calinfo.display_width);
 
             if (this.calinfo.has_img)
             {
@@ -277,7 +280,26 @@ namespace CalendarAggregator
             }
 
             html = html.Replace("__CONTACT__", this.calinfo.contact);
-            html = html.Replace("__SOURCES__", this.ical_sources);
+
+			var sources_builder = new StringBuilder();
+
+			if (this.calinfo.eventful)
+				sources_builder.Append(@"<p class=""sources""><a target=""_new"" href=""http://eventful.com"">Eventful</a></p>");
+
+			if (this.calinfo.upcoming)
+				sources_builder.Append(@"<p class=""sources""><a target=""_new"" href=""http://upcoming.yahoo.com"">Upcoming</a></p>");
+
+			if (this.calinfo.eventbrite)
+				sources_builder.Append(@"<p class=""sources""><a target=""_new"" href=""http://eventbrite.com"">EventBrite</a></p>");
+
+			if (this.calinfo.facebook)
+				sources_builder.Append(@"<p class=""sources""><a target=""_new"" href=""http://facebook.com"">Facebook</a></p>");
+
+			var ical_feeds = string.Format(@"<p class=""sources""><a target=""_new"" href=""http://elmcity.cloudapp.net/services/{0}/stats"">{1} iCalendar feeds</a></p>", 
+				this.calinfo.delicious_account, this.calinfo.feed_count);
+			sources_builder.Append(ical_feeds);
+
+			html = html.Replace("__SOURCES__", sources_builder.ToString());
 
             return html;
         }
@@ -298,8 +320,15 @@ namespace CalendarAggregator
             OrganizeByDate(es);
             TimeOfDay current_time_of_day;
             var event_renderer = new EventRenderer(RenderEvtAsHtml);
+			var year_month_anchors = new List<string>(); // e.g. ym201110
             foreach (string datekey in es.datekeys)
             {
+				var year_month_anchor = datekey.Substring(1, 6);
+				if (! year_month_anchors.Exists(ym => ym == year_month_anchor))
+				{
+					builder.Append(string.Format("\n<a name=\"ym{0}\"></a>\n", year_month_anchor));
+					year_month_anchors.Add(year_month_anchor);
+				}
                 current_time_of_day = TimeOfDay.Initialized;
                 var event_builder = new StringBuilder();
                 var date = Utils.DateFromDateKey(datekey);
