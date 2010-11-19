@@ -47,6 +47,7 @@ namespace WorkerRole
         private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
         private static Delicious delicious = Delicious.MakeDefaultDelicious();
 		private static Logger logger = new Logger();
+		private static Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
 
         private static string blobhost = ElmcityUtils.Configurator.azure_blobhost;
         private static List<string> ids;
@@ -117,6 +118,8 @@ namespace WorkerRole
                 while (true)
                 {
                     logger.LogMsg("info", "waking", null);
+
+					settings = GenUtils.GetSettingsFromAzureTable(); 
 
 					PythonUtils.RunIronPython(CalendarAggregator.Configurator.iron_python_run_script_url, new List<string>() { "", "", "" });
 
@@ -387,7 +390,7 @@ namespace WorkerRole
             {
 
                 logger.LogMsg("info", "DoIcal: " + id, null);
-                Collector coll = new Collector(calinfo);
+				Collector coll = new Collector(calinfo, settings);
                 coll.CollectIcal(fr, ical, test:testing, nosave:false);
             }
             catch (Exception e)
@@ -401,7 +404,7 @@ namespace WorkerRole
             if (calinfo.eventful)
             {
                 var eventful = new ZonedEventStore(calinfo, ".eventful");
-                Collector coll = new Collector(calinfo);
+				Collector coll = new Collector(calinfo, settings);
                 coll.CollectEventful(eventful, testing);
             }
         }
@@ -411,7 +414,7 @@ namespace WorkerRole
             if (calinfo.upcoming)
             {
                 var upcoming = new ZonedEventStore(calinfo, ".upcoming");
-                Collector coll = new Collector(calinfo);
+				Collector coll = new Collector(calinfo, settings);
                 coll.CollectUpcoming(upcoming, testing);
             }
         }
@@ -421,7 +424,7 @@ namespace WorkerRole
             if (calinfo.eventbrite)
             {
                 var eventbrite = new ZonedEventStore(calinfo, ".eventbrite");
-                Collector coll = new Collector(calinfo);
+				Collector coll = new Collector(calinfo, settings);
                 coll.CollectEventBrite(eventbrite, testing);
             }
         }
@@ -431,7 +434,7 @@ namespace WorkerRole
             if (calinfo.facebook)
             {
                 var facebook = new ZonedEventStore(calinfo, ".facebook");
-                Collector coll = new Collector(calinfo);
+				Collector coll = new Collector(calinfo, settings);
                 coll.CollectFacebook(facebook, testing);
             }
         }
@@ -462,9 +465,7 @@ namespace WorkerRole
 
             foreach (var feedurl in fr.feeds.Keys)
             {
-                var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
-                var homeurl = GenUtils.DictTryGetValueAsStr(feed_metadict, "url");
-                DoStatsRow(istats, ref report, ref futurecount, feedurl, homeurl);
+				StatsRow(id, istats, ref report, ref futurecount, feedurl);
             }
 
             report += "</table>\n";
@@ -481,6 +482,16 @@ namespace WorkerRole
             TableStorage.UpmergeDictToTableStore(dict, "metadata", id, id);
         }
 
+		private static void StatsRow(string id, Dictionary<string, IcalStats> istats, ref string report, ref int futurecount, string feedurl)
+		{
+			var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
+			var homeurl = GenUtils.DictTryGetValueAsStr(feed_metadict, "url");
+			var redirected_url = GenUtils.DictTryGetValueAsStr(feed_metadict, "redirected_url");
+			if (String.IsNullOrEmpty(redirected_url))
+				redirected_url = feedurl;
+			DoStatsRow(istats, ref report, ref futurecount, feedurl, redirected_url, homeurl);
+		}
+
         private static void SaveWhatStats(FeedRegistry fr, Calinfo calinfo)
         {
             var id = calinfo.delicious_account;
@@ -491,8 +502,7 @@ namespace WorkerRole
             var futurecount = 0;
             foreach (var feedurl in istats.Keys)
             {
-                var homeurl = fr.feeds[feedurl];
-                DoStatsRow(istats, ref report, ref futurecount, feedurl, homeurl);
+				StatsRow(id, istats, ref report, ref futurecount, feedurl);
             }
             report += "</table>\n";
             string preamble = MakeWhatPreamble(futurecount);
@@ -514,7 +524,7 @@ namespace WorkerRole
 <td>instances</td>
 <td>loaded</td>
 <td>when</td>
-<td>dday.ical load error</td>
+<td>error</td>
 <td>PRODID</td>
 </tr>");
             return report;
@@ -569,7 +579,7 @@ All events {8}, population {9}, events/person {10:f}
             return preamble;
         }
 
-        private static void DoStatsRow(Dictionary<string, IcalStats> istats, ref string report, ref int futurecount, string feedurl, string homeurl)
+        private static void DoStatsRow(Dictionary<string, IcalStats> istats, ref string report, ref int futurecount, string feedurl, string redirected_url, string homeurl)
         {
             try
             {
@@ -593,7 +603,7 @@ All events {8}, population {9}, events/person {10:f}
                 ical_stats.source,
                 homeurl,
                 string.Format(@"<a href=""{0}"">{1}</a>",
-                  Utils.ValidationUrlFromFeedUrl(feedurl),
+                 Utils.ValidationUrlFromFeedUrl(redirected_url),
                   ical_stats.score),
                 ical_stats.futurecount,
                 ical_stats.singlecount,
