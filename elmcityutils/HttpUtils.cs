@@ -72,6 +72,7 @@ namespace ElmcityUtils
     // basic http-related operations
     public static class HttpUtils
     {
+		public static string elmcity_user_agent = "elmcity";
 
         // equivalent of curl --head
         public static HttpResponse HeadFetchUrl(Uri url)
@@ -152,6 +153,8 @@ namespace ElmcityUtils
 
         public static HttpResponse DoHttpWebRequest(HttpWebRequest request, byte[] data)
         {
+			request.UserAgent = "elmcity";
+
             try
             {
                 request.ContentLength = 0;
