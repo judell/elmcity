@@ -25,7 +25,6 @@ namespace CalendarAggregator
 
     public static class Configurator
     {
-
 		private static Dictionary<string, string> settings = new Dictionary<string, string>();
 
         // encapsulated settings
@@ -196,6 +195,13 @@ namespace CalendarAggregator
 		private static int _testrunner_interval_hours
 		{ get { return Convert.ToInt32(GetSettingValue("testrunner_interval_hours")); } }
 
+		// http://blog.jonudell.net/2010/05/07/facebook-is-now-an-elmcity-event-source/
+		public static int facebook_mystery_offset_hours
+		{ get { return _facebook_mystery_offset_hours; } }
+
+		private static int _facebook_mystery_offset_hours
+		{ get { return Convert.ToInt32(GetSettingValue("facebook_mystery_offset_hours")); } }
+
         #endregion
 
 		#region boolean settings
@@ -204,9 +210,34 @@ namespace CalendarAggregator
 		{ get { return _do_ical_validation; } }
 
 		private static bool _do_ical_validation
-		{ get { return (bool)(GetSettingValue("do_ical_validation") == "true"); } }
+		{ get { return (bool)(GetSettingValue("do_ical_validation", reload: true) == "true"); } }
 
 		#endregion
+
+		#region template settings
+
+		public static string default_css { get { return _default_css; } }
+		private static string _default_css = ElmcityUtils.Configurator.azure_blobhost + "/admin/" + GetSettingValue("elmcity_css");
+
+		public static string default_img_html { get { return _default_img_html; } }
+		private static string _default_img_html { get { return GetSettingValue("default_img_html"); } }
+
+		public static Uri default_img_url { get { return _default_img_url; } }
+		private static Uri _default_img_url = new Uri(ElmcityUtils.Configurator.azure_blobhost + "/admin/" + GetSettingValue("elmcity_img"));
+
+		public static Uri default_template_url { get { return _default_template_url; } }
+		private static Uri _default_template_url = new Uri(ElmcityUtils.Configurator.azure_blobhost + "/admin/" + GetSettingValue("elmcity_tmpl"));
+
+		public static Uri default_contribute_url { get { return _default_contribute_url; } }
+		private static Uri _default_contribute_url = new Uri(GetSettingValue("elmcity_contribute"));
+
+		public static string default_display_width { get { return _default_display_width; } }
+		private static string _default_display_width = GetSettingValue("elmcity_display_width");
+
+		public static Uri what_template_url { get { return _what_template_url; } }
+		private static Uri _what_template_url = new Uri(ElmcityUtils.Configurator.azure_blobhost + "/admin/" + GetSettingValue("elmcity_tmpl"));
+
+#endregion template settings
 
 		// non-encapsulated (for now) settings
 
@@ -316,26 +347,7 @@ namespace CalendarAggregator
         public const string default_tz = "Eastern";
         public const string default_contact = "nobody-yet";
 
-        public static string default_css { get { return _default_css; } }
-        private static string _default_css = ElmcityUtils.Configurator.azure_blobhost + "/admin/elmcity.css";
-
-        public static string default_img_html
-        { get { return _default_img_html; } }
-
-        private static string _default_img_html
-        { get { return GetSettingValue("default_img_html"); } }
-
-        public static Uri default_img_url { get { return _default_img_url; } }
-        private static Uri _default_img_url = new Uri(ElmcityUtils.Configurator.azure_blobhost + "/admin/keene-night-360.jpg");
-
-        public static Uri default_template_url { get { return _default_template_url; } }
-        private static Uri _default_template_url = new Uri(ElmcityUtils.Configurator.azure_blobhost + "/admin/events.tmpl");
-
         public const string nowhere = "nowhere";
-
-        public static Uri what_template_url { get { return _what_template_url; } }
-        private static Uri _what_template_url = new Uri(ElmcityUtils.Configurator.azure_blobhost + "/admin/what_events.tmpl");
-
         public const string nothing = "nothing";
 
         // defaults for iis output cache
@@ -420,12 +432,12 @@ namespace CalendarAggregator
 		// why? 
 		// 1. dry (don't repeat yourself, in this case by not writing down settings twice, for worker and web role
 		// 2. testing: tests run outside azure environment can use same defaults as used within
-		private static string GetSettingValue(string setting_name)
+		private static string GetSettingValue(string setting_name, bool reload)
 		{
 			// GenUtils.LogMsg("info", "GetSettingValue", setting_name);
 			string setting_value = null;
 
-			if (settings.Count == 0)
+			if (settings.Count == 0 || reload)
 				settings = GenUtils.GetSettingsFromAzureTable();
 
 			if (settings.ContainsKey(setting_name))
@@ -448,6 +460,11 @@ namespace CalendarAggregator
 				GenUtils.LogMsg("info", "GetSettingValue: " + setting_name, " is null");
 
 			return setting_value;
+		}
+
+		private static string GetSettingValue(string setting_name)
+		{
+			return GetSettingValue(setting_name, reload: false);
 		}
 
         private static Delicious delicious = Delicious.MakeDefaultDelicious();
@@ -580,6 +597,18 @@ namespace CalendarAggregator
         { get { return _template_url; } }
         private Uri _template_url = Configurator.default_template_url;
 
+		public Uri contribute_url
+		{ get { return _contribute_url; } }
+		private Uri _contribute_url = Configurator.default_contribute_url;
+
+		public string display_width
+		{ get { return _display_width; } }
+		private string _display_width = Configurator.default_display_width;
+
+		public string feed_count
+		{ get { return _feed_count; } }
+		private string _feed_count = "0";
+
         public Dictionary<string, string> metadict
         { get { return _metadict; } }
         private Dictionary<string, string> _metadict;
@@ -632,13 +661,17 @@ namespace CalendarAggregator
             }
 
             this._twitter_account = (metadict.ContainsKey("twitter") ? metadict["twitter"] : null);
-            this._css = (metadict.ContainsKey("css") ? metadict["css"] : this._css);
+            this._css = metadict.ContainsKey("css") ? metadict["css"] : this._css;
 
-            this._has_img = (metadict.ContainsKey("header_image") && metadict["header_image"] == "no") ? false : true;
-            this._img_url = (metadict.ContainsKey("img") ? new Uri(metadict["img"]) : this._img_url);
+            this._has_img = metadict.ContainsKey("header_image") && metadict["header_image"] == "no" ? false : true;
+            this._img_url = metadict.ContainsKey("img") ? new Uri(metadict["img"]) : this._img_url;
 
-            this._contact = (metadict.ContainsKey("contact") ? metadict["contact"] : this._contact);
-            this._template_url = (metadict.ContainsKey("template") ? new Uri(metadict["template"]) : this._template_url);
+            this._contact = metadict.ContainsKey("contact") ? metadict["contact"] : this._contact;
+            this._template_url = metadict.ContainsKey("template") ? new Uri(metadict["template"]) : this._template_url;
+
+			this._display_width = metadict.ContainsKey("display_width") ? metadict["display_width"] : this._display_width;
+
+			this._feed_count = metadict.ContainsKey("feed_count") ? metadict["feed_count"] : this._display_width;
         }
 
         // how long to wait between aggregator runs
