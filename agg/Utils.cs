@@ -199,8 +199,8 @@ namespace CalendarAggregator
 		public static DateTime LocalDateTimeFromFacebookDateStr(string str_dt, TimeZoneInfo tzinfo)
 		{
 			var dt = DateTimeFromISO8601DateStr(str_dt);     // 2010-07-18 01:00
-			// off by 7 hours: why?
-			var adjusted_dt = dt - new TimeSpan(7, 0, 0);    // 2010-07-17 18:00
+			// off by 7 or 8 hours: why?
+			var adjusted_dt = dt - new TimeSpan(Configurator.facebook_mystery_offset_hours, 0, 0);    // 2010-07-17 18:00
 			return adjusted_dt;
 		}
 
