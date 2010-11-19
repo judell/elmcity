@@ -59,7 +59,7 @@ namespace CalendarAggregator
         private string username;
         private string password;
         private TableStorage ts;
-        private string ts_table = "metadata";
+        public static string ts_table = "metadata";
         private string ts_master_pk = "master";
         private string ts_master_accounts_rk = "accounts";
 
