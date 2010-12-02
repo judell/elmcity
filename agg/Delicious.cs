@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
 using ElmcityUtils;
 
@@ -116,25 +117,30 @@ namespace CalendarAggregator
             return FetchMetadataFromDeliciousForUrlAndId(feedurl, id);
         }
 
-        public void StoreFeedAndMaybeMetadataToAzure(string id, FeedRegistry fr, string feedurl)
+        public Dictionary<string,string> StoreFeedAndMaybeMetadataToAzure(string id, FeedRegistry fr, string feedurl)
         {
             string rowkey = Utils.MakeSafeRowkeyFromUrl(feedurl);
+			
+			var dict = new Dictionary<string, string>();
 
             // this response should at least include url=http://... so all events in the feed have
             // a default link
             var response = FetchFeedMetadataFromDeliciousForFeedurlAndId(feedurl, id);
-            if (response.outcome != MetadataQueryOutcome.Success) // delicious failed, don't overwrite cached info in azure table
-                return;
-            var dict = response.dict_response;
+			if (response.outcome != MetadataQueryOutcome.Success) // delicious failed, don't overwrite cached info in azure table
+				return dict;
+            dict = response.dict_response;
             dict = GenUtils.DictTryAddStringValue(dict, "feedurl", feedurl);
             dict = GenUtils.DictTryAddStringValue(dict, "source", fr.feeds[feedurl]);
             TableStorage.UpdateDictToTableStore(ObjectUtils.DictStrToDictObj(dict), ts_table, id, rowkey);
+			return dict;
         }
 
         // used by worker role (UpdateFeedsToAzure) when caching registry + metadata from delicious to azure table
-        public void StoreFeedsAndMaybeMetadataToAzure(FeedRegistry fr_delicious, string id)
+        public List<Dictionary<string,string>> StoreFeedsAndMaybeMetadataToAzure(FeedRegistry fr_delicious, string id)
         {
             string feedurl = "";
+
+			var dicts = new List<Dictionary<string, string>>();
 
             try
             {
@@ -143,13 +149,16 @@ namespace CalendarAggregator
                     feedurl = key;
                     // this will always send source= and feedurl= 
                     // if extra metadata is specified in delicious, e.g. url= and category=, that will go too
-                    StoreFeedAndMaybeMetadataToAzure(id, fr_delicious, feedurl);
+                    var dict = StoreFeedAndMaybeMetadataToAzure(id, fr_delicious, feedurl);
+					dicts.Add(dict);
                 }
             }
             catch (Exception e)
             {
                 GenUtils.LogMsg("exception", "StoreFeedsAndMaybeMetadataToAzure (reload) " + id + " : " + feedurl, e.Message + e.StackTrace);
             }
+
+			return dicts;
         }
 
         /*
@@ -271,6 +280,11 @@ namespace CalendarAggregator
         {
             var metadata_url = string.Format("http://delicious.com/{0}/metadata", id);
             var response = FetchMetadataFromDeliciousForUrlAndId(metadata_url, id);
+			if (response.outcome != MetadataQueryOutcome.Success) // allow www. variant
+			{
+				metadata_url = string.Format("http://www.delicious.com/{0}/metadata", id);
+				response = FetchMetadataFromDeliciousForUrlAndId(metadata_url, id);
+			}
             if (response.outcome != MetadataQueryOutcome.Success )
                 return response;
             var dict = response.dict_response;
@@ -400,6 +414,7 @@ namespace CalendarAggregator
 			return (r.outcome == MetadataQueryOutcome.Success);
 		}
 
+		/*
         public void StoreMetadataForIdToAzure(string id, bool merge, Dictionary<string, string> extra)
         {
             var response = FetchMetadataForIdFromDelicious(id);
@@ -415,6 +430,24 @@ namespace CalendarAggregator
             else
                 TableStorage.UpdateDictToTableStore(dict_obj, table: ts_table, partkey: id, rowkey: id);
         }
+		*/
+
+		public Dictionary<string,string> StoreMetadataForIdToAzure(string id, bool merge, Dictionary<string,string> extra)
+		{
+			var response = FetchMetadataForIdFromDelicious(id);
+			if (response.outcome != MetadataQueryOutcome.Success)
+			{
+				GenUtils.LogMsg("warning", "StoreMetadataForIdToAzure: " + id, "could not fetch");
+				return new Dictionary<string, string>();
+			}
+			response.dict_response = InjectTestKeysAndVals(response.dict_response, extra);
+			var dict_obj = ObjectUtils.DictStrToDictObj(response.dict_response);
+			if (merge == true)
+				TableStorage.UpmergeDictToTableStore(dict_obj, table: ts_table, partkey: id, rowkey: id);
+			else
+				TableStorage.UpdateDictToTableStore(dict_obj, table: ts_table, partkey: id, rowkey: id);
+			return response.dict_response;
+		}
 
         public static DeliciousResponse FetchFeedCountForIdWithTags(string id, string tags)
         {

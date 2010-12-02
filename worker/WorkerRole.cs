@@ -119,7 +119,9 @@ namespace WorkerRole
                 {
                     logger.LogMsg("info", "waking", null);
 
-					settings = GenUtils.GetSettingsFromAzureTable(); 
+					settings = GenUtils.GetSettingsFromAzureTable();
+
+					SaveSettings(settings);
 
 					PythonUtils.RunIronPython(CalendarAggregator.Configurator.iron_python_run_script_url, new List<string>() { "", "", "" });
 
@@ -200,7 +202,8 @@ namespace WorkerRole
             logger.LogMsg("info", "UpdateMetadataToAzure", null);
             try
             {
-                delicious.StoreMetadataForIdToAzure(id, true, new Dictionary<string, string>());
+                var dict = delicious.StoreMetadataForIdToAzure(id, true, new Dictionary<string, string>());
+				ObjectUtils.MaybeSaveJsonSnapshot(id, ObjectUtils.JsonSnapshotType.DictStr, "metadata", dict);
             }
             catch (Exception e)
             {
@@ -319,7 +322,8 @@ namespace WorkerRole
             logger.LogMsg("info", "UpdateFeedsToAzure", null);
             try
             {
-                delicious.StoreFeedsAndMaybeMetadataToAzure(fr_delicious, id);
+                var dicts = delicious.StoreFeedsAndMaybeMetadataToAzure(fr_delicious, id);
+				ObjectUtils.MaybeSaveJsonSnapshot(id, ObjectUtils.JsonSnapshotType.ListDictStr, "feeds", dicts);
             }
             catch (Exception e)
             {
@@ -690,8 +694,7 @@ All events {8}, population {9}, events/person {10:f}
             return stats;
         }
 
-
-        private static Dictionary<string, IcalStats> GetIcalStats(string container)
+		private static Dictionary<string, IcalStats> GetIcalStats(string container)
         {
             return FeedRegistry.DeserializeIcalStatsFromJson(blobhost, container, "ical_stats.json");
         }
@@ -769,6 +772,12 @@ All events {8}, population {9}, events/person {10:f}
                 logger.LogMsg("exception", "IronPythonAdmin", ex.Message + ex.StackTrace);
             }
         }
+
+		private static void SaveSettings(Dictionary<string,string> dict)
+		{
+			var blob_name = DnsUtils.TryGetHostName("127.0.0.1") + ".settings.txt";
+			ObjectUtils.SaveDictAsTextToBlob(dict, bs, "admin", blob_name);
+		}
 
         /*
         public override RoleStatus GetHealthStatus()
