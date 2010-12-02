@@ -432,9 +432,17 @@ namespace CalendarAggregator
 
         public string RenderRss(ZonelessEventStore eventstore, string view, int count)
         {
-            eventstore = GetEventStore(eventstore, view, count);
-            var query = string.Format("view={0}&count={1}", view, count);
-            return Utils.RssFeedFromEventStore(this.id, query, eventstore);
+			try
+			{
+				eventstore = GetEventStore(eventstore, view, count);
+				var query = string.Format("view={0}&count={1}", view, count);
+				return Utils.RssFeedFromEventStore(this.id, query, eventstore);
+			}
+			catch ( Exception e )
+			{
+				GenUtils.LogMsg("exception", String.Format("RenderRss: view {0}, count {1}", view, count), e.Message);
+				return String.Empty;
+			}
         }
 
         #endregion rss
