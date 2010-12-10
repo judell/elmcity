@@ -902,26 +902,57 @@ namespace CalendarAggregator
 
 				Dictionary<string, int> event_count_by_venue = new Dictionary<string, int>();
 
+				Dictionary<string, XElement> unique = new Dictionary<string, XElement>();
+
 				foreach (XElement evt in UpcomingIterator(page_count, method, args))
 				{
-					string str_start_date = evt.Attribute("start_date").Value; //2010-07-07
-					string str_dtstart = evt.Attribute("utc_start").Value;     //2010-07-21 18:00:00 UTC
-					str_dtstart = str_start_date + str_dtstart.Substring(10, 13);
-					DateTime dtstart = Utils.LocalDateTimeFromUtcDateStr(str_dtstart, this.calinfo.tzinfo);
-					var dtstart_with_zone = new Utils.DateTimeWithZone(dtstart, this.calinfo.tzinfo);
+					var unpacked = UnpackUpcomingXelement(evt);
+					var dtstart_with_zone = (Utils.DateTimeWithZone) unpacked["dtstart_with_zone"];
+					var title = (string) unpacked["title"];
+					var venue_name = (string) unpacked["venue_name"];
+					var str_dtstart = (string) unpacked["str_dtstart"];
 
 					if (dtstart_with_zone.UniversalTime < Utils.MidnightInTz(this.calinfo.tzinfo).UniversalTime)
 						continue;
 
-					var venue_name = evt.Attribute("venue_name").Value;
+					var key = venue_name + title + str_dtstart;
+
+					if (unique.ContainsKey(key) == false)
+						unique[key] = evt;
+				}
+
+				foreach (var key in unique.Keys)
+				{
+					var evt = unique[key];
+					var unpacked = UnpackUpcomingXelement(evt);
+					var dtstart_with_zone = (Utils.DateTimeWithZone)unpacked["dtstart_with_zone"];
+					var venue_name = (string)unpacked["venue_name"];
 					IncrementEventCountByVenue(event_count_by_venue, venue_name);
 					AddUpcomingEvent(es, venue_name, evt, dtstart_with_zone);
 				}
+
 				ustats.venuecount = event_count_by_venue.Keys.Count;
 				ustats.whenchecked = DateTime.Now.ToUniversalTime();
 
 				SerializeStatsAndIntermediateOutputs(es, upcoming_ical, ustats, EventFlavor.upcoming);
 			}
+		}
+
+		private Dictionary<string, object> UnpackUpcomingXelement(XElement evt)
+		{
+			string str_start_date = evt.Attribute("start_date").Value; //2010-07-07
+			string str_dtstart = evt.Attribute("utc_start").Value;     //2010-07-21 18:00:00 UTC
+			str_dtstart = str_start_date + str_dtstart.Substring(10, 13);
+			DateTime dtstart = Utils.LocalDateTimeFromUtcDateStr(str_dtstart, this.calinfo.tzinfo);
+			var dtstart_with_zone = new Utils.DateTimeWithZone(dtstart, this.calinfo.tzinfo);
+			var title = evt.Attribute("name").Value;
+			var venue_name = evt.Attribute("venue_name").Value;
+			return new Dictionary<string, object>() {
+				{"str_dtstart"	, str_dtstart },
+				{"title"		, title },
+				{"venue_name"	, venue_name },
+				{"dtstart_with_zone" , dtstart_with_zone }
+			};
 		}
 
 		public void AddUpcomingEvent(ZonedEventStore es, string venue_name, XElement evt, Utils.DateTimeWithZone dtstart)
@@ -1300,6 +1331,9 @@ namespace CalendarAggregator
 			BlobStorageResponse bsr;
 			TableStorageResponse tsr;
 			var flavor_str = flavor.ToString();
+
+			if (BlobStorage.ExistsContainer(this.id) == false)
+				bs.CreateContainer(this.id, is_public: true, headers: new Hashtable());
 
 			if (flavor == EventFlavor.ical)
 			{
