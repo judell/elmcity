@@ -211,7 +211,7 @@ namespace WorkerRole
             }
         }
 
-        private static void RecacheHubIdsToAzure()
+        public static void RecacheHubIdsToAzure()
         {
             try
             {
@@ -725,17 +725,7 @@ All events {8}, population {9}, events/person {10:f}
 
 				foreach (var id in ids)
 				{
-					var fr_delicious = new FeedRegistry(id);
-
-					fr_delicious.LoadFeedsFromDelicious();
-
-					//PurgeDeletedFeeds(fr_delicious, id);
-
-					UpdateFeedsToAzure(fr_delicious, id);
-
-					UpdateFeedCountToAzure(id);
-
-					UpdateMetadataToAzure(id);
+					UpdateFeedsAndMetadataForIdToAzure(id);
 				}
             }
             catch ( Exception e )
@@ -743,6 +733,16 @@ All events {8}, population {9}, events/person {10:f}
                 logger.LogMsg("exception", "DeliciousAdmin", e.Message + e.StackTrace);
             }
         }
+
+		public static void UpdateFeedsAndMetadataForIdToAzure(string id)
+		{
+			var fr_delicious = new FeedRegistry(id);
+			fr_delicious.LoadFeedsFromDelicious();
+			//PurgeDeletedFeeds(fr_delicious, id);
+			UpdateFeedsToAzure(fr_delicious, id);
+			UpdateFeedCountToAzure(id);
+			UpdateMetadataToAzure(id);
+		}
 
 		public static void TestRunnerAdmin(object o, ElapsedEventArgs args)
 		{
