@@ -172,13 +172,20 @@ namespace ElmcityUtils
 			{
 				if ( type == JsonSnapshotType.DictStr)
 				{
+					var dict_str = (Dictionary<string, string>) new_obj;
+					if (dict_str.Keys.Count == 0) // no response from delicious
+						return;
 					var existing_obj = ObjectUtils.GetDictStrFromJsonUri(existing_obj_uri);
-					equal = ObjectUtils.DictStrEqualsDictStr((Dictionary<string, string>)existing_obj, (Dictionary<string, string>)new_obj);
+					equal = ObjectUtils.DictStrEqualsDictStr((Dictionary<string, string>)existing_obj, dict_str);
 				}
 				else // JsonSnapshotType.ListDictStr
 				{
+					var list_dict_str = (List<Dictionary<string, string>>) new_obj;
+					foreach (var dict_str in list_dict_str)
+						if (dict_str.Keys.Count == 0) // no response from delicious
+							return;
 					var existing_obj = ObjectUtils.GetListDictStrFromJsonUri(existing_obj_uri);
-					equal = ObjectUtils.ListDictStrEqualsDictStr((List<Dictionary<string, string>>)existing_obj, (List<Dictionary<string, string>>)new_obj);
+					equal = ObjectUtils.ListDictStrEqualsDictStr((List<Dictionary<string, string>>)existing_obj, list_dict_str);
 				}
 			}
 			if (equal == false)
