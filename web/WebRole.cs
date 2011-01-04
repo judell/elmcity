@@ -17,43 +17,55 @@ using System.Linq;
 using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using ElmcityUtils;
+using System.Web;
 
 namespace WebRole
 {
-    public class WebRole : RoleEntryPoint
-    {
-        public override bool OnStart()
-        {
-            var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
+	public class WebRole : RoleEntryPoint
+	{
+		public static string local_storage_path;
 
-            //Counters.AddCountersToConfig(config, excluded_specifier_prefix: null);
-            //config.PerformanceCounters.ScheduledTransferPeriod = TimeSpan.FromMinutes(ElmcityUtils.Configurator.default_counter_transfer_period);
+		public override bool OnStart()
+		{
+			local_storage_path = RoleEnvironment.GetLocalResource("LocalStorage1").RootPath;
 
-            config.Logs.ScheduledTransferLogLevelFilter = LogLevel.Verbose;
-            config.Logs.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_log_transfer_minutes);
+			var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
 
-            config.WindowsEventLog.DataSources.Add("System!*");
-            config.WindowsEventLog.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_log_transfer_minutes);
+			//Counters.AddCountersToConfig(config, excluded_specifier_prefix: null);
+			//config.PerformanceCounters.ScheduledTransferPeriod = TimeSpan.FromMinutes(ElmcityUtils.Configurator.default_counter_transfer_period);
 
-            config.Directories.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_file_transfer_minutes);
+			config.Logs.ScheduledTransferLogLevelFilter = LogLevel.Verbose;
+			config.Logs.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_log_transfer_minutes);
 
-            DiagnosticMonitor.Start("DiagnosticsConnectionString", config);
+			config.WindowsEventLog.DataSources.Add("System!*");
+			config.WindowsEventLog.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_log_transfer_minutes);
 
-            RoleEnvironment.Changing += RoleEnvironmentChanging;
+			config.Directories.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_file_transfer_minutes);
+
+			DiagnosticMonitor.Start("DiagnosticsConnectionString", config);
+
+			RoleEnvironment.Changing += RoleEnvironmentChanging;
 
 			GenUtils.LogMsg("info", "Webrole: OnStart", null);
 
-            return base.OnStart();
-        }
+			return base.OnStart();
+		}
 
-        private void RoleEnvironmentChanging(object sender, RoleEnvironmentChangingEventArgs e)
-        {
-            // If a configuration setting is changing
-            if (e.Changes.Any(change => change is RoleEnvironmentConfigurationSettingChange))
-            {
-                // Set e.Cancel to true to restart this role instance
-                e.Cancel = true;
-            }
-        }
-    }
+		private void RoleEnvironmentChanging(object sender, RoleEnvironmentChangingEventArgs e)
+		{
+			// If a configuration setting is changing
+			if (e.Changes.Any(change => change is RoleEnvironmentConfigurationSettingChange))
+			{
+				// Set e.Cancel to true to restart this role instance
+				e.Cancel = true;
+			}
+		}
+
+		protected void Application_Error(object sender, EventArgs e)
+		{
+			Exception exception = HttpContext.Current.Server.GetLastError();
+			// currently unused, see http://azuremiscellany.blogspot.com/2010/05/web-role-crash-dumps.html for interesting possibility
+		}
+
+	}
 }
