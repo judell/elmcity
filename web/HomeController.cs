@@ -112,7 +112,7 @@ namespace WebRole.Controllers
             {
             var script_url = "http://elmcity.blob.core.windows.net/admin/_generic.py";
             var args = new List<string>() { arg1, arg2, arg3 };
-            ViewData["result"] = PythonUtils.RunIronPython(script_url, args);
+            ViewData["result"] = PythonUtils.RunIronPython(WebRole.local_storage_path, script_url, args);
             return View();
             }
             else
