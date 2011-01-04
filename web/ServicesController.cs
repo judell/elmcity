@@ -401,7 +401,7 @@ namespace WebRole
 				// this one calls out to python, can take a while
 				context.HttpContext.Server.ScriptTimeout = CalendarAggregator.Configurator.webrole_script_timeout_seconds;
 				var args = new List<string>() { this.fusecal_url, this.filter, this.tz_source, this.tz_dest };
-				var ics = PythonUtils.RunIronPython(CalendarAggregator.Configurator.fusecal_dispatcher, args);
+				var ics = PythonUtils.RunIronPython(WebRole.local_storage_path, CalendarAggregator.Configurator.fusecal_dispatcher, args);
 				new ContentResult
 				{
 					ContentType = "text/calendar",
