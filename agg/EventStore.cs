@@ -59,6 +59,7 @@ namespace CalendarAggregator
             get { return _categories; }
             set { _categories = value; }
         }
+
         private string _categories;
 
         public Event(string title, string url, string source, bool allday, string categories)
@@ -197,7 +198,6 @@ namespace CalendarAggregator
             // combine the various List<ZonedEvent> objects into our new ZonelessEventStore
             foreach (var list in lists_of_zoned_events)
                 foreach (var evt in list)
-
                     es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories);
 
             es_zoneless.ExcludePastEvents(); // the EventCollector should already have done this, but in case not...
