@@ -20,7 +20,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
-//using System.Threading.Tasks;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using DDay.iCal;
 using DDay.iCal.Components;
@@ -226,8 +226,11 @@ namespace CalendarAggregator
 
 				var feedurls = test ? feeds.Keys.ToList().Take(test_feeds) : feeds.Keys;
 
+				var parallel_options = new ParallelOptions();
+				parallel_options.MaxDegreeOfParallelism = -1;
+				Parallel.ForEach(source: feedurls, parallelOptions: parallel_options, body: (feedurl, loop_state) =>
 				//Parallel.ForEach(feedurls, (feedurl, loop_state) =>
-				foreach (string feedurl in feedurls)
+				//foreach (string feedurl in feedurls)
 				{
 					per_feed_metadata_cache = new Dictionary<string, Dictionary<string, string>>();
 
@@ -267,8 +270,8 @@ namespace CalendarAggregator
 						{
 							var msg = String.Format("{0}: no events found for {1}", id, source);
 							GenUtils.LogMsg("warning", msg, null);
-							continue;
-							//loop_state.Break();
+							//continue;
+							loop_state.Break();
 						}
 
 						foreach (DDay.iCal.Components.Event evt in ical.Events)
@@ -281,8 +284,9 @@ namespace CalendarAggregator
 						fr.stats[feedurl].dday_error = e.Message;
 					}
 				}
-				//)
-				;
+
+				);
+
 
 				if (nosave == false) // why ever true? see CalendarRenderer.Viewer 
 					SerializeStatsAndIntermediateOutputs(fr, es, ical_ical, new NonIcalStats(), EventFlavor.ical);
