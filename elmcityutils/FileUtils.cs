@@ -27,22 +27,23 @@ namespace ElmcityUtils
             return Directory.CreateDirectory(string.Format(@"{0}\{1}", cd, name));
         }
 
-        public static void UnzipFromUrlToCurrentDirectory(Uri zip_url)
-        {
-            var zip_response = HttpUtils.FetchUrl(zip_url);
-            var zs = new MemoryStream(zip_response.bytes);
-            var zip = ZipFile.Read(zs);
-            var cd = Directory.GetCurrentDirectory();
-            foreach (var entry in zip.Entries)
-                entry.Extract(cd);
-        }
-
-        public static void UnzipFromUrlToCurrentDirectory(Uri zip_url, string existing_dir)
-        {
-            if (Directory.Exists(existing_dir))
-                Directory.Delete(existing_dir, true);
-            UnzipFromUrlToCurrentDirectory(zip_url);
-        }
+		public static void UnzipFromUrlToDirectory(Uri zip_url, string directory)
+		{
+			var zip_response = HttpUtils.FetchUrl(zip_url);
+			var zs = new MemoryStream(zip_response.bytes);
+			var zip = ZipFile.Read(zs);
+			foreach (var entry in zip.Entries)
+			{
+				try
+				{
+					entry.Extract(directory);
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", entry.FileName, e.Message + e.InnerException.Message + e.StackTrace);
+				}
+			}
+		}
 
     }
 }
