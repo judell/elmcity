@@ -87,7 +87,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("exception", "ProcessMonitor: snapshot", e.Message + e.StackTrace);
+					GenUtils.LogMsg("exception", "ProcessMonitorThreadMethod: snapshot", e.Message + e.StackTrace);
 				}
 			}
 		}
@@ -207,16 +207,24 @@ namespace ElmcityUtils
 				var qualifier = (c.ContainsKey("qualifier") ? c["qualifier"] : null);
 				var description = c["description"];
 
-				if (qualifier != null)
+				try
 				{
-					counter_paths.Add(c["RowKey"], String.Format(@"\{0}({1})\{2}", category, qualifier, description));
-					counter_objects.Add(c["RowKey"], new PerformanceCounter(categoryName: category, counterName: description, instanceName: qualifier));
-				}
-				else
-				{
-					counter_paths.Add(c["RowKey"], String.Format(@"\{0}\{1}", category, description));
-					counter_objects.Add(c["RowKey"], new PerformanceCounter(categoryName: category, counterName: description));
 
+					if (qualifier != null)
+					{
+						counter_paths.Add(c["RowKey"], String.Format(@"\{0}({1})\{2}", category, qualifier, description));
+						counter_objects.Add(c["RowKey"], new PerformanceCounter(categoryName: category, counterName: description, instanceName: qualifier));
+					}
+					else
+					{
+						counter_paths.Add(c["RowKey"], String.Format(@"\{0}\{1}", category, description));
+						counter_objects.Add(c["RowKey"], new PerformanceCounter(categoryName: category, counterName: description));
+
+					}
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", "GetCounters", category + "/" + description);
 				}
 			}
 			return new CounterResponse(counter_paths: counter_paths, counter_objects: counter_objects);
