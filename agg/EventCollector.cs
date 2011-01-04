@@ -226,10 +226,7 @@ namespace CalendarAggregator
 
 				var feedurls = test ? feeds.Keys.ToList().Take(test_feeds) : feeds.Keys;
 
-				var parallel_options = new ParallelOptions();
-				parallel_options.MaxDegreeOfParallelism = -1;
-				Parallel.ForEach(source: feedurls, parallelOptions: parallel_options, body: (feedurl, loop_state) =>
-				//Parallel.ForEach(feedurls, (feedurl, loop_state) =>
+				Parallel.ForEach(source: feedurls, body: (feedurl, loop_state) => 
 				//foreach (string feedurl in feedurls)
 				{
 					per_feed_metadata_cache = new Dictionary<string, Dictionary<string, string>>();
@@ -285,7 +282,8 @@ namespace CalendarAggregator
 					}
 				}
 
-				);
+				); 
+
 
 
 				if (nosave == false) // why ever true? see CalendarRenderer.Viewer 
