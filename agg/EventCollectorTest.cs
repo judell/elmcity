@@ -28,7 +28,7 @@ namespace CalendarAggregator
     [TestFixture]
     public class EventCollectorTest
     {
-        private Uri test_feedurl = new Uri("http://www.google.com/calendar/ical/062hi8ogvvoejd5o2djdjqd07g%40group.calendar.google.com/public/basic.ics");
+		private Uri test_feedurl = new Uri("http://cid-dffec23daaf5ee89.calendar.live.com/calendar/Jon+Udell+(public)/calendar.ics");
         private string test_venue = "testvenue";
         private string test_eventful_args = "date=Next+Week&location=03431&within=15&units=mi";
         private static string min_date = string.Format("{0:yyyy-MM-dd}", DateTime.UtcNow);
