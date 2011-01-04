@@ -53,6 +53,8 @@ namespace WorkerRole
         private static List<string> ids;
         private static Dictionary<string, int> feedcounts = new Dictionary<string, int>();
 
+		private static string local_storage_path;
+
         private static List<TwitterDirectMessage> twitter_direct_messages;
 
         private static ElmcityUtils.Monitor monitor;
@@ -62,6 +64,8 @@ namespace WorkerRole
             try
             {
                 HttpUtils.Wait(startup_delay);
+
+				local_storage_path = RoleEnvironment.GetLocalResource("LocalStorage1").RootPath;
 
                 var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
                 
@@ -79,7 +83,8 @@ namespace WorkerRole
 
                 logger.LogMsg("info", "worker: OnStart", null);
 
-                PythonUtils.InstallPythonStandardLibrary(ts);
+				GenUtils.LogMsg("info", "LocalStorage1", local_storage_path);
+                PythonUtils.InstallPythonStandardLibrary(local_storage_path, ts);
 
                 HttpUtils.SetAllowUnsafeHeaderParsing(); //http://www.cookcomputing.com/blog/archives/000556.html
 
@@ -123,7 +128,7 @@ namespace WorkerRole
 
 					SaveSettings(settings);
 
-					PythonUtils.RunIronPython(CalendarAggregator.Configurator.iron_python_run_script_url, new List<string>() { "", "", "" });
+					PythonUtils.RunIronPython( local_storage_path, CalendarAggregator.Configurator.iron_python_run_script_url, new List<string>() { "", "", "" });
 
                     ids = delicious.LoadHubIdsFromAzureTable();
 
@@ -443,7 +448,7 @@ namespace WorkerRole
             }
         }
 
-        private static void SaveWhereStats(FeedRegistry fr, Calinfo calinfo)
+        public static void SaveWhereStats(FeedRegistry fr, Calinfo calinfo)
         {
             var id = calinfo.delicious_account;
             logger.LogMsg("info", "SaveWhereStats: " + id, null);
@@ -496,7 +501,7 @@ namespace WorkerRole
 			DoStatsRow(istats, ref report, ref futurecount, feedurl, redirected_url, homeurl);
 		}
 
-        private static void SaveWhatStats(FeedRegistry fr, Calinfo calinfo)
+        public static void SaveWhatStats(FeedRegistry fr, Calinfo calinfo)
         {
             var id = calinfo.delicious_account;
             logger.LogMsg("info", "SaveWhatStats: " + id, null);
@@ -528,7 +533,6 @@ namespace WorkerRole
 <td>instances</td>
 <td>loaded</td>
 <td>when</td>
-<td>error</td>
 <td>PRODID</td>
 </tr>");
             return report;
@@ -591,7 +595,7 @@ All events {8}, population {9}, events/person {10:f}
                 futurecount += istats[feedurl].futurecount;
                 report += string.Format(@"
 <tr>
-<td><a href=""{0}"">{1}</a> (<a href=""{2}"">home</a>)</td>
+<td><a title=""click to load calendar"" href=""{0}"">{1}</a> (<a title=""click to visit calendar's home page"" href=""{2}"">home</a>)</td>
 <td>{3}</td>
 <td>{4}</td>
 <td>{5}</td>
@@ -600,23 +604,22 @@ All events {8}, population {9}, events/person {10:f}
 <td>{8}</td>
 <td>{9}</td>
 <td>{10}</td>
-<td>{11}</td>
 </tr>
 ",
-                feedurl,
-                ical_stats.source,
-                homeurl,
-                string.Format(@"<a href=""{0}"">{1}</a>",
+                feedurl,                                                 // 0
+                ical_stats.source,                                       // 1
+                homeurl,                                                 // 2
+                string.Format(@"<a title=""click to validate"" href=""{0}"">{1}</a>",    // 3
                  Utils.ValidationUrlFromFeedUrl(redirected_url),
                   ical_stats.score),
-                ical_stats.futurecount,
-                ical_stats.singlecount,
-                ical_stats.recurringcount,
-                ical_stats.recurringinstancecount,
-                ical_stats.loaded,
-                ical_stats.whenchecked,
-                ical_stats.dday_error,
-                ical_stats.prodid
+                ical_stats.futurecount,                                  // 4
+                ical_stats.singlecount,                                  // 5
+                ical_stats.recurringcount,                               // 6
+                ical_stats.recurringinstancecount,                       // 7
+                ical_stats.loaded,                                       // 8
+                ical_stats.whenchecked,                                  // 9
+                //ical_stats.dday_error,                                 // 10
+                ical_stats.prodid                                        // 10
                 );
             }
             catch (Exception ex)
@@ -764,7 +767,7 @@ All events {8}, population {9}, events/person {10:f}
             {
                 // PythonUtils.InstallPythonElmcityLibrary(ts); // won't work because ipy holds references to imports
 				logger.LogMsg("info", "IronPythonAdmin", null);
-				PythonUtils.RunIronPython(CalendarAggregator.Configurator.iron_python_admin_script_url, new List<string>() { "", "", "" });
+				PythonUtils.RunIronPython(local_storage_path, CalendarAggregator.Configurator.iron_python_admin_script_url, new List<string>() { "", "", "" });
 
             }
             catch (Exception ex)
