@@ -188,9 +188,9 @@ try:
 except:
   message('_admin: error in rebuild_search_output')
 
-try:
-  snapshot_feeds_and_metadata_for_ids()
-except:
-  message('_admin: error in snapshot_feeds_and_metadata_for_ids')
+#try:
+#  snapshot_feeds_and_metadata_for_ids()
+#except:
+#  message('_admin: error in snapshot_feeds_and_metadata_for_ids')
 
 
