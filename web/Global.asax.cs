@@ -83,9 +83,7 @@ namespace WebRole
                 ElmcityApp.logger.LogMsg("warning", "AuthenticateAsSelf rejected " + incoming_addr, "trusted: " + String.Join(", ", trusted_addrs_list.ToArray()));
                 return false;
             }
-
         }
-
     }
 
     public class ElmcityApp : HttpApplication
@@ -100,7 +98,7 @@ namespace WebRole
 
 		public static Logger logger = new Logger();
 
-        public static string version =  "929";
+        public static string version =  "947";
 
         public static string pagetitle = "the elmcity project";
 
@@ -207,6 +205,8 @@ namespace WebRole
                 RouteTable.Routes.Clear();
 
                 RegisterRoutes(RouteTable.Routes); // if a hub was acquired, /services/ID namespace will expand
+
+				// RouteDebug.RouteDebugger.RewriteRoutesForTesting(RouteTable.Routes);
 
                 monitor.ReloadCounters();
 
@@ -371,8 +371,10 @@ namespace WebRole
 
             if (testing == false)
             {
-                PythonUtils.InstallPythonStandardLibrary(ts);
-                PythonUtils.InstallPythonElmcityLibrary(ts);
+				var local_resource = RoleEnvironment.GetLocalResource("LocalStorage1");
+				GenUtils.LogMsg("info", "LocalStorage1", local_resource.RootPath);
+				PythonUtils.InstallPythonStandardLibrary(local_resource.RootPath, ts);
+                PythonUtils.InstallPythonElmcityLibrary(local_resource.RootPath, ts);
             }
 
             monitor = ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
