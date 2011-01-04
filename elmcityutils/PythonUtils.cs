@@ -31,16 +31,17 @@ namespace ElmcityUtils
     public static class PythonUtils
     {
 
-        public static void InstallPythonStandardLibrary(TableStorage ts)
+        public static void InstallPythonStandardLibrary(string directory, TableStorage ts)
         {
             GenUtils.LogMsg("info", "installing python standard library", null, ts);
             try
             {
+				
                 var zip_url = Configurator.pylib_zip_url;
-                FileUtils.UnzipFromUrlToCurrentDirectory(zip_url, existing_dir: "Lib");
+                FileUtils.UnzipFromUrlToDirectory(zip_url, directory);
                 var args = new List<string> { "", "", "" };
                 var script_url = Configurator.python_test_script_url;
-                var result = RunIronPython(script_url, args);
+                var result = RunIronPython(directory, script_url, args);
                 GenUtils.LogMsg("info", "result of python standard lib install test", result, ts);
             }
             catch (Exception e)
@@ -50,17 +51,17 @@ namespace ElmcityUtils
         }
 
         // todo: externalize test url as a setting
-        public static void InstallPythonElmcityLibrary(TableStorage ts)
+        public static void InstallPythonElmcityLibrary(string directory, TableStorage ts)
         {
             {
                 GenUtils.LogMsg("info", "installing python elmcity library", null, ts);
                 try
                 {
                     var zip_url = Configurator.elmcity_pylib_zip_url;
-                    FileUtils.UnzipFromUrlToCurrentDirectory(zip_url, existing_dir: "ElmcityLib");
+                    FileUtils.UnzipFromUrlToDirectory(zip_url, directory: directory);
                     var args = new List<string> { "http://www.libraryinsight.com/calendar.asp?jx=ea", "", "eastern" };
                     var script_url = Configurator.elmcity_python_test_script_url;
-                    var result = RunIronPython(script_url, args);
+                    var result = RunIronPython(directory, script_url, args);
                     GenUtils.LogMsg("info", "result of python elmcity install test", result, ts);
                 }
                 catch (Exception e)
@@ -70,7 +71,7 @@ namespace ElmcityUtils
             }
         }
 
-        public static string RunIronPython(string str_script_url, List<string> args)
+        public static string RunIronPython(string directory, string str_script_url, List<string> args)
         {
             GenUtils.LogMsg("info", "Utils.run_ironpython: " + str_script_url, args[0] + "," + args[1] + "," + args[2]);
 			//var app_domain_name = "ironpython";
@@ -88,9 +89,12 @@ namespace ElmcityUtils
 				options["LightweightScopes"] = true;
 				var python = Python.CreateEngine(options);
                 var paths = new List<string>();
-                paths.Add("./Lib");        // standard python lib
-                paths.Add("./Lib/site-packages");
-                paths.Add("./ElmcityLib"); // Elmcity python lib
+                paths.Add(directory + "Lib");        // standard python lib
+                paths.Add(directory + "Lib\\site-packages");
+                paths.Add(directory + "ElmcityLib"); // Elmcity python lib
+
+				GenUtils.LogMsg("info", "Utils.run_ironpython", String.Join(":", paths.ToArray()));
+
                 python.SetSearchPaths(paths);
                 var ipy_args = new IronPython.Runtime.List();
                 foreach (var item in args)
