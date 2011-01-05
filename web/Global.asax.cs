@@ -98,7 +98,7 @@ namespace WebRole
 
 		public static Logger logger = new Logger();
 
-        public static string version =  "947";
+        public static string version =  "952";
 
         public static string pagetitle = "the elmcity project";
 
