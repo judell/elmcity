@@ -1,8 +1,18 @@
-import sys, os, traceback
+import sys, clr
 
-#sys.path.append("c:\\users\\jon\\aptc")
-#sys.path.append("c:\\program files\\ironpython 2.6\\lib")
-import clr
+clr.AddReference("System")
+clr.AddReference("mscorlib")
+import System
+from System.IO import Directory
+
+resource_dirs = Directory.GetDirectories('c:\\Resources\\Directory')
+lib_dir = [dir for dir in resource_dirs if dir.endswith('LocalStorage1')][0]
+sys.path = []
+sys.path.append(lib_dir + "\Lib")
+sys.path.append(lib_dir + "\Lib\site-packages")
+sys.path.append(lib_dir + "\ElmcityLib")
+
+import os, traceback
 
 clr.AddReference("CalendarAggregator")
 import CalendarAggregator
@@ -26,13 +36,28 @@ tasktable = 'tasks'
 
 (arg0,arg1,arg2) = ( sys.argv[0], sys.argv[1], sys.argv[2] )
 
-result = "arg0: %s, arg1: %s arg2: %s\n\n" % (arg0,arg1,arg2)
+usage = """
+-----------------------------
+Usage:
 
-def MessagesSince(type='exception',days_ago=1,ticks=None):
+/test
+/messages/TYPE/HOURS_AGO
+/schedule/ID
+/reset/ID
+/metadict/ID
+/feeds/ID
+/recache_feeds/ID
+/recache_metadict/ID
+-----------------------------
+"""
+
+result = "arg0: [%s], arg1: [%s] arg2: [%s] [%s]\n %s \n\n" % (arg0,arg1,arg2, lib_dir, usage)
+
+def MessagesSince(type='exception',hours_ago=1,ticks=None):
   global result
-  result += 'MessagesSince: Type %s, DaysAgo %s, TicksThen %s\n' % ( type, days_ago, ticks)
+  result += 'MessagesSince: Type %s, HoursAgo %s, TicksThen %s\n' % ( type, hours_ago, ticks)
   if ticks is None:
-    delta = System.TimeSpan.FromDays(System.Convert.ToInt32(days_ago))
+    delta = System.TimeSpan.FromHours(System.Convert.ToInt32(hours_ago))
     then = System.DateTime.Now - delta
     result += 'Then: %s\n\n' % then
     ticks = then.Ticks
@@ -42,7 +67,7 @@ def MessagesSince(type='exception',days_ago=1,ticks=None):
   if len(ts_response.response) > 0:
     for dict in ts_response.response:
       result += '%s: %s\n%s\n\n'  % ( dict['Timestamp'], dict['message'], dict['data'] ) 
-    MessagesSince(type, days_ago, dict['RowKey'])
+    MessagesSince(type, hours_ago, dict['RowKey'])
 
 def message(msg):
   print msg
@@ -95,7 +120,6 @@ if (arg0 == 'test'):
 
     result += 'contents of cwd: ' + ', '.join(glob.glob('./*')) + '\n\n'
 
-
     result += "Delicious.FetchFeedMetadataFromDeliciousForFeedurlAndId('http://openmikes.org/listings/darkstarpub?ical', 'elmcity')" + '\n\n'
     r = Delicious.FetchFeedMetadataFromDeliciousForFeedurlAndId('http://openmikes.org/listings/darkstarpub?ical', 'elmcity')
     result += r.http_response.DataAsString()
@@ -103,34 +127,16 @@ if (arg0 == 'test'):
 
     result += "webrole_reload_interval_hours: %s\n\n" % CalendarAggregator.Configurator.webrole_reload_interval_hours
 
-#    result += 'contents of ElmcityLib/myspace.py: \n'
-#    result += open('./ElmcityLib/myspace.py').read()
-
-#    result += 'contents of ElmcityLib/libraryinsight.py: \n'
-#    result += open('./ElmcityLib/libraryinsight.py').read()
-
-#    result += 'contents of ElmcityLib/ElmcityEventParser.py: \n'
-#    result += open('./ElmcityLib/ElmcityEventParser.py').read()
-
-#    result += "reinstalling ElmcityLib"
-#    PythonUtils.InstallPythonElmcityLibrary(ts)
-
-#    args = System.Collections.Generic.List[str]()
-#    args.Add('http://www.libraryinsight.com/calendar.asp?jx=ea')
-#    args.Add('')
-#    args.Add('eastern')
-#    result += PythonUtils.RunIronPython(CalendarAggregator.Configurator.fusecal_dispatcher, args);
-#    PythonUtils.RunIronPython(CalendarAggregator.Configurator.fusecal_dispatcher, args);
   except:
     result += traceback.format_exc()
 
 if (arg0 == 'messages'):
-  MessagesSince(type=arg1,days_ago=arg2)
+  MessagesSince(type=arg1,hours_ago=arg2)
 
 if (arg0 == 'schedule'):
-  for id in ids:
-    calinfo = Calinfo(id)
-    result += get_task_for_calinfo(calinfo)
+  id = arg1
+  calinfo = Calinfo(id)
+  result += get_task_for_calinfo(calinfo)
 
 if ( arg0 == 'reset' ):
   id = arg1
@@ -177,5 +183,7 @@ if ( arg0 == 'recache_metadict' ):
 
 if ( arg0 == 'pylib' ):
   result = os.path.realpath('.')
+
+
 
 

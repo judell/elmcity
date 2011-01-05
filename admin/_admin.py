@@ -1,16 +1,25 @@
 import sys, clr
 
-sys.path.append("c:\\users\\jon\\aptc")
 clr.AddReference("System")
 clr.AddReference("mscorlib")
 import System
+from System.IO import Directory
+
+resource_dirs = Directory.GetDirectories('c:\\Resources\\Directory')
+lib_dir = [dir for dir in resource_dirs if dir.endswith('LocalStorage1')][0]
+sys.path = []
+sys.path.append(lib_dir + "\Lib")
+sys.path.append(lib_dir + "\Lib\site-packages")
+sys.path.append(lib_dir + "\ElmcityLib")
+
+import os, traceback
 
 clr.AddReference("CalendarAggregator")
 import CalendarAggregator
 from CalendarAggregator import *
 
 clr.AddReference("ElmcityUtils")
-import ElmcityUtils 
+import ElmcityUtils
 from ElmcityUtils import *
 
 metatable = 'metadata'
@@ -19,9 +28,7 @@ tasktable = 'tasks'
 delicious = Delicious.MakeDefaultDelicious()
 bs = BlobStorage.MakeDefaultBlobStorage()
 ts = TableStorage.MakeDefaultTableStorage()
-
 ids = delicious.LoadHubIdsFromAzureTable()
-
 calinfos = CalendarAggregator.Configurator.Calinfos
 
 def message(msg):
@@ -29,29 +36,12 @@ def message(msg):
   GenUtils.LogMsg(msg, '', '')
   return msg
 
+"""
 def delete_dict(dict):
   pk = dict['PartitionKey']
   rk = dict['RowKey']
   tsr = ts.DeleteEntity(metatable,pk,rk)
 
-def snapshot_feeds_and_metadata(id):
-  message('_admin: snapshot_feeds_and_metadata: %s' % id)
-  s = ''
-  q = "$filter=(PartitionKey eq '%s' and feedurl ne '' )" % id 
-  ts_response = ts.QueryEntities(metatable,q)
-  for dict in ts_response.response:
-    s += message('source %s, feedurl %s\n' % ( dict['source'], dict['feedurl'] ) )
-#    delete_dict(dict)
-  now = System.DateTime.UtcNow.ToString("yyyyMMdd-HHmm")
-  filename = 'feeds_and_metadata_' + now + '.txt'
-  bs.PutBlob(id, filename, System.Collections.Hashtable(), System.Text.Encoding.UTF8.GetBytes(s), "text/plain")
-
-def snapshot_feeds_and_metadata_for_ids():
-  message('_admin: snapshot_feeds_and_metadata_for_ids start')
-  for id in ids:
-    snapshot_feeds_and_metadata(id)
-
-"""
   # delete venues from aztable
   q = "$filter=(PartitionKey eq '%s_venues')" % ( id )
   ts_response = ts.QueryEntities(metatable,q)
@@ -104,39 +94,10 @@ def dump_metadata():
     dump_metadata_result += unpack(r)
   dump_metadata_result += '\n\n'
 
-  dump_metadata_result += "# feeds for ids\n\n"
-  for id in ids:
-#    message('_admin: dump_metadata feed: %s' % id)
-    dump_metadata_result += "%s\n\n" % id
-    q = "$filter=(PartitionKey eq '%s' and feedurl ne '' )" % ( id )
-    r = ts.QueryEntities(metatable,q)
-    dump_metadata_result += unpack(r)
-  dump_metadata_result += '\n\n'
-
-  dump_metadata_result += "# venues for ids\n\n"
-  for id in ids:
-#    message('_admin: dump_metadata venue: %s' % id)
-    dump_metadata_result += "%s\n\n" % id
-    q = "$filter=(PartitionKey eq '%s_venues')" % ( id )
-    r = ts.QueryEntities(metatable,q)
-    dump_metadata_result += unpack(r)
-  dump_metadata_result += '\n\n'
-
   bs.PutBlob("admin", "dump_metadata.txt", System.Collections.Hashtable(), System.Text.Encoding.UTF8.GetBytes(dump_metadata_result), "text/plain")
 
   message('_admin: dump_metadata stop')
 
-def list_blobs():
-  message('_admin: eccblobs start')
-  list_blobs_result = ''
-  for id in ids:
-#    message('_admin: list_blobs: %s' % id)
-    list_blobs_result += "\n%s\n" % id
-    r = bs.ListBlobs(id)
-    for dict in r.response:
-      list_blobs_result += "\t%s %s\n" % ( dict["LastModified"], dict["Name"] )
-    bs.PutBlob("admin", "list_blobs.txt", System.Collections.Hashtable(), System.Text.Encoding.UTF8.GetBytes(list_blobs_result), "text/plain")
-  message('_admin: eccblobs stop')
 
 def datetime_is_older_than(dt,days):
   now = System.DateTime.Now
@@ -174,23 +135,7 @@ except:
   message('_admin: error in follow_curators')
 
 try:
-  dump_metadata() # -> dump_metadata.txt
-except:
-  message('_admin: error in dump_metadata')
-
-try:
-  list_blobs()    # -> list_blobs.txt
-except:
-  message('_admin: error in list_blobs')
-
-try:
   rebuild_search_output()
 except:
   message('_admin: error in rebuild_search_output')
-
-#try:
-#  snapshot_feeds_and_metadata_for_ids()
-#except:
-#  message('_admin: error in snapshot_feeds_and_metadata_for_ids')
-
 
