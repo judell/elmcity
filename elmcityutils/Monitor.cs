@@ -196,13 +196,13 @@ namespace ElmcityUtils
 				var c = ObjectUtils.DictObjToDictStr(counter_name_and_category);
 				var category = c["category"];
 
-				//http://support.microsoft.com/?kbid=2022138
+				//http://support.microsoft.com/?kbid=2022138 -> solved in v4?
 
-				if (category == "ASP.NET")
-					category = "ASP.NET v2.0.50727";
+				//if (category == "ASP.NET")
+				//	category = "ASP.NET v2.0.50727";
 
-				if (category == "ASP.NET Applications")
-					category = "ASP.NET Apps v2.0.50727";
+				//if (category == "ASP.NET Applications")
+				//	category = "ASP.NET Apps v2.0.50727";
 
 				var qualifier = (c.ContainsKey("qualifier") ? c["qualifier"] : null);
 				var description = c["description"];
@@ -224,7 +224,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("exception", "GetCounters", category + "/" + description);
+					GenUtils.LogMsg("exception", "GetCounters", category + "/" + description + " -> " + e.Message + e.StackTrace);
 				}
 			}
 			return new CounterResponse(counter_paths: counter_paths, counter_objects: counter_objects);
@@ -263,12 +263,23 @@ namespace ElmcityUtils
 			if (counters == null)
 				counters = Counters.GetCounters();
 
-			foreach (var key in counters.counter_objects.Keys)
+			foreach (var key in counters.counter_objects.Keys)  // prime the pump
+			{
+				var counter = counters.counter_objects[key];
+				try
+				{	counter.NextValue(); }
+				catch 
+				{ }
+			}
+
+			HttpUtils.Wait(1);
+
+			foreach (var key in counters.counter_objects.Keys) // now read values
 			{
 				var counter = counters.counter_objects[key];
 				try
 				{
-					dict[key] = counter.NextValue();
+				dict[key] = counter.NextValue();
 				}
 				catch (Exception e)
 				{
