@@ -26,6 +26,7 @@ namespace CalendarAggregator
 
     // render calendar data in various formats
 
+	[Serializable] 
     public class CalendarRenderer
     {
 
