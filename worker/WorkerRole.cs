@@ -314,7 +314,7 @@ namespace WorkerRole
             logger.LogMsg("info", "PurgeDeletedFeeds", null);
             try
             {
-                delicious.PurgeDeletedFeedFromAzure(fr_delicious, id);
+                delicious.PurgeDeletedFeedsFromAzure(fr_delicious, id);
             }
             catch (Exception e)
             {
