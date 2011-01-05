@@ -172,7 +172,7 @@ namespace CalendarAggregator
 
         // if a curator deletes a feed from the delicious registry, it 
         // needs to also get deleted from the corresponding azure table
-        public void PurgeDeletedFeedFromAzure(FeedRegistry fr_delicious, string id)
+        public void PurgeDeletedFeedsFromAzure(FeedRegistry fr_delicious, string id)
         {
             FeedRegistry fr_azure = new FeedRegistry(id);
 
@@ -278,17 +278,39 @@ namespace CalendarAggregator
 
         public static DeliciousResponse FetchMetadataForIdFromDelicious(string id)
         {
-            var metadata_url = string.Format("http://delicious.com/{0}/metadata", id);
-            var response = FetchMetadataFromDeliciousForUrlAndId(metadata_url, id);
+            var metadata_url = string.Format("http://delicious.com/{0}/metadata", id); // try looking up the metadata url directly
+			var response = FetchMetadataFromDeliciousForUrlAndId(metadata_url, id);
+
 			if (response.outcome != MetadataQueryOutcome.Success) // allow www. variant
 			{
 				metadata_url = string.Format("http://www.delicious.com/{0}/metadata", id);
 				response = FetchMetadataFromDeliciousForUrlAndId(metadata_url, id);
 			}
+
+			if (response.outcome != MetadataQueryOutcome.Success) // delicious can't look up metadata url? try scanning whole rss feed
+			{
+				var raw_rss_url = string.Format("http://feeds.delicious.com/v2/rss/{0}?count=200", id);
+				Utils.Wait(Configurator.delicious_delay_seconds);
+				var http_response = HttpUtils.FetchUrl(new Uri(raw_rss_url));
+				var xdoc = XmlUtils.XdocFromXmlBytes(http_response.bytes);
+
+				var items = from item in xdoc.Descendants("item")
+							where item.Descendants("link").First().Value.EndsWith(string.Format("{0}/metadata", id)) 
+							select item;
+
+				var xml_bytes = Encoding.UTF8.GetBytes(items.First().ToString());
+
+				var tmp_dict = new Dictionary<string,string>();
+				var outcome = MaybeReadDeliciousMetadata(metadata_url, id, tmp_dict, xml_bytes, response.outcome);
+				response = new DeliciousResponse(http_response, tmp_dict, outcome: outcome);
+			}
+
             if (response.outcome != MetadataQueryOutcome.Success )
                 return response;
+
             var dict = response.dict_response;
-            var response2 = FetchFeedCountForIdWithTags(id, Configurator.delicious_trusted_ics_feed);
+
+            var response2 = FetchFeedCountForIdWithTags(id, Configurator.delicious_trusted_ics_feed); // now do feed count
 			if (response2.outcome != MetadataQueryOutcome.Success) 
                 return response2;
             var count = response2.int_response;
@@ -297,7 +319,7 @@ namespace CalendarAggregator
             return new DeliciousResponse(response2.http_response, dict_response: dict, outcome: response2.outcome);
         }
 
-		public enum MetadataQueryOutcome { Success, Error, NoRedirect, HttpRequestFailed, NotBookmarkedOrTagged, Blocked }
+		public enum MetadataQueryOutcome { InProgress, Success, Error, NoRedirect, HttpRequestFailed, NotBookmarkedOrTagged, Blocked }
 
         // this implements the delicious "Look up an URL" feature, which interactively looks like
         // a 1-step process but behind the scenes involves redirection.
@@ -322,12 +344,19 @@ namespace CalendarAggregator
             Utils.Wait(Configurator.delicious_delay_seconds);
             var http_response = HttpUtils.FetchUrlNoRedirect(url);
 
-            // bail if not found
+			// bail and warn if blocked
 
+			if ( http_response.DataAsString().Contains(Configurator.delicious_blocked_message) )
+			{
+				GenUtils.LogMsg("warning", Configurator.delicious_blocked_message, null);
+    			return new DeliciousResponse(http_response, dict, outcome: MetadataQueryOutcome.Blocked);
+			}
+
+            // bail if no Location header found
             if (http_response.headers.ContainsKey("Location") == false)
                 return new DeliciousResponse(http_response, dict, outcome: MetadataQueryOutcome.NoRedirect);
 
-			MetadataQueryOutcome outcome = MetadataQueryOutcome.Success;
+			MetadataQueryOutcome outcome = MetadataQueryOutcome.InProgress;
 
             // now follow location header to internal url
 
@@ -348,38 +377,13 @@ namespace CalendarAggregator
 
                 // read metadata (if any)
 
-                var xdoc = XmlUtils.XdocFromXmlBytes(http_response.bytes);
-
-				string domain = string.Format("http://www.delicious.com/{0}/", id);
-                var categories = from category in xdoc.Descendants("category")
-                                 where category.Attribute("domain").Value.ToLower() == domain.ToLower()
-                                 select new { category.Value };
-
-                foreach (var category in categories)
-                {
-                    var key_value = GenUtils.RegexFindKeyValue(category.Value);
-                    if (key_value.Count == 2)
-                        dict[key_value[0]] = key_value[1].Replace('+', ' ');
-                }
-
-				if (dict.Keys.Count == 0 && metadata_url.EndsWith("metadata"))
-				{
-					outcome = MetadataQueryOutcome.NotBookmarkedOrTagged;
-					GenUtils.LogMsg("info", "FetchMetadataFromDeliciousForUrlAndId: " + id, "metadata url not found or has no tags");
-				}
+				outcome = MaybeReadDeliciousMetadata(metadata_url, id, dict, http_response.bytes, outcome);
             }
             catch (Exception e)
             {
 				outcome = MetadataQueryOutcome.Error;
                 GenUtils.LogMsg("exception", "FetchMetadataFromDeliciousForUrlAndId: " + metadata_url, e.Message + e.StackTrace);
             }
-
-            var blocked = (http_response.DataAsString().Contains(Configurator.delicious_blocked_message) ? true : false );
-			if (blocked)
-			{
-				outcome = MetadataQueryOutcome.Blocked;
-				GenUtils.LogMsg("warning", Configurator.delicious_blocked_message, null);
-			}
 
             return new DeliciousResponse(http_response, dict, outcome: outcome);
 
@@ -401,6 +405,33 @@ namespace CalendarAggregator
             </item>
              */
         }
+
+		private static MetadataQueryOutcome MaybeReadDeliciousMetadata(string metadata_url, string id, Dictionary<string, string> dict, byte[] xml_bytes, MetadataQueryOutcome outcome)
+		{
+			var xdoc = XmlUtils.XdocFromXmlBytes(xml_bytes);
+
+			string domain = string.Format("http://www.delicious.com/{0}/", id);
+			var categories = from category in xdoc.Descendants("category")
+							 where category.Attribute("domain").Value.ToLower() == domain.ToLower()
+							 select new { category.Value };
+
+			foreach (var category in categories)
+			{
+				var key_value = GenUtils.RegexFindKeyValue(category.Value);
+				if (key_value.Count == 2)
+					dict[key_value[0]] = key_value[1].Replace('+', ' ');
+			}
+
+			if (dict.Keys.Count == 0 && metadata_url.EndsWith("metadata"))
+			{
+				outcome = MetadataQueryOutcome.NotBookmarkedOrTagged;
+				GenUtils.LogMsg("info", "FetchMetadataFromDeliciousForUrlAndId: " + id, "metadata url not found or has no tags");
+			}
+			else
+				outcome = MetadataQueryOutcome.Success;
+
+			return outcome;
+		}
 
 		/*
 		public static DeliciousResponse FetchMetadataFromDeliciousForUrlAndId(string metadata_url, string id)
