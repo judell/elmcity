@@ -117,6 +117,7 @@ namespace ElmcityUtils
         // retries until deleted
         public BlobStorageResponse DeleteContainer(string containername)
         {
+			containername = LegalizeContainerName(containername);
             var completed_delegate = new GenUtils.Actions.CompletedDelegate<BlobStorageResponse, Object>(CompletedIfContainerIsGone);
             return GenUtils.Actions.Retry<BlobStorageResponse>(delegate() { return MaybeDeleteContainer(containername); }, completed_delegate, completed_delegate_object: containername, wait_secs: StorageUtils.wait_secs, max_tries: StorageUtils.max_tries, timeout_secs: StorageUtils.timeout_secs);
         }
@@ -177,9 +178,17 @@ namespace ElmcityUtils
 			return new BlobStorageResponse(http_response, dicts);
 		}
 
+		public static string LegalizeContainerName(string containername)
+		{
+			containername = containername.ToLower();
+			//containername = containername.Replace("_", "");
+			return containername;
+		}
+
 		public static bool ExistsContainer(string containername)
         {
-            var url = MakeAzureBlobUri(containername.ToLower(), "");
+            //var url = MakeAzureBlobUri(containername.ToLower(), "");
+			var url = MakeAzureBlobUri(LegalizeContainerName(containername), "");
             var response = HttpUtils.FetchUrl(url);
             return (response.status == HttpStatusCode.OK);
         }
@@ -223,6 +232,11 @@ namespace ElmcityUtils
             return new BlobStorageResponse(http_response);
         }
 
+		public BlobStorageResponse PutBlob(string containername, string blobname, byte[] data)
+		{
+			return PutBlob(containername, blobname, new Hashtable(), data, null);
+		}
+
         public BlobStorageResponse GetBlobProperties(string containername, string blobname)
         {
             HttpResponse http_response = DoBlobStoreRequest(containername, blobname, method: "HEAD", headers: new Hashtable(), data: null, content_type: null, query_string: null);
@@ -250,7 +264,7 @@ namespace ElmcityUtils
 
                 if (containername != null)
                 {
-					containername = containername.ToLower();
+					containername = LegalizeContainerName(containername);
                     path = path + containername;
                     if (blobname != null)
                         path = path + "/" + blobname;
@@ -335,7 +349,7 @@ namespace ElmcityUtils
         {
             string url = string.Format("{0}/{1}/{2}",
                 Configurator.azure_blobhost,
-                container.ToLower(), // http://msdn.microsoft.com/en-us/library/dd135715.aspx
+                LegalizeContainerName(container), // http://msdn.microsoft.com/en-us/library/dd135715.aspx
                 name);
             return new Uri(url);
         }
