@@ -63,6 +63,10 @@ namespace WorkerRole
         {
             try
             {
+				var msg = "Worker: OnStart";
+				logger.LogMsg("info", msg, null);
+				GenUtils.PriorityLogMsg("info", msg, null, ts);
+
                 HttpUtils.Wait(startup_delay);
 
 				local_storage_path = RoleEnvironment.GetLocalResource("LocalStorage1").RootPath;
@@ -81,16 +85,16 @@ namespace WorkerRole
 
                 RoleEnvironment.Changing += RoleEnvironmentChanging;
 
-                logger.LogMsg("info", "worker: OnStart", null);
-
 				GenUtils.LogMsg("info", "LocalStorage1", local_storage_path);
                 PythonUtils.InstallPythonStandardLibrary(local_storage_path, ts);
 
                 HttpUtils.SetAllowUnsafeHeaderParsing(); //http://www.cookcomputing.com/blog/archives/000556.html
 
-                Utils.ScheduleTimer(IronPythonAdmin, minutes: CalendarAggregator.Configurator.general_admin_interval_hours * 60, name: "IronPythonAdmin", startnow: false);
+                Utils.ScheduleTimer(IronPythonAdmin, minutes: CalendarAggregator.Configurator.ironpython_admin_interval_hours * 60, name: "IronPythonAdmin", startnow: false);
 
                 Utils.ScheduleTimer(DeliciousAdmin, minutes: CalendarAggregator.Configurator.delicious_admin_interval_hours * 60, name: "DeliciousAdmin", startnow: false);
+
+				Utils.ScheduleTimer(GeneralAdmin, minutes: CalendarAggregator.Configurator.worker_general_admin_interval_hours * 60, name: "StartupAdmin", startnow: false);
 
 				Utils.ScheduleTimer(TestRunnerAdmin, minutes: CalendarAggregator.Configurator.testrunner_interval_hours * 60, name: "TestRunnerAdmin", startnow: false);
 
@@ -100,10 +104,24 @@ namespace WorkerRole
             }
             catch (Exception e)
             {
-                logger.LogMsg("exception", "Worker.OnStart", e.Message + e.StackTrace);
+				var msg = "Worker.OnStart";
+                logger.LogMsg("exception", msg, e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", msg, e.Message + e.StackTrace, ts);
+				TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, msg);
             }
             return base.OnStart();
         }
+
+		public override void OnStop()
+		{
+			var msg = "Worker: OnStop";
+			logger.LogMsg("info", msg, null);
+			GenUtils.PriorityLogMsg("info", msg, null, ts);
+			var snapshot = Counters.MakeSnapshot(Counters.GetCounters());
+			monitor.StoreSnapshot(snapshot);
+
+			base.OnStop();
+		}
 
         private void RoleEnvironmentChanging(object sender, RoleEnvironmentChangingEventArgs e)
         {
@@ -120,9 +138,13 @@ namespace WorkerRole
         {
             try
             {
+				var message = "Worker: Run";
+				logger.LogMsg("info", message, null);
+				GenUtils.PriorityLogMsg("info", message, null, ts);
+
                 while (true)
                 {
-                    logger.LogMsg("info", "waking", null);
+                    logger.LogMsg("info", "worker waking", null);
 
 					settings = GenUtils.GetSettingsFromAzureTable();
 
@@ -151,19 +173,20 @@ namespace WorkerRole
                         StopTask(id);
                     }
 
-                    logger.LogMsg("info", "sleeping", null);
+                    logger.LogMsg("info", "worker sleeping", null);
                     Utils.Wait(CalendarAggregator.Configurator.scheduler_check_interval_minutes * 60);
                 }
             }
             catch (Exception e)
             {
                 logger.LogMsg("exception", "Worker.Run", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "Worker.Run", e.Message + e.StackTrace, ts);
             }
         }
 
         public void ProcessHub(string id, Calinfo calinfo)
         {
-            logger.LogMsg("info", "processing hub: " + id, null);
+            logger.LogMsg("info", "worker processing hub: " + id, null);
 
             var fr = new FeedRegistry(id);
 
@@ -172,7 +195,7 @@ namespace WorkerRole
 
                 DoIcal(fr, calinfo);
 
-                if (calinfo.hub_type == "where")
+                if (calinfo.hub_type == CalendarAggregator.HubType.where.ToString())
                 {
                     DoEventful(calinfo);
                     DoUpcoming(calinfo);
@@ -180,14 +203,14 @@ namespace WorkerRole
                     DoFacebook(calinfo);
                 }
 
-                EventStore.CombineZonedEventStoresToZonelessEventStore(id);
+				EventStore.CombineZonedEventStoresToZonelessEventStore(id, settings);
 
                 RenderHtmlXmlJson(id, calinfo);
 
-                if (calinfo.hub_type == "where")
+                if (calinfo.hub_type == CalendarAggregator.HubType.where.ToString())
                     SaveWhereStats(fr, calinfo);
 
-                if (calinfo.hub_type == "what")
+                if (calinfo.hub_type == CalendarAggregator.HubType.what.ToString())
                     SaveWhatStats(fr, calinfo);
 
                 MergeIcs(calinfo);
@@ -195,10 +218,14 @@ namespace WorkerRole
             }
             catch (Exception e)
             {
-                logger.LogMsg("exception", "main loop: " + id, e.Message + e.StackTrace);
+				var msg = "worker main loop: " + id;
+				var data = e.Message + e.StackTrace;
+                logger.LogMsg("exception", msg, data);
+				GenUtils.PriorityLogMsg("exception", msg, data, ts);
+				TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, msg);
             }
 
-            logger.LogMsg("info", "done processing: " + id, null);
+            logger.LogMsg("info", "worker done processing: " + id, null);
 
         }
 
@@ -410,7 +437,7 @@ namespace WorkerRole
 
         public static void DoEventful(Calinfo calinfo)
         {
-            if (calinfo.eventful)
+            if (settings["use_eventful"] == "true" && calinfo.eventful)
             {
                 var eventful = new ZonedEventStore(calinfo, ".eventful");
 				Collector coll = new Collector(calinfo, settings);
@@ -420,7 +447,7 @@ namespace WorkerRole
 
         public static void DoUpcoming(Calinfo calinfo)
         {
-            if (calinfo.upcoming)
+            if (settings["use_upcoming"] == "true" && calinfo.upcoming)
             {
                 var upcoming = new ZonedEventStore(calinfo, ".upcoming");
 				Collector coll = new Collector(calinfo, settings);
@@ -430,7 +457,7 @@ namespace WorkerRole
 
         public static void DoEventBrite(Calinfo calinfo)
         {
-            if (calinfo.eventbrite)
+            if (settings["use_eventbrite"] == "true" && calinfo.eventbrite)
             {
                 var eventbrite = new ZonedEventStore(calinfo, ".eventbrite");
 				Collector coll = new Collector(calinfo, settings);
@@ -440,7 +467,7 @@ namespace WorkerRole
 
         public static void DoFacebook(Calinfo calinfo)
         {
-            if (calinfo.facebook)
+            if (settings["use_facebook"] == "true" && calinfo.facebook)
             {
                 var facebook = new ZonedEventStore(calinfo, ".facebook");
 				Collector coll = new Collector(calinfo, settings);
@@ -452,10 +479,10 @@ namespace WorkerRole
         {
             var id = calinfo.delicious_account;
             logger.LogMsg("info", "SaveWhereStats: " + id, null);
-            NonIcalStats estats = GetNonIcalStats(id, "eventful_stats.json");
-            NonIcalStats ustats = GetNonIcalStats(id, "upcoming_stats.json");
-            NonIcalStats ebstats = GetNonIcalStats(id, "eventbrite_stats.json");
-            NonIcalStats fbstats = GetNonIcalStats(id, "facebook_stats.json");
+            NonIcalStats estats = GetNonIcalStats(NonIcalType.eventful, id, calinfo, settings);
+            NonIcalStats ustats = GetNonIcalStats(NonIcalType.upcoming, id, calinfo, settings);
+            NonIcalStats ebstats = GetNonIcalStats(NonIcalType.eventbrite, id, calinfo, settings);
+            NonIcalStats fbstats = GetNonIcalStats(NonIcalType.facebook, id, calinfo, settings);
             Dictionary<string, IcalStats> istats = GetIcalStats(id);
 
             var where = calinfo.where;
@@ -628,11 +655,17 @@ All events {8}, population {9}, events/person {10:f}
             }
         }
 
-        public static void MergeIcs(Calinfo calinfo)
+        public static void MergeIcs(Calinfo calinfo)  
         {
             var id = calinfo.delicious_account;
             logger.LogMsg("info", "MergeIcs: " + id, null);
-            var suffixes = calinfo.hub_type == "where" ? new List<string>() { "ical", "eventful", "upcoming" } : new List<string>() { "ical" };
+			List<string> suffixes = new List<string>() { "ical" };
+			if ( calinfo.hub_type == CalendarAggregator.HubType.where.ToString() )
+				foreach (NonIcalType type in Enum.GetValues(typeof(CalendarAggregator.NonIcalType)))
+                {
+				if (Utils.UseNonIcalService(type, settings, calinfo) == true)
+					suffixes.Add(type.ToString());
+				}
             try
             {
                 var metadict = delicious.LoadMetadataForIdFromAzureTable(id);
@@ -642,15 +675,22 @@ All events {8}, population {9}, events/person {10:f}
 				foreach (var tz in all_ical.TimeZones)
 					tz.TZID = calinfo.tzinfo.Id;
 
-                foreach (var suffix in suffixes)
+                foreach (var suffix in suffixes)  // todo: skip if disabled in settings
                 {
                     var url = MakeIcsUrl(id, suffix);
-                    var feedtext = HttpUtils.FetchUrl(url).DataAsString();
-                    var sr = new StringReader(feedtext);
-                    var ical = iCalendar.LoadFromStream(sr);
-					foreach (var tz in ical.TimeZones)
-						tz.TZID = calinfo.tzinfo.Id;
-                    all_ical.MergeWith(ical);
+					try
+					{
+						var feedtext = HttpUtils.FetchUrl(url).DataAsString();
+						var sr = new StringReader(feedtext);
+						var ical = iCalendar.LoadFromStream(sr);
+						foreach (var tz in ical.TimeZones)
+							tz.TZID = calinfo.tzinfo.Id;
+						all_ical.MergeWith(ical);
+					}
+					catch (Exception e)
+					{
+						GenUtils.LogMsg("warning", "MergeICS: " + url, e.Message);
+					}
                 }
 
                 //var deduped = new iCalendar().iCalendar;
@@ -682,17 +722,25 @@ All events {8}, population {9}, events/person {10:f}
             }
         }
 
-        private static NonIcalStats GetNonIcalStats(string container, string name)
+        private static NonIcalStats GetNonIcalStats(NonIcalType type, string id, Calinfo calinfo, Dictionary<string,string> settings)
         {
-            var stats = new NonIcalStats();
+			var name = type.ToString() + "_stats.json";
+			var stats = new NonIcalStats();
+			if (settings["use_" + type.ToString()] != "true" || Utils.UseNonIcalService(type, settings, calinfo) != true)
+			{
+				stats.venuecount = 0;
+				stats.eventcount = 0;
+				stats.whenchecked = DateTime.MinValue;
+				return stats;
+			}
             try
             {
-                if ( BlobStorage.ExistsBlob(container, name) )
-                    stats = Utils.DeserializeObjectFromJson<NonIcalStats>(container, name);
+                if ( BlobStorage.ExistsBlob(id, name) )
+                    stats = Utils.DeserializeObjectFromJson<NonIcalStats>(id, name);
             }
             catch (Exception e)
             {
-                logger.LogMsg("exception", "GetEventAndVenueStats: " + container + " " + name, e.Message + e.StackTrace);
+                logger.LogMsg("exception", "GetEventAndVenueStats: " + id + " " + name, e.Message + e.StackTrace);
             }
             return stats;
         }
@@ -736,6 +784,25 @@ All events {8}, population {9}, events/person {10:f}
                 logger.LogMsg("exception", "DeliciousAdmin", e.Message + e.StackTrace);
             }
         }
+
+		public static void GeneralAdmin(object o, ElapsedEventArgs args)
+		{
+			logger.LogMsg("info", "GeneralAdmin", null);
+			foreach (var id in ids)
+			{
+				try
+				{
+					var calinfo = new Calinfo(id);
+					var cr = new CalendarRenderer(calinfo);
+					bs.SerializeObjectToAzureBlob(calinfo, id, id + ".calinfo.obj");
+					bs.SerializeObjectToAzureBlob(cr, id, id + ".renderer.obj");
+				}
+				catch (Exception e)
+				{
+					logger.LogMsg("exception", "GeneralAdmin: " + id, e.Message + e.StackTrace);
+				}
+			}
+		}
 
 		public static void UpdateFeedsAndMetadataForIdToAzure(string id)
 		{
