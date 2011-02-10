@@ -29,8 +29,6 @@ local_storage = get_local_storage()
 python_lib = local_storage + '/Lib'
 log.write('python lib: %s\n' % python_lib)
 
-ElmcityUtils.FileUtils.UnzipFromUrlToDirectory(System.Uri('http://elmcity.blob.core.windows.net/admin/python_library.zip'), local_storage)
-
 sys.path.append(python_lib)
 import traceback
 
