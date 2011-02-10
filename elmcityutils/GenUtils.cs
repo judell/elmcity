@@ -39,6 +39,13 @@ namespace ElmcityUtils
 			ts.WriteLogMessage(type, title, blurb);
 		}
 
+		public static void PriorityLogMsg(string type, string title, string blurb, TableStorage ts)
+		{
+			if (ts == null) ts = default_ts;
+			title = MakeLogMsgTitle(title);
+			ts.WritePriorityLogMessage(type, title, blurb);
+		}
+
 		public static string MakeLogMsgTitle(string title)
 		{
 			string hostname = Dns.GetHostName(); 
