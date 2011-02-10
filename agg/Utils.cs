@@ -488,6 +488,15 @@ namespace CalendarAggregator
 			return new string[] { lat, lon };
 		}
 
+		public static void StoreLatLonToAzureForId(string id, string lat, string lon)
+		{
+			var d = Delicious.MakeDefaultDelicious();
+			var latlon_dict = new Dictionary<string, object>();
+			latlon_dict["lat"] = lat;
+			latlon_dict["lon"] = lon;
+			ts.MergeEntity("metadata", id, id, latlon_dict);
+		}
+
 		//http://pietschsoft.com/post/2008/02/Calculate-Distance-Between-Geocodes-in-C-and-JavaScript.aspx
 		public static class GeoCodeCalc
 		{
@@ -642,6 +651,7 @@ namespace CalendarAggregator
 		static public string IcsFromRssPlusXcal(string rss_plus_xcal_url, string source, TimeZoneInfo tzinfo, bool use_utc)
 		{
 			XNamespace xcal = "urn:ietf:params:xml:ns:xcal";
+			XNamespace geo = "http://www.w3.org/2003/01/geo/wgs84_pos#";
 			//var uri = new Uri("http://events.pressdemocrat.com/search?city=Santa+Rosa&new=n&rss=1&srad=90&svt=text&swhat=&swhen=&swhere=");
 			var rss = HttpUtils.FetchUrl(new Uri(rss_plus_xcal_url));
 			var xdoc = XmlUtils.XdocFromXmlBytes(rss.bytes);
@@ -656,9 +666,20 @@ namespace CalendarAggregator
 				var dtstart = Utils.DateTimeFromDateStr(item.Element(xcal + "dtstart").Value);
 				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
 				var location = item.Element(xcal + "location").Value;
+				string lat = null;
+				string lon = null;
+				try
+				{
+					lat = item.Element(geo + "lat").Value;
+					lon = item.Element(geo + "long").Value;
+				}
+				catch 
+				{
+					GenUtils.LogMsg("warning", "IcsFromRssPlusXcal", "unable to parse lat/lon");
+				}
 				//var evt = Collector.MakeTmpEvt(dtstart_with_zone, title, url, source, allday: false, use_utc: use_utc);
 				//var evt = Collector.MakeTmpEvt(dtstart_with_zone,  Utils.DateTimeWithZone.MinValue(tzinfo), title, source, allday: false, use_utc: use_utc);
-				var evt = Collector.MakeTmpEvt(dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url:url, location: location, description: source, allday: false, use_utc: false);
+				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url:url, location: location, description: source, lat: lat, lon: lon, allday: false, use_utc: false);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
 			var serializer = new DDay.iCal.Serialization.iCalendarSerializer(ical);
@@ -690,7 +711,7 @@ namespace CalendarAggregator
 				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
 				var location = entry.Descendants(ns + "location").First().Value;
 				//var evt = Collector.MakeTmpEvt(dtstart_with_zone, title, url, source, allday: false, use_utc: use_utc);
-				var evt = Collector.MakeTmpEvt(dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, allday: false, use_utc: use_utc);
+				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, lat: null, lon: null, allday: false, use_utc: use_utc);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
 			var serializer = new DDay.iCal.Serialization.iCalendarSerializer(ical);
@@ -701,6 +722,26 @@ namespace CalendarAggregator
 		#endregion
 
 		#region other
+
+		public static bool UseNonIcalService(NonIcalType type, Dictionary<string,string> settings, Calinfo calinfo)
+		{
+		if ( settings["use_" + type.ToString()] != "true") 
+			return false;
+
+		if (type.ToString() == "eventful" && !calinfo.eventful)
+			return false;
+		
+		if (type.ToString() == "upcoming" && !calinfo.upcoming)
+			return false;
+
+		if (type.ToString() == "eventbrite" && !calinfo.eventbrite)
+			return false;
+
+		if (type.ToString() == "facebook" && !calinfo.facebook)
+			return false;
+
+		return true;
+		}
 
 		public static string MakeLengthLimitedExceptionMessage(Exception e)
 		{
@@ -759,8 +800,9 @@ namespace CalendarAggregator
 
 		public static string MakeBaseUrl(string id)
 		{
-			return string.Format("{0}/{1}/{1}.zoneless.obj",
+			return string.Format("{0}/{1}/{2}.zoneless.obj",
 				ElmcityUtils.Configurator.azure_blobhost,
+				BlobStorage.LegalizeContainerName(id),
 				id);
 		}
 
@@ -768,7 +810,7 @@ namespace CalendarAggregator
 		{
 			return string.Format("/services/{0}/{1}?view={2}&count={3}", id, type, view, count);
 		}
-
+		
 		public static void RemoveBaseCacheEntry(string id)
 		{
 			var cached_base_uri = MakeBaseUrl(id);
@@ -777,7 +819,7 @@ namespace CalendarAggregator
 				cached_base_uri);
 			var result = HttpUtils.FetchUrl(new Uri(url));
 		}
-
+				
 		// convert a feed url into a base-64-encoded and uri-escaped string
 		// that can be used as an azure table rowkey
 		public static string MakeSafeRowkeyFromUrl(string feedurl)
@@ -850,8 +892,7 @@ namespace CalendarAggregator
 				offset += read;
 			}
 		}
-
-
+		
 		#endregion other
 
 	}
