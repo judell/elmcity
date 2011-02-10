@@ -38,11 +38,16 @@ namespace WebRole
 
 		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
-		private static List<string> cacheable_types = new List<string>() { "ics", "search", "stats" };
+		//private static List<string> cacheable_types = new List<string>() { "ics", "search", "stats" };
+		private static List<string> cacheable_types = new List<string>() { };
+
+		public ServicesController()
+        {
+        }
 
 		#region events
 
-		//[OutputCache(Duration = Configurator.services_output_cache_duration, VaryByParam="*")]
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam="*")]
 		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -100,7 +105,8 @@ namespace WebRole
 				if (this.cr.cache[base_key] == null)
 				{
 					var bytes = HttpUtils.FetchUrl(new Uri(base_key)).bytes;
-					InsertIntoCache(bytes, ElmcityUtils.Configurator.cache_sliding_expiration, dependency: null, key: base_key);
+					//InsertIntoCache(bytes, ElmcityUtils.Configurator.cache_sliding_expiration, dependency: null, key: base_key);
+					InsertIntoCache(bytes, dependency: null, key: base_key);
 				}
 
 				// uri for static content, e.g.:
@@ -119,7 +125,7 @@ namespace WebRole
 				{
 					var bytes = HttpUtils.FetchUrl(blob_uri).bytes;
 					var dependency = new ElmcityCacheDependency(base_key);
-					InsertIntoCache(bytes, ElmcityUtils.Configurator.cache_sliding_expiration, dependency: dependency, key: blob_key);
+					InsertIntoCache(bytes, dependency: dependency, key: blob_key);
 				}
 
 				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString());
@@ -255,9 +261,15 @@ namespace WebRole
 
 			}
 
-			private void InsertIntoCache(byte[] bytes, TimeSpan sliding_expiration, CacheDependency dependency, string key)
+			private void InsertIntoCache(byte[] bytes, CacheDependency dependency, string key)
 			{
 				var logger = new CacheItemRemovedCallback(AspNetCache.LogRemovedItemToAzure);
+				var expiration_hours = ElmcityUtils.Configurator.cache_sliding_expiration.Hours;
+				if (ElmcityApp.where_ids.Exists(id => id == this.id))
+					expiration_hours = Convert.ToInt32(ElmcityController.settings["where_aggregate_interval_hours"]);
+				else
+					expiration_hours = Convert.ToInt32(ElmcityController.settings["what_aggregate_interval_hours"]);
+				var sliding_expiration = new TimeSpan(expiration_hours,0,0);
 				this.cr.cache.Insert(key, bytes, dependency, Cache.NoAbsoluteExpiration, sliding_expiration, CacheItemPriority.Normal, logger);
 			}
 
@@ -267,7 +279,7 @@ namespace WebRole
 				{
 					var view_str = this.cr.RenderDynamicViewWithoutCaching(this.context, view_renderer, this.view, this.count);
 					byte[] view_bytes = Encoding.UTF8.GetBytes(view_str);
-					InsertIntoCache(view_bytes, ElmcityUtils.Configurator.cache_sliding_expiration, dependency, view_key);
+					InsertIntoCache(view_bytes, dependency, view_key);
 				}
 			}
 
@@ -363,7 +375,7 @@ namespace WebRole
 
 		#region fusecal
 
-		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration, VaryByParam = "*")]
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult GetFusecalICS(string url, string filter, string tz_source, string tz_dest)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -415,6 +427,7 @@ namespace WebRole
 
 		#region cache
 
+		/*
 		public ActionResult RemoveCacheEntry(string cached_uri)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -432,6 +445,13 @@ namespace WebRole
 			{
 				ElmcityApp.logger.LogMsg("exception", "RemoveCacheEntry: " + cached_uri, e.Message);
 			}
+			return r;
+		}*/
+
+		public ActionResult RemoveCacheEntry(string cached_uri)
+		{
+			ElmcityApp.logger.LogMsg("exception", "RemoveCacheEntry: " + cached_uri, "obselete method");
+			RemoveCacheEntryResult r = null;
 			return r;
 		}
 
@@ -497,7 +517,7 @@ namespace WebRole
 
 		#region arra
 
-		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration, VaryByParam = "*")]
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult GetArraData(string state, string town, string year, string quarter)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
