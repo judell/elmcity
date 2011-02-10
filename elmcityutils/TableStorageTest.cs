@@ -25,8 +25,12 @@ namespace ElmcityUtils
     {
         public static string test_partition = "test_partition";
         public static string test_row = "test_row";
-        public static string test_table = "test1000";
-        public static string test_table_2 = "test1002";
+		private static Random r = new Random();
+		public string test_table = String.Format("test{0}", r.Next());
+		public string test_table_2 = String.Format("test2{0}", r.Next());
+
+		//public static string test_table = "test1";
+		//public static string test_table_2 = "test2";
 
         public static DateTime test_dt = DateTime.Now;
         public static Int32 test_int32 = 32;
@@ -36,6 +40,13 @@ namespace ElmcityUtils
 
 		private static int short_wait = 5;
 		private static int long_wait = 30;
+
+	    ~TableStorageTest()  
+		{
+			ts.DeleteTable(test_table);
+			ts.DeleteTable(test_table_2);
+		}
+
 
         public static Dictionary<string, object> test_dict = new Dictionary<string, object>()
          {
