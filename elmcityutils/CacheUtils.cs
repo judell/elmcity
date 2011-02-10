@@ -39,6 +39,7 @@ namespace ElmcityUtils
 
         Object this[string key]
         { get; set; }
+
     }
 
     // one of two implementations of ICache. this one
@@ -47,6 +48,7 @@ namespace ElmcityUtils
     public class AspNetCache : ICache
     {
         private Cache cache;
+		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
         public AspNetCache(Cache cache)
         {
@@ -101,8 +103,8 @@ namespace ElmcityUtils
             {
                 this.cache[key] = value;
             }
-
         }
+
     }
 
     // Placeholder for extension, not used yet
@@ -144,6 +146,10 @@ namespace ElmcityUtils
 
     public static class CacheUtils
     {
+		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
+
+		public static string cache_control_tablename = "cacheurls";
+		public static string cache_control_partkey = cache_control_tablename;
 
         // used by CalendarRenderer.RenderDynamicViewWithCaching, 
         // emits not-modified if client already has the rendered view
@@ -216,7 +222,12 @@ namespace ElmcityUtils
                     value = entry.Value.ToString();
                 dict.Add(entry.Key.ToString(), value);
             }
-            var html = new StringBuilder("<html>\n<body>\n<table>\n");
+            var html = new StringBuilder("<html>\n<body>\n");
+			var p = System.Diagnostics.Process.GetCurrentProcess();
+			var info = string.Format("<p>host {0}, procname {1}, procid {2}</p>",
+				System.Net.Dns.GetHostName(), p.ProcessName, p.Id);
+			html.Append(info);
+			html.Append("<table>\n");
             List<string> keys = dict.Keys.ToList();
             keys.Sort();
             foreach (string key in keys)
@@ -226,5 +237,53 @@ namespace ElmcityUtils
             html.Append("</html>");
             return html.ToString();
         }
+
+		public static void MarkBaseCacheEntryForRemoval(string cached_uri, int instance_count)
+		{
+			var entity = new Dictionary<string, object>();
+			entity.Add("cached_uri", cached_uri);
+			entity.Add("count", instance_count);
+			TableStorage.DictObjToTableStore(TableStorage.Operation.merge, entity, cache_control_tablename, cache_control_partkey, TableStorage.MakeSafeRowkeyFromUrl(cached_uri));
+		}
+
+		public static void MaybePurgeCache(ICache cache)
+		{
+			try
+			{
+				var purgeable_entities = FetchPurgeableCacheDicts();
+				foreach (var purgeable_entity in purgeable_entities)
+				{
+					var purgeable_cache_url = (string)purgeable_entity["cached_uri"];
+					if (cache[purgeable_cache_url] != null)
+					{
+						GenUtils.LogMsg("info", "MaybePurgeCache", purgeable_cache_url);
+						cache.Remove(purgeable_cache_url);
+						var count = (int)purgeable_entity["count"];
+						count -= 1;
+						if (count < 0)
+						{
+							count = 0;
+							GenUtils.LogMsg("warning", "CacheUtils.MaybePurgeCache", "count went subzero, reset to zero");
+						}
+						purgeable_entity["count"] = count;
+						var rowkey = TableStorage.MakeSafeRowkeyFromUrl(purgeable_cache_url);
+						ts.UpdateEntity(cache_control_tablename, cache_control_partkey, rowkey, purgeable_entity);
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "MaybePurgeCache", e.Message + e.StackTrace);
+			}
+		}
+
+		public static List<Dictionary<string, object>> FetchPurgeableCacheDicts()
+		{
+			var query = String.Format("$filter=(PartitionKey eq '{0}')", cache_control_tablename);
+			var marked_cache_url_dicts = (List<Dictionary<string, object>>)ts.QueryAllEntities(cache_control_tablename, query, TableStorage.QueryAllReturnType.as_dicts).response;
+			var purgeable_cache_dicts = marked_cache_url_dicts.FindAll(dict => (int)dict["count"] > 0);
+			return purgeable_cache_dicts;
+		}
+
     }
 }
