@@ -29,7 +29,7 @@ namespace CalendarAggregator
         private Calinfo calinfo = new Calinfo(Configurator.testid);
         private CalendarRenderer cr;
         private ZonelessEventStore es;
-        private string event_html_header = @"<h3 class=""eventBlurb"">";
+        private string event_html_header = "<div class=\"eventBlurb\"";
 
         static Uri view_uri = new Uri("http://elmcity.cloudapp.net/services/elmcity/xml?view=government");
         static byte[] view_contents = HttpUtils.FetchUrl(view_uri).bytes;
@@ -59,7 +59,7 @@ namespace CalendarAggregator
         {
             var es_count = this.es.events.Count;
             var html = cr.RenderHtml();
-            var html_count = GenUtils.RegexCountSubstrings(html, event_html_header);
+            var html_count = GenUtils.RegexCountSubstrings(html, this.event_html_header);
             Assert.AreEqual(es_count, html_count);
             Assert.AreEqual(2, html_count);
         }
@@ -92,9 +92,11 @@ namespace CalendarAggregator
         {
             var es_count = es.events.Count;
             var json = cr.RenderJson(0);
-            var events = JsonConvert.DeserializeObject<List<ZonelessEvent>>(json);
-            Assert.AreEqual(es_count, events.Count());
-            Assert.AreEqual(2, events.Count());
+            //var events = JsonConvert.DeserializeObject<List<ZonelessEvent>>(json);
+			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+			var events = (object[]) serializer.DeserializeObject(json);
+            Assert.AreEqual(es_count, events.ToList().Count());
+            Assert.AreEqual(2, events.ToList().Count());
         }
 
         [Test]

@@ -67,12 +67,14 @@ namespace CalendarAggregator
 
         // used to list ical sources in the html rendering
         // todo: make this a query that returns the list in all formats
+		/* obsolete
         public string ical_sources
         {
             get { return _ical_sources; }
             set { _ical_sources = value; }
         }
         private string _ical_sources;
+		 */
 
         // points to a method for rendering individual events in various formats
         private delegate string EventRenderer(ZonelessEvent evt, Calinfo calinfo);
@@ -116,7 +118,7 @@ namespace CalendarAggregator
                 this.jsonfile = this.id + ".json";
                 this.htmlfile = this.id + ".html";
 
-                this.ical_sources = Collector.GetIcalSources(this.id);
+              //  this.ical_sources = Collector.GetIcalSources(this.id);
             }
             catch (Exception e)
             {
@@ -187,6 +189,13 @@ namespace CalendarAggregator
                 xml.Append(string.Format("<dtend>{0}</dtend>\n", evt.dtend.ToString(DATETIME_FORMAT_FOR_XML)));
             xml.Append(string.Format("<allday>{0}</allday>\n", evt.allday));
             xml.Append(string.Format("<categories>{0}</categories>\n", HttpUtility.HtmlEncode(evt.categories)));
+			if (this.calinfo.hub_type == HubType.where.ToString())
+			{
+				var lat = evt.lat != null ? evt.lat : this.calinfo.lat;
+				var lon = evt.lon != null ? evt.lon : this.calinfo.lon;
+				xml.Append(string.Format("<lat>{0}</lat>\n", lat));
+				xml.Append(string.Format("<lon>{0}</lon>\n", lon));
+			}
             xml.Append("</event>\n");
             return xml.ToString();
         }
@@ -224,6 +233,11 @@ namespace CalendarAggregator
             for (var i = 0; i < eventstore.events.Count; i++)
             {
                 var evt = eventstore.events[i];
+				if (this.calinfo.hub_type == HubType.where.ToString())
+				{
+					evt.lat = evt.lat != null ? evt.lat : this.calinfo.lat;
+					evt.lon = evt.lon != null ? evt.lon : this.calinfo.lon;
+				}
                 // provide utc so browsers receiving the json don't apply their own timezones
                 evt = ZonelessEventStore.UniversalFromLocalAndTzinfo(evt, this.calinfo.tzinfo);
                 eventstore.events[i] = evt;
@@ -357,12 +371,9 @@ namespace CalendarAggregator
                 dtstart = "  ";
             else
                 dtstart = evt.dtstart.ToString("ddd hh:mm tt  ");
-            string evt_title;
-            if (!String.IsNullOrEmpty(evt.url))
-                evt_title = string.Format("<a target=\"{0}\" href=\"{1}\">{2}</a>",
-                    Configurator.default_html_window_name, evt.url, evt.title);
-            else
-                evt_title = evt.title;
+
+			//string evt_title;
+			//evt_title = MakeTitleForRDFa(evt);
 
             string categories = "";
             List<string> catlist_links = new List<string>();
@@ -375,22 +386,59 @@ namespace CalendarAggregator
                     var category_url = string.Format("http://{0}/services/{1}/html?view={2}", ElmcityUtils.Configurator.appdomain, this.id, bare_cat);
                     catlist_links.Add(string.Format(@"<a href=""{0}"">{1}</a>", category_url, bare_cat));
                 }
-                categories = string.Format(@" <span class=""eventSource"">{0}</span>", string.Join(", ", catlist_links.ToArray()));
+                categories = string.Format(@" <span class=""eventCats"">{0}</span>", string.Join(", ", catlist_links.ToArray()));
             }
 
-            return string.Format(
-@"<h3 class=""eventBlurb""> 
-<span class=""eventStart"">{0}</span> 
-<span class=""eventTitle"">{1}</span> 
-<span class=""eventSource"">{2}</span>
-{3}
-</h3>
-",
-            dtstart,
-            evt_title,
-            evt.source,
-            categories);
+			return string.Format(
+@"
+<div class=""eventBlurb"" xmlns:v=""http://rdf.data-vocabulary.org/#"" typeof=""v:Event"" >
+<span class=""eventStart"" property=""v:startDate"" content=""{0}"">{1}</span> 
+<span href=""{2}"" rel=""v:url""></span>
+<span class=""eventTitle"">{3}</span> 
+<span class=""eventSource"" property=""v:description"">{4}</span> {5} 
+{6}
+</div>",
+			String.Format("{0:yyyy-MM-ddTHH:mm}", evt.dtstart),
+			dtstart,
+			evt.url,
+            MakeTitleForRDFa(evt),
+			evt.source,
+            categories,
+			MakeGeoForRDFa(evt)
+			);
         }
+
+		private static string MakeTitleForRDFa(ZonelessEvent evt)
+		{
+			string evt_title;
+			if (!String.IsNullOrEmpty(evt.url))
+				// evt_title = string.Format("<a target=\"{0}\" href=\"{1}\">{2}</a>",
+				//evt_title = string.Format("<a target=\"{0}\" href=\"{1}\" rel=\"v:url\" property=\"v:summary\">{2}</a>",
+				evt_title = string.Format("<a target=\"{0}\" property=\"v:summary\" href=\"{1}\">{2}</a>",
+				  Configurator.default_html_window_name, evt.url, evt.title);
+			else
+				evt_title = evt.title;
+			return evt_title;
+		}
+
+		private string MakeGeoForRDFa(ZonelessEvent evt)
+		{
+			string geo = "";
+			if (this.calinfo.hub_type == HubType.where.ToString())
+				geo = string.Format(
+@"<span rel=""v:location"">
+    <span rel=""v:geo"">
+       <span typeof=""v:Geo"">
+          <span property=""v:latitude"" content=""{0}"" ></span>
+          <span property=""v:longitude"" content=""{1}"" ></span>
+       </span>
+    </span>
+  </span>",
+				evt.lat != null ? evt.lat : this.calinfo.lat,
+				evt.lon != null ? evt.lon : this.calinfo.lon
+				);
+			return geo;
+		}
 
         // just today's events, used by, e.g., RenderJsWidget
         public string RenderTodayAsHtml()
@@ -491,7 +539,7 @@ namespace CalendarAggregator
 
         private void MaybeAnnounceTimeOfDay(StringBuilder eventstring, ref TimeOfDay current_time_of_day, DateTime dt)
         {
-            if (this.calinfo.hub_type == "what")
+            if (this.calinfo.hub_type == HubType.what.ToString())
                 return;
 
             if (Utils.ClassifyTime(dt) != current_time_of_day)
@@ -538,6 +586,8 @@ namespace CalendarAggregator
             var html = new StringBuilder();
             foreach (var evt in es.events)
                 html.Append(RenderEvtAsHtml(evt, this.calinfo));
+			html = html.Replace(@"<h3 class=""eventBlurb""", @"<p class=""eventBlurb""");
+			html = html.Replace("</h3>", "</p>");
             html = html.Replace("\'", "\\\'").Replace("\"", "\\\"");
             html = html.Replace(Environment.NewLine, "");
             return (string.Format("document.write('{0}')", html));
