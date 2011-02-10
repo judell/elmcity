@@ -32,17 +32,20 @@ namespace ElmcityUtils
 			var zip_response = HttpUtils.FetchUrl(zip_url);
 			var zs = new MemoryStream(zip_response.bytes);
 			var zip = ZipFile.Read(zs);
+			int exceptions = 0;
 			foreach (var entry in zip.Entries)
 			{
 				try
 				{
-					entry.Extract(directory);
+					entry.Extract(directory, ExtractExistingFileAction.DoNotOverwrite);
 				}
-				catch (Exception e)
+				catch
 				{
-					GenUtils.LogMsg("exception", entry.FileName, e.Message + e.InnerException.Message + e.StackTrace);
+					exceptions += 1;
 				}
 			}
+
+			GenUtils.LogMsg("exception", String.Format("UnzipFromUrlToDirectory: {0} exceptions", exceptions), null);
 		}
 
     }
