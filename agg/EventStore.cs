@@ -54,6 +54,22 @@ namespace CalendarAggregator
         }
         private bool _allday;
 
+		public string lat
+		{
+			get { return _lat; }
+			set { _lat = value; }
+		}
+
+		private string _lat;
+
+		public string lon
+		{
+			get { return _lon; }
+			set { _lon = value; }
+		}
+
+		private string _lon;
+
         public string categories
         {
             get { return _categories; }
@@ -62,12 +78,23 @@ namespace CalendarAggregator
 
         private string _categories;
 
-        public Event(string title, string url, string source, bool allday, string categories)
+		public Event(string title, string url, string source, bool allday, string categories)
+		{
+			this.title = title;
+			this.url = url;
+			this.source = source;
+			this.allday = allday;
+			this.categories = categories;
+		}
+
+        public Event(string title, string url, string source, bool allday, string lat, string lon, string categories)
         {
             this.title = title;
             this.url = url;
             this.source = source;
             this.allday = allday;
+			this.lat = lat;
+			this.lon = lon;
             this.categories = categories;
         }
 
@@ -99,6 +126,14 @@ namespace CalendarAggregator
             this.dtstart = dtstart;
             this.dtend = dtend;
         }
+
+		public ZonedEvent(string title, string url, string source, bool allday, string lat, string lon, string categories,
+			Utils.DateTimeWithZone dtstart, Utils.DateTimeWithZone dtend) :
+			base(title, url, source, allday, lat, lon, categories)
+		{
+			this.dtstart = dtstart;
+			this.dtend = dtend;
+		}
     }
 
     // the agggregator combines intermediate results into a pickled list of ZonelessEvents objects
@@ -116,6 +151,15 @@ namespace CalendarAggregator
             this.dtstart = dtstart;
             this.dtend = dtend;
         }
+
+		public ZonelessEvent(string title, string url, string source, bool allday, string lat, string lon, string categories,
+			DateTime dtstart, DateTime dtend) :
+			base(title, url, source, allday, lat, lon, categories)
+		{
+			this.dtstart = dtstart;
+			this.dtend = dtend;
+		}
+
     }
 
     [Serializable]
@@ -171,7 +215,7 @@ namespace CalendarAggregator
             }
         }
 
-        public static void CombineZonedEventStoresToZonelessEventStore(string id)
+        public static void CombineZonedEventStoresToZonelessEventStore(string id, Dictionary<string,string> settings)
         {
             var bs = BlobStorage.MakeDefaultBlobStorage();
             var calinfo = new Calinfo(id);
@@ -182,11 +226,14 @@ namespace CalendarAggregator
 
             DeserializeZoned(ical_uri, lists_of_zoned_events);
 
-            if (calinfo.hub_type == "where")
+            if (calinfo.hub_type == HubType.where.ToString())
             {
                 Uri non_ical_uri;
-                foreach (var type in non_ical_types)
+                //foreach (var type in non_ical_types)
+				foreach (NonIcalType type in Enum.GetValues(typeof(CalendarAggregator.NonIcalType)))
                 {
+					if (Utils.UseNonIcalService(type, settings,calinfo) == false)
+						continue;
                     non_ical_uri = BlobStorage.MakeAzureBlobUri(container: id, name: id + "." + type + ".zoned.obj");
                     if (BlobStorage.ExistsBlob(non_ical_uri)) // // might not exist, e.g. if facebook=no in hub metadata
                         DeserializeZoned(non_ical_uri, lists_of_zoned_events);
@@ -196,14 +243,18 @@ namespace CalendarAggregator
             var es_zoneless = new ZonelessEventStore(calinfo, null);
 
             // combine the various List<ZonedEvent> objects into our new ZonelessEventStore
-            foreach (var list in lists_of_zoned_events)
-                foreach (var evt in list)
-                    es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories);
+			foreach (var list in lists_of_zoned_events)
+				foreach (var evt in list)
+					//es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories);
+					es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.lat, evt.lon, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories);
 
             es_zoneless.ExcludePastEvents(); // the EventCollector should already have done this, but in case not...
             es_zoneless.SortEventList();     // order by dtstart
-            Utils.RemoveBaseCacheEntry(id);  // purge cache entry for the pickled object being rebuilt, 
-            // which also triggers purge of dependencies, so if the base entry is
+
+			CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseUrl(id), Convert.ToInt32(settings["webrole_instance_count"]));
+			//Utils.RemoveBaseCacheEntry(id);  // purge cache entry for the pickled object being rebuilt, 
+           
+			// which also triggers purge of dependencies, so if the base entry is
             // http://elmcity.blob.core.windows.net/a2cal/a2cal.zoneless.obj
             // then dependencies also ousted from cache include:
             // /services/a2cal/html
@@ -245,6 +296,20 @@ namespace CalendarAggregator
             events.Add(evt);
         }
 
+		// add event (sans categories, with lat/lon) to store
+		public void AddEvent(string title, string url, string source, Utils.DateTimeWithZone dtstart, Utils.DateTimeWithZone dtend, string lat, string lon, bool allday)
+		{
+			ZonedEvent evt = new ZonedEvent(title, url, source, allday, lat, lon, categories:null, dtstart:dtstart, dtend:dtend);
+			events.Add(evt);
+		}
+
+		// add event (with categories, with lat/lon) to store
+		public void AddEvent(string title, string url, string source, Utils.DateTimeWithZone dtstart, Utils.DateTimeWithZone dtend, string lat, string lon, bool allday, string categories)
+		{
+			ZonedEvent evt = new ZonedEvent(title, url, source, allday, lat, lon, categories: categories, dtstart: dtstart, dtend: dtend);
+			events.Add(evt);
+		}
+
     }
 
     [Serializable]
@@ -276,6 +341,20 @@ namespace CalendarAggregator
             var evt = new ZonelessEvent(title, url, source, allday, categories, dtstart, dtend);
             this.events.Add(evt);
         }
+
+		// add event sans categories with lat/lon
+		public void AddEvent(string title, string url, string source, string lat, string lon, DateTime dtstart, DateTime dtend, bool allday)
+		{
+			var evt = new ZonelessEvent(title, url, source, allday, lat, lon, null, dtstart, dtend);
+			this.events.Add(evt);
+		}
+
+		// add event with categories with lat/lon
+		public void AddEvent(string title, string url, string source, string lat, string lon, DateTime dtstart, DateTime dtend, bool allday, string categories)
+		{
+			var evt = new ZonelessEvent(title, url, source, allday, lat, lon, categories, dtstart, dtend);
+			this.events.Add(evt);
+		}
 
         // recover the UTC datetime that was in the original ZonedEvent,
         // used by CalendarRenderer.RenderJson
@@ -345,7 +424,8 @@ namespace CalendarAggregator
                 if (!dict.ContainsKey(datekey))
                     dict[datekey] = new List<ZonelessEvent>();
 
-                var local_evt = new ZonelessEvent(evt.title, evt.url, evt.source, evt.allday, evt.categories, evt.dtstart, evt.dtend);
+                //var local_evt = new ZonelessEvent(evt.title, evt.url, evt.source, evt.allday, evt.categories, evt.dtstart, evt.dtend);
+				var local_evt = new ZonelessEvent(evt.title, evt.url, evt.source, evt.allday, evt.lat, evt.lon, evt.categories, evt.dtstart, evt.dtend);
                 dict[datekey].Add(local_evt);
             }
             this.event_dict = dict;
