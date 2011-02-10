@@ -30,6 +30,7 @@ namespace ElmcityUtils
 		private int interval_minutes;
 		private string tablename;
 		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
+		private List<Dictionary<string, string>> priority_log_triggers;
 
 		public Monitor(int interval_minutes, string tablename)
 		{
@@ -42,6 +43,18 @@ namespace ElmcityUtils
 			this.interval_minutes = interval_minutes;
 			this.tablename = tablename;
 			this.ts = ts;
+			priority_log_triggers = GetPriorityLogTriggers(ts);
+		}
+
+		private static List<Dictionary<string,string>> GetPriorityLogTriggers(TableStorage ts)
+		{
+			var query = "$filter=(PartitionKey eq 'prioritylogtriggers')";
+			var ts_response = ts.QueryEntities("prioritylogtriggers", query);
+			var list_dict_obj = (List<Dictionary<string,object>>) ts_response.response;
+			var list_dict_str = new List<Dictionary<string, string>>();
+			foreach ( var dict_obj in list_dict_obj )
+				list_dict_str.Add( ObjectUtils.DictObjToDictStr(dict_obj));
+			return list_dict_str;
 		}
 
 		public static Monitor TryStartMonitor(int interval_minutes, string tablename)
@@ -71,6 +84,7 @@ namespace ElmcityUtils
 		{
 			GenUtils.LogMsg("info", "Monitor.ReloadCounters", null);
 			this.counters = Counters.GetCounters();
+			this.priority_log_triggers = GetPriorityLogTriggers(this.ts);
 		}
 
 		public void ProcessMonitorThreadMethod()
@@ -83,6 +97,7 @@ namespace ElmcityUtils
 					this.ReloadCounters();
 					var snapshot = Counters.MakeSnapshot(counters);
 					this.StoreSnapshot(snapshot);
+					this.MaybeWritePriorityLog(snapshot);
 					Thread.Sleep(TimeSpan.FromMinutes(this.interval_minutes));
 				}
 				catch (Exception e)
@@ -90,6 +105,71 @@ namespace ElmcityUtils
 					GenUtils.LogMsg("exception", "ProcessMonitorThreadMethod: snapshot", e.Message + e.StackTrace);
 				}
 			}
+		}
+
+		public void MaybeWritePriorityLog(Dictionary<string, object> snapshot)
+		{
+			try
+			{
+				foreach (var trigger_dict in priority_log_triggers)
+				{
+					var key = trigger_dict["RowKey"];
+					var is_min_trigger = trigger_dict.ContainsKey("min");
+					var is_max_trigger = trigger_dict.ContainsKey("max");
+					if (snapshot.ContainsKey(key))
+						EvaluateTrigger(key, trigger_dict, snapshot);
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "MaybeWritePriorityLog", e.Message + e.StackTrace);
+			}
+		}
+
+		private void EvaluateTrigger(string key, Dictionary<string, string> trigger_dict, Dictionary<string, object> snapshot)
+		{
+			int snapshot_int;
+			float snapshot_float;
+			int trigger_int;
+			float trigger_float;
+			var type = trigger_dict["type"];
+			switch (type)
+			{
+				case "float":
+					snapshot_float = (float)snapshot[key];
+					if (trigger_dict.ContainsKey("max"))
+					{
+						trigger_float = float.Parse(trigger_dict["max"]);
+						if ( snapshot_float > trigger_float )
+							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) > trigger ({1})", snapshot_float, trigger_float), this.ts);
+					}
+					if (trigger_dict.ContainsKey("min"))
+					{
+						trigger_float = float.Parse(trigger_dict["min"]);
+						if (snapshot_float < trigger_float)
+							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) < trigger ({1})", snapshot_float, trigger_float), this.ts);
+					}
+					break;
+				case "int":
+					snapshot_int = Convert.ToInt32(snapshot[key]);
+					if (trigger_dict.ContainsKey("max"))
+					{
+						trigger_int = Convert.ToInt32(trigger_dict["max"]);
+						if ( snapshot_int > trigger_int )
+							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) > trigger ({1})", snapshot_int, trigger_int), this.ts);
+					}
+					if (trigger_dict.ContainsKey("min"))
+					{
+						trigger_int = Convert.ToInt32(trigger_dict["min"]);
+						if (snapshot_int < trigger_int)
+							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) < trigger ({1})", snapshot_int, trigger_int), this.ts);
+					}
+					break;
+				default:
+					GenUtils.LogMsg("warning", "MaybeWritePriorityLog", "unexpected type: " + type);
+					break;
+			}
+
 		}
 
 		public void StoreSnapshot(Dictionary<string, object> snapshot)
@@ -194,6 +274,10 @@ namespace ElmcityUtils
 			foreach (var counter_name_and_category in counter_names_and_categories)
 			{
 				var c = ObjectUtils.DictObjToDictStr(counter_name_and_category);
+
+				if ( c.ContainsKey("active") && c["active"] == "no" ) // skip if marked inactive
+					continue;
+
 				var category = c["category"];
 
 				//http://support.microsoft.com/?kbid=2022138 -> solved in v4?
