@@ -80,8 +80,8 @@ namespace ElmcityUtils
             {
                 this.cache[key] = (byte[])value;
             }
-
         }
+
 
         private delegate bool CacheEntryRemover(string key, TimeSpan sliding_expiration);
 
@@ -200,6 +200,24 @@ namespace ElmcityUtils
             cache.Remove(key);
             Assert.That(cache[key] == null);
         }
+
+		[Test]
+		public void PurgeIsSuccessful()
+		{
+			var cache = new MockCache();
+			var cache_span = new TimeSpan(1, 0, 0);
+			var key = blob_uri.ToString();
+			cache.Insert(key, view_contents, null, Cache.NoAbsoluteExpiration, cache_span, CacheItemPriority.Normal, null);
+			CacheUtils.MarkBaseCacheEntryForRemoval(key, 2);
+			var purgeable_dicts = CacheUtils.FetchPurgeableCacheDicts();
+			var test_dict = purgeable_dicts.Find(d => (string) d["cached_uri"] == key);
+			Assert.That( (int) test_dict["count"] == 2);
+			CacheUtils.MaybePurgeCache(cache);
+			Assert.That(cache[key] == null);
+			purgeable_dicts = CacheUtils.FetchPurgeableCacheDicts();
+			test_dict = purgeable_dicts.Find(d => (string) d["cached_uri"] == key);
+			Assert.That((int)test_dict["count"] == 1);
+		}
 
         [Test]
         public void OkToRemoveNonExistingObject()
