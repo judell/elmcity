@@ -25,6 +25,7 @@ namespace ElmcityUtils
 	// encapsulate http response from azure table plus various operation-specific responses
 	public class TableStorageResponse
 	{
+
 		public HttpResponse http_response
 		{
 			get { return _http_response; }
@@ -77,6 +78,8 @@ namespace ElmcityUtils
 	// an http-oriented alternative to the azure sdk wrapper around table store
 	public class TableStorage
 	{
+		public enum Operation { merge, update };
+
 		const string NEW_LINE = "\x0A";
 		const string PREFIX_STORAGE = "x-ms-";
 		const string TIME_FORMAT = "ddd, dd MMM yyyy HH:mm:ss";
@@ -137,18 +140,26 @@ namespace ElmcityUtils
 		// merge partial set of values into existing record
 		public static TableStorageResponse UpmergeDictToTableStore(Dictionary<string, object> dict, string table, string partkey, string rowkey)
 		{
-			return DictObjToTableStore("merge", dict, table, partkey, rowkey);
+			return DictObjToTableStore(Operation.merge, dict, table, partkey, rowkey);
 		}
 
 		// update full set of values into existing record
 		public static TableStorageResponse UpdateDictToTableStore(Dictionary<string, object> dict, string table, string partkey, string rowkey)
 		{
-			return DictObjToTableStore("update", dict, table, partkey, rowkey);
+			return DictObjToTableStore(Operation.update, dict, table, partkey, rowkey);
+		}
+
+		// convert a feed url into a base-64-encoded and uri-escaped string
+		// that can be used as an azure table rowkey
+		public static string MakeSafeRowkeyFromUrl(string url)
+		{
+			var b64array = Encoding.UTF8.GetBytes(url);
+			return Uri.EscapeDataString(Convert.ToBase64String(b64array)).Replace('%', '_');
 		}
 
 		// try to insert a dict<str,obj> into table store
 		// if conflict, try to merge or update 
-		private static TableStorageResponse DictObjToTableStore(string operation, Dictionary<string, object> dict, string table, string partkey, string rowkey)
+		public static TableStorageResponse DictObjToTableStore(Operation operation, Dictionary<string, object> dict, string table, string partkey, string rowkey)
 		{
 			TableStorage ts = MakeDefaultTableStorage();
 			var entity = new Dictionary<string, object>();
@@ -162,14 +173,14 @@ namespace ElmcityUtils
 			{
 				switch (operation)
 				{
-					case "update":
+					case Operation.update:
 						response = ts.UpdateEntity(table, partkey, rowkey, entity);
 						break;
-					case "merge":
+					case Operation.merge:
 						response = ts.MergeEntity(table, partkey, rowkey, entity);
 						break;
 					default:
-						GenUtils.LogMsg("info", "DictToTableStore unexpected operation", operation);
+						GenUtils.LogMsg("info", "DictToTableStore unexpected operation", operation.ToString());
 						break;
 				}
 				if (response.http_response.status != HttpStatusCode.NoContent)
@@ -207,6 +218,37 @@ namespace ElmcityUtils
 		{
 			var dict = QueryForSingleEntityAsDictObj(ts, table, q);
 			return ObjectUtils.DictObjToDictStr(dict);
+		}
+
+		public TableStorageResponse WritePriorityLogMessage(string type, string message, string data)
+		{
+			return WriteLogMessage(type, message, data, Configurator.azure_priority_log_table);
+		}
+
+		// for tracing, used everywhere
+		public TableStorageResponse WriteLogMessage(string type, string message, string data, string table)
+		{
+			type = type ?? "";
+			message = message ?? "";
+			data = data ?? "";
+			var entity = new Dictionary<string, object>();
+			entity.Add("PartitionKey", "log");
+			entity.Add("RowKey", DateTime.Now.ToUniversalTime().Ticks.ToString());
+			entity.Add("type", type);
+			entity.Add("message", message);
+			entity.Add("data", data);
+			TableStorageResponse response;
+			try
+			{
+				var tablename = (table == null) ? Configurator.azure_log_table : table;
+				response = this.InsertEntity(table, entity);
+			}
+			catch (Exception e)
+			{
+				var rs = new HttpResponse(HttpStatusCode.Unused, "unable to write log message, " + e.Message, null, null);
+				response = new TableStorageResponse(rs);
+			}
+			return response;
 		}
 
 		// for tracing, used everywhere
