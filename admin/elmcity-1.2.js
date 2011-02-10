@@ -59,7 +59,7 @@ function find_text()
     var selector = selectors[i];
     if ( results[selector] != -1 )
       {
-      var blurbs = $('h3');
+      var blurbs = $('div[class=eventBlurb]');
       var blurb = blurbs[results[selector]];
       var dates = $(blurb).prevAll('a[name^=d]');
       var date_str = $(dates[0]).attr('name');

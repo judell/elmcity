@@ -20,7 +20,7 @@ color: #333333;
 .eventTitle {
 }
 
-.eventSource {
+.eventSource, .eventCats {
 color: #333333;
 font-size: smaller;
 }
@@ -33,6 +33,8 @@ h2 { font-size:8pt;  margin-left: 30%; margin-top:0px; margin-bottom:4pt; }
 h3 { font-size:9pt;font-weight:normal; }
 
 h3.eventBlurb { margin-right: 40%; margin-top:0px; margin-bottom:10pt; text-indent: -1em; margin-left: 1em; }
+
+div.eventBlurb { margin-right: 40%; margin-top:0px; margin-bottom:10pt; text-indent: -1em; margin-left: 1em; }
 
 
 table { 
