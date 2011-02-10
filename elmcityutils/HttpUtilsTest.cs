@@ -25,7 +25,9 @@ namespace ElmcityUtils
 
         public HttpUtilsTest()
         {
-            view_uri = MakeViewUri("/services/elmcity/html", "view=government");
+			var r = new Random();
+			var count = r.Next(200);
+			view_uri = MakeViewUri("services/elmcity/html", String.Format("view={0}", count));
         }
 
         [Test]
@@ -51,10 +53,10 @@ namespace ElmcityUtils
         [Test]
         public void ViewETagMatchesExpected()
         {
-            var fetched_response_bytes = HttpUtils.FetchUrl(view_uri).bytes;
-            var etag = HttpUtils.GetMd5Hash(fetched_response_bytes);
             var dict_obj = new Dictionary<string, object>();
             HttpUtils.FetchResponseBodyAndETagFromUri(view_uri, dict_obj);
+			var body = (byte[])dict_obj["response_body"];
+			var etag = HttpUtils.GetMd5Hash(body);
             Assert.That(etag == (string)dict_obj["ETag"]);
         }
 
