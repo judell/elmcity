@@ -25,7 +25,7 @@ namespace ElmcityUtils
     [TestFixture]
     public class BlobStorageTest
     {
-        private const string containername = "AAATestContainer";
+        private const string containername = "AAATestContainer"; // should become aaatestcontainer
         private const string blobname = "AAATestBlob";
         private static byte[] blobcontent = Encoding.UTF8.GetBytes("AAATestContent");
         private static Hashtable blobmeta;
@@ -58,7 +58,7 @@ namespace ElmcityUtils
             CreateNewPublicContainerIsSuccessful();
 			var e = (IEnumerable<Dictionary<string, string>>)bs.ListContainers().response;
             var l = e.ToList();
-            var found = l.Exists(d => d["Name"] == containername.ToLower());
+            var found = l.Exists(d => d["Name"] == BlobStorage.LegalizeContainerName(containername));
             Assert.IsTrue(found);
         }
 
@@ -80,7 +80,7 @@ namespace ElmcityUtils
             string content_type = "text/random";
             var bs_response = bs.PutBlob(containername, blobname, blobmeta, blobcontent, content_type);
             string domain = Configurator.azure_storage_account + "." + Configurator.azure_blob_domain;
-            string str_url = string.Format("http://{0}/{1}/{2}", domain, containername.ToLower(), blobname);
+            string str_url = string.Format("http://{0}/{1}/{2}", domain, BlobStorage.LegalizeContainerName(containername), blobname);
             var request = (HttpWebRequest)WebRequest.Create(new Uri(str_url));
             var response = HttpUtils.DoHttpWebRequest(request, null);
             Assert.AreEqual(blobcontent, response.bytes);
