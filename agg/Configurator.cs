@@ -14,6 +14,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using ElmcityUtils;
 using Microsoft.WindowsAzure.ServiceRuntime;
@@ -22,6 +23,10 @@ namespace CalendarAggregator
 {
     // used in default html rendering to carve up the day into chunks
     public enum TimeOfDay { Initialized, AllDay, Morning, Lunch, Afternoon, Evening, Night, WeeHours };
+
+	public enum HubType { where, what };
+
+	public enum NonIcalType { eventful, upcoming, eventbrite, facebook };
 
     public static class Configurator
     {
@@ -123,6 +128,36 @@ namespace CalendarAggregator
 
         #region numeric settings
 
+		public static int eventful_max_events
+		{ get { return _eventful_max_events; } }
+
+		private static int _eventful_max_events
+		{ get { return Convert.ToInt32(GetSettingValue("eventful_max_events")); } }
+
+		public static int upcoming_max_events
+		{ get { return _upcoming_max_events; } }
+
+		private static int _upcoming_max_events
+		{ get { return Convert.ToInt32(GetSettingValue("upcoming_max_events")); } }
+
+		public static int eventbrite_max_events
+		{ get { return _eventbrite_max_events; } }
+
+		private static int _eventbrite_max_events
+		{ get { return Convert.ToInt32(GetSettingValue("eventbrite_max_events")); } }
+
+		public static int webrole_instance_count
+		{ get { return _webrole_instance_count; } }
+
+		private static int _webrole_instance_count
+		{ get { return Convert.ToInt32(GetSettingValue("webrole_instance_count")); } }
+
+		public static int webrole_cache_purge_interval_minutes
+		{ get { return _webrole_cache_purge_interval_minutes; } }
+
+		private static int _webrole_cache_purge_interval_minutes
+		{ get { return Convert.ToInt32(GetSettingValue("webrole_cache_purge_interval_minutes")); } }
+
         public static int default_log_transfer_minutes
         { get { return _default_log_transfer_minutes; } }
 
@@ -153,11 +188,17 @@ namespace CalendarAggregator
         private static int _what_aggregate_interval_hours
         { get { return Convert.ToInt32(GetSettingValue("what_aggregate_interval_hours")); } }
 
-        public static int general_admin_interval_hours
-        { get { return _general_admin_interval_hours; } }
+		public static int worker_general_admin_interval_hours
+		{ get { return _worker_general_admin_interval_hours; } }
 
-        private static int _general_admin_interval_hours
-        { get { return Convert.ToInt32(GetSettingValue("general_admin_interval_hours")); } }
+		private static int _worker_general_admin_interval_hours
+		{ get { return Convert.ToInt32(GetSettingValue("worker_general_admin_interval_hours")); } }
+
+        public static int ironpython_admin_interval_hours
+        { get { return _ironpython_admin_interval_hours; } }
+
+        private static int _ironpython_admin_interval_hours
+        { get { return Convert.ToInt32(GetSettingValue("ironpython_admin_interval_hours")); } }
 
         public static int webrole_reload_interval_hours
         { get { return _webrole_reload_interval_hours; } }
@@ -211,6 +252,32 @@ namespace CalendarAggregator
 
 		private static bool _do_ical_validation
 		{ get { return (bool)(GetSettingValue("do_ical_validation", reload: true) == "true"); } }
+
+		public static bool use_eventful
+		{ get { return _use_eventful; } }
+
+		private static bool _use_eventful
+		{ get { return (bool)(GetSettingValue("use_eventful", reload: true) == "true"); } }
+
+		public static bool use_upcoming
+		{ get { return _use_upcoming; } }
+
+		private static bool _use_upcoming
+		{ get { return (bool)(GetSettingValue("use_upcoming", reload: true) == "true"); } }
+
+		public static bool use_eventbrite
+		{ get { return _use_eventbrite; } }
+
+		private static bool _use_eventbrite
+		{ get { return (bool)(GetSettingValue("use_eventbrite", reload: true) == "true"); } }
+
+		public static bool use_facebook
+		{ get { return _use_facebook; } }
+
+		private static bool _use_facebook
+		{ get { return (bool)(GetSettingValue("use_facebook", reload: true) == "true"); } }
+
+
 
 		#endregion
 
@@ -351,8 +418,8 @@ namespace CalendarAggregator
         public const string nothing = "nothing";
 
         // defaults for iis output cache
-        public const int home_page_output_cache_duration = 60 * 60; // 1 hour
-        public const int services_output_cache_duration = 60 * 10;   // 10 min
+        public const int services_output_cache_duration_seconds = 60 * 60; // 1 hour
+        public const int homepage_output_cache_duration_seconds = 60 * 60;  
 
         // routine admin tasks, run from worker on a scheduled basis, are in this python script
         public static string iron_python_admin_script_url = ElmcityUtils.Configurator.azure_blobhost + "/admin/_admin.py";
@@ -476,19 +543,24 @@ namespace CalendarAggregator
             {
                 var calinfos = new Dictionary<string, Calinfo>();
                 var ids = delicious.LoadHubIdsFromAzureTable(); // could come from delicious, but prefer azure cache of that data
-                foreach (var id in ids)
-                {
-                    try
-                    {
-                        var calinfo = new Calinfo(id);
-                        calinfos.Add(id, new Calinfo(id));
-                    }
-                    catch (Exception e)
-                    {
-                        GenUtils.LogMsg("exception", "Calinfos.get", id + "," + e.Message);
-                    }
+				//Parallel.ForEach(ids, id =>
+				foreach (var id in ids)
+				{
+					try
+					{
+						//var calinfo = new Calinfo(id);
+						var calinfo_uri = new Uri(string.Format("{0}/{1}/{2}.calinfo.obj", ElmcityUtils.Configurator.azure_blobhost, id.ToLower(), id));
+						var calinfo = (Calinfo)BlobStorage.DeserializeObjectFromUri(calinfo_uri);
+						calinfos.Add(id, calinfo);
+					}
+					catch (Exception e)
+					{
+						GenUtils.LogMsg("exception", "Calinfos rehydrate ", id + "," + e.Message);
+						var calinfo = new Calinfo(id);
+						calinfos.Add(id, calinfo);
+					}
 
-                }
+				} //);
                 return calinfos;
             }
         }
@@ -506,11 +578,14 @@ namespace CalendarAggregator
     [Serializable] // because included in the pickled event store
     public class Calinfo
     {
-
         // todo: use an enumeration instead of string values "what" and "where"
-        public string hub_type
-        { get { return _hub_type; } }
-        private string _hub_type;
+        //public HubType hub_enum
+        //{ get { return _hub_enum; } }
+		//private HubType _hub_enum;
+
+		public string hub_type
+		{ get { return _hub_type; } }
+		private string _hub_type;
 
         // idle for now, since each hub shares the master delicious account for registry and metadata,
         // but the idea is that each hub might need its own account
@@ -542,10 +617,17 @@ namespace CalendarAggregator
         // radius for a where hub
         public int radius
         { get { return _radius; } }
-
         private int _radius;
 
         // only for where hub
+		public string lat
+		{ get { return _lat; } }
+		private string _lat;
+
+		public string lon
+		{ get { return _lon; } }
+		private string _lon;
+
         public int population
         { get { return _population; } }
         private int _population;
@@ -567,6 +649,11 @@ namespace CalendarAggregator
         public bool facebook
         { get { return _facebook; } }
         private bool _facebook;
+
+		// option to disable RDFa, value is yes/no, default is yes
+		public bool use_rdfa
+		{ get { return _use_rdfa; } }
+		private bool _use_rdfa;
 
         // values documented at: http://blog.jonudell.net/elmcity-project-faq/#tzvalues
         public string tzname
@@ -629,8 +716,8 @@ namespace CalendarAggregator
 
             if (metadict.ContainsKey("where"))
             {
-                this._hub_type = "where";
-                this._where = metadict[this.hub_type];
+				this._hub_type = HubType.where.ToString();
+				this._where = metadict[this.hub_type.ToString()];
                 this._what = Configurator.nothing;
 
                 this._radius = metadict.ContainsKey("radius") ? Convert.ToInt16(metadict["radius"]) : Configurator.default_radius;
@@ -647,12 +734,39 @@ namespace CalendarAggregator
                 this._upcoming = (metadict.ContainsKey("upcoming") && metadict["upcoming"] == "no") ? false : true;
                 this._eventbrite = (metadict.ContainsKey("eventbrite") && metadict["eventbrite"] == "no") ? false : true;
                 this._facebook = (metadict.ContainsKey("facebook") && metadict["facebook"] == "yes") ? true : false;
+
+				// curator gets to override the lat/lon that will otherwise be looked up based on the location
+				// ( from where= in the metadata )
+				if (this.metadict.ContainsKey("lat") && this.metadict.ContainsKey("lon"))
+				{
+					this._lat = this.metadict["lat"];
+					this._lon = this.metadict["lon"];
+				}
+				else
+				{
+					var apikeys = new Apikeys();
+					var lookup_lat = Utils.LookupLatLon(apikeys.yahoo_api_key, this.where)[0];
+					var lookup_lon = Utils.LookupLatLon(apikeys.yahoo_api_key, this.where)[1];
+
+					if (!String.IsNullOrEmpty(lookup_lat) && !String.IsNullOrEmpty(lookup_lon))
+					{
+						this._lat = lookup_lat;
+						this._lon = lookup_lon;
+						Utils.StoreLatLonToAzureForId(id, this.lat, this.lon);
+					}
+				}
+
+				if (this.lat == null || this.lon == null)
+				{
+					throw new Exception("Configurator: no lat/lon for " + id);
+				}
+
             }
 
             if (metadict.ContainsKey("what"))
             {
-                this._hub_type = "what";
-                this._what = metadict[this.hub_type];
+				this._hub_type = HubType.what.ToString();
+                this._what = metadict[this.hub_type.ToString()];
                 this._where = Configurator.nowhere;
                 this._tzname = metadict.ContainsKey("tz") ? metadict["tz"] : "GMT";
                 this._tzinfo = Utils.TzinfoFromName(this._tzname);
@@ -670,6 +784,7 @@ namespace CalendarAggregator
             this._template_url = metadict.ContainsKey("template") ? new Uri(metadict["template"]) : this._template_url;
 
 			this._display_width = metadict.ContainsKey("display_width") ? metadict["display_width"] : this._display_width;
+			this._use_rdfa = metadict.ContainsKey("use_rdfa") && metadict["use_rdfa"] == "no" ? false : true;
 
 			this._feed_count = metadict.ContainsKey("feed_count") ? metadict["feed_count"] : this._display_width;
         }
@@ -679,7 +794,7 @@ namespace CalendarAggregator
         {
             get
             {
-                if (this.hub_type == "what")
+                if (this.hub_type == HubType.what.ToString())
                     return Scheduler.what_interval;
                 else
                     return Scheduler.where_interval;
