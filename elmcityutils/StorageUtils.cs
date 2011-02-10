@@ -37,7 +37,7 @@ namespace ElmcityUtils
 		const string PREFIX_STORAGE = "x-ms-";
 		const string TIME_FORMAT = "ddd, dd MMM yyyy HH:mm:ss";
 
-		public const int max_tries = 15;
+		public const int max_tries = 30;
 		public static TimeSpan timeout_secs = TimeSpan.FromSeconds(100);
 		public const int wait_secs = 3;
 
