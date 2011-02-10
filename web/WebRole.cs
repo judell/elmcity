@@ -17,18 +17,19 @@ using System.Linq;
 using Microsoft.WindowsAzure.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using ElmcityUtils;
+using CalendarAggregator;
 using System.Web;
+using System.Reflection;
 
 namespace WebRole
 {
 	public class WebRole : RoleEntryPoint
 	{
-		public static string local_storage_path;
+		public static string local_storage_path = RoleEnvironment.GetLocalResource("LocalStorage1").RootPath;
+		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
 		public override bool OnStart()
 		{
-			local_storage_path = RoleEnvironment.GetLocalResource("LocalStorage1").RootPath;
-
 			var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
 
 			//Counters.AddCountersToConfig(config, excluded_specifier_prefix: null);
@@ -46,9 +47,32 @@ namespace WebRole
 
 			RoleEnvironment.Changing += RoleEnvironmentChanging;
 
-			GenUtils.LogMsg("info", "Webrole: OnStart", null);
+			var msg = "WebRole: OnStart";
+			GenUtils.LogMsg("info", msg, null);
+			GenUtils.PriorityLogMsg("info", msg, null, ts);
 
 			return base.OnStart();
+		}
+
+		public override void OnStop()
+		{
+			var msg = "WebRole: OnStop";
+			GenUtils.LogMsg("info", msg, null);
+			GenUtils.PriorityLogMsg("info", msg, null, ts);
+
+			var snapshot = Counters.MakeSnapshot(Counters.GetCounters());
+			ElmcityApp.monitor.StoreSnapshot(snapshot);
+
+			base.OnStop();
+		}
+
+		public override void Run()
+		{
+			var msg = "WebRole: Run";
+			GenUtils.LogMsg("info", msg, null);
+			GenUtils.PriorityLogMsg("info", msg, null, ts);
+
+			base.Run();
 		}
 
 		private void RoleEnvironmentChanging(object sender, RoleEnvironmentChangingEventArgs e)
@@ -63,8 +87,39 @@ namespace WebRole
 
 		protected void Application_Error(object sender, EventArgs e)
 		{
+			var ts = TableStorage.MakeDefaultTableStorage();
 			Exception exception = HttpContext.Current.Server.GetLastError();
-			// currently unused, see http://azuremiscellany.blogspot.com/2010/05/web-role-crash-dumps.html for interesting possibility
+			GenUtils.PriorityLogMsg("exception", "Application_Error", exception.Message, ts);
+			TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, exception.Message);
+			// see http://azuremiscellany.blogspot.com/2010/05/web-role-crash-dumps.html for interesting possibility
+		}
+
+		protected void Application_End(object sender, EventArgs e)
+		{
+			HttpRuntime runtime = (HttpRuntime)typeof(System.Web.HttpRuntime).InvokeMember("_theRuntime",
+										  BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.GetField,
+										  null,
+										  null,
+										  null);
+
+			if (runtime == null)
+				return;
+
+			string shutdown_message = (string)runtime.GetType().InvokeMember("_shutDownMessage",
+										  BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.GetField,
+										  null,
+										  runtime,
+										  null);
+
+			string shutdown_stack = (string)runtime.GetType().InvokeMember("_shutDownStack",
+										   BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.GetField,
+										   null,
+										   runtime,
+										   null);
+
+			var ts = TableStorage.MakeDefaultTableStorage();
+			GenUtils.PriorityLogMsg("Application_End", shutdown_message, shutdown_stack, ts);
+			TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, shutdown_message);
 		}
 
 	}
