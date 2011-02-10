@@ -291,22 +291,22 @@ namespace ElmcityUtils
 
         public static void LogHttpRequest(System.Web.Mvc.ControllerContext c)
         {
-            string requestor_ip_addr = "none";
-            string requestor_dns_name = "none";
-            string url = "none";
+            string requestor_ip_addr = "ip_unavailable";
+            //string requestor_dns_name = "dns_unavailable";
+            string url = "url_unavailable";
             try
             {
                 requestor_ip_addr = c.HttpContext.Request.UserHostAddress;
-                requestor_dns_name = DnsUtils.TryGetHostName(requestor_ip_addr);
+                //requestor_dns_name = DnsUtils.TryGetHostName(requestor_ip_addr);
                 url = c.HttpContext.Request.Url.ToString();
             }
-            catch (Exception e)
+            catch // (Exception e)
             {
-                GenUtils.LogMsg("exception", "LogHttpRequest", e.Message + e.StackTrace);
+             //   GenUtils.LogMsg("exception", "LogHttpRequest", e.Message + e.StackTrace);
             }
 
             var msg = string.Format("{0} {1} ",
-                requestor_dns_name,
+                requestor_ip_addr,
                 url);
 
             GenUtils.LogMsg("info", msg, null);
