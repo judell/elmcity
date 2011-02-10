@@ -102,8 +102,9 @@ namespace CalendarAggregator
         public void SerializeAndDeserializeZonelessEventStoreYieldsExpectedEvents()
         {
             var es = new ZonelessEventStore(calinfo, null);
-            es.AddEvent(title1, "http://foo", source1, dt1, min, false, test_category);
-            es.AddEvent(title2, "http://bar", source2, dt2, min, false);
+            
+			es.AddEvent(title1, "http://foo", source1, lat:null, lon:null, dtstart:dt1, dtend:min, allday:false, categories:test_category);
+            es.AddEvent(title2, "http://bar", source2, lat:null, lon:null, dtstart:dt2, dtend:min, allday:false);
 
             bs.SerializeObjectToAzureBlob(es, test_container, es.objfile);
 
