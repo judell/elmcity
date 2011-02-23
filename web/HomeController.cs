@@ -34,16 +34,18 @@ namespace WebRole.Controllers
         BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
         Delicious delicious = Delicious.MakeDefaultDelicious();
 
-        public HomeController()
+		public HomeController()
         {
+			ElmcityApp.home_controller = this;
             while (ElmcityApp.loaded == false)
             {
                 ElmcityApp.logger.LogMsg("info", "HomeController", "waiting for reload");
                 Utils.Wait(5);
             }
+			this.index(); // prime the pump
         }
 
-        [OutputCache(Duration = CalendarAggregator.Configurator.home_page_output_cache_duration, VaryByParam = "None")]
+       //[OutputCache(Duration = CalendarAggregator.Configurator.home_page_output_cache_duration, VaryByParam = "None")]
         public ActionResult index()
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -54,7 +56,7 @@ namespace WebRole.Controllers
             return View();
         }
 
-        [OutputCache(Duration = CalendarAggregator.Configurator.home_page_output_cache_duration, VaryByParam = "None")]
+        [OutputCache(Duration = CalendarAggregator.Configurator.homepage_output_cache_duration_seconds, VaryByParam = "None")]
         public ActionResult hubfiles(string id)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -81,25 +83,24 @@ namespace WebRole.Controllers
             ViewData["view"] = CalendarRenderer.Viewer(url, source);
             return View();
         }
-		
-		public ActionResult ics_from_xcal(string url, string source, string tzname, string use_utc)
+
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "None")]
+		public ActionResult ics_from_xcal(string url, string source, string tzname)
 		{
-			var utc = String.IsNullOrEmpty(use_utc) == false && use_utc == "1";
-			
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			var tzinfo = Utils.TzinfoFromName(tzname);
-			var ics = Utils.IcsFromRssPlusXcal(url, source, tzinfo, utc);
+			var ics = Utils.IcsFromRssPlusXcal(url, source, tzinfo);
 			ViewData["ics"] = ics;
 			return View();
 		}
 
-		public ActionResult ics_from_vcal(string url, string source, string tzname, string use_utc)
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "None")]
+		public ActionResult ics_from_vcal(string url, string source, string tzname)
 		{
-			var utc = String.IsNullOrEmpty(use_utc) == false && use_utc == "1";
 
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			var tzinfo = Utils.TzinfoFromName(tzname);
-			var ics = Utils.IcsFromAtomPlusVCalAsContent(url, source, tzinfo, utc);
+			var ics = Utils.IcsFromAtomPlusVCalAsContent(url, source, tzinfo);
 			ViewData["ics"] = ics;
 			return View();
 		}
@@ -121,6 +122,17 @@ namespace WebRole.Controllers
              return View();
             }
         }
+
+		public ActionResult maybe_purge_cache()
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			if (this.AuthenticateAsSelf())
+			{
+				var cache = new ElmcityUtils.AspNetCache(this.ControllerContext.HttpContext.Cache);
+				ElmcityUtils.CacheUtils.MaybePurgeCache(cache);
+			}
+			return View();
+		}
 
         public ActionResult reload()
         {
