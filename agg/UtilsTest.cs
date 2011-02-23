@@ -220,7 +220,7 @@ import System
 		{
 			var url = "http://events.pressdemocrat.com/search?city=Santa+Rosa&new=n&rss=1&srad=90&svt=text&swhat=&swhen=&swhere=";
 			var tzinfo = Utils.TzinfoFromName("pacific");
-			var ical_str = Utils.IcsFromRssPlusXcal(url, "test source", tzinfo, use_utc:false);
+			var ical_str = Utils.IcsFromRssPlusXcal(url, "test source", tzinfo);
 			var sr = new StringReader(ical_str);
 			var ical = DDay.iCal.iCalendar.LoadFromStream(sr);
 			Assert.AreNotEqual(0, ical.Events.Count);
