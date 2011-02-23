@@ -237,6 +237,16 @@ namespace ElmcityUtils
 			return PutBlob(containername, blobname, new Hashtable(), data, null);
 		}
 
+		public BlobStorageResponse PutBlob(string containername, string blobname, string data)
+		{
+			return PutBlob(containername, blobname, new Hashtable(), System.Text.Encoding.UTF8.GetBytes(data), null);
+		}
+
+		public BlobStorageResponse PutBlob(string containername, string blobname, string data, string content_type)
+		{
+			return PutBlob(containername, blobname, new Hashtable(), System.Text.Encoding.UTF8.GetBytes(data), content_type);
+		}
+
         public BlobStorageResponse GetBlobProperties(string containername, string blobname)
         {
             HttpResponse http_response = DoBlobStoreRequest(containername, blobname, method: "HEAD", headers: new Hashtable(), data: null, content_type: null, query_string: null);
@@ -299,6 +309,8 @@ namespace ElmcityUtils
 				foreach (string element in elements)
 				{
 					dict[element] = node.SelectSingleNode(element).FirstChild.Value;
+					var lm = node.SelectSingleNode("Properties/Last-Modified").FirstChild.Value;
+					dict["Last-Modified"] = lm;
 				}
 				dicts.Add(dict);
             }
