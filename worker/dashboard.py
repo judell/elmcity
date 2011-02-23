@@ -42,9 +42,6 @@ def is_html_blob(blob):
 def is_gif_blob(blob):
   return  blob['Name'].endswith('gif')
 
-def is_current_web_blob(blob):
-  return  blob['Name'].startswith('web') and System.DateTime.UtcNow - blob_time_to_dt(blob) <= System.TimeSpan.FromMinutes(int(web_interval))
-
 def hostname(blob):
   return re.findall('_([^_]+)', blob['Name'])[0]
 
