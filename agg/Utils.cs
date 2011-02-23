@@ -648,7 +648,7 @@ namespace CalendarAggregator
 
 		#region xcal
 
-		static public string IcsFromRssPlusXcal(string rss_plus_xcal_url, string source, TimeZoneInfo tzinfo, bool use_utc)
+		static public string IcsFromRssPlusXcal(string rss_plus_xcal_url, string source, TimeZoneInfo tzinfo)
 		{
 			XNamespace xcal = "urn:ietf:params:xml:ns:xcal";
 			XNamespace geo = "http://www.w3.org/2003/01/geo/wgs84_pos#";
@@ -691,9 +691,9 @@ namespace CalendarAggregator
 
 		#region vcal
 
-		static public string IcsFromAtomPlusVCalAsContent(string atom_plus_vcal_url, string source, TimeZoneInfo tzinfo, bool use_utc)
+		static public string IcsFromAtomPlusVCalAsContent(string atom_plus_vcal_url, string source, TimeZoneInfo tzinfo)
 		{
-			//var uri = new Uri("http://www.techhui.com/events/event/feed");
+			//var uri = new Uri("http://www.techhui.com/events/event/feed");  (should work for all ning sites)
 			var ns = StorageUtils.atom_namespace;
 		
 			var atom = HttpUtils.FetchUrl(new Uri(atom_plus_vcal_url));
@@ -711,7 +711,7 @@ namespace CalendarAggregator
 				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
 				var location = entry.Descendants(ns + "location").First().Value;
 				//var evt = Collector.MakeTmpEvt(dtstart_with_zone, title, url, source, allday: false, use_utc: use_utc);
-				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, lat: null, lon: null, allday: false, use_utc: use_utc);
+				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, lat: null, lon: null, allday: false, use_utc: false);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
 			var serializer = new DDay.iCal.Serialization.iCalendarSerializer(ical);
