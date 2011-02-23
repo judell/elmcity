@@ -75,7 +75,7 @@ namespace ElmcityUtils
         {
             GenUtils.LogMsg("info", "Utils.run_ironpython: " + str_script_url, args[0] + "," + args[1] + "," + args[2]);
 			//var app_domain_name = "ironpython";
-            var result = "";
+            string result = "";
             try
             {
 				/*
@@ -92,7 +92,7 @@ namespace ElmcityUtils
                 paths.Add(directory + "Lib");        // standard python lib
                 paths.Add(directory + "Lib\\site-packages");
                 paths.Add(directory + "ElmcityLib"); // Elmcity python lib
-
+				
 				GenUtils.LogMsg("info", "Utils.run_ironpython", String.Join(":", paths.ToArray()));
 
                 python.SetSearchPaths(paths);
@@ -100,13 +100,32 @@ namespace ElmcityUtils
                 foreach (var item in args)
                     ipy_args.Add(item);
                 var s = HttpUtils.FetchUrl(new Uri(str_script_url)).DataAsString();
+
+				try
+				{
+					var common_script_url = BlobStorage.MakeAzureBlobUri("admin", "common.py");
+					var common_script = HttpUtils.FetchUrl(common_script_url).DataAsString();
+					s = s.Replace("#include common.py", common_script);
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", "RunIronPython: cannot #include common.py", e.Message);
+				}
+
                 var source = python.CreateScriptSourceFromString(s, SourceCodeKind.Statements);
                 var scope = python.CreateScope();
                 var sys = python.GetSysModule();
 				//sys.SetVariable("argv", new PythonArgs() { args = ipy_args } );
 				sys.SetVariable("argv", args);
                 source.Execute(scope);
-                result = scope.GetVariable("result").ToString();
+				try
+				{
+					result = scope.GetVariable("result").ToString();
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", "RunIronPython", e.Message);
+				}
                 python.Runtime.Shutdown();
 				//AppDomain.Unload(python_domain);
             }
