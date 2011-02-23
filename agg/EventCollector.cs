@@ -634,8 +634,8 @@ namespace CalendarAggregator
 		}
 		 */
 
-		// alter feed url if it should be handled by the internal "fusecal" service
-		// todo: make this table-driven from an azure table
+		// alter feed url if it should be handled by the internal "fusecal" service, or the vcal or xcal converters
+		// todo: make this table-driven 
 		public string MaybeRedirectFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
 		{
 			List<string> groups;
@@ -689,7 +689,7 @@ namespace CalendarAggregator
 		public string MaybeXcalToIcsFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
 		{
 			string str_final_url = str_url;
-			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_xcal_service, feed_metadict, trigger_key: "xcal", use_utc: "0", str_final_url: str_final_url);
+			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_xcal_service, feed_metadict, trigger_key: "xcal", str_final_url: str_final_url);
 			return str_final_url;
 		}
 
@@ -697,11 +697,11 @@ namespace CalendarAggregator
 		public string MaybeVcalToIcsFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
 		{
 			string str_final_url = str_url;
-			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_vcal_service, feed_metadict, trigger_key: "vcal", use_utc: "1", str_final_url: str_final_url);
+			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_vcal_service, feed_metadict, trigger_key: "vcal", str_final_url: str_final_url);
 			return str_final_url;
 		}
 
-		private string RedirectFeedUrl(string str_url, string service_url, Dictionary<string, string> feed_metadict, string trigger_key, string use_utc, string str_final_url)
+		private string RedirectFeedUrl(string str_url, string service_url, Dictionary<string, string> feed_metadict, string trigger_key, string str_final_url)
 		{
 			try
 			{
@@ -709,16 +709,15 @@ namespace CalendarAggregator
 				var source = feed_metadict["source"];
 				if (feed_metadict.ContainsKey(trigger_key))
 				{
-					str_final_url = String.Format(service_url,  // e.g. ics_from_xcal?url={0}&tzname={1}&source={2}&use_utc={3}";
+					str_final_url = String.Format(service_url,  // e.g. ics_from_xcal?url={0}&tzname={1}&source={2}";
 							Uri.EscapeDataString(str_url),
 							tzname,
-							source,
-							use_utc);
+							source);
 				}
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "MaybeXcalToIcsFeedUrl", e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "RedirectFeedUrl", e.Message + e.StackTrace);
 			}
 			return str_final_url;
 		}
