@@ -224,6 +224,24 @@ namespace CalendarAggregator
         private static int _worker_reload_interval_hours
         { get { return Convert.ToInt32(GetSettingValue("worker_reload_interval_hours")); } }
 
+		public static int worker_gather_monitor_data_interval_minutes
+		{ get { return _worker_gather_monitor_data_interval_minutes; } }
+
+		private static int _worker_gather_monitor_data_interval_minutes
+		{ get { return Convert.ToInt32(GetSettingValue("worker_gather_monitor_data_interval_minutes")); } }
+
+		public static int web_make_tables_and_charts_interval_minutes
+		{ get { return _web_make_tables_and_charts_interval_minutes; } }
+
+		private static int _web_make_tables_and_charts_interval_minutes
+		{ get { return Convert.ToInt32(GetSettingValue("web_make_tables_and_charts_interval_minutes")); } }
+
+		public static int high_frequency_script_interval_minutes
+		{ get { return _high_frequency_script_interval_minutes; } }
+
+		private static int _high_frequency_script_interval_minutes
+		{ get { return Convert.ToInt32(GetSettingValue("high_frequency_script_interval_minutes")); } }
+
         public static string process_monitor_table
         { get { return _process_monitor_table; } }
 
@@ -357,9 +375,9 @@ namespace CalendarAggregator
         // internally it becomes: http://elmcity.cloudapp.net/services=fusecal?url=http://www.myspace.com/lonesomelake&filter=keene&tz_source=eastern&tz_dest=eastern
         public const string fusecal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/services/fusecal?url={0}&filter={1}&tz_source={2}&tz_dest={3}";
 
-		public const string ics_from_xcal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/ics_from_xcal?url={0}&tzname={1}&source={2}&use_utc={3}";
+		public const string ics_from_xcal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/ics_from_xcal?url={0}&tzname={1}&source={2}";
 
-		public const string ics_from_vcal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/ics_from_vcal?url={0}&tzname={1}&source={2}&use_utc={3}";
+		public const string ics_from_vcal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/ics_from_vcal?url={0}&tzname={1}&source={2}";
 
         // the "fusecal" service is written in python, this is the dispatcher that runs the appropriate 
         // parser for, e.g., myspace or librarything
@@ -423,6 +441,15 @@ namespace CalendarAggregator
 
         // routine admin tasks, run from worker on a scheduled basis, are in this python script
         public static string iron_python_admin_script_url = ElmcityUtils.Configurator.azure_blobhost + "/admin/_admin.py";
+
+		// for worker role to gather monitor data, write charts and reports
+		public static string monitor_script_url = ElmcityUtils.Configurator.azure_blobhost + "/admin/monitor.py";
+
+		// for web role to gather log data, write charts and reports
+		public static string charts_and_tables_script_url = ElmcityUtils.Configurator.azure_blobhost + "/admin/charts.py";
+
+		// for web and worker roles to update dashboard
+		public static string dashboard_script_url = ElmcityUtils.Configurator.azure_blobhost + "/admin/dashboard.py";
 
         // part of experimental pshb implementation, idle for now
         //public static string pubsubhubub_uri = "http://pubsubhubbub.appspot.com/";
