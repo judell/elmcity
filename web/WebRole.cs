@@ -30,6 +30,7 @@ namespace WebRole
 
 		public override bool OnStart()
 		{
+			/*
 			var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
 
 			//Counters.AddCountersToConfig(config, excluded_specifier_prefix: null);
@@ -44,6 +45,7 @@ namespace WebRole
 			config.Directories.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_file_transfer_minutes);
 
 			DiagnosticMonitor.Start("DiagnosticsConnectionString", config);
+			 */
 
 			RoleEnvironment.Changing += RoleEnvironmentChanging;
 

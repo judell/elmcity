@@ -71,6 +71,7 @@ namespace WorkerRole
 
 				local_storage_path = RoleEnvironment.GetLocalResource("LocalStorage1").RootPath;
 
+				/*
                 var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
                 
                 config.Logs.ScheduledTransferLogLevelFilter = LogLevel.Verbose;
@@ -82,15 +83,19 @@ namespace WorkerRole
                 config.Directories.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_file_transfer_minutes);
                 
                 DiagnosticMonitor.Start("DiagnosticsConnectionString", config);
+				 */
 
                 RoleEnvironment.Changing += RoleEnvironmentChanging;
 
 				GenUtils.LogMsg("info", "LocalStorage1", local_storage_path);
+
                 PythonUtils.InstallPythonStandardLibrary(local_storage_path, ts);
 
                 HttpUtils.SetAllowUnsafeHeaderParsing(); //http://www.cookcomputing.com/blog/archives/000556.html
 
                 Utils.ScheduleTimer(IronPythonAdmin, minutes: CalendarAggregator.Configurator.ironpython_admin_interval_hours * 60, name: "IronPythonAdmin", startnow: false);
+
+				Utils.ScheduleTimer(HighFrequencyScript, minutes: CalendarAggregator.Configurator.high_frequency_script_interval_minutes, name: "HighFrequencyScript", startnow: false);
 
                 Utils.ScheduleTimer(DeliciousAdmin, minutes: CalendarAggregator.Configurator.delicious_admin_interval_hours * 60, name: "DeliciousAdmin", startnow: false);
 
@@ -99,6 +104,8 @@ namespace WorkerRole
 				Utils.ScheduleTimer(TestRunnerAdmin, minutes: CalendarAggregator.Configurator.testrunner_interval_hours * 60, name: "TestRunnerAdmin", startnow: false);
 
                 Utils.ScheduleTimer(ReloadMonitorCounters, minutes: CalendarAggregator.Configurator.worker_reload_interval_hours * 60, name: "WorkerReloadCounters", startnow: false);
+
+				Utils.ScheduleTimer(MonitorAdmin, minutes: CalendarAggregator.Configurator.worker_gather_monitor_data_interval_minutes, name: "GatherMonitorData", startnow: false);
 
                 monitor = ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
             }
@@ -149,8 +156,6 @@ namespace WorkerRole
 					settings = GenUtils.GetSettingsFromAzureTable();
 
 					SaveSettings(settings);
-
-					PythonUtils.RunIronPython( local_storage_path, CalendarAggregator.Configurator.iron_python_run_script_url, new List<string>() { "", "", "" });
 
                     ids = delicious.LoadHubIdsFromAzureTable();
 
@@ -764,6 +769,19 @@ All events {8}, population {9}, events/person {10:f}
             monitor.ReloadCounters();
         }
 
+		public static void MonitorAdmin(object o, ElapsedEventArgs args)
+		{
+			logger.LogMsg("info", "MonitorAdmin", null);
+			try
+			{
+				PythonUtils.RunIronPython(local_storage_path, CalendarAggregator.Configurator.monitor_script_url, new List<string>() { "", "", "" });
+			}
+			catch (Exception e)
+			{
+				logger.LogMsg("exception", "MonitorAdmin", e.Message + e.StackTrace);
+			}
+		}
+
         public static void DeliciousAdmin(object o, ElapsedEventArgs args)
         {
             logger.LogMsg("info", "DeliciousAdmin", null);
@@ -842,6 +860,20 @@ All events {8}, population {9}, events/person {10:f}
                 logger.LogMsg("exception", "IronPythonAdmin", ex.Message + ex.StackTrace);
             }
         }
+
+		public static void HighFrequencyScript(object o, ElapsedEventArgs e)
+		{
+			try
+			{
+				logger.LogMsg("info", "HighFrequencyScript", null);
+				PythonUtils.RunIronPython(local_storage_path, CalendarAggregator.Configurator.iron_python_run_script_url, new List<string>() { "", "", "" });
+
+			}
+			catch (Exception ex)
+			{
+				logger.LogMsg("exception", "HighFrequencyScript", ex.Message + ex.StackTrace);
+			}
+		}
 
 		private static void SaveSettings(Dictionary<string,string> dict)
 		{
