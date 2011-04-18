@@ -1,7 +1,6 @@
 def get_resource_dirs():
   return System.IO.Directory.GetDirectories('c:\Resources\Directory')
 
-
 def get_local_storage():
   return [dir for dir in get_resource_dirs() if dir.endswith('LocalStorage1')][0]
 
