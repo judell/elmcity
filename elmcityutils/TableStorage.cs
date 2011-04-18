@@ -42,6 +42,7 @@ namespace ElmcityUtils
 		public TableStorageResponse(HttpResponse http_response, List<Dictionary<string, object>> response)
 		{
 			this._http_response = http_response;
+			this._http_response.bytes = null; // data is parsed out, so release the memory
 			this._response = response;
 		}
 
@@ -49,6 +50,7 @@ namespace ElmcityUtils
 		public TableStorageResponse(HttpResponse http_response, string response)
 		{
 			this._http_response = http_response;
+			this._http_response.bytes = null;
 			this._response = response;
 		}
 
