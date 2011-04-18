@@ -196,7 +196,8 @@ namespace CalendarAggregator
         public static Dictionary<string, IcalStats> DeserializeIcalStatsFromJson(string blobhost, string containername, string filename)
         {
             containername = containername.ToLower();
-            var url = new Uri(string.Format("{0}/{1}/{2}", blobhost, containername, filename));
+            // var url = new Uri(string.Format("{0}/{1}/{2}", blobhost, containername, filename));
+			var url = BlobStorage.MakeAzureBlobUri(containername, filename);
             string json = HttpUtils.FetchUrl(url).DataAsString();
             return JsonConvert.DeserializeObject<Dictionary<string, IcalStats>>(json);
         }
