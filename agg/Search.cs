@@ -153,8 +153,16 @@ namespace CalendarAggregator
 
 			var html = sb.ToString();
 
-			html = GenUtils.RegexReplace(html, "</*(em|strong|b|i|center)>", "");
+			var tags = "em|strong|b|i|center|font";
+			html = EraseTags(html, tags);
+			html = EraseTags(html, tags.ToUpper());
 
+			return html;
+		}
+
+		private static string EraseTags(string html, string tags)
+		{
+			html = GenUtils.RegexReplace(html, "<\\*\\s*(" + tags + ")[^>]+\\s*>", "");
 			return html;
 		}
 
@@ -192,7 +200,7 @@ namespace CalendarAggregator
 
 		public static List<SearchResult> BingSearch(string search_expression, Dictionary<string, object> stats_dict)
 		{
-			var url_template = "http://api.search.live.net/json.aspx?AppId=8F9BDD3C8AAD34D18AFE5099AE3894CE02BC1CF6&Market=en-US&Sources=Web&Adult=Strict&Query={0}&Web.Count=50";
+			var url_template = "http://api.search.live.net/json.aspx?AppId=" + Configurator.bing_api_key + "&Market=en-US&Sources=Web&Adult=Strict&Query={0}&Web.Count=50";
 			var offset_template = "&Web.Offset={1}";
 			var results_list = new List<SearchResult>();
 			Uri search_url;
@@ -204,25 +212,47 @@ namespace CalendarAggregator
 				else
 					search_url = new Uri(string.Format(url_template + offset_template, search_expression, offset));
 
-				var page = new WebClient().DownloadString(search_url);
+				var page = CallSearchApi(search_url);
+				if (page == null)
+					continue;
 
+				try
+				{
 				JObject o = (JObject)JsonConvert.DeserializeObject(page);
 
 				var results_query =
 					from result in o["SearchResponse"]["Web"]["Results"].Children()
 					select new SearchResult
 						  (
-						  url: result.Value<string>("Url").ToString(),
-						  title: result.Value<string>("Title").ToString(),
-						  content: result.Value<string>("Description").ToString(),
+						  url: result.Value<string>("Url").ToString() ?? "NoUrl",
+						  title: result.Value<string>("Title").ToString() ?? "NoTitle",
+						  content: result.Value<string>("Description").ToString() ?? "NoDescription",
 						  engine: SearchResult.FindingEngine.bing
 						  );
 
 				foreach (var result in results_query)
 					results_list.Add(result);
+				}
+				catch
+				{
+					GenUtils.LogMsg("exception", "BingSearch", search_url.ToString());
+				}
 			}
 
 			return results_list;
+		}
+
+		private static string CallSearchApi(Uri search_url)
+		{
+			Utils.Wait(1);
+			var r = HttpUtils.FetchUrl(search_url);
+			if (r.status != HttpStatusCode.OK)
+			{
+				GenUtils.LogMsg("warning", "CallSearchApi" + r.status.ToString(), search_url.ToString());
+				return null;
+			}
+			else
+				return r.DataAsString();
 		}
 
 		public static List<SearchResult> GoogleSearch(string search_expression, 
@@ -236,21 +266,31 @@ namespace CalendarAggregator
 			{
 				search_url = new Uri(string.Format(url_template, search_expression, offset));
 
-				var page = new WebClient().DownloadString(search_url);
+				var page = CallSearchApi(search_url);
+				if (page == null)
+					continue;
 
+				try
+				{
 				JObject o = (JObject)JsonConvert.DeserializeObject(page);
 
 				var results_query =
 					from result in o["responseData"]["results"].Children()
 					select new SearchResult(
-							url: result.Value<string>("url").ToString(),
-							title: result.Value<string>("title").ToString(),
-							content: result.Value<string>("content").ToString(),
+							url: result.Value<string>("url").ToString() ?? "NoUrl",
+							title: result.Value<string>("title").ToString() ?? "NoTitle",
+							content: result.Value<string>("content").ToString() ?? "NoContent",
 							engine: SearchResult.FindingEngine.google
 							);
 
 				foreach (var result in results_query)
 					results_list.Add(result);
+				}
+				catch 
+				{
+					GenUtils.LogMsg("exception", "GoogleSearch", search_url.ToString());
+				}
+
 			}
 
 			return results_list;
