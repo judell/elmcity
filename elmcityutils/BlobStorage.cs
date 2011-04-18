@@ -181,7 +181,7 @@ namespace ElmcityUtils
 		public static string LegalizeContainerName(string containername)
 		{
 			containername = containername.ToLower();
-			//containername = containername.Replace("_", "");
+			containername = containername.Replace("_", "-");
 			return containername;
 		}
 
