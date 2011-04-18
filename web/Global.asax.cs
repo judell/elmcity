@@ -24,6 +24,7 @@ using WebRole;
 using ElmcityUtils;
 using System.Globalization;
 using System.Threading;
+using System.Threading.Tasks;
 using System.IO;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.Diagnostics;
@@ -41,9 +42,10 @@ namespace WebRole
         {
 			var msg = filterContext.Exception.Message;
             ElmcityApp.logger.LogMsg("exception", "last chance", msg + filterContext.Exception.StackTrace);
+			GenUtils.PriorityLogMsg("exception", "last chance", msg + filterContext.Exception.StackTrace, ts);
 			if (msg.Length > 140)
 				msg = msg.Substring(0, 140);
-			TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, msg);
+			TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, "last chance: " + msg);
             filterContext.ExceptionHandled = true;
             this.View("FinalError").ExecuteResult(this.ControllerContext);
         }
@@ -80,8 +82,12 @@ namespace WebRole
                 return true;
             else
             {
-                ElmcityApp.logger.LogMsg("warning", "AuthenticateAsSelf rejected " + incoming_addr, "trusted: " + String.Join(", ", trusted_addrs_list.ToArray()));
-                return false;
+				var msg = "AuthenticateAsSelf rejected " + incoming_addr;
+				var data = "trusted: " +  String.Join(", ", trusted_addrs_list.ToArray());
+				ElmcityApp.logger.LogMsg("warning", msg, data);
+				GenUtils.PriorityLogMsg("warning", msg, data, ts);
+				TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, msg);
+               return false;
             }
         }
     }
@@ -90,7 +96,7 @@ namespace WebRole
     {
 #if false // true if testing, false if not testing
        private static bool testing = true;
-       private static string test_id = "elmcity";
+       private static string test_id = "prescottaz";
 #else    // not testing
         private static bool testing = false;
         private static string test_id = "";
@@ -98,7 +104,7 @@ namespace WebRole
 
 		public static Logger logger = new Logger();
 
-        public static string version =  "952";
+        public static string version =  "1073"; 
 
         public static string pagetitle = "the elmcity project";
 
@@ -107,6 +113,9 @@ namespace WebRole
 		public static Dictionary<string, CalendarRenderer> renderers = new Dictionary<string, CalendarRenderer>();
 
         public static ElmcityUtils.Monitor monitor;        // gather/report diagnostic info
+
+		public static ElmcityController home_controller;
+		public static ElmcityController services_controller;
 
         public static List<string> where_ids;  
         public static List<string> what_ids;
@@ -134,6 +143,31 @@ namespace WebRole
 		//public static string twitter_oauth_access_token;
 		//public static string twitter_oauth_access_token_secret;
 
+		public static void MaybePurgeCache(Object o, ElapsedEventArgs e)
+		{
+			try
+			{
+				var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
+				ElmcityUtils.CacheUtils.MaybePurgeCache(cache);
+			}
+			catch (Exception ex)
+			{
+				GenUtils.LogMsg("exception", "WebRole.MaybePurgeCache", ex.Message + ex.StackTrace);
+			}
+		}
+
+		public static void MakeTablesAndCharts(Object o, ElapsedEventArgs e)
+		{
+			logger.LogMsg("info", "MakeTablesAndCharts", null);
+			try
+			{
+				PythonUtils.RunIronPython(WebRole.local_storage_path, CalendarAggregator.Configurator.charts_and_tables_script_url, new List<string>() { "", "", "" });
+			}
+			catch (Exception ex)
+			{
+				logger.LogMsg("exception", "MonitorAdmin", ex.Message + ex.StackTrace);
+			}
+		}
 
         // encapsulate _reload with the signature needed by Utils.ScheduleTimer
         public static void reload(Object o, ElapsedEventArgs e)
@@ -143,7 +177,7 @@ namespace WebRole
 
         private static void _reload()
         {
-            ElmcityApp.logger.LogMsg("info", "_reload", null);
+            ElmcityApp.logger.LogMsg("info", "webrole _reload start", null);
             string current_id = "";
 
             try
@@ -158,45 +192,46 @@ namespace WebRole
                 else  // construct the full list of hubs
                     calinfos = CalendarAggregator.Configurator.Calinfos;
 
-                where_ids = calinfos.Keys.ToList().FindAll(id => calinfos[id].hub_type == "where");
+                where_ids = calinfos.Keys.ToList().FindAll(id => calinfos[id].hub_type == CalendarAggregator.HubType.where.ToString());
                 var where_ids_as_str = string.Join(",", where_ids.ToArray());
                 ElmcityApp.logger.LogMsg("info", "where_ids: " + where_ids_as_str, null);
 
-                what_ids = calinfos.Keys.ToList().FindAll(id => calinfos[id].hub_type == "what");
+                what_ids = calinfos.Keys.ToList().FindAll(id => calinfos[id].hub_type == CalendarAggregator.HubType.what.ToString());
                 var what_ids_as_str = string.Join(",", what_ids.ToArray());
                 ElmcityApp.logger.LogMsg("info", "what_ids: " + what_ids_as_str, null);
 
                 where_ids.Sort((a, b) => calinfos[a].where.ToLower().CompareTo(calinfos[b].where.ToLower()));
                 what_ids.Sort();
 
-                foreach (var id in calinfos.Keys)
-                {
-                    ElmcityApp.logger.LogMsg("info", "_reload: readying: " + id, null);
-                    current_id = id;
+				List<string> calinfo_keys = calinfos.Keys.ToList();
 
-					// todo: move this to worker
+				Parallel.ForEach( calinfo_keys, id =>
+				//foreach (var id in calinfos.Keys)
+				{
+					ElmcityApp.logger.LogMsg("info", "_reload: readying: " + id, null);
+					current_id = id;
 
-                    try
-                    {
-                        var task = Scheduler.FetchTaskForId(id); // hub has already been processed once
-                    }
-                    catch (Exception e)                          // hub just added, never processed
-                    {
-                        ElmcityApp.logger.LogMsg("info", "creating task record for " + id, e.Message + e.StackTrace);
-                        Scheduler.InitTaskForId(id);            
-                    }
+					CalendarRenderer cr;
 
-                    var calinfo = calinfos[id];
-                    var cr = new CalendarRenderer(calinfo);
+					try
+					{
+						var renderer_uri = new Uri(string.Format("{0}/{1}/{2}.renderer.obj", ElmcityUtils.Configurator.azure_blobhost, id.ToLower(), id));
+						cr = (CalendarRenderer)BlobStorage.DeserializeObjectFromUri(renderer_uri);
+					}
+					catch (Exception e)
+					{
+						GenUtils.LogMsg("exception", "_reload: renderer rehydration: " + id, e.Message + e.StackTrace);
+						cr = new CalendarRenderer(calinfos[id]);
+					}
 
 					if (renderers.ContainsKey(id))
 						renderers[id] = cr;
 					else
 						renderers.Add(id, cr);
 
-                    if (BlobStorage.ExistsBlob(id, id + ".html")) // there has been at least one aggregation
-                        ready_ids.Add(id);
-                }
+					if (BlobStorage.ExistsBlob(id, id + ".html")) // there has been at least one aggregation
+						ready_ids.Add(id);
+				} );
 
                 // this pipe-delimited string defines allowed IDs in the /services/ID/... URL pattern
                 str_ready_ids = String.Join("|", ready_ids.ToArray());
@@ -216,10 +251,15 @@ namespace WebRole
 
             catch (Exception e)
             {
-                ElmcityApp.logger.LogMsg("exception", "_reload " + current_id, e.Message + e.StackTrace);
+				var msg = "_reload " + current_id;
+				var data = e.Message + e.StackTrace;
+                ElmcityApp.logger.LogMsg("exception", msg, data);
+				GenUtils.PriorityLogMsg("exception", msg, data, ts);
+				TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, msg);
                 Scheduler.InitTaskForId(current_id);
             }
-
+			
+		ElmcityApp.logger.LogMsg("info", "webrole _reload stop", null);
         }
 
         public static void RegisterRoutes(RouteCollection routes)
@@ -366,14 +406,15 @@ namespace WebRole
 			var thread_id = Thread.CurrentThread.ManagedThreadId;
 
 			var info = String.Format("domain: {0}, thread_id: {1}", domain, thread_id);
-
-			ElmcityApp.logger.LogMsg("info", "AppStarter: " + info, null);
+			var msg = "AppStarter: " + info;
+			ElmcityApp.logger.LogMsg("info", msg, null);
+			GenUtils.PriorityLogMsg("info", msg, null, ts);
 
             if (testing == false)
             {
 				var local_resource = RoleEnvironment.GetLocalResource("LocalStorage1");
 				GenUtils.LogMsg("info", "LocalStorage1", local_resource.RootPath);
-				PythonUtils.InstallPythonStandardLibrary(local_resource.RootPath, ts);
+				PythonUtils.InstallPythonStandardLibrary(local_resource.RootPath, ts); 
                 PythonUtils.InstallPythonElmcityLibrary(local_resource.RootPath, ts);
             }
 
@@ -382,6 +423,11 @@ namespace WebRole
             _reload();
 
             Utils.ScheduleTimer(reload, minutes: CalendarAggregator.Configurator.webrole_reload_interval_hours * 60, name: "reload", startnow: false);
+
+			Utils.ScheduleTimer(MaybePurgeCache, minutes: CalendarAggregator.Configurator.webrole_cache_purge_interval_minutes, name: "maybe_purge_cache", startnow: false);
+
+			Utils.ScheduleTimer(MakeTablesAndCharts, minutes: CalendarAggregator.Configurator.web_make_tables_and_charts_interval_minutes, name: "make_tables_and_charts", startnow: false);
+
         }
 
         protected void Application_Start()
