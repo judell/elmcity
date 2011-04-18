@@ -66,6 +66,12 @@ namespace CalendarAggregator
         private static string _facebook_api_key
         { get { return GetSettingValue("facebook_api_key"); } }
 
+		public static string bing_api_key
+		{ get { return _bing_api_key; } }
+
+		private static string _bing_api_key
+		{ get { return GetSettingValue("bing_api_key"); } }
+
         #endregion
 
         #region delicious
