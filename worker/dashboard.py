@@ -1,4 +1,4 @@
-import clr, sys
+import clr, sys, re
 
 clr.AddReference('System')
 import System
