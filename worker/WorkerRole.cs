@@ -826,7 +826,7 @@ All events {8}, population {9}, events/person {10:f}
 		{
 			var fr_delicious = new FeedRegistry(id);
 			fr_delicious.LoadFeedsFromDelicious();
-			//PurgeDeletedFeeds(fr_delicious, id);
+			PurgeDeletedFeeds(fr_delicious, id);
 			UpdateFeedsToAzure(fr_delicious, id);
 			UpdateFeedCountToAzure(id);
 			UpdateMetadataToAzure(id);
