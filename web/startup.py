@@ -91,14 +91,16 @@ try:
   propagation = PropagationFlags.None
 
   log.write('...changing permissions on local_storage...\n')
-  set_permissions(local_storage, 'Everyone',        FileSystemRights.Read | FileSystemRights.Write, inheritance, propagation, AccessControlType.Allow)
+  set_permissions(local_storage, 'Everyone',        FileSystemRights.Read | FileSystemRights.Write | FileSystemRights.ListDirectory, inheritance, propagation, AccessControlType.Allow)
   set_permissions(local_storage, 'SYSTEM',          FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow)
   set_permissions(local_storage, 'NETWORK SERVICE', FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow)
+  set_permissions(local_storage, 'Administrators',  FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow)
   
   log.write('...changing permissions on diagnostic storage..\n')
-  set_permissions(get_diagnostic_store(), 'Everyone',        FileSystemRights.Read | FileSystemRights.Write, inheritance, propagation, AccessControlType.Allow)  
+  set_permissions(get_diagnostic_store(), 'Everyone',        FileSystemRights.Read | FileSystemRights.Write | FileSystemRights.ListDirectory, inheritance, propagation, AccessControlType.Allow)  
   set_permissions(get_diagnostic_store(), 'SYSTEM',          FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow)
-  set_permissions(get_diagnostic_store(), 'NETWORK SERVICE', FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow)    
+  set_permissions(get_diagnostic_store(), 'NETWORK SERVICE', FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow)  
+  set_permissions(get_diagnostic_store(), 'Administrators',  FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow)      
    
   """
   log.write('...sending failed requests to local storage...\n')
