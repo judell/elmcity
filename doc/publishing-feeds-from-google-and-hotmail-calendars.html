@@ -1,0 +1,196 @@
+<html>
+<head>
+<title>How to publish a calendar feed from Google Calendar or Hotmail Calendar</title>
+<style>
+body { 
+font-family: verdana,arial,sans-serif; 
+font-size:10pt;
+margin-left:.5in;
+margin-right:.5in;
+} 
+
+h1 { font-size:16pt;font-weight:bold }
+h2 { font-size:13pt;font-weight:bold; margin-top:20pt; }
+p { width: 600px; }
+</style>
+<script src="http://ajax.microsoft.com/ajax/jQuery/jquery-1.4.2.min.js"></script>
+<script>
+function watch(step)
+  {
+  $('*[id^=step]').hide();
+  $('*[id^=control]').each( function(i) {
+      var anchor_html = $(this)[0].innerHTML;
+      $(this)[0].innerHTML = anchor_html.replace('Replay','Watch!');
+      });
+  var control = $('#control' + step)[0];
+  control.innerHTML = "Replay";
+  uncache(step);
+//  $('#step' + step).css('float','right').css('clear','both');
+  $('#step' + step).show();
+  }
+
+function uncache(step)
+  {
+  $('#img' + step).css('border-style','solid').css('border-width','thin');
+  var img_node = $('#img' + step)[0];
+  var nocache_suffixes = /\?.+/.exec(img_node.src);
+  if ( nocache_suffixes != null )
+    img_node.src.replace(nocache_suffixes[0], '');
+  img_node.src += '?' + new Date().getTime();
+  }
+</script>
+</head>
+
+<body>
+
+<h1>How to publish a calendar feed from Google Calendar or Hotmail Calendar</h1>
+
+<p>
+If you want to publish calendar events to an <a href="http://blog.jonudell.net/elmcity-project-faq/">elmcity</a> hub, the administrator of the hub will ask you to produce a calendar feed and report its URL. Most calendar applications can produce feeds. This page focuses on two free web-based applications that make the process very simple: Google Calendar and Hotmail Calendar. 
+</p>
+
+
+<p>
+<strong>Q:</strong> Which one should I use?
+</p>
+
+<p>
+<strong>A:</strong> Either will work fine. If you already have a Google account, it would make sense to use Google Calendar. Likewise if you already have a Hotmail account, you might want to use Hotmail Calendar. If you don't have either kind of account, sign up for one or the other.
+
+
+</p>
+
+<p>
+<strong>Q:</strong> These feeds will enable my calendar to syndicate to other sites, right?
+</p>
+
+<p>
+<strong>A:</strong> Right.
+</p>
+
+<p>
+<strong>Q:</strong> But don't I mainly want to display my calendar on my own site?
+
+
+</p>
+
+<p>
+<strong>A:</strong> Of course! Both Google Calendar and Hotmail Calendar provide widgets that you can embed in pages on your own site. That's a common and thus well-documented scenario. These instructions focus, instead, on a scenario that isn't (yet) common: using those same calendars to feed your data to other sites.
+</p>
+
+
+
+<h2>Publishing a feed from Google Calendar</h2>
+
+<p>
+<strong>Q:</strong> How do I publish a calendar feed using Google Calendar?
+
+
+</p>
+
+<p>
+<strong>A:</strong> Starting from Google Calendar's home page, follow these steps:
+</p>
+
+<ol>
+
+<li>
+<p>
+From the upper right corner of the Google Calendar screen, click <b>Settings</b> and then <b>Calendar Settings</b>.
+ <a id="control1" href="javascript:watch(1);">Watch!</a>
+
+</p>
+<div style="display:none" id="step1"><img id="img1" src="http://jonudell.net/images/gcal-howto-01.gif" />
+</li>
+
+<li>
+<p>
+From the <b>Calendar Settings</b> screen, click <b>Calendars</b>. <a id="control2" href="javascript:watch(2);">Watch!</a>
+</p>
+<div style="display:none" id="step2"><img id="img2" src="http://jonudell.net/images/gcal-howto-02.gif" />
+
+</li>
+
+<li>
+<p>
+From the <b>Calendars</b> tab, click <b>Create New Calendar</b>. Give the new calendar a name, description, and location. Adjust the timezone if necessary. Check <b>Make this calendar public</b>. Click <b>Create Calendar</b>, and click <b>Yes</b> when asked "Are you sure?" <a id="control3" href="javascript:watch(3);">Watch!</a>
+
+</p>
+<div style="display:none" id="step3"><img id="img3" src="http://jonudell.net/images/gcal-howto-03.gif" />
+</li>
+
+<li>
+<p>
+Now open the settings for your new calendar, click the green ICAL button, and copy the URL of the iCalendar feed. This is the URL you'll paste into an email to the curator of your calendar hub. <a id="control4" href="javascript:watch(4);">Watch!</a>
+</p>
+<div style="display:none" id="step4"><img id="img4" src="http://jonudell.net/images/gcal-howto-04.gif" />
+</li>
+
+
+</ol>
+
+<h2>Publishing a feed from Hotmail Calendar</h2>
+
+<p>
+<strong>Q:</strong> How do I publish a calendar feed using Hotmail Calendar?
+</p>
+
+<p>
+<strong>A:</strong> Follow these steps:
+</p>
+
+<ol>
+
+<li>
+<p>
+
+From the home page of Hotmail Calendar, click <b>Add a new calendar</b>.
+ <a id="control5" href="javascript:watch(5);">Watch!</a>
+</p>
+<div style="display:none" id="step5"><img id="img5" src="http://jonudell.net/images/hcal-howto-05.gif" />
+</li>
+
+<li>
+<p>
+Add a name and description.
+ <a id="control6" href="javascript:watch(6);">Watch!</a>
+
+</p>
+<div style="display:none" id="step6"><img id="img6" src="http://jonudell.net/images/hcal-howto-06.gif" />
+</li>
+
+<li>
+<p>
+Click <b>Edit Sharing</b>. You're invited to save before you edit sharing. Click <b>Save</b>.
+ <a id="control7" href="javascript:watch(7);">Watch!</a>
+</p>
+<div style="display:none" id="step7"><img id="img7" src="http://jonudell.net/images/hcal-howto-07.gif" />
+</li>
+
+<li>
+<p>
+Check <b>Share This Calendar</b>, then click <b>Save</b>. Uncheck <b>Share Your Calendar Privately with friends and family</b> and check <b>Make your calendar public</b>.
+ <a id="control8" href="javascript:watch(8);">Watch!</a>
+
+</p>
+<div style="display:none" id="step8"><img id="img8" src="http://jonudell.net/images/hcal-howto-08.gif" />
+
+</li>
+
+<li>
+<p>
+Click <b>Get Your Calendar Links</b>. When asked to confirm sharing, click <b>OK</b>. Click <b>Import Into Another Calendar Application</b>. Copy the URL that appears. This is the URL you'll paste into an email to the curator of your calendar hub. Click <b>OK</b>, then click <b>Save</b>. <a id="control9" href="javascript:watch(9);">Watch!</a>
+
+</p>
+<div style="display:none" id="step9"><img id="img9" src="http://jonudell.net/images/hcal-howto-09.gif" />
+</li>
+
+</ol>
+
+
+<p>
+<b>Shortcut</b>: Once you've created the calendar you want to publish, you can drag this bookmarklet -- <a href="javascript:(function(){document.head.appendChild(document.createElement('script')).src='http://elmcity.blob.core.windows.net/admin/calpub-hotmail-1.0.js';})()">Hotmail Calendar Quick Publish</a> -- to your toolbar and click it to streamline steps 3, 4, and 5.
+</p>
+
+
+</body>

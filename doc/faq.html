@@ -1,0 +1,493 @@
+<p><strong>Q:</strong> <a href="#whatis">What is the elmcity project?</a></p>
+
+<p><strong>Q:</strong> <a href="#contribute">How do I contribute events to a hub?</a></p>
+
+<p><strong>Q:</strong> <a href="#quickstart">How do I become a calendar curator for my community (or topic)?</a></p>
+
+<p><strong>Q:</strong> <a href="#secondstep">OK, I started a hub, where's my stuff? </a></p>
+
+<p><strong>Q:</strong> <a href="#findfeeds">Where do I find iCalendar feeds?</a></p>
+
+<p><strong>Q:</strong> <a href="#whypublishical">Why should people care about publishing iCalendar feeds?</a></p>
+
+<p><strong>Q:</strong> <a href="#howtoincludefeed">OK, I've found or created some iCalendar feeds. How do I get the collector to collect and process them?</a></p>
+
+<p><strong>Q:</strong> <a href="#howtocustomize">How can I customize the collector for my location?</a></p>
+
+<p><strong>Q:</strong> <a href="#tzvalues">What are the tz= values?</a></p>
+
+<p><strong>Q:</strong> <a href="#categorizing">How do I categorize feeds and events?</a></p>
+
+<p><strong>Q:</strong> <a href="#viewingcategories">How do I view categorized events?</a></p>
+
+<p><strong>Q:</strong> <a href="#delicious">Why Delicious?</a></p>
+
+<p><strong>Q:</strong> <a href="#twitter">I just added a feed. Can I run the aggregator now instead of waiting up to 8 hours for the next cycle?</a></p>
+
+<p><strong>Q:</strong> <a href="#friendfeed">Where do curators hang out?</a></p>
+
+
+
+
+<hr />
+<p><a name="whatis"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> What is the elmcity project?
+</p>
+<p>
+<strong>A:</strong> It's a <a href="http://elmcity.cloudapp.net">web service</a> that:
+<ul>
+	<li>Collects online calendar events for geographic or topical communities</li>
+	<li>Merges information from many sources: <a href="http://eventful.com">Eventful</a>, <a href="http://upcoming.org">Upcoming</a>,  <a href="http://eventbrite.com">Eventbrite</a>, <a href="http://facebook.com">Facebook</a>,  and iCalendar feeds published by <a href="http://delicious.com/judell/icalpub+howto">popular calendar programs</a></li>
+	<li>Creates network effects using iCalendar (<a href="http://en.wikipedia.org/wiki/Icalendar">ICS</a>) feeds, in the same way that blogging and microblogging systems create network effects using RSS, Atom, and Twitter feeds.</li>
+	<li>Does not store events in a centralized database, but rather operates as a hub that merges streams of events and republishes the merged result in a variety of formats.</li>
+	<li>Is managed by one or more curators in a community, on behalf of everyone in the community.</li>
+	<li>Runs on, and demonstrates the capabilities of, Microsoft's Azure platform.</li>
+<li>Is released under the Apache 2.0 license at <a href="http://github.com/judell/elmcity">github.com/judell/elmcity</a>
+</li>
+</ul>
+</p>
+
+<hr />
+<p><a name="contribute"></a>&nbsp;</p>
+
+<p>
+<strong>Q:</strong> How do I contribute events to a hub?
+</p>
+
+<p>
+<strong>A:</strong> You can contribute in any of these ways:
+</p>
+
+<ol>
+
+<li>
+<p>
+Publish your own iCalendar feed, and give its URL to the hub's curator. You can do this most easily using <a href="http://jonudell.net/elmcity/publishing-feeds-from-google-and-hotmail-calendars.html">Google Calendar or Hotmail Calendar</a>. You can also use <a href="http://jonudell.net/examples/calpub-outlook.html">Microsoft Outlook</a> or <a href="http://jonudell.net/examples/calpub-apple.html">Apple iCal</a>
+</p>
+</li>
+
+<li>
+<p><a href="http://eventful.com">Eventful</a>: Post an event to a venue within your hub's radius. 
+</p>
+</li>
+
+<li>
+<p><a href="http://upcoming.yahoo.com">Yahoo</a>: Post an event to a venue within your hub's radius. </p>
+</li>
+
+<li>
+<p><a href="http://eventbrite.com">EventBrite</a>: Post an event to a venue within your hub's radius. </p>
+</li>
+
+<li>
+<p><a href="http://eventbrite.com">Facebook</a>: Post a public event and include the name of your location (e.g.: "Keene, NH" or "Bloomington IN") in the event's "What are you planning?" field.</p>
+</li>
+
+</ol>
+
+
+<hr />
+<p><a name="quickstart"></a>&nbsp;</p>
+<p><strong>Q:</strong> How do I become a calendar curator for my community (or topic)?</p>
+
+<strong>A:</strong> Follow these three steps:
+<ol>
+	<li>Designate a <a href="http://delicious.com">Delicious</a> account for this purpose. If you already have one, you can use that. If not, create one.
+
+The account that manages the Fredericksburg, VA collector, for example, is <a href="http://delicious.com/aroundfred">aroundfred</a>.</li>
+	<li>Log in to the account, click <a href="http://delicious.com/save">Save a bookmark</a>, and enter your version of the information shown here:
+
+<img src="http://jonudell.net/img/elmcity-faq-01.png" alt="" />
+
+So, for example, if your account was a2cals and your location Ann Arbor, MI, you would say:
+<ol>
+	<li>URL: http://delicious.com/a2cals/metadata</li>
+	<li>TITLE: metadata</li>
+	<li>TAGS: elmcity where=ann+arbor,mi
+
+There are two tags here: "elmcity" and "where=ann+arbor,mi" -- the second is written with no spaces (note: use a + when the name contains a space), and it looks like more than one tag, but it is really only a single tag that works as a name/value pair.
+</li>
+</ol>
+
+To check that you've done it right, use <a href="http://elmcity.cloudapp.net/delicious_check">elmcity.cloudapp.net/delicious_check</a>
+
+</li>
+	<li>Send me <a href="mailto:jonu@microsoft.com">an email</a> to let me know you want to start up an instance of the collector for your location.</li>
+</ol>
+With just this minimal setup, the service will find and merge events for your location from Eventful, Upcoming, Eventbrite, and (optionally) Facebook. But you'll also want to include iCalendar feeds for schools, businesses, sports clubs, cultural venues, because most of what's going on in your community won't be available from those other sources.
+
+<hr />
+<p><a name="secondstep"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> OK, I started a hub, where's my stuff? 
+</p>
+
+<strong>A:</strong> Go to http://elmcity.cloudapp.net/services/ID (substituting the name of your delicious account for ID). You'll find a family of  URLs for HTML, XML, RSS, iCalendar, and other resources related to your hub.
+
+<hr />
+<p><a name="findfeeds"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> Where do I find iCalendar feeds?
+</p>
+<strong>A:</strong> This is a major challenge, and also an exciting opportunity. Although there seems to be a lot of calendar information floating around on the web, most of it isn't usefully available. Web pages and PDF files are much more common than iCalendar feeds. But those formats cannot be read, processed, and syndicated in the ways that iCalendar feeds can be.
+
+The central goal of this project is to light up iCalendar feeds that could easily exist on the web, and should, but don't.
+
+Here are some strategies:
+<ol>
+	<li><strong>Create some feeds yourself.</strong>
+Maybe you coach a youth soccer team, or run a local restaurant that features musical performances, or participate in a birdwatching club whose hikes are open to the public. You can, and should, and maybe already do publish a web page about these events. But you probably don't publish an iCalendar feed.
+
+Here's the strategy: Maintain the calendar information in a program like Outlook, Google Calendar, or Apple iCal. That way, you can publish your calendar to the web in HTML format for people to read, and simultaneously publish in ICS format for syndication. Here's how to do that for <a href="http://blog.jonudell.net/2008/05/23/free-online-calendar-publishing-part-1-outlook/">Outlook 2007</a>, <a href="http://blog.jonudell.net/2008/05/27/free-online-calendar-publishing-part-2-google-calendar/">Google Calendar</a>, and <a href="http://blog.jonudell.net/2008/05/28/free-online-calendar-publishing-part-3-apple-ical/">Apple iCal</a>.</li>
+	<li><strong>Turn existing web pages into feeds.</strong>
+Curators are having good success with a service called <a href="http://fusecal.com">FuseCal</a>, which can translate many (but not all) calendar-like web pages into iCalendar feeds. For example, the curator for Huntington, WV found <a href="http://appyfilmfest.com/pages/events-schedule.htm">this web page</a> which publishes the schedule for the Appalachian Film Festival. FuseCal was able to read the page, figure out the implicit structure -- dates, times, event titles -- and produce an iCalendar feed that's included in the <a href="http://elmcity.cloudapp.net/stats/whyhuntington">set of feeds</a> for Huntington.
+
+<strong>Update</strong>: The FuseCal service, sadly, shut down in July 2009.</li>
+	<li><strong>Light up existing feeds.</strong>
+In a number of cases, people are publishing web calendars without even realizing that they are also publishing iCalendar feeds. This happens most often with Google Calendar. Consider <a href="http://get2knowyourneighbor.com/">WV Get To Know Your Neighbor</a>. The site uses Google Calendar to publish an <a href="http://get2knowyourneighbor.com/3.html">events page</a>. Unbeknownst to the site owner, there is an ICS link that corresponds to that calendar. The link is:
+
+http://www.google.com/calendar/ical/<strong>get2knowyourneighbor@gmail.com</strong>/public/basic.ics
+
+Given the email address associated with any Google Calendar, you can produce an iCalendar link of this form. The Huntington WV curator did so, and as a result the Get To Know Your Neighbor calendar is now included in the <a href="http://elmcity.cloudapp.net/stats/whyhuntington">set of Huntington feeds</a>. If you don't know and can't easily find the email address associated with the calendar, just ask the site owner.
+
+Another source of existing feeds is Drupal, an open source content management system. In Keene, NH, for example, the Hannah Grimes coop runs its website on Drupal, and publishes a <a href="http://www.hannahgrimes.com/calendar">calendar</a>. Unknown to the site operator, there was a corresponding iCalendar feed: http://www.hannahgrimes.com/ical.</li>
+	<li><strong>Invite individuals, groups, and organizations to publish feeds.</strong>
+As a calendar curator for your community, you can explain how to do this, and why it matters. Sometimes a small intervention can produce a large effect. The Keene, NH school district, for example, did not realize that calendar syndication was possible. When I met with the school board, I learned that it's in the process of selecting a new content management system that will, among other things, manage calendar information for all the schools. I pointed out that the ability to export iCalendar feeds should be a requirement, and the board agreed. It'll take six months or a year to deploy the new system, but when that happens, a rich source of iCalendar feeds will come online.
+
+In general, you'll want to look for the systems in your community that are currently managing calendar information, and investigate whether they are capable of exporting iCalendar feeds -- either natively, or by means of an add-on. A Virginia school district, for example, is migrating to Microsoft SharePoint, and will be managing its calendars there. That system doesn't export iCalendar feeds out of the box. But the <a href="http://www.codeplex.com/CKS">Community Kit for SharePoint</a> offers a module that adds the capability.</li>
+</ol>
+
+<hr />
+<p><a name="whypublishical"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> Why should people care about publishing iCalendar feeds?
+</p>
+
+<strong>A:</strong> For two major reasons:
+<ol>
+	<li><strong>Personal information management</strong>
+When you publish an iCalendar feed, people can subscribe to it from their personal calendar programs: Outlook, Google Calendar, Apple iCal, others. They can see public events (the soccer game, the musical performance) as overlays on their personal events (the dentist appointment, the birthday party).</li>
+	<li><strong>Social information management</strong>
+When you publish an iCalendar feed, it can syndicate to one or more services like the elmcity collector. A comprehensive view of what's going on in a town or neighborhood can therefore emerge without any central management or control. Individuals, groups, and organizations can write down their event information once, and have it propagate through the syndication network without loss of fidelity or control.</li>
+</ol>
+
+<hr />
+<p><a name="howtoincludefeed"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> OK, I've found or created some iCalendar feeds. How do I get the collector to collect and process them?
+</p>
+
+<strong>A:</strong> You bookmark them in Delicious. Here are a couple of examples for Providence, RI, which uses the Delicious account <a href="http://delicious.com/mashablecity">mashablecity</a>:
+
+<img src="http://jonudell.net/img/elmcity-faq-02.png" alt="" />
+
+The RI Council for Humanities feed was created using FuseCal. It was bookmarked like so:
+
+<img src="http://jonudell.net/img/elmcity-faq-03.png" alt="" />
+
+The URL is the address of the iCalendar feed.
+
+The title will be cited as the source of all events flowing from this feed.
+
+There are four tags:
+<ol>
+	<li><strong>feed</strong>: This tag identifies the bookmarked URL as a feed.</li>
+	<li><strong>ics</strong>: We specify ICS to distinguish this feed from other formats (e.g. XML) that might exist.</li>
+	<li><strong>trusted</strong>: This tag indicates that the curator trusts the feed as a reliable source of legitimate events. Since all three of these tags are required, removing the trusted tag effectively revokes trust, and will prevent a feed's events from being included in the merged outputs.</li>
+	<li><strong>url=http://www.rihumanities.org/calendar</strong>: This tag provides a "home page" for events from this feed. It's the link that people will follow to find out more about any event from this source. In some cases, events in an iCalendar feed provide direct links to information about specific events. If these exist, they'll be used. But often they don't exist, so this "home page" link provides a default.</li>
+</ol>
+
+<hr />
+<p><a name="howtocustomize"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> How can I customize the collector for my location?
+</p>
+
+<strong>A:</strong> Using Delicious tags, again. There are two kinds of bookmarks used to manage an instance of the collector:
+<ol>
+	<li><strong>The metadata bookmark</strong>. That's the one that refers to the URL formed like so:
+
+http://delicious.com/ACCOUNTNAME/metadata
+
+There's only one metadata URL per location.</li>
+	<li><strong>Feed bookmarks</strong>. These are the ones that refer to iCalendar feeds. There can be any number of these per location.</li>
+</ol>
+In the minimal setup shown above, the metadata URL only used one tag:
+
+where=fredericksburg,va
+
+But there's a set of defaults that you can override by adding additional tags. They are:
+<pre>tz=Eastern
+title=event+calendar
+contact=nobody_yet
+img=http://elmcity.blob.core.windows.net/admin/keene-night-360.jpg
+css=http://elmcity.blob.core.windows.net/admin/elmcity.css
+template=http://elmcity.blob.core.windows.net/admin/events.tmpl
+lat={computed from where}
+lon={computed from where}
+radius=10</pre>
+<strong>tz</strong>: If you're in Utah, you'd add the tag tz=Mountain.
+
+<strong>title</strong>: If you're in Providence, RI, you might change this to title=events+in+and+around+providence. The title appears in the <a href="http://elmcity.cloudapp.net/services/mashablecity/html">default HTML rendering</a> of the merged calendar.
+
+<strong>contact</strong>: The Providence curator is Matt Gillooly, so he used the tag contact=matt@mattgilloly.com.
+
+<strong>img</strong>: This is the header image for the default HTML rendering. Matt Gillooly changed his from the default by specifying img=http://mashablecity.org/elmcity/providence-waterfire-header.jpg.
+
+<strong>header_image</strong>: Default is yes, include a header image. But if you're sourcing the HTML rendering into a page that already has one, you'll want to omit it like so: header_image=no.
+
+<strong>css</strong>: This is the CSS stylesheet for the default HTML rendering. Change to suit your taste.
+
+<strong>template</strong>: This is the template for the default HTML rendering. You can point to an alternate template that radically alters the default rendering.
+
+<strong>lat, lon</strong>: The latitude and longitude for your location are automatically derived from the location specified in where=LOCATION. But you can override the computed defaults here.
+
+<strong>radius</strong>: When the collector scans Eventful and Upcoming for your location, it defaults to a 5-mile radius. You can change that here.
+
+<strong>facebook</strong>: The default is no, because Facebook's public search API can yield <a href="http://blog.jonudell.net/2010/04/30/surprise-your-facebook-visibility-isnt-what-you-thought-it-was/">surprising results</a>, but if those results work for you, you can include like so: facebook=yes.
+
+
+<hr />
+<p><a name="tzvalues"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> What are the tz= values?
+</p>
+
+<strong>A:</strong>
+<pre>afghanistan
+alaskan
+arab
+arabian
+arabic
+argentina
+atlantic
+aus+central
+aus+eastern
+azerbaijan
+azores
+canada+central
+cape+verde
+caucasus
+cen.+australia
+central+america
+central+asia
+central+brazilian
+central+europe
+central+european
+central+pacific
+central
+central+(mexico)
+china
+dateline
+e.+africa
+e.+australia
+e.+europe
+e.+south+america
+eastern
+egypt
+ekaterinburg
+fiji
+fle
+georgian
+gmt
+greenland
+greenwich
+gtb
+hawaiian
+india
+iran
+israel
+jordan
+korea
+mauritius
+mid-atlantic
+middle+east
+montevideo
+morocco
+mountain
+mountain+(mexico)
+myanmar
+n.+central+asia
+namibia
+nepal
+new+zealand
+newfoundland
+north+asia+east
+north+asia
+pacific+sa
+pacific
+pacific+(mexico)
+pakistan
+romance
+russian
+sa+eastern
+sa+pacific
+sa+western
+samoa
+se+asia
+singapore
+south+africa
+sri+lanka
+taipei
+tasmania
+tokyo
+tonga
+us+eastern
+us+mountain
+venezuela
+vladivostok
+w.+australia
+w.+central+africa
+w.+europe
+west+asia
+west+pacific</pre>
+
+<hr />
+<p><a name="categorizing"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> How do I categorize feeds and events?
+</p>
+<strong>A:</strong> On a per-feed basis, if all of the events from a feed can be categorized, you can name that category in the Delicious metadata, using category=CATEGORY. All events from the feed will inherit it  in the same way that they all inherit the default clickthrough link specified with url=URL.
+
+On a per-event basis, if events in the iCalendar feed use the CATEGORIES property, it'll come through automatically.
+
+On a per-event basis, the Description field can also use these patterns anywhere in the text:
+
+url=http://www.harlowspub.com
+
+category=music,bluegrass
+
+<hr />
+<p><a name="viewingcategories"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> How do I view categorized events?
+</p>
+
+<strong>A:</strong>  All the formats accept a ?view= parameter. So for example:
+
+http://elmcity.cloudapp.net/services/elmcity/html?view=government
+
+http://elmcity.cloudapp.net/services/elmcity/rss?view=music
+
+<p><a name="delicious"></a>&nbsp;</p>
+<hr />
+<p>
+<strong>Q:</strong> Why Delicious?
+</p>
+
+<p>
+<strong>A:</strong> It's just a convenient way to manage hub metadata and feed registries.</p>
+
+<p><b>2010.12.17 update:</b> Yesterday news leaked that Yahoo plans to close Delicious. Curators are naturally wondering how this affects the elmcity service. There's no need to take any immediate action. The hub configuration and feed lists that you've been storing in Delicious are all cached in an Azure database. And the elmcity service doesn't depend on live access to Delicious, it uses that cache instead. 
+</p>
+
+<p>
+If Yahoo does close Delicious, we'll need to decide which other service we'll use to feed that cache. I'm leaning toward pinboard.in, because it clones both the visible part of delicious and also the behind-the-scenes API. Of course there's no need to use any kind of social bookmarking service for hub configuration and feed registries, there are lots of other ways to manage this small amount of data. For now, let's wait and see what develops.
+</p>
+
+<hr />
+<p><a name="twitter"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> I just added a feed. Can I run the aggregator now instead of waiting up to 8 hours for the next cycle?
+</p>
+
+<strong>A:</strong> Yes. First, add the tag twitter=YourTwitterUsername to your metadata URL. The elmcity service, represented on Twitter as @elmcity_azure, will notice and follow you. Then you can send messages to the service. To start the aggregator without waiting, send a Twitter direct message to @elmcity_azure that simply says: start.
+
+<hr />
+<p><a name="friendfeed"></a>&nbsp;</p>
+<p>
+<strong>Q:</strong> Where do curators hang out?
+</p>
+
+<strong>A:</strong> We are currently using the FriendFeed room <a href="http://friendfeed.com/rooms/elmcity">friendfeed.com/rooms/elmcity</a>. The room subscribes to the following sources:
+<ul>
+	<li>All the curatorial feeds on Delicious.</li>
+	<li>The <a href="http://delicious.com/judell/elmcity+azure">subset of my blog's feed</a> that is specific to the project</li>
+	<li>The <a href="http://pipes.yahoo.com/pipes/pipe.info?_id=d4529aab6d88a333bab8e438c4e7ca48">Pipes feed</a> that gathers news about a related effort to improve <a href="http://pipes.yahoo.com/pipes/pipe.run?_id=d4529aab6d88a333bab8e438c4e7ca48&amp;tag=icalvalid">iCalendar validation</a>.</li>
+	<li>Updates to the <a href="http://blog.jonudell.net/elmcityazure-project-status/">project status</a> page.</li>
+</ul>
+Feel free to join this FriendFeed room. But there's no need to do so. You can monitor activity there, or subscribe to its RSS feed, without having to register and join.
+
+<pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre>
