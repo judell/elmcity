@@ -563,19 +563,24 @@ namespace CalendarAggregator
 
 		private static DateTime Since(int minutes)
 		{
-			if (minutes > Configurator.azure_log_max_minutes)
-				minutes = Configurator.azure_log_max_minutes;
+			//if (minutes > Configurator.azure_log_max_minutes)
+			//	minutes = Configurator.azure_log_max_minutes;
 			var delta = System.TimeSpan.FromMinutes(minutes);
 			var dt = System.DateTime.UtcNow - delta;
 			return dt;
 		}
 
-		public static string GetRecentLogEntries(int minutes, string id)
+		public static string GetRecentLogEntries(string log, int minutes, string id)
 		{
 			var sb = new StringBuilder();
 			var dt = Since(minutes);
-			GetLogEntriesLaterThanTicks(dt.Ticks, id, FilterByAllOrId, sb);
+			GetLogEntriesLaterThanTicks(log, dt.Ticks, id, FilterByAllOrId, sb);
 			return sb.ToString();
+		}
+
+		public static string GetRecentLogEntries(int minutes, string id)
+		{
+			return GetRecentLogEntries("log", minutes, id);
 		}
 
 		public static string GetRecentMonitorEntries(int minutes, string conditions)
@@ -591,7 +596,8 @@ namespace CalendarAggregator
 			string query = String.Format("$filter=(PartitionKey eq '{0}') and (RowKey gt '{1}')", partition_key, row_key);
 			if (String.IsNullOrEmpty(conditions) == false)
 				query += conditions;
-			TableStorageResponse r = ts.QueryEntities(tablename, query);
+			//TableStorageResponse r = ts.QueryEntities(tablename, query);
+			TableStorageResponse r = ts.QueryAllEntities(tablename, query, TableStorage.QueryAllReturnType.as_dicts);
 			var dicts = r.response as List<Dictionary<string, object>>;
 			if (dicts.Count == 0)
 				return;
@@ -614,8 +620,13 @@ namespace CalendarAggregator
 
 		public static void GetLogEntriesLaterThanTicks(long ticks, string id, ByAllOrId filter, StringBuilder sb)
 		{
+			GetLogEntriesLaterThanTicks("log", ticks, id, filter, sb);
+		}
+
+		public static void GetLogEntriesLaterThanTicks(string log, long ticks, string id, ByAllOrId filter, StringBuilder sb)
+		{
 			var entries = new List<Dictionary<string, string>>();
-			GetTableEntriesLaterThanTicks(tablename: "log", partition_key: "log", row_key: ticks.ToString(), conditions: null, entries: entries);
+			GetTableEntriesLaterThanTicks(tablename: log, partition_key: "log", row_key: ticks.ToString(), conditions: null, entries: entries);
 			var filtered_entries = filter(entries, id);
 			FormatLogEntries(sb, filtered_entries);
 		}
