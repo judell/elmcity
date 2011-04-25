@@ -323,7 +323,7 @@ namespace CalendarAggregator
         // the ZonelessEventStore's event_dict like so:
         // key: d20100710
         // value: [ <ZonelessEvent>, <ZonelessEvent> ... ]
-        private static void OrganizeByDate(ZonelessEventStore es)
+        public static void OrganizeByDate(ZonelessEventStore es)
         {
             es.GroupEventsByDatekey();
             es.SortEventSublists();
