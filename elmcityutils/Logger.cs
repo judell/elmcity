@@ -7,88 +7,87 @@ using System.Threading;
 
 namespace ElmcityUtils
 {
+	public class LogMsg
+	{
+		public string type  { get; set; }
+		public string title { get; set; }
+		public string blurb { get; set; }
+
+		public LogMsg(string type, string title, string blurb)
+		{
+			this.type = type;
+			this.title = title;
+			this.blurb = blurb;
+		}
+	}	
+
 	public class Logger
 	{
-		private static TableStorage default_ts = TableStorage.MakeDefaultTableStorage(); // for logging
+		private TableStorage ts { get; set; }
+
+		private int wait_milliseconds = 50;
+
+		private int max_messages = 100;
+
         private static string hostname = Dns.GetHostName(); // for status/error reporting
 
-		delegate TableStorageResponse LogWriterDelegate(string type, string title, string blurb);
+		private Queue<LogMsg> log_queue = new Queue<LogMsg>();
+
+		public Logger()
+		{
+			this.ts = TableStorage.MakeDefaultTableStorage();
+			this.Start();
+		}
+
+		public Logger(int milliseconds, int max_messages)
+		{
+			this.ts = TableStorage.MakeDefaultTableStorage();
+			this.wait_milliseconds = milliseconds;
+			this.max_messages = max_messages;
+			this.Start();
+		}
+
+		public Logger(int milliseconds, int max_messages, TableStorage ts)
+		{
+			this.ts = ts;
+			this.wait_milliseconds = milliseconds;
+			this.max_messages = max_messages;
+			this.Start();
+		}
+
+		private void Start()
+		{
+        var dequeue_thread = new Thread(new ThreadStart(LogThreadMethod));
+		dequeue_thread.Start();
+		}
 
 		public void LogMsg(string type, string title, string blurb)
 		{
-			LogMsg(type, title, blurb, default_ts);
+			var msg = new LogMsg( type: type, title: title, blurb: blurb );
+			log_queue.Enqueue(msg);
 		}
-
-		public void LogMsg(string type, string title, string blurb, TableStorage ts)
-		{
-			if (ts == null) ts = default_ts;
-			var procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
-			title = string.Format("{0} {1} {2}", hostname, procname, title);
-			var logger_delegate = new LogWriterDelegate(ts.WriteLogMessage);
-			var result = logger_delegate.BeginInvoke(type, title, blurb, null, null);
-			logger_delegate.EndInvoke(result);
-		}
-
-		delegate void HttpRequestLoggerDelegate(System.Web.Mvc.ControllerContext c);
 
 		public void LogHttpRequest(System.Web.Mvc.ControllerContext c)
 		{
-			var logger_delegate = new HttpRequestLoggerDelegate(HttpUtils.LogHttpRequest);
-			var result = logger_delegate.BeginInvoke(c, null, null);
-			logger_delegate.EndInvoke(result);
+			var msg = HttpUtils.MakeHttpLogMsg(c);
+			log_queue.Enqueue(msg);
 		}
 
-		/*
-		public class LogMsg
+		private void LogThreadMethod()
 		{
-			public string type;
-			public string title;
-			public string blurb;
-			public TableStorage ts;
-		}	
-		 
-		private static Queue<LogMsg> log_queue = new Queue<LogMsg>();
-		  
-		private static int wait_milliseconds = 50;
-
-		private static Thread log_thread;
-		
-		public Logger()
-		{
-        log_thread = new Thread(new ThreadStart(LogThreadMethod));
-		log_thread.Start();
-		}
-
-		private static void LogThreadMethod()
-		{
-			while ( true )
+			while (true)
 			{
-				if ( log_queue.Count > 0 )
+				if (this.log_queue.Count > this.max_messages)
+					GenUtils.PriorityLogMsg("warning", "Logger", String.Format("{0} messages", this.log_queue.Count), this.ts);
+
+				if (this.log_queue.Count > 0)
 				{
-					try
-					{
-						var msg = log_queue.Dequeue();
-						msg.ts.WriteLogMessage(msg.type, msg.title, msg.blurb);
-					}
-					catch { }
+					var msg = log_queue.Dequeue();
+					this.ts.WriteLogMessage(msg.type, msg.title, msg.blurb);
 				}
 
 				Thread.Sleep(wait_milliseconds);
 			}
 		}
-
-        public void LogMsg(string type, string title, string blurb)
-        {
-            LogMsg(type, title, blurb, default_ts);
-        }
-
-        public void LogMsg(string type, string title, string blurb, TableStorage ts)
-        {
-			if (ts == null) ts = default_ts;
-			title = GenUtils.MakeLogMsgTitle(title);
-			var msg = new LogMsg { type = type, title = title, blurb = blurb, ts = ts };
-			log_queue.Enqueue(msg);
-        }
-		 */
 	}
 }
