@@ -3,6 +3,9 @@ clr.AddReference('System')
 import System
 from System.Security.AccessControl import *
 
+clr.AddReference('Microsoft.WindowsAzure.ServiceRuntime')
+from Microsoft.WindowsAzure.ServiceRuntime import RoleEnvironment
+
 clr.AddReference('Microsoft.Web.Administration')
 import Microsoft.Web.Administration
 from Microsoft.Web.Administration import *
@@ -20,12 +23,30 @@ def get_resource_dirs():
 
 def get_local_storage():
   return [dir for dir in get_resource_dirs() if dir.endswith('LocalStorage1')][0]
-  
+ 
 def get_diagnostic_store():
-  return [dir for dir in get_resource_dirs() if dir.endswith('DiagnosticStore')][0]  
-  
+  return [dir for dir in get_resource_dirs() if dir.endswith('DiagnosticStore')][0] 
+
 def get_log_storage():
   return [d for d in System.IO.Directory.GetDirectories("%s/LogFiles/Web" % get_diagnostic_store())][0]  
+
+def show_rules(ds,log):
+  rules = ds.GetAccessRules(True, True, System.Type.GetType('System.Security.Principal.NTAccount'))
+  log.write('%s rules\n' % rules.Count)
+  for rule in rules:
+    log.write('%s %s %s\n' % (rule.IdentityReference.Value, rule.AccessControlType, rule.FileSystemRights))  
+
+def set_permissions(directory, who, rights, inheritance, propagation, access_type):
+  try:
+    di = System.IO.DirectoryInfo(directory)
+    ds = di.GetAccessControl()
+    show_rules(ds, log)
+    rule = FileSystemAccessRule(who, rights, inheritance, propagation, access_type)
+    ds.AddAccessRule(rule)
+    di.SetAccessControl(ds)
+    show_rules(ds,log)
+  except:
+    log.write('cannot set permissions on %s' % directory )     
 
 def get_process_owner():
   mos = System.Management.ManagementObjectSearcher("SELECT * from Win32_Process")
@@ -40,25 +61,7 @@ def format_traceback():
   exc_type, exc_value, exc_traceback = sys.exc_info()
   tb = traceback.format_exception(exc_type, exc_value, exc_traceback)  
   return repr(tb) 
-  
-def show_rules(ds,log):
-  rules = ds.GetAccessRules(True, True, System.Type.GetType('System.Security.Principal.NTAccount'))
-  log.write('%s rules\n' % rules.Count)
-  for rule in rules:
-    log.write('%s %s %s\n' % (rule.IdentityReference.Value, rule.AccessControlType, rule.FileSystemRights))  
-    
-def set_permissions(directory, who, rights, inheritance, propagation, access_type):
-  try:
-    di = System.IO.DirectoryInfo(directory)
-    ds = di.GetAccessControl()
-    show_rules(ds, log)
-    rule = FileSystemAccessRule(who, rights, inheritance, propagation, access_type)
-    ds.AddAccessRule(rule)
-    di.SetAccessControl(ds)
-    show_rules(ds,log)
-  except:
-    log.write('cannot set permissions on %s' % directory )   
-    
+
 #endregion
 
 local_storage = get_local_storage()
@@ -102,7 +105,7 @@ try:
   set_permissions(get_diagnostic_store(), 'NETWORK SERVICE', FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow)  
   set_permissions(get_diagnostic_store(), 'Administrators',  FileSystemRights.FullControl, inheritance, propagation, AccessControlType.Allow)      
    
-  """
+  """ disabled for now, not necessary
   log.write('...sending failed requests to local storage...\n')
 
   try:
@@ -114,6 +117,8 @@ try:
     log.write('redirect failed requests: %s\n' % format_traceback() )
   """
 
+  """ disabled for now, doing with appcmd instead
+  
   log.write('...unlocking config section ...\n')
 
   try:
@@ -144,6 +149,8 @@ try:
    
   except:
     log.write('configuring dynamic ip restrictions: %s\n' % format_traceback() )
+    
+"""
     
   log.write('...send a request to the webserver to get it going ...\n')
 

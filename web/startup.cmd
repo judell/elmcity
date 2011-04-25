@@ -6,6 +6,9 @@ dir Startup >> Startup\startup.log
 wget http://go.microsoft.com/?linkid=9655675 2>> Startup\startup.log
 echo "installing dynamic ip restrictions into startup2.log" >> Startup\startup.log
 msiexec /i dynamiciprestrictions_beta2_x64.msi /qn /Lime Startup\startup2.log
+
+%WINDIR%\system32\inetsrv\appcmd.exe set config -section:system.webServer/security/dynamicIpSecurity /denyByRequestRate.enabled:"True" /denyByRequestRate.maxRequests:"5" /denyByRequestRate.requestIntervalInMilliseconds:"5000" /denyByConcurrentRequests.enabled:"True" /denyByConcurrentRequests.maxConcurrentRequests:5 /commit:apphost >> Startup\startup.log
+
 time /t >> Startup\startup.log
 
 echo "installing LogParser" >> Startup\startup.log
