@@ -289,7 +289,7 @@ namespace WebRole
 
 		#region logentries
 
-		public ActionResult GetLogEntries(string id, string minutes)
+		public ActionResult GetLogEntries(string id, string minutes, string priority)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
@@ -297,7 +297,7 @@ namespace WebRole
 
 			try
 			{
-				r = new LogEntriesResult(id, minutes);
+				r = new LogEntriesResult(id, minutes, priority);
 			}
 			catch (Exception e)
 			{
@@ -310,21 +310,24 @@ namespace WebRole
 		{
 			string id;
 			int minutes;
+			string priority;
 
-			public LogEntriesResult(string id, string minutes)
+			public LogEntriesResult(string id, string minutes, string priority)
 			{
 				this.id = id;
 				this.minutes = Convert.ToInt16(minutes);
+				this.priority = priority;
 			}
 
 			public override void ExecuteResult(ControllerContext context)
 			{
 				// it can take a while to fetch a large result
 				context.HttpContext.Server.ScriptTimeout = CalendarAggregator.Configurator.webrole_script_timeout_seconds;
+				var content = priority == "null" ? Utils.GetRecentLogEntries(this.minutes, this.id) : Utils.GetRecentLogEntries(priority, this.minutes, this.id);
 				new ContentResult
 				{
 					ContentType = "text/plain",
-					Content = Utils.GetRecentLogEntries(this.minutes, this.id),
+					Content = content,
 					ContentEncoding = UTF8
 				}.ExecuteResult(context);
 			}
