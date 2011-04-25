@@ -289,6 +289,7 @@ namespace ElmcityUtils
             System.Threading.Thread.Sleep(seconds * 1000);
         }
 
+		/*
         public static void LogHttpRequest(System.Web.Mvc.ControllerContext c)
         {
             string requestor_ip_addr = "ip_unavailable";
@@ -311,6 +312,25 @@ namespace ElmcityUtils
 
             GenUtils.LogMsg("info", msg, null);
         }
+		 */
+
+		public static LogMsg MakeHttpLogMsg(System.Web.Mvc.ControllerContext c)
+		{
+			string requestor_ip_addr = "ip_unavailable";
+			string url = "url_unavailable";
+			try
+			{
+				requestor_ip_addr = c.HttpContext.Request.UserHostAddress;
+				url = c.HttpContext.Request.Url.ToString();
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("info", "LogHttpRequest", e.Message + e.StackTrace);
+			}
+
+			var msg = new LogMsg("info", requestor_ip_addr, url);
+			return msg;
+		}
 
 		public static bool CompletedIfStatusOK(HttpResponse r, Object o)
 		{
