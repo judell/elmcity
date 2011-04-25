@@ -18,7 +18,7 @@ def get_local_storage():
   return [dir for dir in get_resource_dirs() if dir.endswith('LocalStorage1')][0]
  
 def get_diagnostic_store():
-  return [dir for dir in get_resource_dirs() if dir.endswith('DiagnosticStore')][0]  
+  return [dir for dir in get_resource_dirs() if dir.endswith('DiagnosticStore')][0] 
 
 def get_log_storage():
   return [d for d in System.IO.Directory.GetDirectories("%s/LogFiles/Web" % get_diagnostic_store())][0]  
@@ -54,7 +54,7 @@ def format_traceback():
   exc_type, exc_value, exc_traceback = sys.exc_info()
   tb = traceback.format_exception(exc_type, exc_value, exc_traceback)  
   return repr(tb) 
-    
+ 
 #endregion  
 
 local_storage = get_local_storage()
