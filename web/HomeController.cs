@@ -25,25 +25,21 @@ using System.Text;
 using CalendarAggregator;
 using ElmcityUtils;
 
-namespace WebRole.Controllers
-{
+using System.IO;
+using System.IO.Pipes;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 
+namespace WebRole
+{
     public class HomeController : ElmcityController
     {
-        TableStorage ts = TableStorage.MakeDefaultTableStorage();
-        BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
-        Delicious delicious = Delicious.MakeDefaultDelicious();
 
 		public HomeController()
-        {
+		{
 			ElmcityApp.home_controller = this;
-            while (ElmcityApp.loaded == false)
-            {
-                ElmcityApp.logger.LogMsg("info", "HomeController", "waiting for reload");
-                Utils.Wait(5);
-            }
-			this.index(); // prime the pump
-        }
+			//this.wrd = WebRolePipeReader.Read();
+		}
 
        //[OutputCache(Duration = CalendarAggregator.Configurator.home_page_output_cache_duration, VaryByParam = "None")]
         public ActionResult index()
@@ -150,7 +146,7 @@ namespace WebRole.Controllers
             }
             catch (Exception ex)
             {
-                ElmcityApp.logger.LogMsg("exception", "HomeController reload", ex.Message + ex.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "HomeController reload", ex.Message + ex.StackTrace);
             }
             return View();
         }
@@ -181,11 +177,12 @@ namespace WebRole.Controllers
 <td align=""right"">{3}</td>
 <td align=""center"">{4}</td>
 </tr>";
-            foreach (var id in ElmcityApp.where_ids)
+            //foreach (var id in WebRoleData.where_ids)
+			foreach ( var id in ElmcityApp.wrd.where_ids )
             {
                 if (IsReady(id) == false)
                     continue;
-                var metadict = ElmcityApp.calinfos[id].metadict;
+                var metadict = ElmcityApp.wrd.calinfos[id].metadict;
                 var population = metadict.ContainsKey("population") ? metadict["population"] : "";
                 var events = metadict.ContainsKey("events") ? metadict["events"] : "";
                 var events_per_person = metadict.ContainsKey("events_per_person") ? metadict["events_per_person"] : "";
@@ -214,7 +211,7 @@ namespace WebRole.Controllers
 <tr>
 <td>{0}</td>
 </tr>";
-            foreach (var id in ElmcityApp.what_ids)
+            foreach (var id in ElmcityApp.wrd.what_ids)
             {
                 if (IsReady(id) == false)
                     continue;
@@ -227,9 +224,9 @@ namespace WebRole.Controllers
             return summary.ToString();
         }
 
-        private static bool IsReady(string id)
+        private bool IsReady(string id)
         {
-            return ElmcityApp.ready_ids.Contains(id);
+            return ElmcityApp.wrd.ready_ids.Contains(id);
         }
 
     }
