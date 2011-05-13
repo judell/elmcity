@@ -363,36 +363,6 @@ namespace CalendarAggregator
 			}
 		}
 
-
-	private void ProcessIcalEvent(DDay.iCal.Components.Event evt, ZonedEventStore es, FeedRegistry fr, DateTime midnight_in_tz, DateTime then, string feedurl, string source)
-		{
-			try
-			{
-				if (evt.RRule == null) // non-recurring
-				{
-					fr.stats[feedurl].singlecount++;
-					fr.stats[feedurl].futurecount++;
-
-				}
-				else // recurring
-				{
-					fr.stats[feedurl].recurringinstancecount++;
-					fr.stats[feedurl].futurecount++;
-					AddIcalEvent(evt, fr, es, feedurl, source);
-				}
-			}
-
-			catch (Exception e)
-			{
-				var msg = Utils.MakeLengthLimitedExceptionMessage(e);  // could be voluminous, so maybe truncate
-				var error = string.Format("Error loading event {0}: {1}", source, evt.Summary);
-				GenUtils.PriorityLogMsg("exception", error, msg);
-				//fr.stats[feedurl].dday_error = error;
-				//fr.stats[feedurl].valid = false;
-				//fr.stats[feedurl].score = "0";
-			}
-		}
-
 		// clone the DDay.iCal event, update dtstart (and maybe dtend) with Year/Month/Day for this occurrence
 		private DDay.iCal.Components.Event PeriodizeRecurringEvent(DDay.iCal.Components.Event evt, iCalendar ical, Period period)
 		{
