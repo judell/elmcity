@@ -16,7 +16,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Web;
 
 namespace ElmcityUtils
 {
@@ -38,7 +37,7 @@ namespace ElmcityUtils
 
 			if (type.GetProperties() == null)
 			{
-				GenUtils.PriorityLogMsg("exception", "DictObjToObj: " + type.Name, 
+				GenUtils.PriorityLogMsg("exception", "DictObjToObj: " + type.Name,
 					"target type does not define properties");
 				return o;
 			}
@@ -94,7 +93,8 @@ namespace ElmcityUtils
 			return serializer.Serialize(dict_str);
 		}
 
-		public static string ListDictStrToJson(List<Dictionary<string,string>> list_dict_str)
+
+		public static string ListDictStrToJson(List<Dictionary<string, string>> list_dict_str)
 		{
 			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
 			return serializer.Serialize(list_dict_str);
@@ -112,28 +112,29 @@ namespace ElmcityUtils
 			return BlobStorage.WriteToAzureBlob(bs, container, blob_name, content_type: null, bytes: json_bytes);
 		}
 
+		/*
 		public static BlobStorageResponse SaveListDictAsJsonToBlob(List<Dictionary<string, string>> list_dict_str, BlobStorage bs, string container, string blob_name)
 		{
 			var json_bytes = Encoding.UTF8.GetBytes(ListDictStrToJson(list_dict_str));
 			return BlobStorage.WriteToAzureBlob(bs, container, blob_name, content_type: null, bytes: json_bytes);
-		}
+		}*/
 
-		public static Dictionary<string,string> GetDictStrFromJsonUri(Uri uri)
+		public static Dictionary<string, string> GetDictStrFromJsonUri(Uri uri)
 		{
 			var json = HttpUtils.FetchUrl(uri).DataAsString();
-			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer(); 
-			var dict_obj = (Dictionary<string,object>) serializer.DeserializeObject(json);
+			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+			var dict_obj = (Dictionary<string, object>)serializer.DeserializeObject(json);
 			return ObjectUtils.DictObjToDictStr(dict_obj);
 		}
 
 		public static List<Dictionary<string, string>> GetListDictStrFromJsonUri(Uri uri)
 		{
 			var json = HttpUtils.FetchUrl(uri).DataAsString();
-			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();  
-			var obj_array = (object[]) serializer.DeserializeObject(json);  
+			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+			var obj_array = (object[])serializer.DeserializeObject(json);
 			var list_dict_str = new List<Dictionary<string, string>>();
 			foreach (var obj in obj_array)
-				list_dict_str.Add(ObjectUtils.DictObjToDictStr( (Dictionary<string,object>) obj));
+				list_dict_str.Add(ObjectUtils.DictObjToDictStr((Dictionary<string, object>)obj));
 			return list_dict_str;
 		}
 
@@ -180,10 +181,10 @@ namespace ElmcityUtils
 				BlobStorage.WriteToAzureBlob(bs, id, json_blob_name, null, new_obj_as_json_bytes);
 				BlobStorage.WriteToAzureBlob(bs, id, timestamped_json_blob_name, null, new_obj_as_json_bytes);
 			}
-			return objects_equal 
+			return objects_equal
 						? false // objects matched, json not saved
 						: true; // did not match, json saved
-			                             
+
 		}
 
 		private static bool NewJsonMatchesExistingJson(JsonSnapshotType type, Object new_obj, Uri existing_obj_uri)

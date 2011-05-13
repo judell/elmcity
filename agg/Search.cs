@@ -16,11 +16,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using ElmcityUtils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Net;
 
 
 namespace CalendarAggregator
@@ -218,20 +218,20 @@ namespace CalendarAggregator
 
 				try
 				{
-				JObject o = (JObject)JsonConvert.DeserializeObject(page);
+					JObject o = (JObject)JsonConvert.DeserializeObject(page);
 
-				var results_query =
-					from result in o["SearchResponse"]["Web"]["Results"].Children()
-					select new SearchResult
-						  (
-						  url: result.Value<string>("Url").ToString() ?? "NoUrl",
-						  title: result.Value<string>("Title").ToString() ?? "NoTitle",
-						  content: result.Value<string>("Description").ToString() ?? "NoDescription",
-						  engine: SearchResult.FindingEngine.bing
-						  );
+					var results_query =
+						from result in o["SearchResponse"]["Web"]["Results"].Children()
+						select new SearchResult
+							  (
+							  url: result.Value<string>("Url").ToString() ?? "NoUrl",
+							  title: result.Value<string>("Title").ToString() ?? "NoTitle",
+							  content: result.Value<string>("Description").ToString() ?? "NoDescription",
+							  engine: SearchResult.FindingEngine.bing
+							  );
 
-				foreach (var result in results_query)
-					results_list.Add(result);
+					foreach (var result in results_query)
+						results_list.Add(result);
 				}
 				catch
 				{
@@ -255,7 +255,7 @@ namespace CalendarAggregator
 				return r.DataAsString();
 		}
 
-		public static List<SearchResult> GoogleSearch(string search_expression, 
+		public static List<SearchResult> GoogleSearch(string search_expression,
 			Dictionary<string, object> stats_dict)
 		{
 			var url_template = "http://ajax.googleapis.com/ajax/services/search/web?v=1.0&rsz=large&safe=active&q={0}&start={1}";
@@ -272,21 +272,21 @@ namespace CalendarAggregator
 
 				try
 				{
-				JObject o = (JObject)JsonConvert.DeserializeObject(page);
+					JObject o = (JObject)JsonConvert.DeserializeObject(page);
 
-				var results_query =
-					from result in o["responseData"]["results"].Children()
-					select new SearchResult(
-							url: result.Value<string>("url").ToString() ?? "NoUrl",
-							title: result.Value<string>("title").ToString() ?? "NoTitle",
-							content: result.Value<string>("content").ToString() ?? "NoContent",
-							engine: SearchResult.FindingEngine.google
-							);
+					var results_query =
+						from result in o["responseData"]["results"].Children()
+						select new SearchResult(
+								url: result.Value<string>("url").ToString() ?? "NoUrl",
+								title: result.Value<string>("title").ToString() ?? "NoTitle",
+								content: result.Value<string>("content").ToString() ?? "NoContent",
+								engine: SearchResult.FindingEngine.google
+								);
 
-				foreach (var result in results_query)
-					results_list.Add(result);
+					foreach (var result in results_query)
+						results_list.Add(result);
 				}
-				catch 
+				catch
 				{
 					GenUtils.PriorityLogMsg("exception", "GoogleSearch", search_url.ToString());
 				}

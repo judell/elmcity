@@ -17,44 +17,44 @@ using NUnit.Framework;
 
 namespace CalendarAggregator
 {
-    [TestFixture]
-    public class FeedRegistryTest
-    {
-        string id = Configurator.testid;
-        FeedRegistry fr;
-        //int testcount = 7;
-        bool testbool = true;
-        string testscore = "0";
-        string testurl = "testurl";
-        string testsource = "testsource";
-        string statsfile = "ical_stats.json";
-        string blobhost = ElmcityUtils.Configurator.azure_blobhost;
-        string containername;
+	[TestFixture]
+	public class FeedRegistryTest
+	{
+		string id = Configurator.testid;
+		FeedRegistry fr;
+		//int testcount = 7;
+		bool testbool = true;
+		string testscore = "0";
+		string testurl = "testurl";
+		string testsource = "testsource";
+		string statsfile = "ical_stats.json";
+		string blobhost = ElmcityUtils.Configurator.azure_blobhost;
+		string containername;
 
-        public FeedRegistryTest()
-        {
-            containername = this.id;
-            fr = new FeedRegistry(this.id);
-            fr.AddFeed(testurl, testsource);
-        }
+		public FeedRegistryTest()
+		{
+			containername = this.id;
+			fr = new FeedRegistry(this.id);
+			fr.AddFeed(testurl, testsource);
+		}
 
-        [Test]
-        public void SerializeStatsYieldsHttpCreated()
-        {
-            fr.stats[testurl].valid = testbool;
-            fr.stats[testurl].score = testscore;
-            var response = fr.SerializeIcalStatsToJson();
-            Assert.AreEqual(HttpStatusCode.Created, response.HttpResponse.status);
-        }
+		[Test]
+		public void SerializeStatsYieldsHttpCreated()
+		{
+			fr.stats[testurl].valid = testbool;
+			fr.stats[testurl].score = testscore;
+			var response = fr.SerializeIcalStatsToJson();
+			Assert.AreEqual(HttpStatusCode.Created, response.HttpResponse.status);
+		}
 
-        [Test]
-        public void DeserializeStatsYieldsExpectedValue()
-        {
-            SerializeStatsYieldsHttpCreated();
-            var dict = FeedRegistry.DeserializeIcalStatsFromJson(blobhost, containername, statsfile);
-            Assert.AreEqual(testscore, dict[testurl].score);
-        }
+		[Test]
+		public void DeserializeStatsYieldsExpectedValue()
+		{
+			SerializeStatsYieldsHttpCreated();
+			var dict = FeedRegistry.DeserializeIcalStatsFromJson(blobhost, containername, statsfile);
+			Assert.AreEqual(testscore, dict[testurl].score);
+		}
 
 
-    }
+	}
 }

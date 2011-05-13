@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 
 namespace ElmcityUtils
 {
 	public class LogMsg
 	{
-		public string type  { get; set; }
+		public string type { get; set; }
 		public string title { get; set; }
 		public string blurb { get; set; }
 
@@ -19,7 +17,7 @@ namespace ElmcityUtils
 			this.title = GenUtils.MakeLogMsgTitle(title);
 			this.blurb = blurb;
 		}
-	}	
+	}
 
 	public class Logger
 	{
@@ -29,7 +27,7 @@ namespace ElmcityUtils
 
 		private int max_messages = 100;
 
-        private static string hostname = Dns.GetHostName(); // for status/error reporting
+		private static string hostname = Dns.GetHostName(); // for status/error reporting
 
 		private Queue<LogMsg> log_queue = new Queue<LogMsg>();
 
@@ -57,13 +55,13 @@ namespace ElmcityUtils
 
 		private void Start()
 		{
-        var dequeue_thread = new Thread(new ThreadStart(LogThreadMethod));
-		dequeue_thread.Start();
+			var dequeue_thread = new Thread(new ThreadStart(LogThreadMethod));
+			dequeue_thread.Start();
 		}
 
 		public void LogMsg(string type, string title, string blurb)
 		{
-			var msg = new LogMsg( type: type, title: title, blurb: blurb );
+			var msg = new LogMsg(type: type, title: title, blurb: blurb);
 			log_queue.Enqueue(msg);
 		}
 

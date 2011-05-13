@@ -14,21 +14,16 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
+using System.Text;
 using System.Web;
 using System.Web.Caching;
 using System.Web.Mvc;
-using System.Text;
-using System.IO;
-using System.Xml;
-using System.Xml.Serialization;
-using WebRole;
+using CalendarAggregator;
 using ElmcityUtils;
 using HtmlAgilityPack;
-using CalendarAggregator;
-using System.Net;
-using System.Text.RegularExpressions;
-using System.Collections.Specialized;
 
 namespace WebRole
 {
@@ -42,12 +37,12 @@ namespace WebRole
 		private static List<string> cacheable_types = new List<string>() { };
 
 		public ServicesController()
-        {
-        }
+		{
+		}
 
 		#region events
 
-		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam="*")]
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -82,7 +77,7 @@ namespace WebRole
 			string response_body = null;
 			byte[] response_bytes = new byte[0];
 
-			public EventsResult( ControllerContext context, CalendarRenderer cr, string id, string type, string view, string jsonp, string count)
+			public EventsResult(ControllerContext context, CalendarRenderer cr, string id, string type, string view, string jsonp, string count)
 			{
 				this.context = context;
 				this.cr = cr;
@@ -269,7 +264,7 @@ namespace WebRole
 					expiration_hours = Convert.ToInt32(ElmcityController.settings["where_aggregate_interval_hours"]);
 				else
 					expiration_hours = Convert.ToInt32(ElmcityController.settings["what_aggregate_interval_hours"]);
-				var sliding_expiration = new TimeSpan(expiration_hours,0,0);
+				var sliding_expiration = new TimeSpan(expiration_hours, 0, 0);
 				this.cr.cache.Insert(key, bytes, dependency, Cache.NoAbsoluteExpiration, sliding_expiration, CacheItemPriority.Normal, logger);
 			}
 
@@ -608,7 +603,7 @@ namespace WebRole
 				if (rk != null)
 					rowkey_clause = String.Format("{0}RowKey eq '{1}'", pk != null ? " and " : "", rk);
 
-				if ( since_minutes_ago != null )
+				if (since_minutes_ago != null)
 				{
 					var minutes_ago = Convert.ToInt32(since_minutes_ago);
 					var since = DateTime.UtcNow - TimeSpan.FromMinutes(minutes_ago);
@@ -629,7 +624,7 @@ namespace WebRole
 				new ContentResult
 				{
 					ContentType = "application/atom+xml",
-					Content = (string) tsr.response,
+					Content = (string)tsr.response,
 					ContentEncoding = UTF8
 				}.ExecuteResult(context);
 			}
@@ -650,7 +645,7 @@ namespace WebRole
 			// on startup, invoke redirect to get called back with an oauth_token which enables
 			// the getting of an access token
 			//if (ElmcityApp.twitter_oauth_access_token == null && oauth_token == null)
-			if ( settings["twitter_access_token"] == "none" && oauth_token == null )
+			if (settings["twitter_access_token"] == "none" && oauth_token == null)
 			{
 				var redirect_url = AutoOAuthLinkGet();
 				redirect_url += String.Format("&method={0}&url={1}&post_data={2}",
@@ -786,7 +781,7 @@ namespace WebRole
 					var access_token_secret = qs["oauth_token_secret"];
 					UpdateTokenSetting("twitter_access_token_secret", access_token_secret);
 				}
-			
+
 			}
 		}
 

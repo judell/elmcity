@@ -14,14 +14,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
 using System.Data.EntityClient;
+using System.Data.SqlClient;
 using System.Linq;
-using System.Xml.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace ElmcityUtils
 {
@@ -57,7 +56,7 @@ namespace ElmcityUtils
 
 		public static string MakeLogMsgTitle(string title)
 		{
-			string hostname = Dns.GetHostName(); 
+			string hostname = Dns.GetHostName();
 			var procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 			title = string.Format("{0} {1} {2}", hostname, procname, title);
 			return title;
@@ -72,7 +71,7 @@ namespace ElmcityUtils
 
 			public delegate bool CompletedDelegate<T, Object>(T result, Object o);
 
-			public static T Retry<T>(RetryDelegate<T> Action, CompletedDelegate<T, Object> Completed, 
+			public static T Retry<T>(RetryDelegate<T> Action, CompletedDelegate<T, Object> Completed,
 				Object completed_delegate_object, int wait_secs, int max_tries, TimeSpan timeout_secs)
 			{
 				T result = default(T);
@@ -90,7 +89,7 @@ namespace ElmcityUtils
 					}
 					catch (Exception e)
 					{
-						LogMsg("exception", "RetryDelegate: " + method_name, 
+						LogMsg("exception", "RetryDelegate: " + method_name,
 							e.Message + e.StackTrace);
 						throw e;
 					}
@@ -106,7 +105,7 @@ namespace ElmcityUtils
 				return result;  // default(T)
 			}
 
-			private static bool TimeToGiveUp(DateTime start, TimeSpan timeout_secs, 
+			private static bool TimeToGiveUp(DateTime start, TimeSpan timeout_secs,
 				int tries, int max_tries)
 			{
 				var timed_out = TimedOut(start, timeout_secs);
@@ -251,7 +250,7 @@ namespace ElmcityUtils
 		}
 
 		public static List<string> RegexFindGroups(
-			string input, 
+			string input,
 			string pattern)
 		{
 			Regex re = new Regex(pattern);

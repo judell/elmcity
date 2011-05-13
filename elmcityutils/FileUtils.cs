@@ -18,14 +18,14 @@ using Ionic.Zip;
 
 namespace ElmcityUtils
 {
-    public static class FileUtils
-    {
+	public static class FileUtils
+	{
 
-        public static DirectoryInfo CreateLocalDirectoryUnderCurrent(string name)
-        {
-            var cd = Directory.GetCurrentDirectory();
-            return Directory.CreateDirectory(string.Format(@"{0}\{1}", cd, name));
-        }
+		public static DirectoryInfo CreateLocalDirectoryUnderCurrent(string name)
+		{
+			var cd = Directory.GetCurrentDirectory();
+			return Directory.CreateDirectory(string.Format(@"{0}\{1}", cd, name));
+		}
 
 		public static void UnzipFromUrlToDirectory(Uri zip_url, string directory)
 		{
@@ -48,5 +48,5 @@ namespace ElmcityUtils
 			GenUtils.PriorityLogMsg("exception", String.Format("UnzipFromUrlToDirectory: {0} exceptions", exceptions), null);
 		}
 
-    }
+	}
 }

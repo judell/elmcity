@@ -14,17 +14,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Net;
 using System.Linq;
+using System.Net;
 using NUnit.Framework;
 
 namespace ElmcityUtils
 {
-    [TestFixture]
-    public class TableStorageTest
-    {
-        public static string test_partition = "test_partition";
-        public static string test_row = "test_row";
+	[TestFixture]
+	public class TableStorageTest
+	{
+		public static string test_partition = "test_partition";
+		public static string test_row = "test_row";
 		private static Random r = new Random();
 		public string test_table = String.Format("test{0}", r.Next());
 		public string test_table_2 = String.Format("test2{0}", r.Next());
@@ -32,23 +32,23 @@ namespace ElmcityUtils
 		//public static string test_table = "test1";
 		//public static string test_table_2 = "test2";
 
-        public static DateTime test_dt = DateTime.Now;
-        public static Int32 test_int32 = 32;
-        public static Int64 test_int64 = 64;
-        public static String test_str = "test_str";
-        public static bool test_bool = false;
+		public static DateTime test_dt = DateTime.Now;
+		public static Int32 test_int32 = 32;
+		public static Int64 test_int64 = 64;
+		public static String test_str = "test_str";
+		public static bool test_bool = false;
 
 		private static int short_wait = 5;
 		private static int long_wait = 30;
 
-	    ~TableStorageTest()  
+		~TableStorageTest()
 		{
 			ts.DeleteTable(test_table);
 			ts.DeleteTable(test_table_2);
 		}
 
 
-        public static Dictionary<string, object> test_dict = new Dictionary<string, object>()
+		public static Dictionary<string, object> test_dict = new Dictionary<string, object>()
          {
             { "TestDt", test_dt },
             { "TestInt32", test_int32},
@@ -57,95 +57,95 @@ namespace ElmcityUtils
             { "TestBool", test_bool}
         };
 
-        public static string test_query = string.Format("$filter=(PartitionKey eq '{0}') and (RowKey eq '{1}') and (TestInt32 eq {2}) and (TestDt eq datetime'{3}')",
-                test_partition, test_row, test_int32, test_dt.ToString(TableStorage.ISO_FORMAT_UTC));
-        public static int count = 12345;
-        public TableStorage ts = TableStorage.MakeDefaultTableStorage();
-        public TableStorage secure_ts = TableStorage.MakeSecureTableStorage();
+		public static string test_query = string.Format("$filter=(PartitionKey eq '{0}') and (RowKey eq '{1}') and (TestInt32 eq {2}) and (TestDt eq datetime'{3}')",
+				test_partition, test_row, test_int32, test_dt.ToString(TableStorage.ISO_FORMAT_UTC));
+		public static int count = 12345;
+		public TableStorage ts = TableStorage.MakeDefaultTableStorage();
+		public TableStorage secure_ts = TableStorage.MakeSecureTableStorage();
 
 
-        [Test]
-        public void CreateTableIsSuccessful()
-        {
-            ts.DeleteTable(test_table);
-            HttpUtils.Wait(long_wait);
-            ts.CreateTable(test_table);
-            HttpUtils.Wait(short_wait);
-            Assert.IsTrue((bool)ts.ExistsTable(test_table).response);
-        }
+		[Test]
+		public void CreateTableIsSuccessful()
+		{
+			ts.DeleteTable(test_table);
+			HttpUtils.Wait(long_wait);
+			ts.CreateTable(test_table);
+			HttpUtils.Wait(short_wait);
+			Assert.IsTrue((bool)ts.ExistsTable(test_table).response);
+		}
 
-        [Test]
-        public void CountTwoTables()
-        {
-            ts.DeleteTable(test_table);
-            ts.DeleteTable(test_table_2);
-            HttpUtils.Wait(long_wait);
-            ts.CreateTable(test_table);
-            HttpUtils.Wait(short_wait);
-            Assert.IsTrue((bool)ts.ExistsTable(test_table).response);
-            var count = (int)ts.CountTables().response;
-            ts.CreateTable(test_table_2);
-            Assert.IsTrue((bool)ts.ExistsTable(test_table_2).response);
-            Assert.That((int)ts.CountTables().response == count + 1);
-        }
+		[Test]
+		public void CountTwoTables()
+		{
+			ts.DeleteTable(test_table);
+			ts.DeleteTable(test_table_2);
+			HttpUtils.Wait(long_wait);
+			ts.CreateTable(test_table);
+			HttpUtils.Wait(short_wait);
+			Assert.IsTrue((bool)ts.ExistsTable(test_table).response);
+			var count = (int)ts.CountTables().response;
+			ts.CreateTable(test_table_2);
+			Assert.IsTrue((bool)ts.ExistsTable(test_table_2).response);
+			Assert.That((int)ts.CountTables().response == count + 1);
+		}
 
-        [Test]
-        public void CreateEntityIsSuccessful()
-        {
-            ts.DeleteEntity(test_table, test_partition, test_row);
-            HttpUtils.Wait(short_wait);
-            if ((bool)ts.ExistsTable(test_table).response == false)
-                ts.CreateTable(test_table);
-            var entity = new Dictionary<string, object>();
-            entity.Add("PartitionKey", test_partition);
-            entity.Add("RowKey", test_row);
-            foreach (var key in test_dict.Keys)
-                entity.Add(key, test_dict[key]);
-            Assert.AreEqual(HttpStatusCode.Created, ts.InsertEntity(test_table, entity).http_response.status);
-        }
+		[Test]
+		public void CreateEntityIsSuccessful()
+		{
+			ts.DeleteEntity(test_table, test_partition, test_row);
+			HttpUtils.Wait(short_wait);
+			if ((bool)ts.ExistsTable(test_table).response == false)
+				ts.CreateTable(test_table);
+			var entity = new Dictionary<string, object>();
+			entity.Add("PartitionKey", test_partition);
+			entity.Add("RowKey", test_row);
+			foreach (var key in test_dict.Keys)
+				entity.Add(key, test_dict[key]);
+			Assert.AreEqual(HttpStatusCode.Created, ts.InsertEntity(test_table, entity).http_response.status);
+		}
 
-        [Test]
-        public void SecureCreateEntityIsSuccessful()
-        {
-            secure_ts.DeleteEntity(test_table, test_partition, test_row);
-            HttpUtils.Wait(short_wait);
-            if ((bool)secure_ts.ExistsTable(test_table).response == false)
-                secure_ts.CreateTable(test_table);
-            var entity = new Dictionary<string, object>();
-            entity.Add("PartitionKey", test_partition);
-            entity.Add("RowKey", test_row);
-            foreach (var key in test_dict.Keys)
-                entity.Add(key, test_dict[key]);
-            Assert.AreEqual(HttpStatusCode.Created, secure_ts.InsertEntity(test_table, entity).http_response.status);
-        }
+		[Test]
+		public void SecureCreateEntityIsSuccessful()
+		{
+			secure_ts.DeleteEntity(test_table, test_partition, test_row);
+			HttpUtils.Wait(short_wait);
+			if ((bool)secure_ts.ExistsTable(test_table).response == false)
+				secure_ts.CreateTable(test_table);
+			var entity = new Dictionary<string, object>();
+			entity.Add("PartitionKey", test_partition);
+			entity.Add("RowKey", test_row);
+			foreach (var key in test_dict.Keys)
+				entity.Add(key, test_dict[key]);
+			Assert.AreEqual(HttpStatusCode.Created, secure_ts.InsertEntity(test_table, entity).http_response.status);
+		}
 
-        [Test]
-        public void ExistsEntitySucceedsForExistingEntity()
-        {
-            CreateEntityIsSuccessful();
-            var q = string.Format(TableStorage.query_template_pk_rk,
-                test_partition, test_row);
-            Assert.AreEqual(true, ts.ExistsEntity(test_table, q));
-        }
+		[Test]
+		public void ExistsEntitySucceedsForExistingEntity()
+		{
+			CreateEntityIsSuccessful();
+			var q = string.Format(TableStorage.query_template_pk_rk,
+				test_partition, test_row);
+			Assert.AreEqual(true, ts.ExistsEntity(test_table, q));
+		}
 
-        [Test]
-        public void ExistsEntityFailsForNonExistingEntity()
-        {
-            DeleteEntityIsSuccessful();
-            var q = string.Format(TableStorage.query_template_pk_rk,
-                test_partition, test_row);
-            Assert.AreEqual(false, ts.ExistsEntity(test_table, q));
-        }
+		[Test]
+		public void ExistsEntityFailsForNonExistingEntity()
+		{
+			DeleteEntityIsSuccessful();
+			var q = string.Format(TableStorage.query_template_pk_rk,
+				test_partition, test_row);
+			Assert.AreEqual(false, ts.ExistsEntity(test_table, q));
+		}
 
-        [Test]
-        public void QueryEntitiesIsSuccessful()
-        {
-            if (ts.ExistsEntity(test_table, test_query) == false)
-                CreateEntityIsSuccessful();
-            var ts_response = ts.QueryEntities(test_table, test_query);
-            var dicts = (List<Dictionary<string, object>>)ts_response.response;
+		[Test]
+		public void QueryEntitiesIsSuccessful()
+		{
+			if (ts.ExistsEntity(test_table, test_query) == false)
+				CreateEntityIsSuccessful();
+			var ts_response = ts.QueryEntities(test_table, test_query);
+			var dicts = (List<Dictionary<string, object>>)ts_response.response;
 			AssertEntity(dicts);
-        }
+		}
 
 		private static void AssertEntity(List<Dictionary<string, object>> dicts)
 		{
@@ -180,81 +180,81 @@ namespace ElmcityUtils
 
 		}
 
-        [Test]
-        public void QueryForSingleEntityIsSuccessful()
-        {
-            if (ts.ExistsEntity(test_table, test_query) == false)
-                CreateEntityIsSuccessful();
-            var ts_response = ts.QueryEntities(test_table, test_query);
-            var dicts = (List<Dictionary<string, object>>)ts_response.response;
-            Assert.That(dicts.Count == 1);
-            if (ts.ExistsEntity(test_table, test_query) == false)
-                CreateEntityIsSuccessful();
-            var multi_response_dict = ObjectUtils.DictObjToDictStr(dicts[0]);
-            var single_response_dict = TableStorage.QueryForSingleEntityAsDictStr(ts, test_table, test_query);
-            Assert.That(multi_response_dict["TestInt32"] == single_response_dict["TestInt32"]);
-            Assert.That(multi_response_dict["TestInt64"] == single_response_dict["TestInt64"]);
-            Assert.That(multi_response_dict["TestBool"] == single_response_dict["TestBool"]);
-        }
+		[Test]
+		public void QueryForSingleEntityIsSuccessful()
+		{
+			if (ts.ExistsEntity(test_table, test_query) == false)
+				CreateEntityIsSuccessful();
+			var ts_response = ts.QueryEntities(test_table, test_query);
+			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			Assert.That(dicts.Count == 1);
+			if (ts.ExistsEntity(test_table, test_query) == false)
+				CreateEntityIsSuccessful();
+			var multi_response_dict = ObjectUtils.DictObjToDictStr(dicts[0]);
+			var single_response_dict = TableStorage.QueryForSingleEntityAsDictStr(ts, test_table, test_query);
+			Assert.That(multi_response_dict["TestInt32"] == single_response_dict["TestInt32"]);
+			Assert.That(multi_response_dict["TestInt64"] == single_response_dict["TestInt64"]);
+			Assert.That(multi_response_dict["TestBool"] == single_response_dict["TestBool"]);
+		}
 
-        [Test]
-        public void DeleteEntityIsSuccessful()
-        {
-            if (ts.ExistsEntity(test_table, test_query) == false)
-                CreateEntityIsSuccessful();
-            var ts_response = ts.DeleteEntity(test_table, test_partition, test_row);
-            HttpUtils.Wait(short_wait);
-            ts_response = ts.DeleteEntity(test_table, test_partition, test_row);
+		[Test]
+		public void DeleteEntityIsSuccessful()
+		{
+			if (ts.ExistsEntity(test_table, test_query) == false)
+				CreateEntityIsSuccessful();
+			var ts_response = ts.DeleteEntity(test_table, test_partition, test_row);
+			HttpUtils.Wait(short_wait);
+			ts_response = ts.DeleteEntity(test_table, test_partition, test_row);
 			Assert.IsNotNull(ts_response);
 			Assert.IsNotNull(ts_response.http_response);
 			Assert.IsNotNull(ts_response.http_response.status);
-            Assert.AreEqual(HttpStatusCode.NotFound, ts_response.http_response.status);
-        }
+			Assert.AreEqual(HttpStatusCode.NotFound, ts_response.http_response.status);
+		}
 
-        [Test]
-        public void UpdateEntityIsSuccessful()
-        {
-            if (ts.ExistsEntity(test_table, test_query) == false)
-                CreateEntityIsSuccessful();
-            var entity = new Dictionary<string, object>();
-            entity.Add("PartitionKey", test_partition);
-            entity.Add("RowKey", test_row);
-            entity.Add("name", "entity_name");
-            entity.Add("dt", test_dt);
-            entity.Add("count", count + 1);
-            Assert.AreEqual(HttpStatusCode.NoContent, ts.UpdateEntity(test_table, test_partition, test_row, entity).http_response.status);
-            var q = string.Format("$filter=(count eq {0}) and (dt eq datetime'{1}')",
-                count + 1, test_dt.ToString(TableStorage.ISO_FORMAT_UTC));
-            var ts_response = ts.QueryEntities(test_table, q);
-            var dicts = (List<Dictionary<string, object>>)ts_response.response;
-            Assert.That(dicts.Count == 1);
-            Assert.That((int)dicts[0]["count"] == count + 1);
-        }
+		[Test]
+		public void UpdateEntityIsSuccessful()
+		{
+			if (ts.ExistsEntity(test_table, test_query) == false)
+				CreateEntityIsSuccessful();
+			var entity = new Dictionary<string, object>();
+			entity.Add("PartitionKey", test_partition);
+			entity.Add("RowKey", test_row);
+			entity.Add("name", "entity_name");
+			entity.Add("dt", test_dt);
+			entity.Add("count", count + 1);
+			Assert.AreEqual(HttpStatusCode.NoContent, ts.UpdateEntity(test_table, test_partition, test_row, entity).http_response.status);
+			var q = string.Format("$filter=(count eq {0}) and (dt eq datetime'{1}')",
+				count + 1, test_dt.ToString(TableStorage.ISO_FORMAT_UTC));
+			var ts_response = ts.QueryEntities(test_table, q);
+			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			Assert.That(dicts.Count == 1);
+			Assert.That((int)dicts[0]["count"] == count + 1);
+		}
 
-        [Test]
-        public void MergeEntityIsSuccessful()
-        {
-            DeleteEntityIsSuccessful();
-            UpdateEntityIsSuccessful();
-            var entity = new Dictionary<string, object>();
-            entity.Add("PartitionKey", test_partition);
-            entity.Add("RowKey", test_row);
-            entity.Add("count", count + 2);
-            Assert.AreEqual(HttpStatusCode.NoContent, ts.MergeEntity(test_table, test_partition, test_row, entity).http_response.status);
-            var q = string.Format("$filter=(count eq {0}) and (dt eq datetime'{1}')",
-                count + 2, test_dt.ToString(TableStorage.ISO_FORMAT_UTC));
-            var ts_response = ts.QueryEntities(test_table, q);
-            var dicts = (List<Dictionary<string, object>>)ts_response.response;
-            Assert.That(dicts.Count == 1);
-            Assert.That((int)dicts[0]["count"] == count + 2);
-        }
+		[Test]
+		public void MergeEntityIsSuccessful()
+		{
+			DeleteEntityIsSuccessful();
+			UpdateEntityIsSuccessful();
+			var entity = new Dictionary<string, object>();
+			entity.Add("PartitionKey", test_partition);
+			entity.Add("RowKey", test_row);
+			entity.Add("count", count + 2);
+			Assert.AreEqual(HttpStatusCode.NoContent, ts.MergeEntity(test_table, test_partition, test_row, entity).http_response.status);
+			var q = string.Format("$filter=(count eq {0}) and (dt eq datetime'{1}')",
+				count + 2, test_dt.ToString(TableStorage.ISO_FORMAT_UTC));
+			var ts_response = ts.QueryEntities(test_table, q);
+			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			Assert.That(dicts.Count == 1);
+			Assert.That((int)dicts[0]["count"] == count + 2);
+		}
 
-        [Test]
-        public void WriteLogMessageIsSuccessful()
-        {
-            var ts_response = this.ts.WriteLogMessage("test", "test_message", "test_data");
-            Assert.AreEqual(HttpStatusCode.Created, ts_response.http_response.status);
-        }
+		[Test]
+		public void WriteLogMessageIsSuccessful()
+		{
+			var ts_response = this.ts.WriteLogMessage("test", "test_message", "test_data");
+			Assert.AreEqual(HttpStatusCode.Created, ts_response.http_response.status);
+		}
 
-    }
+	}
 }

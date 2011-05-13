@@ -12,37 +12,37 @@
  *
  * *******************************************************************************/
 
-using ElmcityUtils;
 using System.Linq;
-using NUnit.Framework;
 using System.Text;
+using ElmcityUtils;
+using NUnit.Framework;
 
 namespace CalendarAggregator
 {
-    [TestFixture]
-    public class TwitterTest
-    {
+	[TestFixture]
+	public class TwitterTest
+	{
 
-        [Test]
-        public void CanRetrieveDirectMessagesFromAzure()
-        {
-            var messages = TwitterApi.GetDirectMessagesFromAzure();
-            var msg = messages.First();
-            Assert.That(msg.recipient_screen_name == Configurator.twitter_account);
-        }
+		[Test]
+		public void CanRetrieveDirectMessagesFromAzure()
+		{
+			var messages = TwitterApi.GetDirectMessagesFromAzure();
+			var msg = messages.First();
+			Assert.That(msg.recipient_screen_name == Configurator.twitter_account);
+		}
 
-        [Test]
-        public void CanRetrieveDirectMessagesFromTwitter()
-        {
-            var xml = TwitterApi.SendTwitterDirectMessage("elmcity_azure", "test");
-            var xdoc = XmlUtils.XdocFromXmlBytes(Encoding.UTF8.GetBytes(xml));
-            var ids = from message in xdoc.Descendants("direct_message")
-                     select message.Descendants("id").First().Value.ToString();
-            var messages = TwitterApi.GetDirectMessagesFromTwitter(1);
-            var msg = messages.First();
-            Assert.That(msg.recipient_screen_name == Configurator.twitter_account);
-            TwitterApi.DeleteTwitterDirectMessage(ids.First());
-        }
-    }
+		[Test]
+		public void CanRetrieveDirectMessagesFromTwitter()
+		{
+			var xml = TwitterApi.SendTwitterDirectMessage("elmcity_azure", "test");
+			var xdoc = XmlUtils.XdocFromXmlBytes(Encoding.UTF8.GetBytes(xml));
+			var ids = from message in xdoc.Descendants("direct_message")
+					  select message.Descendants("id").First().Value.ToString();
+			var messages = TwitterApi.GetDirectMessagesFromTwitter(1);
+			var msg = messages.First();
+			Assert.That(msg.recipient_screen_name == Configurator.twitter_account);
+			TwitterApi.DeleteTwitterDirectMessage(ids.First());
+		}
+	}
 }
 

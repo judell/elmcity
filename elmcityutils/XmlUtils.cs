@@ -20,82 +20,82 @@ using System.Xml.Linq;
 
 namespace ElmcityUtils
 {
-    public static class XmlUtils
-    {
+	public static class XmlUtils
+	{
 
 		public static XmlDocument XmlDocumentFromHttpResponse(HttpResponse response)
-        {
-            var sr = new MemoryStream(response.bytes);
-            XmlDocument doc = new XmlDocument();
-            try
-            {
-                doc.Load(sr);
-            }
-            catch (Exception e)
-            {
-                GenUtils.PriorityLogMsg("exception", "XmlDocumentFromHttpResponse", e.Message + e.StackTrace);
-            }
-            return doc;
-        }
+		{
+			var sr = new MemoryStream(response.bytes);
+			XmlDocument doc = new XmlDocument();
+			try
+			{
+				doc.Load(sr);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "XmlDocumentFromHttpResponse", e.Message + e.StackTrace);
+			}
+			return doc;
+		}
 
-        public static XDocument XdocFromXmlBytes(byte[] xml)
-        {
-            var xdoc = new XDocument();
-            if (xml.Length == 0)
-                return xdoc;
-            var ms = new MemoryStream(xml);
-            var xr = XmlReader.Create(ms);
-            try
-            {
-                xdoc = XDocument.Load(xr);
-            }
-            catch (Exception e)
-            {
-                GenUtils.PriorityLogMsg("exception", "XdocFromXmlBytes", e.Message + e.StackTrace);
-            }
-            return xdoc;
-        }
+		public static XDocument XdocFromXmlBytes(byte[] xml)
+		{
+			var xdoc = new XDocument();
+			if (xml.Length == 0)
+				return xdoc;
+			var ms = new MemoryStream(xml);
+			var xr = XmlReader.Create(ms);
+			try
+			{
+				xdoc = XDocument.Load(xr);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "XdocFromXmlBytes", e.Message + e.StackTrace);
+			}
+			return xdoc;
+		}
 
-        public static string GetXeltValue(XContainer xelt, XNamespace ns, string name)
-        {
-            var elt = xelt.Descendants(ns + name);
-            var first = elt.FirstOrDefault();
-            var value = first.Value;
-            return value;
-        }
+		public static string GetXeltValue(XContainer xelt, XNamespace ns, string name)
+		{
+			var elt = xelt.Descendants(ns + name);
+			var first = elt.FirstOrDefault();
+			var value = first.Value;
+			return value;
+		}
 
-        public static string GetXAttrValue(XContainer xelt, XNamespace ns, string elt_name, string attr_name)
-        {
-            var value = xelt.Descendants(ns + elt_name).FirstOrDefault().Attribute(attr_name).Value;
-            return value.ToString();
-        }
+		public static string GetXAttrValue(XContainer xelt, XNamespace ns, string elt_name, string attr_name)
+		{
+			var value = xelt.Descendants(ns + elt_name).FirstOrDefault().Attribute(attr_name).Value;
+			return value.ToString();
+		}
 
-        public static string Cdataize(string str)
-        {
-            return string.Format("<![CDATA[{0}]]>", str);
-        }
+		public static string Cdataize(string str)
+		{
+			return string.Format("<![CDATA[{0}]]>", str);
+		}
 
-        public static string XmlEscape(string str)
-        {
-            return str.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;").Replace("'", "&apos;");
-        }
+		public static string XmlEscape(string str)
+		{
+			return str.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;").Replace("'", "&apos;");
+		}
 
-        // idle for now, used to pshb-enable an odata feed
-        /*
-        public static string PubSubHubEnable(string atom_feed_xml, string hub_uri)
-        {
-          var xml = new XmlDocument();
-          xml.LoadXml(atom_feed_xml);
-          var nsmgr = new XmlNamespaceManager(xml.NameTable);
-          var atom_namespace = TableStorage.atom_namespace.ToString();
-          nsmgr.AddNamespace("atom", atom_namespace);
-          XmlNode feed = xml.SelectSingleNode("//atom:feed", nsmgr);
-          var element = xml.CreateElement("link", atom_namespace);
-          element.SetAttribute("rel", "hub");
-          element.SetAttribute("href", hub_uri);
-          feed.InsertBefore(element, feed.FirstChild);
-          return feed.OuterXml.ToString();
-        }*/
+		// idle for now, used to pshb-enable an odata feed
+		/*
+		public static string PubSubHubEnable(string atom_feed_xml, string hub_uri)
+		{
+		  var xml = new XmlDocument();
+		  xml.LoadXml(atom_feed_xml);
+		  var nsmgr = new XmlNamespaceManager(xml.NameTable);
+		  var atom_namespace = TableStorage.atom_namespace.ToString();
+		  nsmgr.AddNamespace("atom", atom_namespace);
+		  XmlNode feed = xml.SelectSingleNode("//atom:feed", nsmgr);
+		  var element = xml.CreateElement("link", atom_namespace);
+		  element.SetAttribute("rel", "hub");
+		  element.SetAttribute("href", hub_uri);
+		  feed.InsertBefore(element, feed.FirstChild);
+		  return feed.OuterXml.ToString();
+		}*/
 
-    }
+	}
 }

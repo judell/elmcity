@@ -14,33 +14,33 @@
 
 namespace ElmcityUtils
 {
-    public static class DnsUtils
-    {
+	public static class DnsUtils
+	{
 
-        public static string TryGetHostName(string name_or_address)
-        {
-            try
-            {
-                var host_entry = System.Net.Dns.GetHostEntry(name_or_address);
-                return host_entry.HostName;
-            }
-            catch
-            {
-                return name_or_address;
-            }
-        }
+		public static string TryGetHostName(string name_or_address)
+		{
+			try
+			{
+				var host_entry = System.Net.Dns.GetHostEntry(name_or_address);
+				return host_entry.HostName;
+			}
+			catch
+			{
+				return name_or_address;
+			}
+		}
 
-        public static string TryGetHostAddr(string name_or_address)
-        {
-            try
-            {
-                var host_entry = System.Net.Dns.GetHostEntry(name_or_address);
-                return host_entry.AddressList[0].ToString();
-            }
-            catch
-            {
-                return name_or_address;
-            }
-        }
-    }
+		public static string TryGetHostAddr(string name_or_address)
+		{
+			try
+			{
+				var host_entry = System.Net.Dns.GetHostEntry(name_or_address);
+				return host_entry.AddressList[0].ToString();
+			}
+			catch
+			{
+				return name_or_address;
+			}
+		}
+	}
 }

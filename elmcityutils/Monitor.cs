@@ -18,7 +18,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Xml;
 using System.Xml.Linq;
 using Microsoft.WindowsAzure.Diagnostics;
 
@@ -46,14 +45,14 @@ namespace ElmcityUtils
 			priority_log_triggers = GetPriorityLogTriggers(ts);
 		}
 
-		private static List<Dictionary<string,string>> GetPriorityLogTriggers(TableStorage ts)
+		private static List<Dictionary<string, string>> GetPriorityLogTriggers(TableStorage ts)
 		{
 			var query = "$filter=(PartitionKey eq 'prioritylogtriggers')";
 			var ts_response = ts.QueryEntities("prioritylogtriggers", query);
-			var list_dict_obj = (List<Dictionary<string,object>>) ts_response.response;
+			var list_dict_obj = (List<Dictionary<string, object>>)ts_response.response;
 			var list_dict_str = new List<Dictionary<string, string>>();
-			foreach ( var dict_obj in list_dict_obj )
-				list_dict_str.Add( ObjectUtils.DictObjToDictStr(dict_obj));
+			foreach (var dict_obj in list_dict_obj)
+				list_dict_str.Add(ObjectUtils.DictObjToDictStr(dict_obj));
 			return list_dict_str;
 		}
 
@@ -140,7 +139,7 @@ namespace ElmcityUtils
 					if (trigger_dict.ContainsKey("max"))
 					{
 						trigger_float = float.Parse(trigger_dict["max"]);
-						if ( snapshot_float > trigger_float )
+						if (snapshot_float > trigger_float)
 							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) > trigger ({1})", snapshot_float, trigger_float));
 					}
 					if (trigger_dict.ContainsKey("min"))
@@ -155,7 +154,7 @@ namespace ElmcityUtils
 					if (trigger_dict.ContainsKey("max"))
 					{
 						trigger_int = Convert.ToInt32(trigger_dict["max"]);
-						if ( snapshot_int > trigger_int )
+						if (snapshot_int > trigger_int)
 							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) > trigger ({1})", snapshot_int, trigger_int));
 					}
 					if (trigger_dict.ContainsKey("min"))
@@ -275,7 +274,7 @@ namespace ElmcityUtils
 			{
 				var c = ObjectUtils.DictObjToDictStr(counter_name_and_category);
 
-				if ( c.ContainsKey("active") && c["active"] == "no" ) // skip if marked inactive
+				if (c.ContainsKey("active") && c["active"] == "no") // skip if marked inactive
 					continue;
 
 				var category = c["category"];
@@ -351,8 +350,8 @@ namespace ElmcityUtils
 			{
 				var counter = counters.counter_objects[key];
 				try
-				{	counter.NextValue(); }
-				catch 
+				{ counter.NextValue(); }
+				catch
 				{ }
 			}
 
@@ -363,7 +362,7 @@ namespace ElmcityUtils
 				var counter = counters.counter_objects[key];
 				try
 				{
-				dict[key] = counter.NextValue();
+					dict[key] = counter.NextValue();
 				}
 				catch (Exception e)
 				{
@@ -603,7 +602,7 @@ namespace ElmcityUtils
 
 				try
 				{
-					
+
 					entities.AddObject(entitySetName: model_name, entity: elmcity_log_entry);
 					db_result = entities.SaveChanges();
 					if (db_result != 1)

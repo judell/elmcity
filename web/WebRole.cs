@@ -13,22 +13,14 @@
  * *******************************************************************************/
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using Microsoft.WindowsAzure.Diagnostics;
-using Microsoft.WindowsAzure.ServiceRuntime;
-using ElmcityUtils;
-using CalendarAggregator;
-using System.Web;
 using System.Reflection;
 using System.Timers;
-using System.Collections.Generic;
-using System.Web.Routing;
-using System.Threading;
-using System.Threading.Tasks;
-using System.IO;
-using System.IO.Pipes;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
+using System.Web;
+using CalendarAggregator;
+using ElmcityUtils;
+using Microsoft.WindowsAzure.ServiceRuntime;
 
 namespace WebRole
 {

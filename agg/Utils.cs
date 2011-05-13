@@ -21,6 +21,7 @@ using System.Net;
 using System.ServiceModel.Syndication;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Timers;
 using System.Xml;
 using System.Xml.Linq;
@@ -28,8 +29,6 @@ using DDay.iCal.DataTypes;
 using ElmcityUtils;
 using LINQtoCSV;
 using Newtonsoft.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
 
 namespace CalendarAggregator
@@ -652,7 +651,7 @@ namespace CalendarAggregator
 
 		public static List<Dictionary<string, string>> FilterByAllOrId(List<Dictionary<string, string>> entries, string id)
 		{
-			return entries.FindAll(entry => (id == "priority" || id == "all" || entry["message"].Contains(id) ) );
+			return entries.FindAll(entry => (id == "priority" || id == "all" || entry["message"].Contains(id)));
 		}
 
 		public static void GetLogEntriesLaterThanTicks(long ticks, string id, ByAllOrId filter, StringBuilder sb)
@@ -706,7 +705,7 @@ namespace CalendarAggregator
 			var itemquery = from items in xdoc.Descendants("item") select items;
 			var ical = new DDay.iCal.iCalendar();
 			Collector.AddTimezoneToDDayICal(ical, tzinfo);
-			
+
 			foreach (var item in itemquery)
 			{
 				var title = item.Element("title").Value;
@@ -721,20 +720,20 @@ namespace CalendarAggregator
 					lat = item.Element(geo + "lat").Value;
 					lon = item.Element(geo + "long").Value;
 				}
-				catch 
+				catch
 				{
 					GenUtils.LogMsg("warning", "IcsFromRssPlusXcal", "unable to parse lat/lon");
 				}
 				//var evt = Collector.MakeTmpEvt(dtstart_with_zone, title, url, source, allday: false, use_utc: use_utc);
 				//var evt = Collector.MakeTmpEvt(dtstart_with_zone,  Utils.DateTimeWithZone.MinValue(tzinfo), title, source, allday: false, use_utc: use_utc);
-				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url:url, location: location, description: source, lat: lat, lon: lon, allday: false, use_utc: false);
+				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, lat: lat, lon: lon, allday: false, use_utc: false);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
 			var serializer = new DDay.iCal.Serialization.iCalendarSerializer(ical);
 			var ics_text = serializer.SerializeToString();
 			return ics_text;
 		}
-		
+
 		#endregion
 
 		#region vcal
@@ -743,7 +742,7 @@ namespace CalendarAggregator
 		{
 			//var uri = new Uri("http://www.techhui.com/events/event/feed");  (should work for all ning sites)
 			var ns = StorageUtils.atom_namespace;
-		
+
 			var atom = HttpUtils.FetchUrl(new Uri(atom_plus_vcal_url));
 			var xdoc = XmlUtils.XdocFromXmlBytes(atom.bytes);
 			var entryquery = from items in xdoc.Descendants(ns + "entry") select items;
@@ -752,8 +751,8 @@ namespace CalendarAggregator
 
 			foreach (var entry in entryquery)
 			{
-				var title = entry.Element(ns+"title").Value;
-				var url = entry.Element(ns+"link").Attribute("href").Value;
+				var title = entry.Element(ns + "title").Value;
+				var url = entry.Element(ns + "link").Attribute("href").Value;
 				var dtstart_str = entry.Descendants(ns + "dtstart").First().Value;
 				var dtstart = Utils.DateTimeFromICalDateStr(dtstart_str);
 				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
@@ -771,24 +770,24 @@ namespace CalendarAggregator
 
 		#region other
 
-		public static bool UseNonIcalService(NonIcalType type, Dictionary<string,string> settings, Calinfo calinfo)
+		public static bool UseNonIcalService(NonIcalType type, Dictionary<string, string> settings, Calinfo calinfo)
 		{
-		if ( settings["use_" + type.ToString()] != "true") 
-			return false;
+			if (settings["use_" + type.ToString()] != "true")
+				return false;
 
-		if (type.ToString() == "eventful" && !calinfo.eventful)
-			return false;
-		
-		if (type.ToString() == "upcoming" && !calinfo.upcoming)
-			return false;
+			if (type.ToString() == "eventful" && !calinfo.eventful)
+				return false;
 
-		if (type.ToString() == "eventbrite" && !calinfo.eventbrite)
-			return false;
+			if (type.ToString() == "upcoming" && !calinfo.upcoming)
+				return false;
 
-		if (type.ToString() == "facebook" && !calinfo.facebook)
-			return false;
+			if (type.ToString() == "eventbrite" && !calinfo.eventbrite)
+				return false;
 
-		return true;
+			if (type.ToString() == "facebook" && !calinfo.facebook)
+				return false;
+
+			return true;
 		}
 
 		public static string MakeLengthLimitedExceptionMessage(Exception e)
@@ -858,7 +857,7 @@ namespace CalendarAggregator
 		{
 			return string.Format("/services/{0}/{1}?view={2}&count={3}", id, type, view, count);
 		}
-		
+
 		public static void RemoveBaseCacheEntry(string id)
 		{
 			var cached_base_uri = MakeBaseUrl(id);
@@ -867,7 +866,7 @@ namespace CalendarAggregator
 				cached_base_uri);
 			var result = HttpUtils.FetchUrl(new Uri(url));
 		}
-				
+
 		// convert a feed url into a base-64-encoded and uri-escaped string
 		// that can be used as an azure table rowkey
 		public static string MakeSafeRowkeyFromUrl(string feedurl)
@@ -940,7 +939,7 @@ namespace CalendarAggregator
 				offset += read;
 			}
 		}
-		
+
 		#endregion other
 
 	}
@@ -983,7 +982,7 @@ namespace CalendarAggregator
 			}
 			else  // construct the full list of hubs 
 
-			this.calinfos = CalendarAggregator.Configurator.Calinfos;
+				this.calinfos = CalendarAggregator.Configurator.Calinfos;
 
 			MakeWhereAndWhatIdLists();
 

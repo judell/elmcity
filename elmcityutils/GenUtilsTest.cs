@@ -14,14 +14,14 @@
 
 namespace ElmcityUtils
 {
-    using System;
+	using System;
 	using System.Collections.Generic;
-    using NUnit.Framework;
+	using NUnit.Framework;
 
-    public class GenUtilsTest
+	public class GenUtilsTest
 	{
 
-	#region retry
+		#region retry
 
 		private int retries;
 
@@ -200,9 +200,9 @@ namespace ElmcityUtils
 			}
 		}
 
-	#endregion retry
+		#endregion retry
 
-	#region regex
+		#region regex
 
 		[Test]
 		public void FindsThreeGroupsLiteral()
@@ -272,6 +272,6 @@ category=government,speech
 			Assert.That(dict.ContainsKey("category"));
 		}
 
-	#endregion regex
+		#endregion regex
 	}
 }

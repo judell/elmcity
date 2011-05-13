@@ -25,24 +25,24 @@ using NUnit.Framework;
 
 namespace CalendarAggregator
 {
-    [TestFixture]
-    public class EventCollectorTest
-    {
+	[TestFixture]
+	public class EventCollectorTest
+	{
 		private Uri test_feedurl = new Uri("http://cid-dffec23daaf5ee89.calendar.live.com/calendar/Jon+Udell+(public)/calendar.ics");
-        private string test_venue = "testvenue";
-        private string test_eventful_args = "date=Next+Week&location=03431&within=15&units=mi";
-        private static string min_date = string.Format("{0:yyyy-MM-dd}", DateTime.UtcNow);
-        //private static Calinfo test_calinfo = new Calinfo(Configurator.testid);
-        private static Calinfo test_calinfo = new Calinfo(ElmcityUtils.Configurator.azure_compute_account);
-        private static Apikeys test_apikeys = new Apikeys();
-        private static string lookup_lat = Utils.LookupLatLon(test_apikeys.yahoo_api_key, test_calinfo.where)[0];
-        private static string lookup_lon = Utils.LookupLatLon(test_apikeys.yahoo_api_key, test_calinfo.where)[1];
-        private static int radius = Configurator.default_radius;
-        private string test_upcoming_args = string.Format("location={0},{1}&radius={2}&min_date={3}", lookup_lat, lookup_lon, radius, min_date);
+		private string test_venue = "testvenue";
+		private string test_eventful_args = "date=Next+Week&location=03431&within=15&units=mi";
+		private static string min_date = string.Format("{0:yyyy-MM-dd}", DateTime.UtcNow);
+		//private static Calinfo test_calinfo = new Calinfo(Configurator.testid);
+		private static Calinfo test_calinfo = new Calinfo(ElmcityUtils.Configurator.azure_compute_account);
+		private static Apikeys test_apikeys = new Apikeys();
+		private static string lookup_lat = Utils.LookupLatLon(test_apikeys.yahoo_api_key, test_calinfo.where)[0];
+		private static string lookup_lon = Utils.LookupLatLon(test_apikeys.yahoo_api_key, test_calinfo.where)[1];
+		private static int radius = Configurator.default_radius;
+		private string test_upcoming_args = string.Format("location={0},{1}&radius={2}&min_date={3}", lookup_lat, lookup_lon, radius, min_date);
 
 		private Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
 
-        private string sample_ics = @"BEGIN:VCALENDAR
+		private string sample_ics = @"BEGIN:VCALENDAR
 PRODID:-//Google Inc//Google Calendar 70.9054//EN
 VERSION:2.0
 CALSCALE:GREGORIAN
@@ -79,92 +79,92 @@ END:VEVENT
 END:VCALENDAR";
 
 
-        [Test]
-        public void IcalFeedYieldsNonzeroEvents()
-        {
-            var response = HttpUtils.FetchUrl(test_feedurl);
-            string feedtext = response.DataAsString();
-            StringReader sr = new StringReader(feedtext);
-            var ical = iCalendar.LoadFromStream(sr);
-            Assert.That(ical.Events.Count > 0);
-        }
+		[Test]
+		public void IcalFeedYieldsNonzeroEvents()
+		{
+			var response = HttpUtils.FetchUrl(test_feedurl);
+			string feedtext = response.DataAsString();
+			StringReader sr = new StringReader(feedtext);
+			var ical = iCalendar.LoadFromStream(sr);
+			Assert.That(ical.Events.Count > 0);
+		}
 
-        [Test]
-        public void iCalSingleEventIsFuture()
-        {
-            var ics = sample_ics;
-            var futuredate = DateTime.Now + new TimeSpan(10, 0, 0, 0, 0);
-            ics = ics.Replace("__SINGLE_DATE_START__", futuredate.ToString("yyyyMMdd"));
-            ics = ics.Replace("__SINGLE_DATE_END__", futuredate.ToString("yyyyMMdd"));
-            StringReader sr = new StringReader(ics);
-            var ical = iCalendar.LoadFromStream(sr);
-            var evt = ical.Events[0];
-            var ical_now = new iCalDateTime(DateTime.Now.ToUniversalTime());
-            Assert.That(evt.GetOccurrences(ical_now).Count == 0);
+		[Test]
+		public void iCalSingleEventIsFuture()
+		{
+			var ics = sample_ics;
+			var futuredate = DateTime.Now + new TimeSpan(10, 0, 0, 0, 0);
+			ics = ics.Replace("__SINGLE_DATE_START__", futuredate.ToString("yyyyMMdd"));
+			ics = ics.Replace("__SINGLE_DATE_END__", futuredate.ToString("yyyyMMdd"));
+			StringReader sr = new StringReader(ics);
+			var ical = iCalendar.LoadFromStream(sr);
+			var evt = ical.Events[0];
+			var ical_now = new iCalDateTime(DateTime.Now.ToUniversalTime());
+			Assert.That(evt.GetOccurrences(ical_now).Count == 0);
 			var collector = new Collector(test_calinfo, settings);
-            Assert.IsTrue(collector.IsCurrentOrFutureDTStartInTz(evt.DTStart));
-        }
+			Assert.IsTrue(collector.IsCurrentOrFutureDTStartInTz(evt.DTStart));
+		}
 
-        [Test]
-        public void iCalSingleEventIsPast()
-        {
-            var ics = sample_ics;
-            var pastdate = DateTime.Now - new TimeSpan(10, 0, 0, 0, 0);
-            ics = ics.Replace("__SINGLE_DATE_START__", pastdate.ToString("yyyyMMdd"));
-            ics = ics.Replace("__SINGLE_DATE_END__", pastdate.ToString("yyyyMMdd"));
-            StringReader sr = new StringReader(ics);
-            var ical = iCalendar.LoadFromStream(sr);
-            var evt = ical.Events[0];
+		[Test]
+		public void iCalSingleEventIsPast()
+		{
+			var ics = sample_ics;
+			var pastdate = DateTime.Now - new TimeSpan(10, 0, 0, 0, 0);
+			ics = ics.Replace("__SINGLE_DATE_START__", pastdate.ToString("yyyyMMdd"));
+			ics = ics.Replace("__SINGLE_DATE_END__", pastdate.ToString("yyyyMMdd"));
+			StringReader sr = new StringReader(ics);
+			var ical = iCalendar.LoadFromStream(sr);
+			var evt = ical.Events[0];
 			var collector = new Collector(test_calinfo, settings);
-            Assert.IsFalse(collector.IsCurrentOrFutureDTStartInTz(evt.DTStart));
-        }
+			Assert.IsFalse(collector.IsCurrentOrFutureDTStartInTz(evt.DTStart));
+		}
 
-        [Test]
-        public void iCalRecurringEventHasFutureOccurrences()
-        {
-            var ics = sample_ics;
-            ics = ics.Replace("__SINGLE_DATE_START__", DateTime.Now.ToString("yyyyMMdd"));
-            ics = ics.Replace("__SINGLE_DATE_END__", DateTime.Now.ToString("yyyyMMdd"));
-            StringReader sr = new StringReader(ics);
-            var ical = iCalendar.LoadFromStream(sr);
-            Assert.That(ical.Events.Count > 0);
-            var evt = ical.Events[1];
-            DateTime now = DateTime.Now;
-            DateTime then = now.AddDays(90);
-            List<Occurrence> occurrences = evt.GetOccurrences(now, then);
-            Assert.That(occurrences.Count > 1);
-            var period = occurrences[1].Period;
+		[Test]
+		public void iCalRecurringEventHasFutureOccurrences()
+		{
+			var ics = sample_ics;
+			ics = ics.Replace("__SINGLE_DATE_START__", DateTime.Now.ToString("yyyyMMdd"));
+			ics = ics.Replace("__SINGLE_DATE_END__", DateTime.Now.ToString("yyyyMMdd"));
+			StringReader sr = new StringReader(ics);
+			var ical = iCalendar.LoadFromStream(sr);
+			Assert.That(ical.Events.Count > 0);
+			var evt = ical.Events[1];
+			DateTime now = DateTime.Now;
+			DateTime then = now.AddDays(90);
+			List<Occurrence> occurrences = evt.GetOccurrences(now, then);
+			Assert.That(occurrences.Count > 1);
+			var period = occurrences[1].Period;
 			var collector = new Collector(test_calinfo, settings);
-            Assert.That(collector.IsCurrentOrFutureDTStartInTz(period.StartTime));
-        }
+			Assert.That(collector.IsCurrentOrFutureDTStartInTz(period.StartTime));
+		}
 
-        [Test]
-        public void EventfulQueryYieldsNonzeroVenues()
-        {
-            string method = "venues/search";
+		[Test]
+		public void EventfulQueryYieldsNonzeroVenues()
+		{
+			string method = "venues/search";
 			var collector = new Collector(test_calinfo, settings);
-            var xdoc = collector.CallEventfulApi(method, test_eventful_args);
-            var venues = from venue in xdoc.Descendants("venue") select venue;
-            Assert.That(venues.Count() > 0);
-        }
+			var xdoc = collector.CallEventfulApi(method, test_eventful_args);
+			var venues = from venue in xdoc.Descendants("venue") select venue;
+			Assert.That(venues.Count() > 0);
+		}
 
-        [Test]
-        public void EventfulQueryYieldsNonzeroEvents()
-        {
+		[Test]
+		public void EventfulQueryYieldsNonzeroEvents()
+		{
 			var collector = new Collector(test_calinfo, settings);
-            var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args);
-            Assert.That(events.Count() > 0);
-        }
+			var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args);
+			Assert.That(events.Count() > 0);
+		}
 
-        [Test]
-        public void EventfulQueryYieldsValidFirstEvent()
-        {
+		[Test]
+		public void EventfulQueryYieldsValidFirstEvent()
+		{
 			var collector = new Collector(test_calinfo, settings);
-            var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args);
-            var es = new ZonedEventStore(test_calinfo, null);
-            collector.AddEventfulEvent(es, test_venue, events.First());
-            Assert.That(es.events[0].title != "");
-        }
+			var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args);
+			var es = new ZonedEventStore(test_calinfo, null);
+			collector.AddEventfulEvent(es, test_venue, events.First());
+			Assert.That(es.events[0].title != "");
+		}
 
 		[Test]
 		public void UpcomingCanCallApi()
@@ -177,33 +177,33 @@ END:VCALENDAR";
 			Assert.That(stat.First().ToString() == "ok");
 		}
 
-        [Test]
-        public void UpcomingQueryYieldsNonzeroEvents()
-        {
-            string method = "event.search";
+		[Test]
+		public void UpcomingQueryYieldsNonzeroEvents()
+		{
+			string method = "event.search";
 			var calinfo = new Calinfo("sfcals");
 			var collector = new Collector(calinfo, settings);
-            var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method);
-            //Console.WriteLine(events.Count());
-            Assert.That(events.Count() > 0);
-        }
+			var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method);
+			//Console.WriteLine(events.Count());
+			Assert.That(events.Count() > 0);
+		}
 
-        [Test]
-        public void UpcomingQueryYieldsValidFirstEvent()
-        {
-            string method = "event.search";
+		[Test]
+		public void UpcomingQueryYieldsValidFirstEvent()
+		{
+			string method = "event.search";
 			var calinfo = new Calinfo("sfcals");
 			var collector = new Collector(calinfo, settings);
-            var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method);
-            var es = new ZonedEventStore(test_calinfo, null);
-            //Console.WriteLine(events.Count());
-            var evt = events.First();
-            string str_dtstart = evt.Attribute("utc_start").Value;
-            var dtstart = Utils.DateTimeFromDateStr(str_dtstart);
-            var dtstart_with_zone = new Utils.DateTimeWithZone(dtstart, test_calinfo.tzinfo);
-            collector.AddUpcomingEvent(es, test_venue, evt, dtstart_with_zone);
-            Assert.That(es.events[0].title != "");
-        }
-    }
+			var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method);
+			var es = new ZonedEventStore(test_calinfo, null);
+			//Console.WriteLine(events.Count());
+			var evt = events.First();
+			string str_dtstart = evt.Attribute("utc_start").Value;
+			var dtstart = Utils.DateTimeFromDateStr(str_dtstart);
+			var dtstart_with_zone = new Utils.DateTimeWithZone(dtstart, test_calinfo.tzinfo);
+			collector.AddUpcomingEvent(es, test_venue, evt, dtstart_with_zone);
+			Assert.That(es.events[0].title != "");
+		}
+	}
 }
 
