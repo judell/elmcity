@@ -24,17 +24,17 @@ def blob_time_to_dt(blob):
   lm = blob['Last-Modified']
   return System.DateTime.Parse(lm)
 
-def is_recent_blob(blob):
+def is_recent_blob(blob, interval):
   now = System.DateTime.UtcNow
   last_mod = blob_time_to_dt(blob)
   diff = now - last_mod
-  return diff <= System.TimeSpan.FromMinutes(int(worker_interval))
+  return diff <= System.TimeSpan.FromMinutes(int(interval))
 
 def is_recent_web_blob(blob):
-  return  blob['Name'].startswith('web') and is_recent_blob(blob)
+  return  blob['Name'].startswith('web') and is_recent_blob(blob, web_interval)
 
 def is_recent_worker_blob(blob):
-  return  blob['Name'].startswith('worker') and is_recent_blob(blob)
+  return  blob['Name'].startswith('worker') and is_recent_blob(blob, worker_interval)
 
 def is_html_blob(blob):
   return blob['Name'].endswith('html')
@@ -49,23 +49,17 @@ def title(blob):
   return re.findall('_.+_([^\.]+)', blob['Name'])[0]
 
 recent_worker_blobs = [blob for blob in r if is_recent_worker_blob(blob)]
-
-recent_worker_gifs = [blob for blob in recent_worker_blobs if is_gif_blob(blob)]
-
-recent_worker_htmls = [blob for blob in recent_worker_blobs if is_html_blob(blob)]
-
 recent_web_blobs = [blob for blob in r if is_recent_web_blob(blob)]
 
-recent_web_gifs = [blob for blob in recent_web_blobs if is_gif_blob(blob)]
+recent_worker_gifs = [blob for blob in recent_worker_blobs if is_gif_blob(blob)]
+recent_worker_htmls = [blob for blob in recent_worker_blobs if is_html_blob(blob)]
 
+recent_web_gifs = [blob for blob in recent_web_blobs if is_gif_blob(blob)]
 recent_web_htmls = [blob for blob in recent_web_blobs if is_html_blob(blob)]
 
 recent_web_hosts = list(set([hostname(blob) for blob in recent_web_blobs]))
-
 recent_web_gif_titles = list(set([title(blob) for blob in recent_web_gifs]))
-
 recent_web_html_titles = list(set([title(blob) for blob in recent_web_htmls]))
-
 recent_worker_gif_titles = list(set([title(blob) for blob in recent_worker_gifs]))
 
 recent_gifs = recent_worker_gifs + recent_web_gifs
@@ -98,5 +92,5 @@ try:
   GenUtils.LogMsg('info', 'dashboard.py make_gif', None)
   make_gif_page('recent_gifs', recent_gifs, 49)
 except:
-  GenUtils.LogMsg('exception', 'dashboard.py', format_traceback() )
+  GenUtils.PriorityLogMsg('exception', 'dashboard.py', format_traceback() )
   
