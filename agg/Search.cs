@@ -182,7 +182,7 @@ namespace CalendarAggregator
 					}
 					catch (Exception ex1)
 					{
-						GenUtils.LogMsg("exception", "search_location: google: " + where, ex1.Message);
+						GenUtils.PriorityLogMsg("exception", "search_location: google: " + where, ex1.Message);
 					}
 					try
 					{
@@ -192,7 +192,7 @@ namespace CalendarAggregator
 					}
 					catch (Exception ex2)
 					{
-						GenUtils.LogMsg("exception", "search_location: bing: " + where, ex2.Message);
+						GenUtils.PriorityLogMsg("exception", "search_location: bing: " + where, ex2.Message);
 					}
 				}
 			}
@@ -235,7 +235,7 @@ namespace CalendarAggregator
 				}
 				catch
 				{
-					GenUtils.LogMsg("exception", "BingSearch", search_url.ToString());
+					GenUtils.PriorityLogMsg("exception", "BingSearch", search_url.ToString());
 				}
 			}
 
@@ -288,7 +288,7 @@ namespace CalendarAggregator
 				}
 				catch 
 				{
-					GenUtils.LogMsg("exception", "GoogleSearch", search_url.ToString());
+					GenUtils.PriorityLogMsg("exception", "GoogleSearch", search_url.ToString());
 				}
 
 			}

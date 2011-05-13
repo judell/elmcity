@@ -155,7 +155,7 @@ namespace CalendarAggregator
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "StoreFeedsAndMaybeMetadataToAzure (reload) " + id + " : " + feedurl, e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "StoreFeedsAndMaybeMetadataToAzure (reload) " + id + " : " + feedurl, e.Message + e.StackTrace);
             }
 
 			return dicts;
@@ -197,7 +197,7 @@ namespace CalendarAggregator
                     }
                     catch (Exception e)
                     {
-                        GenUtils.LogMsg("exception", "PurgeDeletedFeeds: " + id + ", " + source, e.Message + e.StackTrace);
+                        GenUtils.PriorityLogMsg("exception", "PurgeDeletedFeeds: " + id + ", " + source, e.Message + e.StackTrace);
                     }
                 }
             }
@@ -382,7 +382,7 @@ namespace CalendarAggregator
             catch (Exception e)
             {
 				outcome = MetadataQueryOutcome.Error;
-                GenUtils.LogMsg("exception", "FetchMetadataFromDeliciousForUrlAndId: " + metadata_url, e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "FetchMetadataFromDeliciousForUrlAndId: " + metadata_url, e.Message + e.StackTrace);
             }
 
             return new DeliciousResponse(http_response, dict, outcome: outcome);
@@ -508,7 +508,7 @@ namespace CalendarAggregator
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "delicious.count_feeds", e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "delicious.count_feeds", e.Message + e.StackTrace);
             }
             return new DeliciousResponse(http_response, int_response: count, outcome: outcome);
         }
@@ -594,9 +594,7 @@ namespace CalendarAggregator
         {
             feedurl = Uri.EscapeDataString(Uri.EscapeDataString(feedurl));
             string tags = Configurator.delicious_trusted_ics_feed;
-            string args = string.Format("&url={0}&tags={1}&description={2}", feedurl, tags, name);
-            var url = string.Format("{0}/posts/add?{1}", apibase, args);
-            return DoAuthorizedRequest(url);
+			return PostDeliciousBookmark(name, feedurl, tags);
         }
 
         public HttpResponse DeleteTrustedIcsFeed(string feedurl)
@@ -664,6 +662,20 @@ namespace CalendarAggregator
         }
 
         #endregion contributors
+
+		public HttpResponse PostDeliciousBookmark(string description, string url, string tags, string user, string pass)
+		{
+			var post_url = MakePostUrl(description, url, tags);
+			return DoAuthorizedRequestUserPass(post_url, user, pass);
+		}
+
+
+
+		public HttpResponse PostDeliciousBookmark(string description, string url, string tags)
+		{
+			var post_url = MakePostUrl(description, url, tags);
+			return DoAuthorizedRequest(post_url);
+		}
 
 		public static string DeliciousCheck(string id)
 		{
@@ -734,7 +746,7 @@ this information: ",
 			}
 
 			GenUtils.LogMsg("warning", "DeliciousCheck", "unexpected case");
-			TwitterApi.SendTwitterDirectMessage(Configurator.delicious_master_account, "DeliciousCheck: unexpected case for: " + id);
+			TwitterApi.SendTwitterDirectMessage(Configurator.twitter_account, "DeliciousCheck: unexpected case for: " + id);
 			html = "<p>Sorry, there was a problem. It has been logged and will be investigated.";
 			return html;
 		}
@@ -785,12 +797,24 @@ this information: ",
             return bookmark_url;
         }
 
+		private static string MakePostUrl(string description, string url, string tags)
+		{
+			string args = string.Format("&url={0}&tags={1}&description={2}", url, tags, description);
+			var post_url = string.Format("{0}/posts/add?{1}", apibase, args);
+			return post_url;
+		}
+
         private HttpResponse DoAuthorizedRequest(string url)
         {
             var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
             return HttpUtils.DoAuthorizedHttpRequest(request, this.username, this.password, new byte[0]);
         }
 
+		private HttpResponse DoAuthorizedRequestUserPass(string url, string user, string pass)
+		{
+			var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+			return HttpUtils.DoAuthorizedHttpRequest(request, user, pass, new byte[0]);
+		}
         private static Dictionary<string, string> InjectTestKeysAndVals(Dictionary<string, string> dict, Dictionary<string, string> extra)
         {
             if (extra != null)
@@ -802,6 +826,16 @@ this information: ",
             return dict;
         }
 
+		public static string MetadictToTagString(Dictionary<string,string> metadict)
+		{
+			var tag_string = "";
+			foreach ( var key in metadict.Keys )
+			{
+				var value = metadict[key].Replace(' ', '+');
+				tag_string += key + "=" + value + ' ';
+			}
+			return tag_string;
+		}
 
     }
 }

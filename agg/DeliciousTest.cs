@@ -37,6 +37,8 @@ namespace CalendarAggregator
         private const string test_hub_key = "testkey";
         private const string test_hub_value = "123";
 
+		private const string test_update_key = "test_update";
+
         private const string test_prop_prefix = Configurator.test_metadata_property_key_prefix;
         private const string test_prop_key = test_prop_prefix + Configurator.test_metadata_property_key;
         private const string test_prop_value = Configurator.test_metadata_property_value;
@@ -66,6 +68,18 @@ namespace CalendarAggregator
             delicious = new Delicious(test_account_name, test_delicious_password);
             fr = new FeedRegistry(ElmcityUtils.Configurator.azure_compute_account);
         }
+
+		[Test]
+		public void PostBookmarkWithTagsIsSuccessful()
+		{
+			var now = System.DateTime.UtcNow.Ticks.ToString();
+			var metadict = Delicious.FetchMetadataForIdFromDelicious(test_account_name).dict_response;
+			metadict[test_update_key] = now;
+			var tag_string = Delicious.MetadictToTagString(metadict);
+			delicious.PostDeliciousBookmark("metadata", "http://delicious.com/elmcity/metadata", tag_string);
+			metadict = Delicious.FetchMetadataForIdFromDelicious(test_account_name).dict_response;
+			Assert.That(metadict[test_update_key] == now);
+		}
 
         # region eventful
 

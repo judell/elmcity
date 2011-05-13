@@ -181,8 +181,9 @@ END:VCALENDAR";
         public void UpcomingQueryYieldsNonzeroEvents()
         {
             string method = "event.search";
-			var collector = new Collector(test_calinfo, settings);
-            var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method, test_upcoming_args);
+			var calinfo = new Calinfo("sfcals");
+			var collector = new Collector(calinfo, settings);
+            var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method);
             //Console.WriteLine(events.Count());
             Assert.That(events.Count() > 0);
         }
@@ -191,8 +192,9 @@ END:VCALENDAR";
         public void UpcomingQueryYieldsValidFirstEvent()
         {
             string method = "event.search";
-			var collector = new Collector(test_calinfo, settings);
-            var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method, test_upcoming_args);
+			var calinfo = new Calinfo("sfcals");
+			var collector = new Collector(calinfo, settings);
+            var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method);
             var es = new ZonedEventStore(test_calinfo, null);
             //Console.WriteLine(events.Count());
             var evt = events.First();

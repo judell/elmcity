@@ -147,7 +147,7 @@ namespace CalendarAggregator
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "GetNewTwitterDirectMessages", e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "GetNewTwitterDirectMessages", e.Message + e.StackTrace);
             }
             return new_messages;
         }

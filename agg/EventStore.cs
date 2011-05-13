@@ -211,7 +211,7 @@ namespace CalendarAggregator
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "DeserializeZoned: " + uri.ToString(), e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "DeserializeZoned: " + uri.ToString(), e.Message + e.StackTrace);
             }
         }
 

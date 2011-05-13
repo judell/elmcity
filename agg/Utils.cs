@@ -28,10 +28,47 @@ using DDay.iCal.DataTypes;
 using ElmcityUtils;
 using LINQtoCSV;
 using Newtonsoft.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 
 namespace CalendarAggregator
 {
+	public static class DictionaryExtensions
+	{
+		public static void AddOrUpdateDDayEvent(this Dictionary<string, DDay.iCal.Components.Event> dict, string key, DDay.iCal.Components.Event evt)
+		{
+			if (dict.ContainsKey(key))
+				dict[key] = evt;
+			else
+				dict.Add(key, evt);
+		}
+
+		public static void AddOrUpdateXElement(this Dictionary<string, XElement> dict, string key, XElement element)
+		{
+			if (dict.ContainsKey(key))
+				dict[key] = element;
+			else
+				dict.Add(key, element);
+		}
+
+		public static void AddOrUpdateFacebookEvent(this Dictionary<string, FacebookEvent> dict, string key, FacebookEvent fb_event)
+		{
+			if (dict.ContainsKey(key))
+				dict[key] = fb_event;
+			else
+				dict.Add(key, fb_event);
+		}
+
+		public static void AddOrUpdateEventWithRecurrenceType(this Dictionary<DDay.iCal.Components.Event, Collector.RecurrenceType> dict, DDay.iCal.Components.Event evt, Collector.RecurrenceType recurrence_type)
+		{
+			if (dict.ContainsKey(evt))
+				dict[evt] = recurrence_type;
+			else
+				dict.Add(evt, recurrence_type);
+		}
+
+	}
 
 	public static class Utils
 	{
@@ -300,7 +337,7 @@ namespace CalendarAggregator
 			catch (Exception e)
 			{
 				tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
-				GenUtils.LogMsg("exception", "no such tz: " + name, e.Message);
+				GenUtils.PriorityLogMsg("exception", "no such tz: " + name, e.Message);
 			}
 
 			return tzinfo;
@@ -409,7 +446,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "lookup_non_us_pop", e.Message);
+				GenUtils.PriorityLogMsg("exception", "lookup_non_us_pop", e.Message);
 			}
 			return pop;
 		}
@@ -437,7 +474,7 @@ namespace CalendarAggregator
 			}
 			catch (AggregatedException ae)
 			{
-				GenUtils.LogMsg("exception", "lookup_us_pop", ae.Message);
+				GenUtils.PriorityLogMsg("exception", "lookup_us_pop", ae.Message);
 				/*
 				List<Exception> innerExceptionsList =
 					(List<Exception>)ae.Data["InnerExceptionsList"];
@@ -531,7 +568,7 @@ namespace CalendarAggregator
 
 		public static void ScheduleTimer(ElapsedEventHandler handler, int minutes, string name, bool startnow)
 		{
-			var timer = new Timer();
+			var timer = new System.Timers.Timer();
 			timer.Elapsed += handler;
 			timer.AutoReset = true;
 			timer.Interval = 1000 * 60 * minutes;
@@ -551,7 +588,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception ex)
 				{
-					GenUtils.LogMsg("exception", "schedule_timer: startnow: " + name, ex.Message + ex.StackTrace);
+					GenUtils.PriorityLogMsg("exception", "schedule_timer: startnow: " + name, ex.Message + ex.StackTrace);
 				}
 			}
 
@@ -615,7 +652,7 @@ namespace CalendarAggregator
 
 		public static List<Dictionary<string, string>> FilterByAllOrId(List<Dictionary<string, string>> entries, string id)
 		{
-			return entries.FindAll(entry => (id == "all") || entry["message"].Contains(id));
+			return entries.FindAll(entry => (id == "priority" || id == "all" || entry["message"].Contains(id) ) );
 		}
 
 		public static void GetLogEntriesLaterThanTicks(long ticks, string id, ByAllOrId filter, StringBuilder sb)
@@ -906,6 +943,131 @@ namespace CalendarAggregator
 		
 		#endregion other
 
+	}
+
+	[Serializable]
+	public class WebRoleData
+	{
+		public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
+		public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
+		public static string domain_name = AppDomain.CurrentDomain.FriendlyName;
+		public static int thread_id = System.Threading.Thread.CurrentThread.ManagedThreadId;
+
+		// on startup, and then periodically, a calinfo and a renderer is constructed for each hub
+		public Dictionary<string, Calinfo> calinfos = new Dictionary<string, Calinfo>();
+		public Dictionary<string, CalendarRenderer> renderers = new Dictionary<string, CalendarRenderer>();
+
+		public List<string> where_ids = new List<string>();
+		public List<string> what_ids = new List<string>();
+
+		// on startup, and then periodically, this list of "ready" hubs is constructed
+		// ready means that the hub has been added to the system, and there has been at 
+		// least one successful aggregation run resulting in an output like:
+		// http://elmcity.cloudapp.net/services/ID/html
+
+		public List<string> ready_ids = new List<string>();
+
+		// the stringified version of the list controls the namespace, under /services, that the
+		// service responds to. so when a new hub is added, say Peekskill, NY, with id peekskill, 
+		// the /services/peekskill family of URLs won't become active until the hub joins the list of ready_ids
+		public string str_ready_ids;
+
+		public WebRoleData(bool testing, string test_id)
+		{
+			GenUtils.LogMsg("info", String.Format("WebRoleData: {0}, {1}, {2}, {3}", procname, procid, domain_name, thread_id), null);
+
+			if (testing) // reduce the list to a single test id
+			{
+				this.calinfos = new Dictionary<string, Calinfo>();
+				this.calinfos.Add(test_id, new Calinfo(test_id));
+			}
+			else  // construct the full list of hubs 
+
+			this.calinfos = CalendarAggregator.Configurator.Calinfos;
+
+			MakeWhereAndWhatIdLists();
+
+			List<string> calinfo_keys = this.calinfos.Keys.ToList();
+
+			Parallel.ForEach(calinfo_keys, id =>
+			//foreach (var id in calinfo_keys)
+			{
+				GenUtils.LogMsg("info", "GatherWebRoleData: readying: " + id, null);
+
+				CalendarRenderer cr;
+
+				cr = AcquireRenderer(id, this.calinfos[id]);
+
+				if (this.renderers.ContainsKey(id))
+					this.renderers[id] = cr;
+				else
+					this.renderers.Add(id, cr);
+
+				if (BlobStorage.ExistsBlob(id, id + ".html")) // there has been at least one aggregation
+					this.ready_ids.Add(id);
+			});
+			//}
+
+			// this pipe-delimited string defines allowed IDs in the /services/ID/... URL pattern
+			this.str_ready_ids = String.Join("|", this.ready_ids.ToArray());
+			GenUtils.LogMsg("info", "GatherWebRoleData: str_ready_ids: " + this.str_ready_ids, null);
+		}
+
+		public static CalendarRenderer AcquireRenderer(string id, Calinfo calinfo)
+		{
+			CalendarRenderer cr;
+			try
+			{
+				//var renderer_uri = new Uri(string.Format("{0}/{1}/{2}.renderer.obj", ElmcityUtils.Configurator.azure_blobhost, id.ToLower(), id));
+				var name = id + ".renderer.obj";
+				var renderer_uri = BlobStorage.MakeAzureBlobUri(id, name);
+				cr = (CalendarRenderer)BlobStorage.DeserializeObjectFromUri(renderer_uri);
+			}
+			catch (Exception e)
+			{
+				var msg = "GatherWebRoleData: renderer rehydration: " + id;
+				GenUtils.PriorityLogMsg("exception", msg, e.Message, TableStorage.MakeDefaultTableStorage());
+				cr = new CalendarRenderer(calinfo);
+			}
+			return cr;
+		}
+
+		public static WebRoleData UpdateCalinfoAndRendererForId(string id, WebRoleData wrd)
+		{
+			try
+			{
+				var calinfo = new Calinfo(id);
+				wrd.calinfos[id] = calinfo;
+			}
+			catch (Exception e1)
+			{
+				GenUtils.PriorityLogMsg("exception", "UpdateCalinfoAndRendererForId", e1.Message);
+			}
+			try
+			{
+				var cr = AcquireRenderer(id, wrd.calinfos[id]);
+				wrd.renderers[id] = cr;
+			}
+			catch (Exception e2)
+			{
+				GenUtils.PriorityLogMsg("exception", "UpdateCalinfoAndRendererForId", e2.Message);
+			}
+			return wrd;
+		}
+
+		private void MakeWhereAndWhatIdLists()
+		{
+			this.where_ids = this.calinfos.Keys.ToList().FindAll(id => this.calinfos[id].hub_type == CalendarAggregator.HubType.where.ToString());
+			var where_ids_as_str = string.Join(",", this.where_ids.ToArray());
+			GenUtils.LogMsg("info", "where_ids: " + where_ids_as_str, null);
+
+			this.what_ids = this.calinfos.Keys.ToList().FindAll(id => this.calinfos[id].hub_type == CalendarAggregator.HubType.what.ToString());
+			var what_ids_as_str = string.Join(",", this.what_ids.ToArray());
+			GenUtils.LogMsg("info", "what_ids: " + what_ids_as_str, null);
+
+			this.where_ids.Sort((a, b) => this.calinfos[a].where.ToLower().CompareTo(this.calinfos[b].where.ToLower()));
+			this.what_ids.Sort();
+		}
 	}
 
 	public class USCensusPopulationData

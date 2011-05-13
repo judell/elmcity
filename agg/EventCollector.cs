@@ -15,6 +15,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -30,75 +32,6 @@ using ElmcityUtils;
 
 namespace CalendarAggregator
 {
-	// encapsulates stats for non-ical sources
-	public class NonIcalStats
-	{
-		public int eventcount
-		{
-			get { return _eventcount; }
-			set { _eventcount = value; }
-		}
-		private int _eventcount;
-
-		public int venuecount
-		{
-			get { return _venuecount; }
-			set { _venuecount = value; }
-		}
-		private int _venuecount;
-
-		public DateTime whenchecked
-		{
-			get { return _whenchecked; }
-			set { _whenchecked = value; }
-		}
-		private DateTime _whenchecked;
-
-		public string blobname
-		{
-			get { return _blobname; }
-			set { _blobname = value; }
-		}
-		private string _blobname;
-
-	}
-
-	// encapsulates the json object that's returned by FacebookIterator. 
-	public class FacebookEvent
-	{
-		public string name;
-		public string location;
-		public string start_time;
-		public string id;
-
-		// contrast with the Eventful|Upcoming|Eventbrite iterators, which use XElements coming from the XML APIs
-		// of those services.
-
-		// all the iterators are "IEnumerable-of-T" -- that is, they iterate over types. since XElement is a type
-		// there was no need to encapsulate it for the other iterators. 
-
-		// given that what comes back from Facebook's json API is a Dictionary<string,object>, the iterator could be:
-
-		// public IEnumerable<Dictonary<string,object>> FacebookIterator(string method, string args)
-
-		// but instead, it is:
-
-		// public IEnumerable<FacebookEvent> FacebookIterator(string method, string args)
-
-		// cost: the effort of defining and using a FacebookEvent object
-		// benefit: the object is self-documenting, no need to remember or look up dictionary keys
-
-		// note: the same cost/benefit would apply to the other iterators. doing things both ways
-		// here just because you can, and because the tradeoffs in this case seem like a wash
-		public FacebookEvent(string name, string location, string start_time, string id)
-		{
-			this.name = name;
-			this.location = location;
-			this.start_time = start_time;
-			this.id = id;
-		}
-	}
-
 	public class Collector
 	{
 		private Calinfo calinfo;
@@ -108,10 +41,13 @@ namespace CalendarAggregator
 		private BlobStorage bs;
 		private Delicious delicious;
 
+		public enum RecurrenceType { Recurring, NonRecurring };
+
 		private Dictionary<string, string> metadict = new Dictionary<string, string>();
 		private int population;
 
 		private enum EventFlavor { ical, eventful, upcoming, eventbrite, facebook };
+		private enum UpcomingSearchStyle { location, latlon };
 
 		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
@@ -221,7 +157,7 @@ namespace CalendarAggregator
 
 						var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.calinfo.delicious_account);
 						var _feedurl = MaybeRedirect(feedurl, feed_metadict);
-
+						    
 						MaybeValidate(fr, feedurl, _feedurl);
 
 						var feedtext = "";
@@ -234,7 +170,7 @@ namespace CalendarAggregator
 						{
 							var msg = String.Format("{0}: {1} cannot retrieve feed", id, source);
 							GenUtils.LogMsg("warning", msg, null);
-							//continue;
+						    //continue;
 							return; // http://stackoverflow.com/questions/3765038/is-there-an-equivalent-to-continue-in-a-parallel-foreach
 						}
 
@@ -244,6 +180,9 @@ namespace CalendarAggregator
 						{
 							ical = iCalendar.LoadFromStream(sr);
 
+							var events_to_include = new List<DDay.iCal.Components.Event>();
+							var event_recurrence_types = new Dictionary<DDay.iCal.Components.Event, RecurrenceType>();
+
 							if (ical == null || ical.Events.Count == 0)
 							{
 								var msg = String.Format("{0}: no events found for {1}", id, source);
@@ -252,27 +191,55 @@ namespace CalendarAggregator
 								return;
 							}
 
-							foreach (DDay.iCal.Components.Event evt in ical.Events)
-								ProcessIcalEvent(fr, es, utc_midnight_in_tz, then, feedurl, source, evt, ical);
+							var ical_tmp = NewCalendarWithTimezone();
+			 
+							foreach (DDay.iCal.Components.Event evt in ical.Events)             // gather future events
+								IncludeFutureEvent(events_to_include, event_recurrence_types, evt, utc_midnight_in_tz, then, ical_tmp);
 
+							var titles = events_to_include.Select(evt => evt.Summary.ToString()).OrderBy(title => title);
+
+							var uniques = new Dictionary<string, DDay.iCal.Components.Event>(); // dedupe by summary + start
+							foreach (var evt in events_to_include)
+							{
+								var key = evt.Summary.ToString() + evt.DTStart.ToString();
+								uniques.AddOrUpdateDDayEvent(key, evt);
+							}
+
+							HashSet<string> recurring_uids = new HashSet<string>();
+
+							foreach (var unique in uniques.Values)                       // count as single event or instance of recurring
+							{
+								fr.stats[feedurl].futurecount++;
+								var recurrence_type = event_recurrence_types[unique];
+								if (recurrence_type == RecurrenceType.Recurring)
+								{
+									fr.stats[feedurl].recurringinstancecount++;
+									recurring_uids.Add(unique.UID);
+								}
+								else
+									fr.stats[feedurl].singlecount++;
+							}
+
+							fr.stats[feedurl].recurringcount = recurring_uids.Count;    // count recurring events
+
+							foreach (var unique in uniques.Values)                      // add to eventstore
+								AddIcalEvent(unique, fr, es, feedurl, source);
 						}
 						catch (Exception e)
 						{
-							GenUtils.LogMsg("exception", "CollectIcal: " + id, e.Message + e.StackTrace);
+							GenUtils.PriorityLogMsg("exception", "CollectIcal: " + id, e.Message);
 							fr.stats[feedurl].dday_error = e.Message;
 						}
 					}
+
 					catch (Exception e)
 					{
-						GenUtils.LogMsg("exception", feedurl, e.Message + e.StackTrace);
+						GenUtils.PriorityLogMsg("exception", feedurl, e.Message);
 					}
 
 				}
 
-
 				); 
-
-
 
 				if (nosave == false) // why ever true? see CalendarRenderer.Viewer 
 					SerializeStatsAndIntermediateOutputs(fr, es, ical_ical, new NonIcalStats(), EventFlavor.ical);
@@ -291,7 +258,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("exception", "DDay_Validate: " + e.Message, _feedurl);
+					GenUtils.PriorityLogMsg("exception", "DDay_Validate: " + e.Message, _feedurl);
 				}
 			}
 		}
@@ -363,7 +330,7 @@ namespace CalendarAggregator
 			}
 		}
 
-		private void ProcessIcalEvent(FeedRegistry fr, ZonedEventStore es, DateTime midnight_in_tz, DateTime then, string feedurl, string source, DDay.iCal.Components.Event evt, iCalendar ical)
+		private void IncludeFutureEvent(List<DDay.iCal.Components.Event> events_to_include, Dictionary<DDay.iCal.Components.Event, RecurrenceType> event_recurrence_types, DDay.iCal.Components.Event evt, DateTime midnight_in_tz, DateTime then, DDay.iCal.iCalendar ical)
 		{
 			try
 			{
@@ -371,24 +338,20 @@ namespace CalendarAggregator
 				{
 					if (IsCurrentOrFutureDTStartInTz(evt.DTStart))
 					{
-						fr.stats[feedurl].singlecount++;
-						fr.stats[feedurl].futurecount++;
-						AddIcalEvent(evt, fr, es, feedurl, source);
+						events_to_include.Add(evt);
+						event_recurrence_types.AddOrUpdateEventWithRecurrenceType(evt, RecurrenceType.NonRecurring);
 					}
 				}
-
 				else // recurring
 				{
-					List<Occurrence> occurrences = evt.GetOccurrences(midnight_in_tz, then);
-					fr.stats[feedurl].recurringcount++;
+					var occurrences = evt.GetOccurrences(midnight_in_tz, then);
 					foreach (Occurrence occurrence in occurrences)
 					{
 						if (IsCurrentOrFutureDTStartInTz(occurrence.Period.StartTime))
 						{
-							fr.stats[feedurl].recurringinstancecount++;
-							fr.stats[feedurl].futurecount++;
-							PeriodizeRecurringEvent(evt, ical, occurrence.Period);
-							AddIcalEvent(evt, fr, es, feedurl, source);
+							var instance = PeriodizeRecurringEvent(evt, ical, occurrence.Period);
+							events_to_include.Add(instance);
+							event_recurrence_types.AddOrUpdateEventWithRecurrenceType(instance, RecurrenceType.Recurring);
 						}
 					}
 				}
@@ -396,19 +359,47 @@ namespace CalendarAggregator
 
 			catch (Exception e)
 			{
-				var msg = Utils.MakeLengthLimitedExceptionMessage(e);  // could be voluminous, so maybe truncate
-				var error = string.Format("Error loading event {0}: {1}");
-				GenUtils.LogMsg("exception", error, "");
-				fr.stats[feedurl].dday_error = error;
-				fr.stats[feedurl].valid = false;
-				fr.stats[feedurl].score = "0";
+				GenUtils.PriorityLogMsg("exception", "IncludeFutureEvent", e.Message);
 			}
 		}
 
-		// update the DDay.iCal event's dtstart (and maybe dtend) with Year/Month/Day for this occurrence
-		private static void PeriodizeRecurringEvent(DDay.iCal.Components.Event evt, iCalendar ical, Period period)
+
+	private void ProcessIcalEvent(DDay.iCal.Components.Event evt, ZonedEventStore es, FeedRegistry fr, DateTime midnight_in_tz, DateTime then, string feedurl, string source)
 		{
-			var dtstart = new iCalDateTime(
+			try
+			{
+				if (evt.RRule == null) // non-recurring
+				{
+					fr.stats[feedurl].singlecount++;
+					fr.stats[feedurl].futurecount++;
+
+				}
+				else // recurring
+				{
+					fr.stats[feedurl].recurringinstancecount++;
+					fr.stats[feedurl].futurecount++;
+					AddIcalEvent(evt, fr, es, feedurl, source);
+				}
+			}
+
+			catch (Exception e)
+			{
+				var msg = Utils.MakeLengthLimitedExceptionMessage(e);  // could be voluminous, so maybe truncate
+				var error = string.Format("Error loading event {0}: {1}", source, evt.Summary);
+				GenUtils.PriorityLogMsg("exception", error, msg);
+				//fr.stats[feedurl].dday_error = error;
+				//fr.stats[feedurl].valid = false;
+				//fr.stats[feedurl].score = "0";
+			}
+		}
+
+		// clone the DDay.iCal event, update dtstart (and maybe dtend) with Year/Month/Day for this occurrence
+		private DDay.iCal.Components.Event PeriodizeRecurringEvent(DDay.iCal.Components.Event evt, iCalendar ical, Period period)
+		{
+			iCalDateTime dtstart = null;
+			iCalDateTime dtend = null;
+
+			dtstart = new iCalDateTime(
 				period.StartTime.Year,
 				period.StartTime.Month,
 				period.StartTime.Day,
@@ -418,11 +409,9 @@ namespace CalendarAggregator
 				evt.DTStart.TZID,
 				ical);
 
-			evt.DTStart = evt.Start = dtstart;
-
 			if (evt.DTEnd != null)
 			{
-				var dtend = new iCalDateTime(
+				dtend = new iCalDateTime(
 					period.EndTime.Year,
 					period.EndTime.Month,
 					period.EndTime.Day,
@@ -431,9 +420,18 @@ namespace CalendarAggregator
 					evt.DTEnd.Second,
 					evt.DTEnd.TZID,
 					ical);
-
-				evt.DTEnd = evt.End = dtend;
 			}
+
+			var instance = new DDay.iCal.Components.Event(ical);
+			instance.DTStart = instance.Start = dtstart;
+			instance.DTEnd = instance.DTEnd = dtend;
+			instance.Summary = evt.Summary;
+			instance.Description = evt.Description;
+			instance.Categories = evt.Categories;
+			instance.Location = evt.Location;
+			instance.Geo = evt.Geo;
+			instance.UID = evt.UID;
+			return instance;
 		}
 
 		// save the intermediate ics file for the source flavor represented in ical
@@ -462,12 +460,10 @@ namespace CalendarAggregator
 
 			if (evt.Categories != null && evt.Categories.Count() > 0)
 			{
-				var categories = evt.Categories.First().ToString();
-				//es.AddEvent(evt.Summary, evt.Url.ToString(), source, dtstart, dtend, evt.IsAllDay, categories);
+				var categories = string.Join(",", evt.Categories.ToList().Select(cat => cat.ToString()));
 				es.AddEvent(evt.Summary, evt.Url.ToString(), source, dtstart, dtend, this.calinfo.lat, this.calinfo.lon, evt.IsAllDay, categories);
 			}
 			else
-				//es.AddEvent(evt.Summary, evt.Url.ToString(), source, dtstart, dtend, evt.IsAllDay);
 				es.AddEvent(evt.Summary, evt.Url.ToString(), source, dtstart, dtend, this.calinfo.lat, this.calinfo.lon, evt.IsAllDay);
 
 			//var evt_tmp = MakeTmpEvt(dtstart, title, event_url, source, all_day, use_utc: true);
@@ -494,7 +490,7 @@ namespace CalendarAggregator
 					}
 					catch (Exception e)
 					{
-						GenUtils.LogMsg("exception", "AddIcalEvent: cannot make evt.Geo", e.Message + e.StackTrace);
+						GenUtils.PriorityLogMsg("exception", "AddIcalEvent: cannot make evt.Geo", e.Message + e.StackTrace);
 					}
 				}
 			}
@@ -509,130 +505,124 @@ namespace CalendarAggregator
 				if (evt.Description == null) evt.Description = "";
 				if (evt.Location == null) evt.Location = "";
 
-				var feed_metadict = new Dictionary<string, string>();
-				if (per_feed_metadata_cache.ContainsKey(feedurl))
-					feed_metadict = per_feed_metadata_cache[feedurl];
-				else
-				{
-					try
-					{
-						feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.calinfo.delicious_account);
-						per_feed_metadata_cache[feedurl] = feed_metadict;
-					}
-					catch (Exception e)
-					{
-						GenUtils.LogMsg("exception", "NormalizeIcalEvt", e.Message + e.StackTrace);
-					}
-				}
-
-				// first apply the feed-level url if any
-
-				if (feed_metadict.ContainsKey("url") && String.IsNullOrEmpty(evt.Url.ToString()))
-					evt.Url = feed_metadict["url"];
-
-				// then the event-level url if Description is Url
-
-				if (String.IsNullOrEmpty(evt.Url.ToString()))
-					if ((!String.IsNullOrEmpty(evt.Description)) && evt.Description.ToString().StartsWith("http://"))
-						evt.Url = evt.Description.ToString();
-
-				// or if in Location is Url
-
-				if (String.IsNullOrEmpty(evt.Url.ToString()) && evt.Location.ToString().StartsWith("http://"))
-					evt.Url = evt.Location.ToString();
-
-				// or if Description has url=Url
+				var feed_metadict = GetFeedMetadictWithCaching(feedurl);
 
 				var metadata_from_description = GenUtils.RegexFindKeysAndValues(Configurator.ical_description_metakeys, evt.Description);
 
-				if (metadata_from_description.ContainsKey("url"))
-					evt.Url = metadata_from_description["url"];
+				SetUrl(evt, feed_metadict, metadata_from_description);
 
-				// apply feed-level categories if any
-
-				MaybeAddCategoriesToEvt(evt, feed_metadict);
-
-				// apply event-level categories from Description, if any
-
-				if (metadata_from_description.ContainsKey("category"))
-					evt.AddCategory(metadata_from_description["category"]);
-
-				// maybe report Url
-
-				if (evt.Location.ToString().Contains(evt.Url.ToString()) == false)
-					evt.Location = string.Format("(see {0})", evt.Url.ToString());
-
-				if ((!String.IsNullOrEmpty(evt.Url.ToString())) && evt.Description.ToString().Contains(evt.Url.ToString()) == false)
-				{
-					var sb = new StringBuilder(evt.Description);
-					string new_desc = string.Format(" (For more info: {0}.)", evt.Url.ToString());
-					evt.Description = sb.Append(new_desc).ToString();
-				}
-
+				SetCategories(evt, feed_metadict, metadata_from_description);
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", this.id + ": adjust_ical_evt", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", this.id + ": NormalizeIcalEvent", e.Message + e.StackTrace);
 			}
 
 			return evt;
 
 		}
 
-		private static void MaybeAddCategoriesToEvt(DDay.iCal.Components.Event evt, Dictionary<string, string> metadict)
+		private static void SetCategories(DDay.iCal.Components.Event evt, Dictionary<string, string> feed_metadict, Dictionary<string, string> metadata_from_description)
 		{
-			if (metadict.ContainsKey("category"))
+			// apply feed-level categories from feed metadata
+
+			if (feed_metadict.ContainsKey("category"))
 			{
-				var cats = metadict["category"];
-				var catlist = cats.Split(',');
-				foreach (var cat in catlist)
-					evt.AddCategory(cat);
+				var cat_string = feed_metadict["category"];
+				AddCategoriesFromCatString(evt, cat_string);
+			}
+
+			// apply event-level categories from Description
+
+			if (metadata_from_description.ContainsKey("category"))
+			{
+				var cat_string = metadata_from_description["category"];
+				AddCategoriesFromCatString(evt, cat_string);
 			}
 		}
 
-		// produce the sources widget used in the default html rendering
-		/* obsolete
-		public static string GetIcalSources(string id)
+		private static void AddCategoriesFromCatString(DDay.iCal.Components.Event evt, string cats)
 		{
-			var fr = new FeedRegistry(id);
-			var delicious = Delicious.MakeDefaultDelicious();
-			fr.LoadFeedsFromAzure();
-			var html = "";
-			var feeds = fr.feeds;
-			string current_feedurl = "";
-			try
+			var catlist = cats.Split(',');
+			foreach (var cat in catlist)
+				evt.AddCategory(cat);
+		}
+
+		private Dictionary<string, string> GetFeedMetadictWithCaching(string feedurl)
+		{
+			var feed_metadict = new Dictionary<string, string>();
+			if (per_feed_metadata_cache.ContainsKey(feedurl))
+				feed_metadict = per_feed_metadata_cache[feedurl];
+			else
 			{
-				foreach (var feedurl in Collector.IcalFeedurlsBySource(fr))
+				try
 				{
-					current_feedurl = feedurl;
-					var source = feeds[feedurl];
-					var metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
-					var home_url = metadict.ContainsKey("url") ? metadict["url"] : "";
-					if (String.IsNullOrEmpty(home_url))
-						html += string.Format(@"{0} (<a title=""iCalendar feed"" href=""{1}"">*</a>), ", source, feedurl);
-					else
-						html += string.Format(@"<a href=""{0}"">{1}</a> (<a title=""iCalendar feed"" href=""{2}"">*</a>), ", home_url, source, feedurl);
+					feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.id);
+					per_feed_metadata_cache[feedurl] = feed_metadict;
 				}
-				html = GenUtils.RegexReplace(html, ", $", "");
-				html += @"<p style=""text-align:right""><a href=""javascript:hide('sources')"">close window</a></p>";
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "NormalizeIcalEvt", e.Message + e.StackTrace);
+				}
 			}
-			catch (Exception e)
-			{
-				GenUtils.LogMsg("CalendarRenderer (get_ical_sources): " + id, e.Message + e.StackTrace, current_feedurl + "," + feeds[current_feedurl]);
-			}
-
-			return html;
+			return feed_metadict;
 		}
 
-		// get list of source feedurls ordered by source name
-		public static List<string> IcalFeedurlsBySource(FeedRegistry fr)
+		private static void SetUrl(DDay.iCal.Components.Event evt, Dictionary<string, string> feed_metadict, Dictionary<string,string> metadata_from_description)
 		{
-			var sorted_items = from k in fr.feeds.Keys
-							   orderby fr.feeds[k] ascending
-							   select k;
-			return sorted_items.ToList();
+			if (EventUrlPropertyIsHttp(evt))  // use the URL property if it exists and is http:
+				return;
+
+			if (feed_metadict.ContainsKey("url"))  // use the feed metadata's URL if it exists
+			{
+				evt.Url = feed_metadict["url"];
+			}
+
+			if (DescriptionNotEmptyAndStartsWithHttp(evt)) // override with event's Description if URL-like
+			{
+				evt.Url = evt.Description.ToString();
+			}
+
+			if (LocationNotEmptyAndStartsWithHttp(evt))   // override with the event's Location if URL-like
+			{
+				evt.Url = evt.Location.ToString();
+			}
+
+			if (metadata_from_description.ContainsKey("url")) // finally override with event's url=URL if it exists
+			{
+				evt.Url = metadata_from_description["url"];
+			}
+
+			// otherwise evt.URL stays empty
+
 		}
-		 */
+
+		private static bool EventUrlPropertyIsHttp(DDay.iCal.Components.Event evt)
+		{
+			string url = evt.Url.ToString();
+			return !String.IsNullOrEmpty(url) && url.StartsWith("http:"); // URL:message:%3C001401cbb263$05c84af0$1158e0d0$@net%3E doesn't qualify
+		}
+
+		private static bool DescriptionNotEmptyAndStartsWithHttp(DDay.iCal.Components.Event evt)
+		{
+			return (!String.IsNullOrEmpty(evt.Description)) && evt.Description.ToString().StartsWith("http://");
+		}
+
+		private static bool LocationNotEmptyAndStartsWithHttp(DDay.iCal.Components.Event evt)
+		{
+			string location = evt.Location.ToString();
+			return !String.IsNullOrEmpty(location) && location.StartsWith("http://");
+		}
+
+		private static bool UrlInLocation(DDay.iCal.Components.Event evt)
+		{
+			return evt.Location.ToString().Contains(evt.Url.ToString()) == false;
+		}
+
+		private static bool UrlNotEmptyAndDescriptionContainsUrl(DDay.iCal.Components.Event evt)
+		{
+			return (!String.IsNullOrEmpty(evt.Url.ToString())) && evt.Description.ToString().Contains(evt.Url.ToString()) == false;
+		}
 
 		// alter feed url if it should be handled by the internal "fusecal" service, or the vcal or xcal converters
 		// todo: make this table-driven 
@@ -717,7 +707,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "RedirectFeedUrl", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "RedirectFeedUrl", e.Message + e.StackTrace);
 			}
 			return str_final_url;
 		}
@@ -782,23 +772,30 @@ namespace CalendarAggregator
 				var msg = string.Format("{0}: loading {1} eventful events", this.id, page_count * page_size);
 				GenUtils.LogMsg("info", msg, null);
 
-				var unique = new Dictionary<string, XElement>(); // for coalescing duplicates
+				var uniques = new Dictionary<string, XElement>(); // dedupe by title + start
+				foreach (XElement evt in EventfulIterator(page_count, args))
+					uniques.AddOrUpdateXElement(
+						XmlUtils.GetXeltValue(evt, ElmcityUtils.Configurator.no_ns, "title") +
+							XmlUtils.GetXeltValue(evt, ElmcityUtils.Configurator.no_ns, "start_time"),
+						evt);
 
 				Dictionary<string, int> event_count_by_venue = new Dictionary<string, int>();
-
 				int event_num = 0;
 
-				//Parallel.ForEach(EventfulIterator(page_count, args), evt =>
-				foreach (XElement evt in EventfulIterator(page_count, args))
+				foreach (XElement evt in uniques.Values)
 				{
 					event_num += 1;
 					if (event_num > Configurator.eventful_max_events)
 						break;
+
 					var ns = ElmcityUtils.Configurator.no_ns;
 					var title = XmlUtils.GetXeltValue(evt, ns, "title");
 					var start_time = XmlUtils.GetXeltValue(evt, ns, "start_time");
 					var venue_name = XmlUtils.GetXeltValue(evt, ns, "venue_name");
 					var url = XmlUtils.GetXeltValue(evt, ns, "url");
+
+					IncrementEventCountByVenue(event_count_by_venue, venue_name);
+					AddEventfulEvent(es, venue_name, evt);
 
 					/* experimental exclusion filter, idle for now
 					if (Utils.ListContainsItemStartingWithString(this.excluded_urls, url))
@@ -806,21 +803,6 @@ namespace CalendarAggregator
 						GenUtils.LogMsg("info", "CollectEventful: " + id, "excluding " + url);
 						continue;
 					}*/
-
-					var key = venue_name + title + start_time;
-
-					if (unique.ContainsKey(key) == false)
-						unique[key] = evt;
-				}
-				//)
-				;
-
-				foreach (string key in unique.Keys)
-				{
-					var evt = unique[key];
-					var venue_name = XmlUtils.GetXeltValue(evt, ElmcityUtils.Configurator.no_ns, "venue_name");
-					IncrementEventCountByVenue(event_count_by_venue, venue_name);
-					AddEventfulEvent(es, venue_name, evt);
 				}
 
 				estats.venuecount = event_count_by_venue.Keys.Count;
@@ -921,18 +903,21 @@ namespace CalendarAggregator
 			using (upcoming_ical)
 			{
 				var page_size = test ? test_pagesize : 100;
-				string fmt = "{0:yyyy-MM-dd}";
-				var now = Utils.MidnightInTz(this.calinfo.tzinfo).LocalTime;
-				var min_date = string.Format(fmt, now);
-				var max_date = MakeDateArg(fmt, now);
-				var args = string.Format("location={0},{1}&radius={2}&min_date={3}&max_date={4}", this.calinfo.lat, this.calinfo.lon, this.calinfo.radius, min_date, max_date);
+				var args = MakeUpcomingApiArgs(UpcomingSearchStyle.location);
 				var method = "event.search";
 				var xdoc = CallUpcomingApi(method, args);
 				int page_count = 1;
 				try
 				{
-					var str_result_count = xdoc.Document.Root.Attribute("resultcount").Value;
-					int result_count = Convert.ToInt32(str_result_count);
+					var result_count = GetUpcomingResultCount(xdoc);
+
+					if (result_count == 0) // try the other search style (upcoming seems flaky that way)
+					{
+						args = MakeUpcomingApiArgs(UpcomingSearchStyle.latlon);
+						xdoc = CallUpcomingApi(method, args);
+						GetUpcomingResultCount(xdoc);
+					}
+
 					page_count = result_count / page_size;
 				}
 				catch
@@ -948,16 +933,18 @@ namespace CalendarAggregator
 				GenUtils.LogMsg("info", msg, null);
 
 				Dictionary<string, int> event_count_by_venue = new Dictionary<string, int>();
-
-				Dictionary<string, XElement> unique = new Dictionary<string, XElement>();
-
 				int event_num = 0;
 
-				foreach (XElement evt in UpcomingIterator(page_count, method, args))
+				var uniques = new Dictionary<string, XElement>();  // dedupe by name + start
+				foreach (var evt in UpcomingIterator(page_count, method))
+					uniques.AddOrUpdateXElement(evt.Attribute("name").ToString() + evt.Attribute("start_date").ToString(), evt);
+
+				foreach (XElement evt in uniques.Values)
 				{
 					event_num += 1;
 					if (event_num > Configurator.upcoming_max_events)
 						break;
+
 					var unpacked = UnpackUpcomingXelement(evt);
 					var dtstart_with_zone = (Utils.DateTimeWithZone) unpacked["dtstart_with_zone"];
 					var title = (string) unpacked["title"];
@@ -967,19 +954,8 @@ namespace CalendarAggregator
 					if (dtstart_with_zone.UniversalTime < Utils.MidnightInTz(this.calinfo.tzinfo).UniversalTime)
 						continue;
 
-					var key = venue_name + title + str_dtstart;
-
-					if (unique.ContainsKey(key) == false)
-						unique[key] = evt;
-				}
-
-				foreach (var key in unique.Keys)
-				{
-					var evt = unique[key];
-					var unpacked = UnpackUpcomingXelement(evt);
-					var dtstart_with_zone = (Utils.DateTimeWithZone)unpacked["dtstart_with_zone"];
-					var venue_name = (string)unpacked["venue_name"];
 					IncrementEventCountByVenue(event_count_by_venue, venue_name);
+
 					AddUpcomingEvent(es, venue_name, evt, dtstart_with_zone);
 				}
 
@@ -988,6 +964,28 @@ namespace CalendarAggregator
 
 				SerializeStatsAndIntermediateOutputs(es, upcoming_ical, ustats, EventFlavor.upcoming);
 			}
+		}
+
+		private static int GetUpcomingResultCount(XDocument xdoc)
+		{
+			var str_result_count = xdoc.Document.Root.Attribute("resultcount").Value;
+			return Convert.ToInt32(str_result_count);
+		}
+
+		private string MakeUpcomingApiArgs(UpcomingSearchStyle search_style)
+		{
+			string fmt = "{0:yyyy-MM-dd}";
+			var now = Utils.MidnightInTz(this.calinfo.tzinfo).LocalTime;
+			var min_date = string.Format(fmt, now);
+			var max_date = MakeDateArg(fmt, now);
+
+			string location_arg;
+			if (search_style == UpcomingSearchStyle.latlon)
+				location_arg = String.Format("{0},{1}", this.calinfo.lat, this.calinfo.lon);
+			else
+				location_arg = String.Format("{0}", this.calinfo.where);
+			
+			return string.Format("location={0}&radius={1}&min_date={2}&max_date={3}", location_arg, this.calinfo.radius, min_date, max_date);
 		}
 
 		public string MakeDateArg(string fmt, DateTime now)
@@ -1050,28 +1048,29 @@ namespace CalendarAggregator
 
 			ustats.eventcount++;
 
-			//var evt_tmp = MakeTmpEvt(dtstart, title, event_url, source, all_day, use_utc: true);
 			var evt_tmp = MakeTmpEvt(this, dtstart, Utils.DateTimeWithZone.MinValue(this.calinfo.tzinfo), this.calinfo.tzinfo, this.calinfo.tzinfo.Id, title, url: event_url, location: event_url, description: source, lat: lat, lon: lon, allday: all_day, use_utc: true);
-
 
 			AddEventToDDayIcal(upcoming_ical, evt_tmp);
 
 			var min = Utils.DateTimeWithZone.MinValue(this.calinfo.tzinfo);
 
 			if (categories == null)
-				//es.AddEvent(title, event_url, source, dtstart_with_tz, min, all_day);
 				es.AddEvent(title, event_url, source, dtstart, min, lat, lon, all_day);
 			else 
-				//es.AddEvent(title, event_url, source, dtstart_with_tz, min, all_day, categories);
 				es.AddEvent(title, event_url, source, dtstart, min, lat, lon, all_day, categories);
 		}
 
-		public IEnumerable<XElement> UpcomingIterator(int page_count, string method, string args)
+		public IEnumerable<XElement> UpcomingIterator(int page_count, string method)
 		{
 			for (int i = 1; i <= page_count; i++)
 			{
-				var this_args = string.Format("{0}&page={1}", args, i);
+				var this_args = string.Format("{0}&page={1}", MakeUpcomingApiArgs(UpcomingSearchStyle.location), i);
 				var xdoc = CallUpcomingApi(method, this_args);
+				if (GetUpcomingResultCount(xdoc) == 0)
+				{
+					this_args = string.Format("{0}&page={1}", MakeUpcomingApiArgs(UpcomingSearchStyle.latlon), i); // try other way
+					xdoc = CallUpcomingApi(method, this_args);
+				}
 				foreach (XElement evt in xdoc.Descendants("event"))
 					yield return evt;
 			}
@@ -1201,7 +1200,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "CallEventBriteApi", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "CallEventBriteApi", e.Message + e.StackTrace);
 				return new XDocument();
 			}
 		}
@@ -1220,7 +1219,11 @@ namespace CalendarAggregator
 				var msg = string.Format("{0}: loading facebook events", this.id);
 				GenUtils.LogMsg("info", msg, null);
 
-				foreach (FacebookEvent fb_event in FacebookIterator(method, args))
+				var uniques = new Dictionary<string, FacebookEvent>();  // dedupe by title + start
+				foreach (var fb_event in FacebookIterator(method, args))
+					uniques.AddOrUpdateFacebookEvent(fb_event.name + fb_event.start_time, fb_event);
+
+				foreach (FacebookEvent fb_event in uniques.Values)
 				{
 					DateTime dtstart = Utils.LocalDateTimeFromFacebookDateStr(fb_event.start_time, this.calinfo.tzinfo);
 
@@ -1294,7 +1297,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "CallFacebookApi", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "CallFacebookApi", e.Message + e.StackTrace);
 				return "";
 			}
 		}
@@ -1323,21 +1326,6 @@ namespace CalendarAggregator
 			ical_evt.UID = Event.MakeEventUid(ical_evt);
 			ical_evt.Geo = evt.Geo;
 		}
-
-		/*
-		public static DDay.iCal.Components.Event MakeTmpEvt(Utils.DateTimeWithZone dtstart, string title, string event_url, string source, bool allday, bool use_utc)
-		{
-			iCalendar ical = new iCalendar();
-			DDay.iCal.Components.Event evt = new DDay.iCal.Components.Event(ical);
-			evt.Summary = title;
-			evt.Url = event_url;
-			evt.Location = event_url;
-			evt.Description = source;
-			evt.DTStart = (use_utc) ? dtstart.UniversalTime : dtstart.LocalTime;
-			evt.IsAllDay = allday;
-			evt.UID = Event.MakeEventUid(evt);
-			return evt;
-		}*/
 
 		public  static DDay.iCal.Components.Event MakeTmpEvt(Collector collector, Utils.DateTimeWithZone dtstart, Utils.DateTimeWithZone dtend, TimeZoneInfo tzinfo, string tzid, string title, string url, string location, string description, string lat, string lon, bool allday, bool use_utc)
 		{
@@ -1406,7 +1394,7 @@ namespace CalendarAggregator
 					}
 					catch (Exception e)
 					{
-						GenUtils.LogMsg("exception", "within_range", e.Message + e.StackTrace);
+						GenUtils.PriorityLogMsg("exception", "within_range", e.Message + e.StackTrace);
 					}
 					return ret;
 				}*/
@@ -1474,6 +1462,75 @@ namespace CalendarAggregator
 					break;
 			}
 			return ts.MergeEntity("metadata", this.id, this.id, entity);
+		}
+	}
+
+	// encapsulates stats for non-ical sources
+	public class NonIcalStats
+	{
+		public int eventcount
+		{
+			get { return _eventcount; }
+			set { _eventcount = value; }
+		}
+		private int _eventcount;
+
+		public int venuecount
+		{
+			get { return _venuecount; }
+			set { _venuecount = value; }
+		}
+		private int _venuecount;
+
+		public DateTime whenchecked
+		{
+			get { return _whenchecked; }
+			set { _whenchecked = value; }
+		}
+		private DateTime _whenchecked;
+
+		public string blobname
+		{
+			get { return _blobname; }
+			set { _blobname = value; }
+		}
+		private string _blobname;
+
+	}
+
+	// encapsulates the json object that's returned by FacebookIterator. 
+	public class FacebookEvent
+	{
+		public string name;
+		public string location;
+		public string start_time;
+		public string id;
+
+		// contrast with the Eventful|Upcoming|Eventbrite iterators, which use XElements coming from the XML APIs
+		// of those services.
+
+		// all the iterators are "IEnumerable-of-T" -- that is, they iterate over types. since XElement is a type
+		// there was no need to encapsulate it for the other iterators. 
+
+		// given that what comes back from Facebook's json API is a Dictionary<string,object>, the iterator could be:
+
+		// public IEnumerable<Dictonary<string,object>> FacebookIterator(string method, string args)
+
+		// but instead, it is:
+
+		// public IEnumerable<FacebookEvent> FacebookIterator(string method, string args)
+
+		// cost: the effort of defining and using a FacebookEvent object
+		// benefit: the object is self-documenting, no need to remember or look up dictionary keys
+
+		// note: the same cost/benefit would apply to the other iterators. doing things both ways
+		// here just because you can, and because the tradeoffs in this case seem like a wash
+		public FacebookEvent(string name, string location, string start_time, string id)
+		{
+			this.name = name;
+			this.location = location;
+			this.start_time = start_time;
+			this.id = id;
 		}
 	}
 }

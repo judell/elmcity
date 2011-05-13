@@ -124,7 +124,7 @@ namespace CalendarAggregator
 
             if (Scheduler.ExistsTaskRecordForId(id) == false)
             {
-                GenUtils.LogMsg("error", "MaybeStartTaskForId: " + id, "task record does not exist but should");
+                GenUtils.PriorityLogMsg("error", "MaybeStartTaskForId: " + id, "task record does not exist but should");
                 return false;
             }
 

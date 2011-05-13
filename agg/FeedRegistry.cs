@@ -144,7 +144,7 @@ namespace CalendarAggregator
         {
             if (feeds.ContainsKey(feedurl))
             {
-                GenUtils.LogMsg("exception", "FeedRegistry.AddFeed", "duplicate feed: " + feedurl + "(" + source + ")");
+                GenUtils.LogMsg("warning", "FeedRegistry.AddFeed", "duplicate feed: " + feedurl + "(" + source + ")");
                 return;
             }
             source = source.Replace("\"", "");

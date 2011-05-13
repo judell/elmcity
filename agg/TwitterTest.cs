@@ -24,13 +24,6 @@ namespace CalendarAggregator
     {
 
         [Test]
-        public void CannotRefollow()
-        {
-            var xml = TwitterApi.FollowTwitterAccount("judell");
-            Assert.That(xml.Contains("already on your list"));
-        }
-
-        [Test]
         public void CanRetrieveDirectMessagesFromAzure()
         {
             var messages = TwitterApi.GetDirectMessagesFromAzure();

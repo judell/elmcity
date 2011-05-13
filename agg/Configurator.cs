@@ -88,6 +88,18 @@ namespace CalendarAggregator
         private static string _delicious_master_password
         {  get { return GetSettingValue("delicious_master_password"); } }
 
+		public static string delicious_test_account
+		{ get { return _delicious_test_account; } }
+
+		private static string _delicious_test_account
+		{ get { return GetSettingValue("delicious_test_account"); } }
+
+		public static string delicious_test_password
+		{ get { return _delicious_test_password; } }
+
+		private static string _delicious_test_password
+		{ get { return GetSettingValue("delicious_test_password"); } }
+
         public static int delicious_delay_seconds
         {  get { return _delicious_delay_seconds; } }
 
@@ -552,7 +564,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("exception", "GetSettingValue", e.Message + e.StackTrace);
+					GenUtils.PriorityLogMsg("exception", "GetSettingValue", e.Message + e.StackTrace);
 				}
 			}
 
@@ -588,9 +600,18 @@ namespace CalendarAggregator
 					}
 					catch (Exception e)
 					{
-						GenUtils.LogMsg("exception", "Calinfos rehydrate ", id + "," + e.Message);
+						GenUtils.PriorityLogMsg("exception", "Calinfos rehydrate ", id + "," + e.Message);
 						var calinfo = new Calinfo(id);
 						calinfos.Add(id, calinfo);
+						try
+						{
+							var bs = BlobStorage.MakeDefaultBlobStorage();
+							bs.SerializeObjectToAzureBlob(calinfo, id, id + ".calinfo.obj");
+						}
+						catch (Exception e2)
+						{
+							GenUtils.PriorityLogMsg("exception", "Calinfos dehydrate ", id + "," + e2.Message);
+						}
 					}
 
 				} //);
@@ -742,10 +763,10 @@ namespace CalendarAggregator
             this._tzinfo = Utils.TzinfoFromName(this.tzname); // start with default
 
             if (metadict.ContainsKey("where") == false && metadict.ContainsKey("what") == false)
-                GenUtils.LogMsg("exception", "new calinfo: neither what nor where", id);
+                GenUtils.PriorityLogMsg("exception", "new calinfo: neither what nor where", id);
 
             if (metadict.ContainsKey("where") == true && metadict.ContainsKey("what") == true)
-                GenUtils.LogMsg("exception", "new calinfo: both what and where", id);
+                GenUtils.PriorityLogMsg("exception", "new calinfo: both what and where", id);
 
             if (metadict.ContainsKey("where"))
             {
