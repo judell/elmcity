@@ -110,7 +110,7 @@ namespace CalendarAggregator
                 }
                 catch (Exception e)
                 {
-                    GenUtils.LogMsg("exception", "CalendarRenderer: cannot fetch template", e.InnerException.Message);
+                    GenUtils.PriorityLogMsg("exception", "CalendarRenderer: cannot fetch template", e.InnerException.Message);
                     throw;
                 }
 
@@ -122,7 +122,7 @@ namespace CalendarAggregator
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "CalenderRenderer.CalendarRenderer: " + id, e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "CalenderRenderer.CalendarRenderer: " + id, e.Message + e.StackTrace);
             }
 
         }
@@ -489,7 +489,7 @@ namespace CalendarAggregator
 			}
 			catch ( Exception e )
 			{
-				GenUtils.LogMsg("exception", String.Format("RenderRss: view {0}, count {1}", view, count), e.Message);
+				GenUtils.PriorityLogMsg("exception", String.Format("RenderRss: view {0}, count {1}", view, count), e.Message);
 				return String.Empty;
 			}
         }
@@ -612,7 +612,7 @@ namespace CalendarAggregator
             catch (Exception e)
             {
                 es = new ZonelessEventStore(this.calinfo, null);
-                GenUtils.LogMsg("exception", "CalendarRenderer.FindTodayEvents", e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "CalendarRenderer.FindTodayEvents", e.Message + e.StackTrace);
             }
             return es;
         }
