@@ -58,12 +58,12 @@ namespace WebRole
 			EventsResult r = null;
 			try
 			{
-				var cr = ElmcityApp.renderers[id];
+				var cr = ElmcityApp.wrd.renderers[id];
 				r = new EventsResult(this.ControllerContext, cr, id, type, view, jsonp, count);
 			}
 			catch (Exception e)
 			{
-				ElmcityApp.logger.LogMsg("exception", "GetEvents: " + id, e.Message);
+				GenUtils.PriorityLogMsg("exception", "GetEvents: " + id, e.Message);
 			}
 			return r;
 		}
@@ -82,7 +82,7 @@ namespace WebRole
 			string response_body = null;
 			byte[] response_bytes = new byte[0];
 
-			public EventsResult(ControllerContext context, CalendarRenderer cr, string id, string type, string view, string jsonp, string count)
+			public EventsResult( ControllerContext context, CalendarRenderer cr, string id, string type, string view, string jsonp, string count)
 			{
 				this.context = context;
 				this.cr = cr;
@@ -112,7 +112,7 @@ namespace WebRole
 				// uri for static content, e.g.:
 				// http://elmcity.blob.core.windows.net/a2cal/a2cal.stats.html
 				// http://elmcity.blob.core.windows.net/a2cal/a2cal.search.html
-				// this generated files could be served using their blob urls, but 
+				// these generated files could be served using their blob urls, but 
 				// here are repackaged into the /services namespace, e.g.:
 				// http://elmcity.cloudapp.net/services/a2cal/stats
 				// http://elmcity.cloudapp.net/services/a2cal/search
@@ -265,7 +265,7 @@ namespace WebRole
 			{
 				var logger = new CacheItemRemovedCallback(AspNetCache.LogRemovedItemToAzure);
 				var expiration_hours = ElmcityUtils.Configurator.cache_sliding_expiration.Hours;
-				if (ElmcityApp.where_ids.Exists(id => id == this.id))
+				if (ElmcityApp.wrd.where_ids.Exists(id => id == this.id))
 					expiration_hours = Convert.ToInt32(ElmcityController.settings["where_aggregate_interval_hours"]);
 				else
 					expiration_hours = Convert.ToInt32(ElmcityController.settings["what_aggregate_interval_hours"]);
@@ -297,11 +297,11 @@ namespace WebRole
 
 			try
 			{
-				r = new LogEntriesResult(id, minutes, priority);
+				r = new LogEntriesResult(id, minutes);
 			}
 			catch (Exception e)
 			{
-				ElmcityApp.logger.LogMsg("exception", "GetLogEntries: " + id, e.Message);
+				GenUtils.PriorityLogMsg("exception", "GetLogEntries: " + id, e.Message);
 			}
 			return r;
 		}
@@ -310,20 +310,18 @@ namespace WebRole
 		{
 			string id;
 			int minutes;
-			string priority;
 
-			public LogEntriesResult(string id, string minutes, string priority)
+			public LogEntriesResult(string id, string minutes)
 			{
 				this.id = id;
 				this.minutes = Convert.ToInt16(minutes);
-				this.priority = priority;
 			}
 
 			public override void ExecuteResult(ControllerContext context)
 			{
 				// it can take a while to fetch a large result
 				context.HttpContext.Server.ScriptTimeout = CalendarAggregator.Configurator.webrole_script_timeout_seconds;
-				var content = priority == "null" ? Utils.GetRecentLogEntries(this.minutes, this.id) : Utils.GetRecentLogEntries(priority, this.minutes, this.id);
+				var content = this.id != "priority" ? Utils.GetRecentLogEntries(this.minutes, this.id) : Utils.GetRecentLogEntries("prioritylog", this.minutes, this.id);
 				new ContentResult
 				{
 					ContentType = "text/plain",
@@ -349,7 +347,7 @@ namespace WebRole
 			}
 			catch (Exception e)
 			{
-				ElmcityApp.logger.LogMsg("exception", "GetMetadata: " + id, e.Message);
+				GenUtils.PriorityLogMsg("exception", "GetMetadata: " + id, e.Message);
 			}
 			return r;
 		}
@@ -391,7 +389,7 @@ namespace WebRole
 			}
 			catch (Exception e)
 			{
-				ElmcityApp.logger.LogMsg("exception", "GetFusecalICS: " + url, e.Message);
+				GenUtils.PriorityLogMsg("exception", "GetFusecalICS: " + url, e.Message);
 			}
 			return r;
 		}
@@ -430,7 +428,6 @@ namespace WebRole
 
 		#region cache
 
-		/*
 		public ActionResult RemoveCacheEntry(string cached_uri)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -446,15 +443,8 @@ namespace WebRole
 			}
 			catch (Exception e)
 			{
-				ElmcityApp.logger.LogMsg("exception", "RemoveCacheEntry: " + cached_uri, e.Message);
+				GenUtils.PriorityLogMsg("exception", "RemoveCacheEntry: " + cached_uri, e.Message);
 			}
-			return r;
-		}*/
-
-		public ActionResult RemoveCacheEntry(string cached_uri)
-		{
-			ElmcityApp.logger.LogMsg("exception", "RemoveCacheEntry: " + cached_uri, "obselete method");
-			RemoveCacheEntryResult r = null;
 			return r;
 		}
 
@@ -491,7 +481,7 @@ namespace WebRole
 			}
 			catch (Exception e)
 			{
-				ElmcityApp.logger.LogMsg("exception", "ViewCache", e.Message);
+				GenUtils.PriorityLogMsg("exception", "ViewCache", e.Message);
 			}
 			return r;
 		}
@@ -533,7 +523,7 @@ namespace WebRole
 			}
 			catch (Exception e)
 			{
-				ElmcityApp.logger.LogMsg("exception", "GetArraData: " + state + ' ' + town, e.Message);
+				GenUtils.PriorityLogMsg("exception", "GetArraData: " + state + ' ' + town, e.Message);
 			}
 			return r;
 		}
@@ -594,7 +584,7 @@ namespace WebRole
 				var args = String.Format("table {0}, pk {1}, rk {2}, constraints {3}, since_minutes_ago {4}",
 					table, pk, rk, constraints, since_minutes_ago);
 
-				ElmcityApp.logger.LogMsg("exception", "GetODataFeed: " + args, e.Message);
+				GenUtils.PriorityLogMsg("exception", "GetODataFeed: " + args, e.Message);
 			}
 			return r;
 		}
@@ -686,7 +676,7 @@ namespace WebRole
 			}
 			catch (Exception e)
 			{
-				ElmcityApp.logger.LogMsg("exception", "TwitterApiResult: " + method + ", " + url + ", " + post_data, e.Message);
+				GenUtils.PriorityLogMsg("exception", "TwitterApiResult: " + method + ", " + url + ", " + post_data, e.Message);
 			}
 
 			return r;
