@@ -20,50 +20,54 @@ using ElmcityUtils;
 using CalendarAggregator;
 using System.Web;
 using System.Reflection;
+using System.Timers;
+using System.Collections.Generic;
+using System.Web.Routing;
+using System.Threading;
+using System.Threading.Tasks;
+using System.IO;
+using System.IO.Pipes;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace WebRole
 {
 	public class WebRole : RoleEntryPoint
 	{
+		public string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
+		public int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
+		public string domain_name = AppDomain.CurrentDomain.FriendlyName;
+		public int thread_id = System.Threading.Thread.CurrentThread.ManagedThreadId;
+
+		public static WebRoleData wrd;
+
 		public static string local_storage_path = RoleEnvironment.GetLocalResource("LocalStorage1").RootPath;
-		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
+		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
 		public override bool OnStart()
 		{
-			/*
-			var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
+			var local_resource = RoleEnvironment.GetLocalResource("LocalStorage1");
+			GenUtils.LogMsg("info", "LocalStorage1", local_resource.RootPath);
 
-			//Counters.AddCountersToConfig(config, excluded_specifier_prefix: null);
-			//config.PerformanceCounters.ScheduledTransferPeriod = TimeSpan.FromMinutes(ElmcityUtils.Configurator.default_counter_transfer_period);
-
-			config.Logs.ScheduledTransferLogLevelFilter = LogLevel.Verbose;
-			config.Logs.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_log_transfer_minutes);
-
-			config.WindowsEventLog.DataSources.Add("System!*");
-			config.WindowsEventLog.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_log_transfer_minutes);
-
-			config.Directories.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_file_transfer_minutes);
-
-			DiagnosticMonitor.Start("DiagnosticsConnectionString", config);
-			 */
+			Utils.ScheduleTimer(ElmcityApp.reload, minutes: CalendarAggregator.Configurator.webrole_reload_interval_hours * 60, name: "reload", startnow: false);
+			Utils.ScheduleTimer(MakeTablesAndCharts, minutes: CalendarAggregator.Configurator.web_make_tables_and_charts_interval_minutes, name: "make_tables_and_charts", startnow: false);
 
 			RoleEnvironment.Changing += RoleEnvironmentChanging;
 
-			var msg = "WebRole: OnStart";
-			GenUtils.LogMsg("info", msg, null);
-			GenUtils.PriorityLogMsg("info", msg, null, ts);
+			var msg = String.Format("WebRole OnStart: {0} {1} {2} {3}", procname, procid, domain_name, thread_id);
+			GenUtils.PriorityLogMsg("info", msg, null);
 
 			return base.OnStart();
+		}
+
+		public WebRole()
+		{
 		}
 
 		public override void OnStop()
 		{
 			var msg = "WebRole: OnStop";
-			GenUtils.LogMsg("info", msg, null);
-			GenUtils.PriorityLogMsg("info", msg, null, ts);
-
-			var snapshot = Counters.MakeSnapshot(Counters.GetCounters());
-			ElmcityApp.monitor.StoreSnapshot(snapshot);
+			GenUtils.PriorityLogMsg("info", msg, null);
 
 			base.OnStop();
 		}
@@ -71,8 +75,7 @@ namespace WebRole
 		public override void Run()
 		{
 			var msg = "WebRole: Run";
-			GenUtils.LogMsg("info", msg, null);
-			GenUtils.PriorityLogMsg("info", msg, null, ts);
+			GenUtils.PriorityLogMsg("info", msg, null);
 
 			base.Run();
 		}
@@ -91,8 +94,7 @@ namespace WebRole
 		{
 			var ts = TableStorage.MakeDefaultTableStorage();
 			Exception exception = HttpContext.Current.Server.GetLastError();
-			GenUtils.PriorityLogMsg("exception", "Application_Error", exception.Message, ts);
-			TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, exception.Message);
+			GenUtils.PriorityLogMsg("exception", "Application_Error", exception.Message);
 			// see http://azuremiscellany.blogspot.com/2010/05/web-role-crash-dumps.html for interesting possibility
 		}
 
@@ -120,8 +122,33 @@ namespace WebRole
 										   null);
 
 			var ts = TableStorage.MakeDefaultTableStorage();
-			GenUtils.PriorityLogMsg("Application_End", shutdown_message, shutdown_stack, ts);
-			TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, shutdown_message);
+			GenUtils.PriorityLogMsg("Application_End", shutdown_message, shutdown_stack);
+		}
+
+		public static void MaybePurgeCache(Object o, ElapsedEventArgs e)
+		{
+			try
+			{
+				var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
+				ElmcityUtils.CacheUtils.MaybePurgeCache(cache);
+			}
+			catch (Exception ex)
+			{
+				GenUtils.PriorityLogMsg("exception", "WebRole.MaybePurgeCache", ex.Message + ex.StackTrace);
+			}
+		}
+
+		public static void MakeTablesAndCharts(Object o, ElapsedEventArgs e)
+		{
+			GenUtils.LogMsg("info", "MakeTablesAndCharts", null);
+			try
+			{
+				PythonUtils.RunIronPython(WebRole.local_storage_path, CalendarAggregator.Configurator.charts_and_tables_script_url, new List<string>() { "", "", "" });
+			}
+			catch (Exception ex)
+			{
+				GenUtils.PriorityLogMsg("exception", "MonitorAdmin", ex.Message + ex.StackTrace);
+			}
 		}
 
 	}
