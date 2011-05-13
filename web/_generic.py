@@ -207,7 +207,7 @@ if ( arg0 == 'dashboard' ):
   except:
     tb = format_trace_back()
     result += tb
-    GenUtils.LogMsg('info', '_run.py', tb)
+    GenUtils.PriorityLogMsg('info', '_run.py', tb)
 
 
 if ( arg0 == 'pylib' ):
