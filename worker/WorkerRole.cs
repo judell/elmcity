@@ -32,8 +32,9 @@ namespace WorkerRole
     public class WorkerRole : RoleEntryPoint
     {
 #if false // true if testing, false if not testing
-        private static int startup_delay = 100000000; // add delay if want to focus on webrole
-        private static List<string> testids = new List<string>() { "elmcity" };
+        //private static int startup_delay = 100000000; // add delay if want to focus on webrole
+		private static int startup_delay = 0;
+        private static List<string> testids = new List<string>() { "socialhartford" };
         private static List<string> testfeeds = new List<string>();
         private static bool testing = true;
 #else     // not testing
@@ -50,7 +51,7 @@ namespace WorkerRole
 		private static Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
 
         private static string blobhost = ElmcityUtils.Configurator.azure_blobhost;
-        private static List<string> ids;
+		public static List<string> ids { get; set; }
         private static Dictionary<string, int> feedcounts = new Dictionary<string, int>();
 
 		private static string local_storage_path;
@@ -63,33 +64,19 @@ namespace WorkerRole
         {
             try
             {
-				var msg = "Worker: OnStart";
-				logger.LogMsg("info", msg, null);
-				GenUtils.PriorityLogMsg("info", msg, null, ts);
+				var hostname = System.Net.Dns.GetHostName();
+				var msg = "Worker: OnStart: " + hostname;
+				GenUtils.PriorityLogMsg("info", msg, null);
 
                 HttpUtils.Wait(startup_delay);
 
 				local_storage_path = RoleEnvironment.GetLocalResource("LocalStorage1").RootPath;
 
-				/*
-                var config = DiagnosticMonitor.GetDefaultInitialConfiguration();
-                
-                config.Logs.ScheduledTransferLogLevelFilter = LogLevel.Verbose;
-                config.Logs.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_log_transfer_minutes);
-
-                config.WindowsEventLog.DataSources.Add("System!*");
-                config.WindowsEventLog.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_log_transfer_minutes);
-
-                config.Directories.ScheduledTransferPeriod = TimeSpan.FromMinutes(CalendarAggregator.Configurator.default_file_transfer_minutes);
-                
-                DiagnosticMonitor.Start("DiagnosticsConnectionString", config);
-				 */
-
                 RoleEnvironment.Changing += RoleEnvironmentChanging;
 
 				GenUtils.LogMsg("info", "LocalStorage1", local_storage_path);
 
-                PythonUtils.InstallPythonStandardLibrary(local_storage_path, ts);
+               // PythonUtils.InstallPythonStandardLibrary(local_storage_path, ts);
 
                 HttpUtils.SetAllowUnsafeHeaderParsing(); //http://www.cookcomputing.com/blog/archives/000556.html
 
@@ -97,7 +84,7 @@ namespace WorkerRole
 
 				Utils.ScheduleTimer(HighFrequencyScript, minutes: CalendarAggregator.Configurator.high_frequency_script_interval_minutes, name: "HighFrequencyScript", startnow: false);
 
-                Utils.ScheduleTimer(DeliciousAdmin, minutes: CalendarAggregator.Configurator.delicious_admin_interval_hours * 60, name: "DeliciousAdmin", startnow: false);
+                //Utils.ScheduleTimer(DeliciousAdmin, minutes: CalendarAggregator.Configurator.delicious_admin_interval_hours * 60, name: "DeliciousAdmin", startnow: false);
 
 				Utils.ScheduleTimer(GeneralAdmin, minutes: CalendarAggregator.Configurator.worker_general_admin_interval_hours * 60, name: "StartupAdmin", startnow: false);
 
@@ -112,9 +99,7 @@ namespace WorkerRole
             catch (Exception e)
             {
 				var msg = "Worker.OnStart";
-                logger.LogMsg("exception", msg, e.Message + e.StackTrace);
-				GenUtils.PriorityLogMsg("exception", msg, e.Message + e.StackTrace, ts);
-				TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, msg);
+				GenUtils.PriorityLogMsg("exception", msg, e.Message + e.StackTrace);
             }
             return base.OnStart();
         }
@@ -123,7 +108,7 @@ namespace WorkerRole
 		{
 			var msg = "Worker: OnStop";
 			logger.LogMsg("info", msg, null);
-			GenUtils.PriorityLogMsg("info", msg, null, ts);
+			GenUtils.PriorityLogMsg("info", msg, null);
 			var snapshot = Counters.MakeSnapshot(Counters.GetCounters());
 			monitor.StoreSnapshot(snapshot);
 
@@ -146,8 +131,7 @@ namespace WorkerRole
             try
             {
 				var message = "Worker: Run";
-				logger.LogMsg("info", message, null);
-				GenUtils.PriorityLogMsg("info", message, null, ts);
+				GenUtils.PriorityLogMsg("info", message, null);
 
                 while (true)
                 {
@@ -168,12 +152,32 @@ namespace WorkerRole
                         var calinfo = new Calinfo(id);
                         var twitter_account = calinfo.twitter_account;
 
-                        var messages = twitter_direct_messages.FindAll(msg => msg.sender_screen_name == twitter_account);
+                        var messages = twitter_direct_messages.FindAll(msg => msg.sender_screen_name.ToLower() == twitter_account.ToLower());
+						// see http://friendfeed.com/elmcity/53437bec/copied-original-css-file-to-my-own-server for why ToLower()
 
-                        if (StartTask(id, calinfo, messages) == false)
+						var got_meta_refresh_request = messages.FindAll(msg => msg.text == "meta_refresh").Count > 0;
+
+						if (got_meta_refresh_request)
+						{
+							logger.LogMsg("info", "Received meta_refresh message from " + id, null);
+							TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your meta_refresh message");
+							UpdateMetadataToAzure(id);
+							TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://elmcity.cloudapp.net/services/" + id + "/metadata");
+							calinfo = new Calinfo(id);
+						}
+
+						var got_start_request = messages.FindAll(msg => msg.text == "start").Count > 0;
+
+                        if (StartTask(id, calinfo, got_start_request) == false)
                             continue;
 
                         ProcessHub(id, calinfo);
+
+						if (got_start_request)
+						{
+							logger.LogMsg("info", "Processed start message from " + id, null);
+							TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your start message");
+						}
 
                         StopTask(id);
                     }
@@ -184,8 +188,7 @@ namespace WorkerRole
             }
             catch (Exception e)
             {
-                logger.LogMsg("exception", "Worker.Run", e.Message + e.StackTrace);
-				GenUtils.PriorityLogMsg("exception", "Worker.Run", e.Message + e.StackTrace, ts);
+				GenUtils.PriorityLogMsg("exception", "Worker.Run", e.Message + e.StackTrace);
             }
         }
 
@@ -225,9 +228,7 @@ namespace WorkerRole
             {
 				var msg = "worker main loop: " + id;
 				var data = e.Message + e.StackTrace;
-                logger.LogMsg("exception", msg, data);
-				GenUtils.PriorityLogMsg("exception", msg, data, ts);
-				TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.delicious_master_account, msg);
+				GenUtils.PriorityLogMsg("exception", msg, data);
             }
 
             logger.LogMsg("info", "worker done processing: " + id, null);
@@ -240,13 +241,35 @@ namespace WorkerRole
             try
             {
                 var dict = delicious.StoreMetadataForIdToAzure(id, true, new Dictionary<string, string>());
-				ObjectUtils.MaybeSaveJsonSnapshot(id, ObjectUtils.JsonSnapshotType.DictStr, "metadata", dict);
+				var snapshot_changed = ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.DictStr, "metadata", dict);
+				if (snapshot_changed == true)
+				{
+					PurgePickledCalinfoAndRenderer(id); // delete [id].calinfo.obj and [id].renderer.obj
+					UpdateWrdForId(id);   // recreate [id].calinfo.obj with changed metadadict, recreate [id].renderer.obj, update wrd.obj              
+				}
             }
             catch (Exception e)
             {
-                logger.LogMsg("exception", "StoreMetadataForIdToAzure", e.Message + e.StackTrace);
+                logger.LogMsg("exception", "UpdateMetadataToAzure", e.Message + e.StackTrace);
             }
         }
+
+		public static void UpdateWrdForId(string id)
+		{
+			var uri = BlobStorage.MakeAzureBlobUri("admin", "wrd.obj");
+			var wrd = (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri); // acquire wrd
+			WebRoleData.UpdateCalinfoAndRendererForId(id, wrd);
+			bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
+		}
+
+		private static void PurgePickledCalinfoAndRenderer(string id)
+		{
+			foreach (string pickle in new List<string>() { "renderer", "calinfo" })
+			{
+				var pickle_name = String.Format("{0}.{1}.obj", id, pickle);
+				bs.DeleteBlob(id, pickle_name);
+			}
+		}
 
         public static void RecacheHubIdsToAzure()
         {
@@ -266,7 +289,7 @@ namespace WorkerRole
             Scheduler.UnlockId(id);
         }
 
-        private static bool StartTask(string id, Calinfo calinfo, List<TwitterDirectMessage> messages)
+        private static bool StartTask(string id, Calinfo calinfo, bool got_start_request)
         {
             Scheduler.EnsureTaskRecord(id);
 
@@ -283,11 +306,10 @@ namespace WorkerRole
 
             bool started;
 
-            var start_requests = messages.FindAll(msg => msg.text == "start");
-
-            if (start_requests.Count > 0)
+            if (got_start_request)
             {
                 logger.LogMsg("info", "Received start message from " + id, null);
+				TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your start message");
                 started = true;
             }
             else
@@ -360,7 +382,7 @@ namespace WorkerRole
             try
             {
                 var dicts = delicious.StoreFeedsAndMaybeMetadataToAzure(fr_delicious, id);
-				ObjectUtils.MaybeSaveJsonSnapshot(id, ObjectUtils.JsonSnapshotType.ListDictStr, "feeds", dicts);
+				var snapshot_changed = ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.ListDictStr, "feeds", dicts);
             }
             catch (Exception e)
             {
@@ -432,7 +454,7 @@ namespace WorkerRole
 
                 logger.LogMsg("info", "DoIcal: " + id, null);
 				Collector coll = new Collector(calinfo, settings);
-                coll.CollectIcal(fr, ical, test:testing, nosave:false);
+            coll.CollectIcal(fr, ical, test:testing, nosave:false);
             }
             catch (Exception e)
             {
@@ -694,7 +716,7 @@ All events {8}, population {9}, events/person {10:f}
 					}
 					catch (Exception e)
 					{
-						GenUtils.LogMsg("warning", "MergeICS: " + url, e.Message);
+						GenUtils.PriorityLogMsg("warning", "MergeICS: " + url, e.Message);
 					}
                 }
 
@@ -782,44 +804,62 @@ All events {8}, population {9}, events/person {10:f}
 			}
 		}
 
-        public static void DeliciousAdmin(object o, ElapsedEventArgs args)
-        {
-            logger.LogMsg("info", "DeliciousAdmin", null);
-            try
-            {
-                RecacheHubIdsToAzure();  // acquire new hubs added since last cycle
+		public void GeneralAdmin(object o, ElapsedEventArgs args)
+		{
+			logger.LogMsg("info", "GeneralAdmin", null);
 
-				var ids = delicious.LoadHubIdsFromAzureTable();
+			try    // acquire new hubs added since last cycle
+			{
+				RecacheHubIdsToAzure();  
+			}
+			catch (Exception e0)
+			{
+				GenUtils.PriorityLogMsg("exception", "GeneralAdmin.RecacheHubs", e0.Message);
+			}
+
+			var ids = delicious.LoadHubIdsFromAzureTable();
+
+			try  // fetch feeds and metadata from delicious, store in azure table
+			{
 				ids = MaybeAdjustIdsForTesting(ids);
 
 				foreach (var id in ids)
 				{
 					UpdateFeedsAndMetadataForIdToAzure(id);
 				}
-            }
-            catch ( Exception e )
-            {
-                logger.LogMsg("exception", "DeliciousAdmin", e.Message + e.StackTrace);
-            }
-        }
+			}
+			catch (Exception e1)
+			{
+				GenUtils.PriorityLogMsg("exception", "GeneralAdmin", e1.Message);
+			}
 
-		public static void GeneralAdmin(object o, ElapsedEventArgs args)
-		{
-			logger.LogMsg("info", "GeneralAdmin", null);
 			foreach (var id in ids)
 			{
-				try
+				try  // create and cache calinfo and renderer
 				{
 					var calinfo = new Calinfo(id);
 					var cr = new CalendarRenderer(calinfo);
 					bs.SerializeObjectToAzureBlob(calinfo, id, id + ".calinfo.obj");
 					bs.SerializeObjectToAzureBlob(cr, id, id + ".renderer.obj");
 				}
-				catch (Exception e)
+				catch (Exception e2)
 				{
-					logger.LogMsg("exception", "GeneralAdmin: " + id, e.Message + e.StackTrace);
+					GenUtils.PriorityLogMsg("exception", "GeneralAdmin: saving calinfo and renderer: " + id, e2.Message);
 				}
 			}
+
+			WebRoleData wrd; 
+
+			try  // create WebRoleData structure and store as blob, available to webrole on next _reload
+			{
+				wrd = new WebRoleData(testing: false, test_id: null);
+				bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
+			}
+			catch (Exception e3)
+			{
+				GenUtils.PriorityLogMsg("exception", "GeneralAdmin: creating wrd", e3.Message);
+			}
+
 		}
 
 		public static void UpdateFeedsAndMetadataForIdToAzure(string id)
@@ -850,7 +890,6 @@ All events {8}, population {9}, events/person {10:f}
         {
             try
             {
-                // PythonUtils.InstallPythonElmcityLibrary(ts); // won't work because ipy holds references to imports
 				logger.LogMsg("info", "IronPythonAdmin", null);
 				PythonUtils.RunIronPython(local_storage_path, CalendarAggregator.Configurator.iron_python_admin_script_url, new List<string>() { "", "", "" });
 
