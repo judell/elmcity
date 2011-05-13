@@ -28,7 +28,7 @@ try:
   script_url = CalendarAggregator.Configurator.monitor_script_url
   PythonUtils.RunIronPython(lib_dir, script_url, args)
 except:
-  GenUtils.LogMsg('info', 'monitor.py', format_traceback() )  
+  GenUtils.PriorityLogMsg('info', 'monitor.py', format_traceback() )  
 """
 
 result = ''
