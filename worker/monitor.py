@@ -7,46 +7,18 @@ import System
 clr.AddReference("ElmcityUtils")
 from ElmcityUtils import *
 
-clr.AddReference('System.Management')
-import System.Management
+clr.AddReference("CalendarAggregator")
+import CalendarAggregator
 
 #include common.py
 
+local_storage = get_local_storage()
+python_lib = local_storage + '/Lib'
+sys.path.append(python_lib)
+import traceback, os 
+
 def make_fname(title, type):
   return 'worker_%s_%s.%s' % (System.Net.Dns.GetHostName(), title, type )
-
-def make_out_spec(local_storage, fname):
-  return '%s/%s' % ( local_storage, fname )      
-
-def expand_title( title ):
-  return '%s - %s - %s' % ( title, System.DateTime.UtcNow.ToString(), System.Net.Dns.GetHostName() )
-
-local_storage = get_local_storage()
-  
-uri = System.Uri('http://elmcity.blob.core.windows.net/admin/python_library.zip')
-FileUtils.UnzipFromUrlToDirectory(uri, local_storage)  
-
-sys.path.append( '%s\Lib' % local_storage )
-import os, traceback
-
-GenUtils.LogMsg('info', 'monitor.py', repr(get_process_owner()) )
-
-def make_chart(local_storage, bin, source_type, chart_type, in_spec, title, query):
-  try:
-    GenUtils.LogMsg("info", "query: " + query, None)    
-    fname = make_fname ( title, 'gif' )
-    out_spec = make_out_spec( local_storage, fname )
-    expanded_title = expand_title ( title )
-    query = query.replace('__IN__', in_spec)
-    query = query.replace('__OUT__', out_spec)
-    cmd = '%s\\LogParser -q -e:1 -i:%s -o:CHART -categories:ON -groupSize:1500x800 -legend:ON -ChartTitle:"%s" -chartType:"%s" "%s"' % ( bin, source_type, expanded_title, chart_type, query )
-    GenUtils.LogMsg("info", "make_chart: " + cmd, None)
-    os.system(cmd)
-    bs = BlobStorage.MakeDefaultBlobStorage()
-    data = System.IO.File.ReadAllBytes(out_spec)
-    bs.PutBlob('charts', fname, System.Collections.Hashtable(), data, "image/gif" )
-  except:
-    GenUtils.LogMsg('exception', 'MakeChart: ' + title, format_traceback() )
 
 monitor = '%s/%s' % ( local_storage, 'monitor.xml')
 
@@ -61,7 +33,7 @@ try:
   f.close()
   GenUtils.LogMsg('info', 'worker saving %s' % monitor, None)
 except:
-  GenUtils.LogMsg('exception', 'MakeChart', format_traceback() )
+  GenUtils.PriorityLogMsg('exception', 'MakeChart', format_traceback() )
 
 # charts
 
@@ -72,6 +44,12 @@ in_spec = '%s#/feed/entry/content' % monitor
 #template = "select to_string(to_timestamp(d:TimeStamp, 'yyyy-MM-ddThh:mm:ss.???????Z'), 'dd hh:mm') as when, %s into __OUT__ from __IN__ where d:ProcName = '%s' order by when"
 
 template = "select to_timestamp(d:TimeStamp, 'yyyy-MM-ddThh:mm:ss.???????Z') as when, %s into __OUT__ from __IN__ where d:ProcName = '%s' order by when"
+
+fields = 'd:asp_reqs_current, d:ThreadCount'
+
+title = 'WebCurrentRequestsAndThreads'
+query = template % ( fields, 'w3wp' )
+make_chart(local_storage, bin, 'xml', 'Line', in_spec, title, query)
 
 fields = 'd:processor_pct_proctime, d:ThreadCount'
 
@@ -148,7 +126,12 @@ try:
   script_url = CalendarAggregator.Configurator.dashboard_script_url
   PythonUtils.RunIronPython(local_storage, script_url, args)    
 except:
-  GenUtils.LogMsg('exception', format_traceback(), None )
+  GenUtils.PriorityLogMsg('exception', format_traceback(), None )
   
 GenUtils.LogMsg("info", "monitor.py stopping", None)
+
+# pull 24 hours of diagnostics from odata feed into a file
+# run logparser queries against the file
+# output charts (gifs) and/or tables (htmls) to charts container in azure storage
+# run dashboard to update pages that include charts and tables
 

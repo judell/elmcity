@@ -1,3 +1,6 @@
+clr.AddReference('System.Management')
+import System.Management 
+
 def get_resource_dirs():
   return System.IO.Directory.GetDirectories('c:\Resources\Directory')
 
@@ -9,6 +12,9 @@ def get_diagnostic_store():
 
 def get_log_storage():
   return [d for d in System.IO.Directory.GetDirectories("%s/LogFiles/Web" % get_diagnostic_store())][0]  
+  
+def get_failed_request_log_storage():
+  return [d for d in System.IO.Directory.GetDirectories("%s/FailedReqLogFiles/Web" % get_diagnostic_store())][0]    
 
 def show_rules(ds,log):
   rules = ds.GetAccessRules(True, True, System.Type.GetType('System.Security.Principal.NTAccount'))
@@ -42,4 +48,25 @@ def format_traceback():
   tb = traceback.format_exception(exc_type, exc_value, exc_traceback)  
   return repr(tb) 
 
+def make_chart(local_storage, bin, source_type, chart_type, in_spec, title, query):
+  try:
+    GenUtils.LogMsg("info", "query: " + query, None)    
+    fname = make_fname ( title, 'gif' )
+    out_spec = make_out_spec( local_storage, fname )
+    expanded_title = expand_title ( title )
+    query = query.replace('__IN__', in_spec)
+    query = query.replace('__OUT__', out_spec)
+    cmd = '%s\\LogParser -q -e:1 -i:%s -o:CHART -categories:ON -groupSize:1500x800 -legend:ON -ChartTitle:"%s" -chartType:"%s" "%s"' % ( bin, source_type, expanded_title, chart_type, query )
+    GenUtils.LogMsg("info", "make_chart: " + cmd, None)
+    os.system(cmd)
+    bs = BlobStorage.MakeDefaultBlobStorage()
+    data = System.IO.File.ReadAllBytes(out_spec)
+    bs.PutBlob('charts', fname, System.Collections.Hashtable(), data, "image/gif" )
+  except:
+    GenUtils.PriorityLogMsg('exception', 'MakeChart: ' + title, format_traceback() )
 
+def make_out_spec(local_storage, fname):
+  return '%s/%s' % ( local_storage, fname )
+  
+def expand_title( title ):
+  return '%s - %s - %s' % ( title, System.DateTime.UtcNow.ToString(), System.Net.Dns.GetHostName() )  
