@@ -11,9 +11,6 @@ from ElmcityUtils import *
 clr.AddReference('CalendarAggregator')
 import CalendarAggregator
 
-clr.AddReference('System.Management')
-import System.Management
-
 #include common.py
 
 local_storage = get_local_storage()
@@ -24,29 +21,6 @@ import traceback, os
 def make_fname(title, type):
   return 'web_%s_%s.%s' % (System.Net.Dns.GetHostName(), title, type )
 
-def make_out_spec(local_storage, fname):
-  return '%s/%s' % ( local_storage, fname )      
-
-def expand_title( title ):
-  return '%s - %s - %s' % ( title, System.DateTime.UtcNow.ToString(), System.Net.Dns.GetHostName() )
-  
-def make_chart(local_storage, bin, source_type, chart_type, in_spec, title, query):
-  try:
-    GenUtils.LogMsg("info", "query: " + query, None)    
-    fname = make_fname(title, 'gif')
-    out_spec = make_out_spec ( local_storage, fname )
-    expanded_title = expand_title(title)
-    query = query.replace('__IN__', in_spec)
-    query = query.replace('__OUT__', out_spec)
-    cmd = '%s\\LogParser -q -e:1 -i:%s -o:CHART -categories:ON -groupSize:1500x800 -legend:ON -ChartTitle:"%s" -chartType:"%s" "%s"' % ( bin, source_type, expanded_title, chart_type, query )
-    GenUtils.LogMsg("info", "make_chart: " + cmd, None)
-    os.system(cmd)
-    bs = BlobStorage.MakeDefaultBlobStorage()
-    data = System.IO.File.ReadAllBytes(out_spec)
-    bs.PutBlob('charts', fname, System.Collections.Hashtable(), data, 'image/gif' )
-  except:
-    GenUtils.LogMsg('exception', 'MakeChart: ' + title, format_traceback() )  
-
 def make_html(local_storage, bin, type, in_spec, title, query):
   try:
     xml_fname = make_fname(title, 'xml')
@@ -55,14 +29,18 @@ def make_html(local_storage, bin, type, in_spec, title, query):
     expanded_title = expand_title(title)
     query = query.replace('__IN__', in_spec)
     query = query.replace('__OUT__', out_spec)
-    cmd = '%s\\LogParser -q -e:1 -i:"%s" -o:XML -oCodepage:"-1" -schemaType:0 "%s" ' % ( bin, type, query)
-    GenUtils.LogMsg("info", "make_html", cmd)
+    cmd = '%s\\LogParser -q -e:1 -i:"%s" __XML_FNAMES__ -o:XML -oCodepage:"-1" -schemaType:0 "%s" ' % ( bin, type, query)
+    if ( type == 'xml' ):
+      cmd = cmd.replace('__XML_FNAMES__', '-fnames:xpath')
+    else:
+      cmd = cmd.replace('__XML_FNAMES__', '')
+    GenUtils.PriorityLogMsg("info", "make_html", cmd)
     os.system(cmd)
     d = System.Xml.XmlDocument()
     d.Load(out_spec)
     make_html_table(d, expanded_title, out_spec, html_fname )
   except:
-    GenUtils.LogMsg("exception", "make_html", format_traceback() )
+    GenUtils.PriorityLogMsg("exception", "make_html", format_traceback() )
 
 def get_xml_header_row(row):
   headers = ''
@@ -102,7 +80,7 @@ h1 { font-size:smaller }
     r = bs.PutBlob('charts', fname, System.Collections.Hashtable(), data, 'text/html' )
     print r.HttpResponse.status.ToString()
   except:
-    GenUtils.LogMsg('exception', 'charts.py: make_html_table', format_traceback() )
+    GenUtils.PriorityLogMsg('exception', 'charts.py: make_html_table', format_traceback() )
   
 bin = 'e:\\approot\\bin'
 
@@ -132,13 +110,12 @@ title = 'SystemLogErrors'
 query = template.replace('__EVENTTYPE__', 'Error')
 make_html(local_storage, bin, 'evt', 'System', title, query)
 
-
 # web queries: tables
 
 try:
   in_spec = '%s/*.log' % get_log_storage()
 except:
-  GenUtils.LogMsg('exception', 'charts.py: get_log_storage', format_traceback() )
+  GenUtils.PriorityLogMsg('exception', 'charts.py: get_log_storage', format_traceback() )
 
 title = 'Top400Urls'
 query = 'select top 50 count(*) as c, cs-uri-stem into __OUT__ from __IN__ where sc-status = 400 group by cs-uri-stem order by c desc'
@@ -174,6 +151,38 @@ title = 'RequestsByIp'
 query = 'select top 50 c-ip as dnsname, count(*) as requests into __OUT__ from __IN__ group by dnsname having requests > 0 order by requests desc'
 make_chart(local_storage, bin, 'iisw3c', 'ColumnClustered', in_spec, title, query)
 
+# failed requests: tables
+
+try:
+  in_spec = '%s/*.xml' % get_failed_request_log_storage()
+except:
+  GenUtils.PriorityLogMsg('exception', 'charts.py: get_log_storage', format_traceback() )
+  
+# logparser -q -i:XML -fNames:XPath "select count(/failedRequest/@url), /failedRequest/@url from *.xml where /failedRequest/Event/EventData/Data/@Name = 'RequestURL' group by /failedRequest/@url order by count(/failedRequest/@url) desc" 
+title = 'FailedRequestsByCount'
+query = "select count(/failedRequest/@url), /failedRequest/@url into __OUT__ from __IN__ where /failedRequest/Event/EventData/Data/@Name = 'RequestURL' group by /failedRequest/@url order by count(/failedRequest/@url) desc"
+make_html(local_storage, bin, 'xml', in_spec, title, query)  
+
+title = 'FailedRequestsByStatus'
+query = "select /failedRequest/@statusCode, count(/failedRequest/@statusCode) into __OUT__ from __IN__ where /failedRequest/Event/EventData/Data/@Name = 'RequestURL' group by /failedRequest/@statusCode order by count(/failedRequest/@statusCode) desc"
+make_html(local_storage, bin, 'xml', in_spec, title, query)  
+
+title = 'FailedRequestTop400s'
+query = "select top 10 count(/failedRequest/@url), /failedRequest/@url  into __OUT__ from __IN__ where /failedRequest/Event/EventData/Data/@Name = 'RequestURL' and /failedRequest/@statusCode = '400' group by /failedRequest/@url order by count(/failedRequest/@url) desc"
+make_html(local_storage, bin, 'xml', in_spec, title, query) 
+
+title = 'FailedRequestTop404s'
+query = "select top 10 count(/failedRequest/@url), /failedRequest/@url into __OUT__ from __IN__ where /failedRequest/Event/EventData/Data/@Name = 'RequestURL' and /failedRequest/@statusCode = '404' group by /failedRequest/@url order by count(/failedRequest/@url) desc"
+make_html(local_storage, bin, 'xml', in_spec, title, query) 
+
+title = 'FailedRequestTop200s'
+query = "select top 10 count(/failedRequest/@url), /failedRequest/@url into __OUT__ from __IN__ where /failedRequest/Event/EventData/Data/@Name = 'RequestURL' and /failedRequest/@statusCode = '200' group by /failedRequest/@url order by count(/failedRequest/@url) desc"
+make_html(local_storage, bin, 'xml', in_spec, title, query) 
+
+title = 'FailedRequestTopOthers'
+query = "select top 10 count(/failedRequest/@url), /failedRequest/@statusCode, /failedRequest/@url into __OUT__ from __IN__ where /failedRequest/Event/EventData/Data/@Name = 'RequestURL' and not /failedRequest/@statusCode = '200' and not /failedRequest/@statusCode = '400' and not /failedRequest/@statusCode = '404'group by /failedRequest/@statusCode order by count(/failedRequest/@statusCode) desc"
+make_html(local_storage, bin, 'xml', in_spec, title, query) 
+
 try:
   args = System.Collections.Generic.List[str]()
   args.Add('')
@@ -182,5 +191,8 @@ try:
   script_url = CalendarAggregator.Configurator.dashboard_script_url
   PythonUtils.RunIronPython(local_storage, script_url, args)    
 except:
-  GenUtils.LogMsg('exception', format_traceback(), None )
+  GenUtils.PriorityLogMsg('exception', format_traceback(), None )
 
+# run logparser queries against iis logs and failed request logs
+# output charts (gifs) and/or tables (htmls) to charts container in azure storage
+# run dashboard to update pages that include charts and tables
