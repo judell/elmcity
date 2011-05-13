@@ -74,8 +74,13 @@ log.write('owner: %s\n' % get_process_owner())
 python_lib = local_storage + '/Lib'
 log.write('python lib: %s\n' % python_lib)  
   
-uri = System.Uri('http://elmcity.blob.core.windows.net/admin/python_library.zip')
-ElmcityUtils.FileUtils.UnzipFromUrlToDirectory(uri, local_storage)  
+try:
+  uri = System.Uri('http://elmcity.blob.core.windows.net/admin/python_library.zip')
+  ElmcityUtils.FileUtils.UnzipFromUrlToDirectory(uri, local_storage)  
+  uri = System.Uri('http://elmcity.blob.core.windows.net/admin/ElmcityLib.zip')
+  ElmcityUtils.FileUtils.UnzipFromUrlToDirectory(uri, local_storage)  
+except:
+  log.write('exception', 'startup.py', format_traceback() )    
 
 sys.path.append(python_lib)
 import traceback
@@ -117,7 +122,7 @@ try:
     log.write('redirect failed requests: %s\n' % format_traceback() )
   """
 
-  """ disabled for now, doing with appcmd instead
+  """ disabled for now, wasn't working, doing with appcmd instead
   
   log.write('...unlocking config section ...\n')
 
@@ -151,9 +156,9 @@ try:
     log.write('configuring dynamic ip restrictions: %s\n' % format_traceback() )
     
 """
-    
-  log.write('...send a request to the webserver to get it going ...\n')
 
+  log.write('...send a request to the webserver to get it going ...\n')
+  
   try:
     binding = site.Bindings[0]
     bi = binding.GetAttributeValue('bindingInformation')

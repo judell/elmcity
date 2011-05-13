@@ -73,6 +73,12 @@ sys.path.append(get_local_storage() + '/Lib')
 import traceback
 
 try:
+  uri = System.Uri('http://elmcity.blob.core.windows.net/admin/python_library.zip')
+  ElmcityUtils.FileUtils.UnzipFromUrlToDirectory(uri, local_storage)    
+except:
+  log.write('exception', 'startup.py', format_traceback() )    
+
+try:
   log.write('...changing permissions on local_storage %s\n' % local_storage)
   inheritance = InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit
 
@@ -84,7 +90,7 @@ try:
   log.write('...stopping at UTC %s...\n' % System.DateTime.UtcNow.ToString())
 
 except:
-  GenUtils.LogMsg('exception', 'startup.py', format_traceback() )    
+  GenUtils.PriorityLogMsg('exception', 'startup.py', format_traceback() )    
 
 log.close()
 
