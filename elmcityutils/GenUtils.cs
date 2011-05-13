@@ -32,16 +32,25 @@ namespace ElmcityUtils
 		static private XNamespace odata_metadata_namespace = "http://schemas.microsoft.com/ado/2007/08/dataservices/metadata";
 		static private XNamespace data_namespace = "http://schemas.microsoft.com/ado/2007/08/dataservices";
 
+		public static void LogMsg(string type, string title, string blurb)
+		{
+			LogMsg(type, title, blurb, default_ts);
+		}
+
 		public static void LogMsg(string type, string title, string blurb, TableStorage ts)
 		{
-			if (ts == null) ts = default_ts;
 			title = MakeLogMsgTitle(title);
 			ts.WriteLogMessage(type, title, blurb);
 		}
 
+		public static void PriorityLogMsg(string type, string title, string blurb)
+		{
+			PriorityLogMsg(type, title, blurb, default_ts);
+		}
+
 		public static void PriorityLogMsg(string type, string title, string blurb, TableStorage ts)
 		{
-			if (ts == null) ts = default_ts;
+			GenUtils.LogMsg(title, title, blurb);
 			title = MakeLogMsgTitle(title);
 			ts.WritePriorityLogMessage(type, title, blurb);
 		}
@@ -52,11 +61,6 @@ namespace ElmcityUtils
 			var procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 			title = string.Format("{0} {1} {2}", hostname, procname, title);
 			return title;
-		}
-
-		public static void LogMsg(string type, string title, string blurb)
-		{
-			LogMsg(type, title, blurb, default_ts);
 		}
 
 		public class Actions

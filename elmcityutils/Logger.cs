@@ -16,7 +16,7 @@ namespace ElmcityUtils
 		public LogMsg(string type, string title, string blurb)
 		{
 			this.type = type;
-			this.title = title;
+			this.title = GenUtils.MakeLogMsgTitle(title);
 			this.blurb = blurb;
 		}
 	}	
@@ -78,7 +78,7 @@ namespace ElmcityUtils
 			while (true)
 			{
 				if (this.log_queue.Count > this.max_messages)
-					GenUtils.PriorityLogMsg("warning", "Logger", String.Format("{0} messages", this.log_queue.Count), this.ts);
+					GenUtils.PriorityLogMsg("warning", "Logger", String.Format("{0} messages", this.log_queue.Count));
 
 				if (this.log_queue.Count > 0)
 				{

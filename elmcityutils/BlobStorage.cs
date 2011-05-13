@@ -133,7 +133,7 @@ namespace ElmcityUtils
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "CompletedIfContainerIsGone", e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "CompletedIfContainerIsGone", e.Message + e.StackTrace);
                 throw new Exception("CompletedObjectDelegateException");
             }
 
@@ -152,7 +152,7 @@ namespace ElmcityUtils
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "MaybeDeleteContainer: " + containername, e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "MaybeDeleteContainer: " + containername, e.Message + e.StackTrace);
                 return default(BlobStorageResponse);
             }
         }
@@ -292,7 +292,7 @@ namespace ElmcityUtils
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "DoBlobStoreRequest", e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "DoBlobStoreRequest", e.Message + e.StackTrace);
                 return default(HttpResponse);
             }
         }
@@ -326,6 +326,7 @@ namespace ElmcityUtils
 
         public BlobStorageResponse SerializeObjectToAzureBlob(object o, string container, string blobname)
         {
+			container = LegalizeContainerName(container);
             IFormatter serializer = new BinaryFormatter();
             var ms = new MemoryStream();
             serializer.Serialize(ms, o);
@@ -339,12 +340,12 @@ namespace ElmcityUtils
         {
             try
             {
-                var buffer = HttpUtils.FetchUrl(uri).bytes;
+                var buffer = HttpUtils.FetchUrlNoCache(uri).bytes;
                 return DeserializeObjectFromBytes(buffer);
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "DeserializeObjectFromUri: " + uri.ToString(), e.Message);
+                GenUtils.PriorityLogMsg("exception", "DeserializeObjectFromUri: " + uri.ToString(), e.Message);
                 throw;
             }
         }

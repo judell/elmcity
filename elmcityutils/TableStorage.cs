@@ -187,7 +187,7 @@ namespace ElmcityUtils
 				}
 				if (response.http_response.status != HttpStatusCode.NoContent)
 				{
-					GenUtils.LogMsg("error", "DictToTableStore: " + operation, response.http_response.status.ToString() + ", " + response.http_response.message);
+					GenUtils.PriorityLogMsg("error", "DictToTableStore: " + operation, response.http_response.status.ToString() + ", " + response.http_response.message);
 					//var keys = String.Join(",", dict.Keys.ToArray());
 					//var str_vals = new List<string>();
 					//foreach (var val in dict.Values)

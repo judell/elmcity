@@ -33,7 +33,7 @@ namespace ElmcityUtils
 
         public static void InstallPythonStandardLibrary(string directory, TableStorage ts)
         {
-            GenUtils.LogMsg("info", "installing python standard library", null, ts);
+            GenUtils.PriorityLogMsg("info", "installing python standard library", null);
             try
             {
 				
@@ -42,11 +42,11 @@ namespace ElmcityUtils
                 var args = new List<string> { "", "", "" };
                 var script_url = Configurator.python_test_script_url;
                 var result = RunIronPython(directory, script_url, args);
-                GenUtils.LogMsg("info", "result of python standard lib install test", result, ts);
+                GenUtils.LogMsg("info", "result of python standard lib install test", result);
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "InstallPythonStandardLibrary", e.Message + e.StackTrace, ts);
+                GenUtils.PriorityLogMsg("exception", "InstallPythonStandardLibrary", e.Message + e.StackTrace);
             }
         }
 
@@ -54,7 +54,7 @@ namespace ElmcityUtils
         public static void InstallPythonElmcityLibrary(string directory, TableStorage ts)
         {
             {
-                GenUtils.LogMsg("info", "installing python elmcity library", null, ts);
+                GenUtils.LogMsg("info", "installing python elmcity library", null);
                 try
                 {
                     var zip_url = Configurator.elmcity_pylib_zip_url;
@@ -66,7 +66,7 @@ namespace ElmcityUtils
                 }
                 catch (Exception e)
                 {
-                    GenUtils.LogMsg("exception", "InstallPythonElmcityLibrary", e.Message + e.StackTrace, ts);
+                    GenUtils.PriorityLogMsg("exception", "InstallPythonElmcityLibrary", e.Message + e.StackTrace);
                 }
             }
         }
@@ -109,7 +109,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("exception", "RunIronPython: cannot #include common.py", e.Message);
+					GenUtils.PriorityLogMsg("exception", "RunIronPython: cannot #include common.py", e.Message);
 				}
 
                 var source = python.CreateScriptSourceFromString(s, SourceCodeKind.Statements);
@@ -122,9 +122,9 @@ namespace ElmcityUtils
 				{
 					result = scope.GetVariable("result").ToString();
 				}
-				catch (Exception e)
+				catch 
 				{
-					GenUtils.LogMsg("exception", "RunIronPython", e.Message);
+					GenUtils.LogMsg("info", "RunIronPython: " + str_script_url, "no result");
 				}
                 python.Runtime.Shutdown();
 				//AppDomain.Unload(python_domain);

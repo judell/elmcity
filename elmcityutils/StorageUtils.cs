@@ -128,7 +128,7 @@ namespace ElmcityUtils
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "DoStorageRequest", e.Message + e.InnerException.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "DoStorageRequest", e.Message + e.InnerException.Message + e.StackTrace);
 				return default(HttpResponse);
 			}
 		}

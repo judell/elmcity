@@ -78,7 +78,7 @@ namespace ElmcityUtils
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "AspNetCache.Remove: " + key, e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "AspNetCache.Remove: " + key, e.Message + e.StackTrace);
             }
             return o;
         }
@@ -251,6 +251,7 @@ namespace ElmcityUtils
 			try
 			{
 				var purgeable_entities = FetchPurgeableCacheDicts();
+				GenUtils.LogMsg("info", String.Format("MaybePurgeCache: {0} purgeable entities", purgeable_entities.Count), null);
 				foreach (var purgeable_entity in purgeable_entities)
 				{
 					var purgeable_cache_url = (string)purgeable_entity["cached_uri"];
@@ -273,7 +274,7 @@ namespace ElmcityUtils
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "MaybePurgeCache", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "MaybePurgeCache", e.Message + e.StackTrace);
 			}
 		}
 

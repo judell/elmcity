@@ -67,7 +67,7 @@ namespace ElmcityUtils
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "StartMonitor", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "StartMonitor", e.Message + e.StackTrace);
 			}
 			return monitor;
 		}
@@ -102,7 +102,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("exception", "ProcessMonitorThreadMethod: snapshot", e.Message + e.StackTrace);
+					GenUtils.PriorityLogMsg("exception", "ProcessMonitorThreadMethod: snapshot", e.Message + e.StackTrace);
 				}
 			}
 		}
@@ -122,7 +122,7 @@ namespace ElmcityUtils
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "MaybeWritePriorityLog", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "MaybeWritePriorityLog", e.Message + e.StackTrace);
 			}
 		}
 
@@ -141,13 +141,13 @@ namespace ElmcityUtils
 					{
 						trigger_float = float.Parse(trigger_dict["max"]);
 						if ( snapshot_float > trigger_float )
-							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) > trigger ({1})", snapshot_float, trigger_float), this.ts);
+							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) > trigger ({1})", snapshot_float, trigger_float));
 					}
 					if (trigger_dict.ContainsKey("min"))
 					{
 						trigger_float = float.Parse(trigger_dict["min"]);
 						if (snapshot_float < trigger_float)
-							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) < trigger ({1})", snapshot_float, trigger_float), this.ts);
+							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) < trigger ({1})", snapshot_float, trigger_float));
 					}
 					break;
 				case "int":
@@ -156,13 +156,13 @@ namespace ElmcityUtils
 					{
 						trigger_int = Convert.ToInt32(trigger_dict["max"]);
 						if ( snapshot_int > trigger_int )
-							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) > trigger ({1})", snapshot_int, trigger_int), this.ts);
+							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) > trigger ({1})", snapshot_int, trigger_int));
 					}
 					if (trigger_dict.ContainsKey("min"))
 					{
 						trigger_int = Convert.ToInt32(trigger_dict["min"]);
 						if (snapshot_int < trigger_int)
-							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) < trigger ({1})", snapshot_int, trigger_int), this.ts);
+							GenUtils.PriorityLogMsg("warning", key, String.Format("snapshot ({0}) < trigger ({1})", snapshot_int, trigger_int));
 					}
 					break;
 				default:
@@ -182,7 +182,7 @@ namespace ElmcityUtils
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "StoreSnapshot", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "StoreSnapshot", e.Message + e.StackTrace);
 			}
 
 		}
@@ -308,7 +308,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("exception", "GetCounters", category + "/" + description + " -> " + e.Message + e.StackTrace);
+					GenUtils.PriorityLogMsg("exception", "GetCounters", category + "/" + description + " -> " + e.Message + e.StackTrace);
 				}
 			}
 			return new CounterResponse(counter_paths: counter_paths, counter_objects: counter_objects);
@@ -367,7 +367,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("exception", string.Format("MakeSnapshotDict: {0}/{1}/{2}", key, counter.CategoryName, counter.CounterName), e.Message + e.StackTrace);
+					GenUtils.PriorityLogMsg("exception", string.Format("MakeSnapshotDict: {0}/{1}/{2}", key, counter.CategoryName, counter.CounterName), e.Message + e.StackTrace);
 				}
 			}
 
@@ -401,7 +401,7 @@ namespace ElmcityUtils
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "Counters.DisplaySnapshotAsText", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "Counters.DisplaySnapshotAsText", e.Message + e.StackTrace);
 				return e.Message + e.StackTrace;
 			}
 		}
@@ -446,7 +446,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception ex_xml)
 				{
-					GenUtils.LogMsg("exception", "IIS_FailedRequestLogs.TransferToSqlAzure Unpack XML", ex_xml.Message + ex_xml.InnerException.Message + ex_xml.StackTrace);
+					GenUtils.PriorityLogMsg("exception", "IIS_FailedRequestLogs.TransferToSqlAzure Unpack XML", ex_xml.Message + ex_xml.InnerException.Message + ex_xml.StackTrace);
 				}
 
 				try
@@ -455,11 +455,11 @@ namespace ElmcityUtils
 					var db_result = entities.SaveChanges();
 
 					if (db_result != 1)
-						GenUtils.LogMsg("warning", "IIS_FailedRequestLogs.TransferToSqlAzure expected 1 saved change but got " + db_result.ToString(), null);
+						GenUtils.PriorityLogMsg("warning", "IIS_FailedRequestLogs.TransferToSqlAzure expected 1 saved change but got " + db_result.ToString(), null);
 				}
 				catch (Exception ex_db)
 				{
-					GenUtils.LogMsg("exception", "IIS_FailedRequestLogs.TransferToSqlAzure SaveChanges", ex_db.Message + ex_db.InnerException.Message + ex_db.StackTrace);
+					GenUtils.PriorityLogMsg("exception", "IIS_FailedRequestLogs.TransferToSqlAzure SaveChanges", ex_db.Message + ex_db.InnerException.Message + ex_db.StackTrace);
 				}
 
 				try
@@ -472,7 +472,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception bs_db)
 				{
-					GenUtils.LogMsg("exception", "IIS_FailedRequestLogs.TransferToSqlAzure DeleteBlob", bs_db.Message + bs_db.StackTrace);
+					GenUtils.PriorityLogMsg("exception", "IIS_FailedRequestLogs.TransferToSqlAzure DeleteBlob", bs_db.Message + bs_db.StackTrace);
 				}
 
 			}
@@ -527,7 +527,7 @@ namespace ElmcityUtils
 					}
 					catch (Exception ex_log)
 					{
-						GenUtils.LogMsg("exception", "IIS_Logs.TransferToSqlAzure: " + line, ex_log.Message + ex_log.InnerException.Message);
+						GenUtils.PriorityLogMsg("exception", "IIS_Logs.TransferToSqlAzure: " + line, ex_log.Message + ex_log.InnerException.Message);
 					}
 
 					try
@@ -535,11 +535,11 @@ namespace ElmcityUtils
 						entities.AddObject(entitySetName: model_name, entity: iis_log_entry);
 						db_result = entities.SaveChanges();
 						if (db_result != 1)
-							GenUtils.LogMsg("warning", "IIS_Logs.TransferToSqlAzure expected 1 but got " + db_result.ToString(), null);
+							GenUtils.PriorityLogMsg("warning", "IIS_Logs.TransferToSqlAzure expected 1 but got " + db_result.ToString(), null);
 					}
 					catch (Exception ex_db)
 					{
-						GenUtils.LogMsg("exception", "IIS_Logs.TransferToSqlAzure SaveChanges", ex_db.Message + ex_db.InnerException.Message + ex_db.StackTrace);
+						GenUtils.PriorityLogMsg("exception", "IIS_Logs.TransferToSqlAzure SaveChanges", ex_db.Message + ex_db.InnerException.Message + ex_db.StackTrace);
 					}
 				}
 
@@ -552,7 +552,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception bs_db)
 				{
-					GenUtils.LogMsg("exception", "IIS_Logs.TransferToSqlAzure DeleteBlob", bs_db.Message + bs_db.StackTrace);
+					GenUtils.PriorityLogMsg("exception", "IIS_Logs.TransferToSqlAzure DeleteBlob", bs_db.Message + bs_db.StackTrace);
 				}
 			}
 		}
@@ -598,7 +598,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception ex_log)
 				{
-					GenUtils.LogMsg("exception", "elmcity_logs.TransferToSqlAzure", ex_log.Message + ex_log.InnerException.Message);
+					GenUtils.PriorityLogMsg("exception", "elmcity_logs.TransferToSqlAzure", ex_log.Message + ex_log.InnerException.Message);
 				}
 
 				try
@@ -611,7 +611,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception ex_db)
 				{
-					GenUtils.LogMsg("exception", "elmcity_logs.TransferToSqlAzure SaveChanges", ex_db.Message + ex_db.InnerException.Message + ex_db.StackTrace);
+					GenUtils.PriorityLogMsg("exception", "elmcity_logs.TransferToSqlAzure SaveChanges", ex_db.Message + ex_db.InnerException.Message + ex_db.StackTrace);
 				}
 			}
 

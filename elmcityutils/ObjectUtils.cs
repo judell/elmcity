@@ -38,7 +38,7 @@ namespace ElmcityUtils
 
 			if (type.GetProperties() == null)
 			{
-				GenUtils.LogMsg("exception", "DictObjToObj: " + type.Name, 
+				GenUtils.PriorityLogMsg("exception", "DictObjToObj: " + type.Name, 
 					"target type does not define properties");
 				return o;
 			}
@@ -56,7 +56,7 @@ namespace ElmcityUtils
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("exception", "DictObjToObj: " + type.Name,
+					GenUtils.PriorityLogMsg("exception", "DictObjToObj: " + type.Name,
 						e.Message + e.StackTrace);
 				}
 			}
@@ -161,32 +161,12 @@ namespace ElmcityUtils
 
 		public enum JsonSnapshotType { DictStr, ListDictStr };
 
-		public static void MaybeSaveJsonSnapshot(string id, JsonSnapshotType type, string name, Object new_obj)
+		public static bool SavedJsonSnapshot(string id, JsonSnapshotType type, string name, Object new_obj)
 		{
 			var json_blob_name = id + "." + name + ".json";
 			var existing_obj_uri = BlobStorage.MakeAzureBlobUri(id, json_blob_name);
-			bool equal = false;
-			if (BlobStorage.ExistsBlob(existing_obj_uri))
-			{
-				if ( type == JsonSnapshotType.DictStr)
-				{
-					var dict_str = (Dictionary<string, string>) new_obj;
-					if (dict_str.Keys.Count == 0) // no response from delicious
-						return;
-					var existing_obj = ObjectUtils.GetDictStrFromJsonUri(existing_obj_uri);
-					equal = ObjectUtils.DictStrEqualsDictStr((Dictionary<string, string>)existing_obj, dict_str);
-				}
-				else // JsonSnapshotType.ListDictStr
-				{
-					var list_dict_str = (List<Dictionary<string, string>>) new_obj;
-					foreach (var dict_str in list_dict_str)
-						if (dict_str.Keys.Count == 0) // no response from delicious
-							return;
-					var existing_obj = ObjectUtils.GetListDictStrFromJsonUri(existing_obj_uri);
-					equal = ObjectUtils.ListDictStrEqualsDictStr((List<Dictionary<string, string>>)existing_obj, list_dict_str);
-				}
-			}
-			if (equal == false)
+			bool objects_equal = NewJsonMatchesExistingJson(type, new_obj, existing_obj_uri);
+			if (objects_equal == false)
 			{
 				var bs = BlobStorage.MakeDefaultBlobStorage();
 				var timestamped_json_blob_name = string.Format(id + "." + string.Format("{0:yyyy.MM.dd.HH.mm}" + "." + name + ".json", DateTime.UtcNow));
@@ -200,6 +180,36 @@ namespace ElmcityUtils
 				BlobStorage.WriteToAzureBlob(bs, id, json_blob_name, null, new_obj_as_json_bytes);
 				BlobStorage.WriteToAzureBlob(bs, id, timestamped_json_blob_name, null, new_obj_as_json_bytes);
 			}
+			return objects_equal 
+						? false // objects matched, json not saved
+						: true; // did not match, json saved
+			                             
+		}
+
+		private static bool NewJsonMatchesExistingJson(JsonSnapshotType type, Object new_obj, Uri existing_obj_uri)
+		{
+			var equal = false;
+			if (BlobStorage.ExistsBlob(existing_obj_uri))
+			{
+				if (type == JsonSnapshotType.DictStr)
+				{
+					var dict_str = (Dictionary<string, string>)new_obj;
+					if (dict_str.Keys.Count == 0) // no response from delicious
+						return equal;
+					var existing_obj = ObjectUtils.GetDictStrFromJsonUri(existing_obj_uri);
+					equal = ObjectUtils.DictStrEqualsDictStr((Dictionary<string, string>)existing_obj, dict_str);
+				}
+				else // JsonSnapshotType.ListDictStr
+				{
+					var list_dict_str = (List<Dictionary<string, string>>)new_obj;
+					foreach (var dict_str in list_dict_str)
+						if (dict_str.Keys.Count == 0) // no response from delicious
+							return equal;
+					var existing_obj = ObjectUtils.GetListDictStrFromJsonUri(existing_obj_uri);
+					equal = ObjectUtils.ListDictStrEqualsDictStr((List<Dictionary<string, string>>)existing_obj, list_dict_str);
+				}
+			}
+			return equal;
 		}
 
 	}

@@ -114,7 +114,7 @@ namespace ElmcityUtils
             }
             catch (Exception e)
             {
-                GenUtils.LogMsg("exception", "FetchResponseBodyAndETagFromUri", e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "FetchResponseBodyAndETagFromUri", e.Message + e.StackTrace);
             }
         }
 
@@ -132,6 +132,14 @@ namespace ElmcityUtils
             byte[] UTf8ByteArray = new byte[0];
             return DoHttpWebRequest(request, UTf8ByteArray);
         }
+
+		public static HttpResponse FetchUrlNoCache(Uri url)
+		{
+			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+			request.Headers.Add("Cache-Control", "no-cache");
+			byte[] UTf8ByteArray = new byte[0];
+			return DoHttpWebRequest(request, UTf8ByteArray);
+		}
 
         public static HttpResponse DoAuthorizedHttpRequest(HttpWebRequest request, string user, string pass, byte[] data)
         {
@@ -170,7 +178,7 @@ namespace ElmcityUtils
 			}
 			catch (Exception ex_write)
 			{
-			GenUtils.LogMsg("exception", "DoHttpWebRequest: writing data", ex_write.Message + ex_write.InnerException.Message + ex_write.StackTrace);
+			GenUtils.PriorityLogMsg("exception", "DoHttpWebRequest: writing data", ex_write.Message + ex_write.InnerException.Message + ex_write.StackTrace);
 			throw;
 			}
 
@@ -191,8 +199,7 @@ namespace ElmcityUtils
             }
             catch (Exception ex_read)
             {
-				GenUtils.LogMsg("exception", "DoHttpWebRequest: reading data", ex_read.Message + ex_read.InnerException.Message + ex_read.StackTrace);
-                Console.WriteLine("exception", "DoHttpWebRequest: reading data: " + ex_read.Message + ex_read.InnerException.Message + ex_read.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "DoHttpWebRequest: reading data", ex_read.Message + ex_read.InnerException.Message + ex_read.StackTrace);
 				throw;
             }
         }
@@ -228,7 +235,7 @@ namespace ElmcityUtils
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "HttpUtils.GetResponseData", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "HttpUtils.GetResponseData", e.Message + e.StackTrace);
 				throw;
 			}
         }
@@ -303,7 +310,7 @@ namespace ElmcityUtils
             }
             catch // (Exception e)
             {
-             //   GenUtils.LogMsg("exception", "LogHttpRequest", e.Message + e.StackTrace);
+             //   GenUtils.PriorityLogMsg("exception", "LogHttpRequest", e.Message + e.StackTrace);
             }
 
             var msg = string.Format("{0} {1} ",
@@ -316,16 +323,18 @@ namespace ElmcityUtils
 
 		public static LogMsg MakeHttpLogMsg(System.Web.Mvc.ControllerContext c)
 		{
-			string requestor_ip_addr = "ip_unavailable";
-			string url = "url_unavailable";
+			string requestor_ip_addr;
+			string url;
+
 			try
 			{
 				requestor_ip_addr = c.HttpContext.Request.UserHostAddress;
 				url = c.HttpContext.Request.Url.ToString();
 			}
-			catch (Exception e)
+			catch 
 			{
-				GenUtils.LogMsg("info", "LogHttpRequest", e.Message + e.StackTrace);
+				requestor_ip_addr = "ip_unavailable";
+				url = "url_unavailable";
 			}
 
 			var msg = new LogMsg("info", requestor_ip_addr, url);
