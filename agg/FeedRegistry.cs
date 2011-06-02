@@ -175,10 +175,10 @@ namespace CalendarAggregator
 				AddFeed(url, dict[url]);
 		}
 
-		// populate feed registry from azure table (which reflects what's on delicious)
-		public void LoadFeedsFromAzure()
+		// populate feed registry from azure table (includes what is public on delicious, and also private out-of-band)
+		public void LoadFeedsFromAzure(FeedLoadOption option)
 		{
-			var dict = delicious.LoadFeedsFromAzureTableForId(this.id);
+			var dict = delicious.LoadFeedsFromAzureTableForId(this.id, option);
 			foreach (var url in dict.Keys)
 				this.AddFeed(url, dict[url]);
 		}
@@ -202,7 +202,7 @@ namespace CalendarAggregator
 			return JsonConvert.DeserializeObject<Dictionary<string, IcalStats>>(json);
 		}
 
-		public TableStorageResponse SaveStatsToAzure()
+		public HttpResponse SaveStatsToAzure()
 		{
 			var entity = new Dictionary<string, object>();
 			entity["PartitionKey"] = entity["RowKey"] = this.id;
@@ -220,7 +220,7 @@ namespace CalendarAggregator
 				}
 			}
 			entity["ical_events"] = events_loaded;
-			return this.ts.MergeEntity("metadata", this.id, this.id, entity);
+			return this.ts.MergeEntity("metadata", this.id, this.id, entity).http_response;
 		}
 	}
 }
