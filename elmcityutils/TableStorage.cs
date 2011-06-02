@@ -23,58 +23,84 @@ using System.Xml.Linq;
 namespace ElmcityUtils
 {
 	// encapsulate http response from azure table plus various operation-specific responses
-	public class TableStorageResponse
-	{
 
+	public class TableStorageHttpResponse
+	{
 		public HttpResponse http_response
 		{
 			get { return _http_response; }
 		}
-		private HttpResponse _http_response;
+		private  HttpResponse _http_response;
 
-		public object response
+		public TableStorageHttpResponse(HttpResponse http_response, bool null_bytes)
 		{
-			get { return _response; }
+			this._http_response = http_response;
+			if (null_bytes == true)
+				this._http_response.bytes = null;
 		}
-		private object _response;
+
+	}
+
+	public class TableStorageListDictResponse : TableStorageHttpResponse
+	{
+		public List<Dictionary<string,object>> list_dict_obj
+		{
+			get { return _list_dict_obj; }
+		}
+		private List<Dictionary<string,object>> _list_dict_obj;
 
 		// encapsulate the http response from the table store, plus data as a list of dict<str,obj>
-		public TableStorageResponse(HttpResponse http_response, List<Dictionary<string, object>> response)
+		public TableStorageListDictResponse(HttpResponse http_response, List<Dictionary<string,object>> list_dict_obj)
+			: base(http_response, null_bytes: true)
 		{
-			this._http_response = http_response;
-			this._http_response.bytes = null; // data is parsed out, so release the memory
-			this._response = response;
+			this._list_dict_obj = list_dict_obj;
 		}
+	}
+
+	public class TableStorageStringResponse : TableStorageHttpResponse
+	{
+		public string str
+		{
+			get { return _str; }
+		}
+		private string _str;
 
 		// alternate for data as string
-		public TableStorageResponse(HttpResponse http_response, string response)
+		public TableStorageStringResponse(HttpResponse http_response, string str)
+			: base(http_response, null_bytes: false)
 		{
-			this._http_response = http_response;
-			this._http_response.bytes = null;
-			this._response = response;
+			this._str = str;
 		}
+	}
 
+	public class TableStorageBoolResponse : TableStorageHttpResponse
+	{
+		public bool boolean
+		{
+			get { return _boolean; }
+		}
+		private bool _boolean;
 		// alternate version for boolean responses
-		public TableStorageResponse(HttpResponse http_response, bool response)
+		public TableStorageBoolResponse(HttpResponse http_response, bool boolean)
+			: base(http_response, null_bytes:true)
 		{
-			this._http_response = http_response;
-			this._response = response;
+			this._boolean = boolean;
 		}
+	}
 
+	public class TableStorageIntResponse : TableStorageHttpResponse
+	{
+		public int i
+		{
+			get { return _i; }
+		}
+		private int _i;
 		// alternate version for int responses
-		public TableStorageResponse(HttpResponse http_response, int response)
+		public TableStorageIntResponse(HttpResponse http_response, int i)
+			: base(http_response, null_bytes:true)
 		{
-			this._http_response = http_response;
-			this._response = response;
+			this._i = i;
 		}
-
-		// alternate version when only http response needed
-		public TableStorageResponse(HttpResponse http_response)
-		{
-			this._http_response = http_response;
-			this._response = null;
-		}
-
 	}
 
 	// an http-oriented alternative to the azure sdk wrapper around table store
@@ -140,13 +166,13 @@ namespace ElmcityUtils
 		}
 
 		// merge partial set of values into existing record
-		public static TableStorageResponse UpmergeDictToTableStore(Dictionary<string, object> dict, string table, string partkey, string rowkey)
+		public static TableStorageListDictResponse UpmergeDictToTableStore(Dictionary<string, object> dict, string table, string partkey, string rowkey)
 		{
 			return DictObjToTableStore(Operation.merge, dict, table, partkey, rowkey);
 		}
 
 		// update full set of values into existing record
-		public static TableStorageResponse UpdateDictToTableStore(Dictionary<string, object> dict, string table, string partkey, string rowkey)
+		public static TableStorageListDictResponse UpdateDictToTableStore(Dictionary<string, object> dict, string table, string partkey, string rowkey)
 		{
 			return DictObjToTableStore(Operation.update, dict, table, partkey, rowkey);
 		}
@@ -161,7 +187,7 @@ namespace ElmcityUtils
 
 		// try to insert a dict<str,obj> into table store
 		// if conflict, try to merge or update 
-		public static TableStorageResponse DictObjToTableStore(Operation operation, Dictionary<string, object> dict, string table, string partkey, string rowkey)
+		public static TableStorageListDictResponse DictObjToTableStore(Operation operation, Dictionary<string, object> dict, string table, string partkey, string rowkey)
 		{
 			TableStorage ts = MakeDefaultTableStorage();
 			var entity = new Dictionary<string, object>();
@@ -188,12 +214,6 @@ namespace ElmcityUtils
 				if (response.http_response.status != HttpStatusCode.NoContent)
 				{
 					GenUtils.PriorityLogMsg("error", "DictToTableStore: " + operation, response.http_response.status.ToString() + ", " + response.http_response.message);
-					//var keys = String.Join(",", dict.Keys.ToArray());
-					//var str_vals = new List<string>();
-					//foreach (var val in dict.Values)
-					//    str_vals.Add(val.ToString());
-					//var vals = String.Join(",", str_vals.ToArray());
-					//GenUtils.LogMsg("info", "DictToTableStore: " + keys + ", " + str_vals, null);
 				}
 			}
 			return response;
@@ -203,7 +223,7 @@ namespace ElmcityUtils
 		public static Dictionary<string, object> QueryForSingleEntityAsDictObj(TableStorage ts, string table, string q)
 		{
 			var ts_response = ts.QueryEntities(table, q);
-			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			var dicts = ts_response.list_dict_obj;
 			var dict = new Dictionary<string, object>();
 
 			if (dicts.Count > 0)
@@ -222,14 +242,15 @@ namespace ElmcityUtils
 			return ObjectUtils.DictObjToDictStr(dict);
 		}
 
-		public TableStorageResponse WritePriorityLogMessage(string type, string message, string data)
+		public TableStorageHttpResponse WritePriorityLogMessage(string type, string message, string data)
 		{
-			return WriteLogMessage(type, message, data, Configurator.azure_priority_log_table);
+			return WriteLogMessage (type, message, data, Configurator.azure_priority_log_table);
 		}
 
 		// for tracing, used everywhere
-		public TableStorageResponse WriteLogMessage(string type, string message, string data, string table)
+		public TableStorageHttpResponse WriteLogMessage(string type, string message, string data, string table)
 		{
+			HttpResponse http_response;
 			type = type ?? "";
 			message = message ?? "";
 			data = data ?? "";
@@ -239,23 +260,22 @@ namespace ElmcityUtils
 			entity.Add("type", type);
 			entity.Add("message", message);
 			entity.Add("data", data);
-			TableStorageResponse response;
 			try
 			{
 				var tablename = (table == null) ? Configurator.azure_log_table : table;
-				response = this.InsertEntity(table, entity);
+				http_response = this.InsertEntity(table, entity).http_response;
 			}
 			catch (Exception e)
 			{
-				var rs = new HttpResponse(HttpStatusCode.Unused, "unable to write log message, " + e.Message, null, null);
-				response = new TableStorageResponse(rs);
+				http_response = new HttpResponse(HttpStatusCode.Unused, "unable to write log message, " + e.Message, null, null);
 			}
-			return response;
+			return new TableStorageHttpResponse(http_response, null_bytes: true);
 		}
 
 		// for tracing, used everywhere
-		public TableStorageResponse WriteLogMessage(string type, string message, string data)
+		public TableStorageHttpResponse WriteLogMessage(string type, string message, string data)
 		{
+			HttpResponse http_response;
 			type = type ?? "";
 			message = message ?? "";
 			data = data ?? "";
@@ -265,61 +285,59 @@ namespace ElmcityUtils
 			entity.Add("type", type);
 			entity.Add("message", message);
 			entity.Add("data", data);
-			TableStorageResponse response;
 			try
 			{
-				response = this.InsertEntity(Configurator.azure_log_table, entity);
+				http_response = this.InsertEntity(Configurator.azure_log_table, entity).http_response;
 			}
 			catch (Exception e)
 			{
-				var rs = new HttpResponse(HttpStatusCode.Unused, "unable to write log message, " + e.Message, null, null);
-				response = new TableStorageResponse(rs);
+				http_response = new HttpResponse(HttpStatusCode.Unused, "unable to write log message, " + e.Message, null, null);
 			}
-			return response;
+			return new TableStorageHttpResponse(http_response, null_bytes: true);
 		}
 
-		public TableStorageResponse ListTables()
+		public TableStorageListDictResponse ListTables()
 		{
 			var request_path = "Tables()";
 			var http_response = DoTableStoreRequest(request_path, query_string: null, method: "GET", headers: new Hashtable(), data: null);
 			var response = GetTsDicts(http_response);
-			return new TableStorageResponse(http_response, response);
+			return new TableStorageListDictResponse (http_response, response);
 		}
 
-		public TableStorageResponse CountTables()
+		public TableStorageIntResponse CountTables()
 		{
-			var ts_response = ListTables();
-			var dicts = (List<Dictionary<string, object>>)ts_response.response;
-			return new TableStorageResponse(ts_response.http_response, dicts.Count);
+			var response = ListTables();
+			var dicts = response.list_dict_obj;
+			return new TableStorageIntResponse (response.http_response, dicts.Count);
 		}
 
-		public TableStorageResponse ExistsTable(string tablename)
+		public TableStorageBoolResponse ExistsTable(string tablename)
 		{
 			var ts_response = ListTables();
 			var found = false;
-			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			var dicts = ts_response.list_dict_obj;
 			foreach (var dict in dicts)
 			{
 				if ((string)dict["TableName"] == tablename)
 					found = true;
 			}
-			return new TableStorageResponse(ts_response.http_response, found);
+			return new TableStorageBoolResponse (ts_response.http_response, found);
 		}
 
-		public TableStorageResponse CreateTable(string tablename)
+		public TableStorageHttpResponse CreateTable(string tablename)
 		{
-			var completed_delegate = new GenUtils.Actions.CompletedDelegate<TableStorageResponse, Object>(CompletedIfCreated);
-			return GenUtils.Actions.Retry<TableStorageResponse>(delegate() { return MaybeCreateTable(tablename); }, completed_delegate, completed_delegate_object: null, wait_secs: StorageUtils.wait_secs, max_tries: StorageUtils.max_tries, timeout_secs: StorageUtils.timeout_secs);
+			var completed_delegate = new GenUtils.Actions.CompletedDelegate<TableStorageHttpResponse, Object>(CompletedIfCreated);
+			return GenUtils.Actions.Retry<TableStorageHttpResponse>(delegate() { return MaybeCreateTable(tablename); }, completed_delegate, completed_delegate_object: null, wait_secs: StorageUtils.wait_secs, max_tries: StorageUtils.max_tries, timeout_secs: StorageUtils.timeout_secs);
 		}
 
-		public static bool CompletedIfCreated(TableStorageResponse response, Object o)
+		public static bool CompletedIfCreated(TableStorageHttpResponse response, Object o)
 		{
 			if (response == null)
 				return false;
 			return response.http_response.status == HttpStatusCode.Created;
 		}
 
-		public TableStorageResponse MaybeCreateTable(string tablename)
+		public TableStorageHttpResponse MaybeCreateTable(string tablename)
 		{
 			var inpath = "Tables";
 			var d = new Dictionary<string, object>();
@@ -327,17 +345,17 @@ namespace ElmcityUtils
 			var content = MakeAppContent(d);
 			var data = MakeAppPayload(content, "");
 			var http_response = DoTableStoreRequest(inpath, query_string: null, method: "POST", headers: new Hashtable(), data: data);
-			return new TableStorageResponse(http_response);
+			return new TableStorageHttpResponse(http_response, null_bytes: true);
 		}
 
-		public TableStorageResponse DeleteTable(string tablename)
+		public TableStorageHttpResponse DeleteTable(string tablename)
 		{
 			var inpath = string.Format("Tables('{0}')", tablename);
 			var http_response = DoTableStoreRequest(inpath, query_string: null, method: "DELETE", headers: new Hashtable(), data: null);
-			return new TableStorageResponse(http_response);
+			return new TableStorageHttpResponse(http_response, null_bytes: true);
 		}
 
-		public TableStorageResponse DoEntity(string inpath, Dictionary<string, object> entity, string id, string method, bool force_unconditional)
+		public TableStorageListDictResponse DoEntity(string inpath, Dictionary<string, object> entity, string id, string method, bool force_unconditional)
 		{
 			byte[] data = null;
 			if (entity != null && id != null)
@@ -352,43 +370,43 @@ namespace ElmcityUtils
 
 			var http_response = DoTableStoreRequest(inpath, query_string: null, method: method, headers: headers, data: data);
 			//Console.WriteLine("DoTableStoreRequest http_response null? " + (http_response == null).ToString());
-			return new TableStorageResponse(http_response, GetTsDicts(http_response));
+			return new TableStorageListDictResponse (http_response, GetTsDicts(http_response));
 		}
 
-		public TableStorageResponse InsertEntity(string tablename, Dictionary<string, object> entity)
+		public TableStorageListDictResponse InsertEntity(string tablename, Dictionary<string, object> entity)
 		{
 			var inpath = tablename;
 			return DoEntity(inpath, entity, id: "", method: "POST", force_unconditional: false);
 		}
 
-		public TableStorageResponse UpdateEntity(string tablename, string partkey, string rowkey, Dictionary<string, object> entity)
+		public TableStorageListDictResponse UpdateEntity(string tablename, string partkey, string rowkey, Dictionary<string, object> entity)
 		{
 			string inpath, id;
 			PrepEntityPathAndId(tablename, partkey, rowkey, out inpath, out id);
 			return DoEntity(inpath, entity, id: id, method: "PUT", force_unconditional: true);
 		}
 
-		public TableStorageResponse MergeEntity(string tablename, string partkey, string rowkey, Dictionary<string, object> entity)
+		public TableStorageListDictResponse MergeEntity(string tablename, string partkey, string rowkey, Dictionary<string, object> entity)
 		{
 			string inpath, id;
 			PrepEntityPathAndId(tablename, partkey, rowkey, out inpath, out id);
 			return DoEntity(inpath, entity, id, method: "MERGE", force_unconditional: true);
 		}
 
-		public TableStorageResponse DeleteEntity(string tablename, string partkey, string rowkey)
+		public TableStorageListDictResponse DeleteEntity(string tablename, string partkey, string rowkey)
 		{
-			var completed_delegate = new GenUtils.Actions.CompletedDelegate<TableStorageResponse, Object>(CompletedIfNotFound);
-			return GenUtils.Actions.Retry<TableStorageResponse>(delegate() { return MaybeDeleteEntity(tablename, partkey, rowkey); }, completed_delegate, completed_delegate_object: null, wait_secs: StorageUtils.wait_secs, max_tries: StorageUtils.max_tries, timeout_secs: StorageUtils.timeout_secs);
+			var completed_delegate = new GenUtils.Actions.CompletedDelegate<TableStorageListDictResponse, Object>(CompletedIfNotFound);
+			return GenUtils.Actions.Retry<TableStorageListDictResponse>(delegate() { return MaybeDeleteEntity(tablename, partkey, rowkey); }, completed_delegate, completed_delegate_object: null, wait_secs: StorageUtils.wait_secs, max_tries: StorageUtils.max_tries, timeout_secs: StorageUtils.timeout_secs);
 		}
 
-		public static bool CompletedIfNotFound(TableStorageResponse response, Object o)
+		public static bool CompletedIfNotFound(TableStorageHttpResponse response, Object o)
 		{
 			if (response == null)
 				return false;
 			return response.http_response.status == HttpStatusCode.NotFound;
 		}
 
-		public TableStorageResponse MaybeDeleteEntity(string tablename, string partkey, string rowkey)
+		public TableStorageListDictResponse MaybeDeleteEntity(string tablename, string partkey, string rowkey)
 		{
 			string inpath, id;
 			PrepEntityPathAndId(tablename, partkey, rowkey, out inpath, out id);
@@ -403,10 +421,10 @@ namespace ElmcityUtils
 				this.azure_storage_name, tablename, partkey, rowkey);
 		}
 
-		public TableStorageResponse QueryEntities(string tablename, string query)
+		public TableStorageListDictResponse QueryEntities(string tablename, string query)
 		{
 			var http_response = DoTableStoreRequest(tablename, query_string: query, method: "GET", headers: new Hashtable(), data: null);
-			return new TableStorageResponse(http_response, GetTsDicts(http_response));
+			return new TableStorageListDictResponse(http_response, GetTsDicts(http_response));
 		}
 
 		public string QueryEntitiesAsFeed(string tablename, string query)
@@ -415,25 +433,53 @@ namespace ElmcityUtils
 			return http_response.DataAsString();
 		}
 
-		public enum QueryAllReturnType { as_dicts, as_string };
-
-		public TableStorageResponse QueryAllEntities(string table, string query, QueryAllReturnType return_type)
+		public TableStorageListDictResponse QueryAllEntitiesAsListDict(string table, string query)
 		{
-			string next_pk = "";
-			string next_rk = "";
-			var http_response = default(HttpResponse);
-			var all_dicts = new List<Dictionary<string, object>>();
-			var all_responses = new StringBuilder();
+			var list_dict_obj = new List<Dictionary<string, object>>();
+			HttpResponse last_http_response = default(HttpResponse);
 
-			if (return_type == QueryAllReturnType.as_string)
-				all_responses.Append(String.Format(@"<?xml version=""1.0"" encoding=""utf-8"" standalone=""yes""?>
+			foreach (HttpResponse http_response in QueryAll(table, query) )
+			{
+				last_http_response = http_response;
+				var response_dicts = TableStorage.GetTsDicts(http_response);
+				foreach (var response_dict in response_dicts)
+				{
+					list_dict_obj.Add(response_dict);
+				}
+			}
+
+			return new TableStorageListDictResponse(last_http_response, list_dict_obj);
+		}
+
+		public TableStorageStringResponse QueryAllEntitiesAsStringOfXml(string table, string query)
+		{
+			var sb = new StringBuilder();
+			HttpResponse last_http_response = default(HttpResponse);
+
+			sb.Append(String.Format(@"<?xml version=""1.0"" encoding=""utf-8"" standalone=""yes""?>
 <feed xml:base=""http://elmcity.table.core.windows.net/"" xmlns:d=""http://schemas.microsoft.com/ado/2007/08/dataservices"" xmlns:m=""http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"" xmlns=""http://www.w3.org/2005/Atom"">
   <title type=""text"">{0}</title>
   <id>http://elmcity.table.core.windows.net/{0}</id>
   <updated>2010-09-22T20:15:03Z</updated>
   <link rel=""self"" title=""monitor"" href=""{0}"" />", table));
 
-			string adjusted_query = "";
+			foreach (HttpResponse http_response in QueryAll(table, query))
+			{
+				last_http_response = http_response;
+				sb.Append(http_response.DataAsString());
+			}
+
+			sb.Append("</feed>");
+			return new TableStorageStringResponse(last_http_response, sb.ToString());
+		}
+
+		private IEnumerable<HttpResponse> QueryAll(string table, string query)
+		{
+			string next_pk = "";
+			string next_rk = "";
+			var adjusted_query = "";
+			HttpResponse http_response;
+
 			do
 			{
 				if (next_pk != "")
@@ -451,47 +497,17 @@ namespace ElmcityUtils
 					next_pk = next_rk = null;
 				}
 
-				switch (return_type)
-				{
-					case QueryAllReturnType.as_dicts:
-						foreach (var dict in GetTsDicts(http_response))
-							all_dicts.Add(dict);
-						break;
-					case QueryAllReturnType.as_string:
-						var xdoc = XmlUtils.XdocFromXmlBytes(http_response.bytes);
-						var entries = from entry in xdoc.Descendants(StorageUtils.atom_namespace + "entry") select entry;
-						foreach (var entry in entries)
-							all_responses.Append(entry.ToString());
-						break;
-				}
-
+				yield return http_response;
 			}
+
 			while (next_pk != null && next_rk != null);
 
-			if (return_type == QueryAllReturnType.as_dicts)
-				return new TableStorageResponse(http_response, all_dicts);
-			else
-			{
-				all_responses.Append("</feed>");
-				return new TableStorageResponse(http_response, all_responses.ToString());
-			}
 		}
-
-
-		/*
-		public string QueryEntitiesAsFeed(string tablename, string query, string pubsubhub_uri)
-		{
-			var inpath = tablename;
-			var http_response = DoStoreRequest(inpath, query, "GET", new Hashtable(), data:null, content_type:null);
-			var atom_feed_xml = http_response.DataAsString();
-		   // return XmlUtils.PubSubHubEnable(atom_feed_xml, pubsubhub_uri);
-			return atom_feed_xml;
-		}*/
 
 		public bool ExistsEntity(string tablename, string query)
 		{
 			var ts_response = QueryEntities(tablename, query);
-			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			var dicts = ts_response.list_dict_obj;
 			return dicts.Count == 1;
 		}
 

@@ -71,7 +71,7 @@ namespace ElmcityUtils
 			HttpUtils.Wait(long_wait);
 			ts.CreateTable(test_table);
 			HttpUtils.Wait(short_wait);
-			Assert.IsTrue((bool)ts.ExistsTable(test_table).response);
+			Assert.IsTrue((bool)ts.ExistsTable(test_table).boolean);
 		}
 
 		[Test]
@@ -82,11 +82,11 @@ namespace ElmcityUtils
 			HttpUtils.Wait(long_wait);
 			ts.CreateTable(test_table);
 			HttpUtils.Wait(short_wait);
-			Assert.IsTrue((bool)ts.ExistsTable(test_table).response);
-			var count = (int)ts.CountTables().response;
+			Assert.IsTrue(ts.ExistsTable(test_table).boolean);
+			var count = ts.CountTables().i;
 			ts.CreateTable(test_table_2);
-			Assert.IsTrue((bool)ts.ExistsTable(test_table_2).response);
-			Assert.That((int)ts.CountTables().response == count + 1);
+			Assert.IsTrue(ts.ExistsTable(test_table_2).boolean);
+			Assert.That(ts.CountTables().i == count + 1);
 		}
 
 		[Test]
@@ -94,7 +94,7 @@ namespace ElmcityUtils
 		{
 			ts.DeleteEntity(test_table, test_partition, test_row);
 			HttpUtils.Wait(short_wait);
-			if ((bool)ts.ExistsTable(test_table).response == false)
+			if (ts.ExistsTable(test_table).boolean == false)
 				ts.CreateTable(test_table);
 			var entity = new Dictionary<string, object>();
 			entity.Add("PartitionKey", test_partition);
@@ -109,7 +109,7 @@ namespace ElmcityUtils
 		{
 			secure_ts.DeleteEntity(test_table, test_partition, test_row);
 			HttpUtils.Wait(short_wait);
-			if ((bool)secure_ts.ExistsTable(test_table).response == false)
+			if (secure_ts.ExistsTable(test_table).boolean == false)
 				secure_ts.CreateTable(test_table);
 			var entity = new Dictionary<string, object>();
 			entity.Add("PartitionKey", test_partition);
@@ -143,7 +143,7 @@ namespace ElmcityUtils
 			if (ts.ExistsEntity(test_table, test_query) == false)
 				CreateEntityIsSuccessful();
 			var ts_response = ts.QueryEntities(test_table, test_query);
-			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			var dicts = ts_response.list_dict_obj;
 			AssertEntity(dicts);
 		}
 
@@ -162,8 +162,8 @@ namespace ElmcityUtils
 		{
 			if (ts.ExistsEntity(test_table, test_query) == false)
 				CreateEntityIsSuccessful();
-			var ts_response = ts.QueryAllEntities(test_table, test_query, TableStorage.QueryAllReturnType.as_dicts);
-			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			var ts_response = ts.QueryAllEntitiesAsListDict(test_table, test_query);
+			var dicts = ts_response.list_dict_obj;
 			AssertEntity(dicts);
 		}
 
@@ -172,8 +172,8 @@ namespace ElmcityUtils
 		{
 			if (ts.ExistsEntity(test_table, test_query) == false)
 				CreateEntityIsSuccessful();
-			var ts_response = ts.QueryAllEntities(test_table, test_query, TableStorage.QueryAllReturnType.as_string);
-			var feed_xml = (string)ts_response.response;
+			var ts_response = ts.QueryAllEntitiesAsStringOfXml(test_table, test_query);
+			var feed_xml = ts_response.http_response.DataAsString();
 			var xdoc = XmlUtils.XdocFromXmlBytes(System.Text.Encoding.UTF8.GetBytes(feed_xml));
 			var entries = from entry in xdoc.Descendants(StorageUtils.atom_namespace + "entry") select entry;
 			Assert.AreEqual(1, entries.Count());
@@ -186,7 +186,7 @@ namespace ElmcityUtils
 			if (ts.ExistsEntity(test_table, test_query) == false)
 				CreateEntityIsSuccessful();
 			var ts_response = ts.QueryEntities(test_table, test_query);
-			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			var dicts = ts_response.list_dict_obj;
 			Assert.That(dicts.Count == 1);
 			if (ts.ExistsEntity(test_table, test_query) == false)
 				CreateEntityIsSuccessful();
@@ -226,7 +226,7 @@ namespace ElmcityUtils
 			var q = string.Format("$filter=(count eq {0}) and (dt eq datetime'{1}')",
 				count + 1, test_dt.ToString(TableStorage.ISO_FORMAT_UTC));
 			var ts_response = ts.QueryEntities(test_table, q);
-			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			var dicts = ts_response.list_dict_obj;
 			Assert.That(dicts.Count == 1);
 			Assert.That((int)dicts[0]["count"] == count + 1);
 		}
@@ -244,7 +244,7 @@ namespace ElmcityUtils
 			var q = string.Format("$filter=(count eq {0}) and (dt eq datetime'{1}')",
 				count + 2, test_dt.ToString(TableStorage.ISO_FORMAT_UTC));
 			var ts_response = ts.QueryEntities(test_table, q);
-			var dicts = (List<Dictionary<string, object>>)ts_response.response;
+			var dicts = ts_response.list_dict_obj;
 			Assert.That(dicts.Count == 1);
 			Assert.That((int)dicts[0]["count"] == count + 2);
 		}
