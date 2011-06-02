@@ -113,7 +113,7 @@ namespace ElmcityUtils
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "FetchResponseBodyAndETagFromUri", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "FetchResponseBodyAndETagFromUri: " + uri.ToString(), e.Message);
 			}
 		}
 
