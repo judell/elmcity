@@ -44,12 +44,7 @@ namespace CalendarAggregator
 		private const string test_prop_value = Configurator.test_metadata_property_value;
 
 		private const string master_account_tag = "calendarcuration";
-		private const string master_account_name = "judell";
-
-		private const string test_account_name = "elmcity";
-		private const string test_delicious_password = "ec0qvr";
-
-
+		
 		private const string test_tag = "testtag";
 
 		private string test_feedurl = "http://www.google.com/calendar/ical/cityofkeenenhmeetings%40gmail.com/public/basic.ics";
@@ -65,7 +60,7 @@ namespace CalendarAggregator
 
 		public DeliciousTest()
 		{
-			delicious = new Delicious(test_account_name, test_delicious_password);
+			delicious = new Delicious(Configurator.delicious_test_account, Configurator.delicious_test_password);
 			fr = new FeedRegistry(ElmcityUtils.Configurator.azure_compute_account);
 		}
 
@@ -73,15 +68,17 @@ namespace CalendarAggregator
 		public void PostBookmarkWithTagsIsSuccessful()
 		{
 			var now = System.DateTime.UtcNow.Ticks.ToString();
-			var metadict = Delicious.FetchMetadataForIdFromDelicious(test_account_name).dict_response;
+			var metadict = Delicious.FetchMetadataForIdFromDelicious(Configurator.delicious_test_account).dict_response;
 			metadict[test_update_key] = now;
 			var tag_string = Delicious.MetadictToTagString(metadict);
 			delicious.PostDeliciousBookmark("metadata", "http://delicious.com/elmcity/metadata", tag_string);
-			metadict = Delicious.FetchMetadataForIdFromDelicious(test_account_name).dict_response;
+			metadict = Delicious.FetchMetadataForIdFromDelicious(Configurator.delicious_test_account).dict_response;
 			Assert.That(metadict[test_update_key] == now);
 		}
-
+		
 		# region eventful
+
+		/* idle for now, move elsewhere if needed later
 
 		[Test]
 		public void AddTrustedEventfulContributorIsSuccessful()
@@ -101,11 +98,13 @@ namespace CalendarAggregator
 			HttpResponse response = delicious.DeleteTrustedEventfulContributor(contrib);
 			Assert.AreEqual(HttpStatusCode.OK, response.status);
 			Assert.That(IsSuccessfulDeliciousOperation(response));
-		}
+		}*/
 
-		#endregion eventful
+		#endregion 
 
 		#region ics
+
+		/* idle for now
 
 		[Test]
 		public void AddTrustedIcsFeedIsSuccessful()
@@ -127,6 +126,7 @@ namespace CalendarAggregator
 			Assert.AreEqual(HttpStatusCode.OK, response.status);
 			Assert.That(IsSuccessfulDeliciousOperation(response));
 		}
+		 */
 
 		#endregion ics
 
@@ -152,7 +152,7 @@ namespace CalendarAggregator
 		[Test]
 		public void CountFeedsReturnsNonZero()
 		{
-			var response = Delicious.FetchFeedCountForIdWithTags(test_account_name, Configurator.delicious_trusted_ics_feed);
+			var response = Delicious.FetchFeedCountForIdWithTags(Configurator.delicious_test_account, Configurator.delicious_trusted_ics_feed);
 			Assert.AreEqual(Delicious.MetadataQueryOutcome.Success, response.outcome);
 			var count = response.int_response;
 			Assert.Greater(count, 0);
@@ -261,7 +261,7 @@ namespace CalendarAggregator
 			delicious.StoreMetadataForIdToAzure(delicious_account, false, extra_dict);
 			var dict = delicious.LoadMetadataForIdFromAzureTable(delicious_account);
 			Assert.AreEqual(testvalue, dict[testkey]);
-		}*/
+		}*/  
 
 		#endregion hub metadata
 
@@ -270,11 +270,11 @@ namespace CalendarAggregator
 		[Test]
 		public void LoadVenueMetaDataSuccessful()
 		{
-			var response = Delicious.FetchVenueMetadataFromDeliciousForVenueUrlAndId(test_venue_url, test_account_name);
+			var response = Delicious.FetchVenueMetadataFromDeliciousForVenueUrlAndId(test_venue_url, Configurator.delicious_test_account);
 			Assert.AreEqual(Delicious.MetadataQueryOutcome.Success, response.outcome);
 			var metadict = response.dict_response;
-			delicious.StoreVenueMetadataToAzureTableForIdAndVenueUrl(test_account_name, metadict, test_venue_url);
-			var dict = delicious.LoadVenueMetadataFromAzureTableForIdAndVenueUrl(test_account_name, test_venue_url);
+			delicious.StoreVenueMetadataToAzureTableForIdAndVenueUrl(Configurator.delicious_test_account, metadict, test_venue_url);
+			var dict = delicious.LoadVenueMetadataFromAzureTableForIdAndVenueUrl(Configurator.delicious_test_account, test_venue_url);
 			Assert.That(dict.ContainsKey("venue") && dict["venue"] == test_venue_service);
 			Assert.That(dict.ContainsKey("venue_url") && dict["venue_url"] == test_venue_url);
 		}
@@ -321,7 +321,7 @@ namespace CalendarAggregator
 
 		private static bool ContainsTestAccount(List<string> list)
 		{
-			return list.Exists(item => item == test_account_name);
+			return list.Exists(item => item == Configurator.delicious_test_account);
 
 		}
 
