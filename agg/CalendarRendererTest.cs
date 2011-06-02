@@ -48,13 +48,6 @@ namespace CalendarAggregator
 		}
 
 		[Test]
-		public void FindTodayEventsIsSuccessful()
-		{
-			var es = this.cr.FindTodayEvents();
-		}
-
-
-		[Test]
 		public void RenderedHtmlEventCountMatchesStoredEventCount()
 		{
 			var es_count = this.es.events.Count;
