@@ -49,6 +49,48 @@ namespace CalendarAggregator
 	   }*/
 	}
 
+	public enum TwitterCommandName { start, meta_refresh, add_fb_feed, rem_fb_feed, show_fb_feeds };
+
+	public class TwitterCommand : TwitterDirectMessage
+	{
+		public string command { get; set; }                  // ? makes it nullable
+		public Dictionary<string, string> args_dict { get; set; }
+		public List<string> vocabulary = GenUtils.EnumToList<TwitterCommandName>();
+		public List<string> required_args = new List<string>() { "id", "key", "who" };
+		public List<string> optional_args = new List<string>() { "url", "category" };
+		public List<string> all_args;
+
+
+		public TwitterCommand(string id, string sender_screen_name, string recipient_screen_name, string text)
+		{
+			this.id = id;
+			this.sender_screen_name = sender_screen_name;
+			this.recipient_screen_name = recipient_screen_name;
+			this.text = text;
+			this.all_args = required_args.Concat(optional_args).ToList();
+			this.GetCommand();
+			if ( this.command != null)
+				this.GetArgs();
+		}
+
+		private void GetCommand()
+		{
+			var valid = vocabulary.FindAll(cmd_name => this.text.StartsWith(cmd_name)).Count() == 1;
+			if ( valid )
+				this.command = vocabulary.Find(cmd_name => this.text.StartsWith(cmd_name));
+			else
+				this.command = null;
+		}
+
+		private void GetArgs()
+		{
+			var name = this.command;
+			var args_text = this.text.Replace(name, "");
+			this.args_dict = GenUtils.RegexFindKeysAndValues(this.all_args, args_text);
+		}
+
+	}
+
 	// see http://blog.jonudell.net/2009/10/21/to-elmcity-from-curator-message-start/
 	public class TwitterApi
 	{
@@ -73,7 +115,7 @@ namespace CalendarAggregator
 		{
 			{
 				var q = string.Format("$filter=(PartitionKey eq '{0}')", pk_directs);
-				var qdicts = (List<Dictionary<string, object>>)ts.QueryEntities(ts_table, q).response;
+				var qdicts = ts.QueryEntities(ts_table, q).list_dict_obj;
 				var messages = new List<TwitterDirectMessage>();
 				foreach (var qdict in qdicts)
 				{
@@ -84,7 +126,7 @@ namespace CalendarAggregator
 			}
 		}
 
-		private static TableStorageResponse StoreDirectMessageToAzure(TwitterDirectMessage message)
+		private static TableStorageListDictResponse StoreDirectMessageToAzure(TwitterDirectMessage message)
 		{
 			var dict = ObjectUtils.ObjToDictObj(message);
 			return TableStorage.UpdateDictToTableStore
@@ -153,6 +195,7 @@ namespace CalendarAggregator
 
 		public static string SendTwitterDirectMessage(string recipient, string text)
 		{
+			text = text.TruncateToLength(140);
 			var url = "http://api.twitter.com/direct_messages/new.xml";
 			//var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
 			//request.ServicePoint.Expect100Continue = false; // http://a-kicker-n.blogspot.com/2009/03/how-to-disable-passing-of-http-header.html
