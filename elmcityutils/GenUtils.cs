@@ -146,7 +146,7 @@ namespace ElmcityUtils
 			return entity_builder.ToString();
 		}
 
-		static public void RunTests(string dll_name)
+		static public int RunTests(string dll_name)
 		{
 			LogMsg("info", "GenUtils.RunTests", "starting");
 			var ts = TableStorage.MakeDefaultTableStorage();
@@ -154,6 +154,9 @@ namespace ElmcityUtils
 			var types = a.GetExportedTypes().ToList();
 			var test_classes = types.FindAll(type => type.Name.EndsWith("Test")).ToList();
 			test_classes.Sort((x, y) => x.Name.CompareTo(y.Name));
+
+			var tests_failed = 0;
+
 			foreach (Type test_class in test_classes)  // e.g. DeliciousTest
 			{
 				object o = Activator.CreateInstance(test_class);
@@ -185,6 +188,7 @@ namespace ElmcityUtils
 						var msg = e.Message + e.StackTrace;
 						entity["outcome"] = "Fail";
 						entity["reason"] = e.InnerException.Message + e.InnerException.StackTrace;
+						tests_failed += 1;
 					}
 
 					var tablename = Configurator.test_results_tablename;
@@ -195,6 +199,7 @@ namespace ElmcityUtils
 				}
 			}
 			LogMsg("info", "GenUtils.RunTests", "done");
+			return tests_failed;
 		}
 
 		#region datetime
@@ -219,8 +224,8 @@ namespace ElmcityUtils
 			var settings = new Dictionary<string, string>();
 			var query = "$filter=PartitionKey eq 'settings'";
 			var ts = TableStorage.MakeSecureTableStorage();
-			var ts_response = ts.QueryEntities("settings", query).response;
-			var dicts = (List<Dictionary<string, object>>)ts_response;
+			var ts_response = ts.QueryEntities("settings", query);
+			var dicts = ts_response.list_dict_obj;
 			foreach (var dict in dicts)
 			{
 				var dict_of_str = ObjectUtils.DictObjToDictStr(dict);
@@ -403,6 +408,98 @@ namespace ElmcityUtils
 		}
 
 		#endregion str
+
+		#region enum
+
+		public static List<string> EnumToList<T>()
+		{
+			Type enumType = typeof(T);
+			if (enumType.BaseType != typeof(Enum))
+			{
+				throw new ArgumentException("T must be a System.Enum");
+			}
+			List<T> enums = (Enum.GetValues(enumType) as IEnumerable<T>).ToList();
+			var list = new List<string>();
+			foreach (var e in enums)
+				list.Add(e.ToString());
+			return list;
+		}
+		#endregion
+
+		#region other
+
+		public static bool AreEqualLists<T>(IList<T> A, IList<T> B)
+		{
+			HashSet<T> setA = new HashSet<T>(A);
+			return setA.SetEquals(B);
+		}
+
+		#endregion
+
+	}
+
+	public static class ListExtensions
+	{
+		public static bool IsSubsetOf<T>(this List<T> list_one, List<T> list_two)
+		{
+			return !list_one.Except(list_two).Any();
+		}
+	}
+
+	public static class DictionaryExtensions
+	{
+		public static void AddOrUpdateDictionary<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue value)
+		{
+			if (dict.ContainsKey(key))
+				dict[key] = value;
+			else
+				dict.Add(key, value);
+		}
+
+		public static bool KeySetEqual<TKey, TValue>(this IDictionary<TKey, TValue> dict, List<TKey> keys)
+		{
+			return GenUtils.AreEqualLists<TKey>(dict.Keys.ToList(), keys);
+		}
+
+		/*
+		public static TValue TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key)
+		{
+			if (dict.ContainsKey(key))
+				return dict[key];
+			else
+				return default(TValue);
+		}*/
+
+	}
+
+	public static class StringExtensions
+	{
+		public static string SingleQuote (this string s)
+		{
+			return "'" + s + "'";
+		}
+
+		public static string TruncateToLength(this string s, int length)
+		{
+			if (s.Length <= length)
+				return s;
+
+			return s.Substring(0, length);
+		}
+
+		public static bool KeySetEqual<TKey, TValue>(this IDictionary<TKey, TValue> dict, List<TKey> keys)
+		{
+			return GenUtils.AreEqualLists<TKey>(dict.Keys.ToList(), keys);
+		}
+
+		/*
+		public static TValue TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key)
+		{
+			if (dict.ContainsKey(key))
+				return dict[key];
+			else
+				return default(TValue);
+		}*/
 
 	}
 
