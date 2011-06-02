@@ -139,108 +139,150 @@ namespace CalendarAggregator
 				Parallel.ForEach(source: feedurls, parallelOptions: options, body: (feedurl, loop_state) =>
 				//foreach (string feedurl in feedurls)
 				{
+					per_feed_metadata_cache = new Dictionary<string, Dictionary<string, string>>();
+
+					string source = feeds[feedurl];
+
+					string load_msg = string.Format("loading {0}: {1} ({2})", id, source, feedurl);
+					GenUtils.LogMsg("info", load_msg, null);
+
+					fr.stats[feedurl].whenchecked = DateTime.Now.ToUniversalTime();
+
+					iCalendar ical;
+
+					var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.calinfo.delicious_account);
+					var _feedurl = MaybeRedirect(feedurl, feed_metadict);
+
+					MaybeValidate(fr, feedurl, _feedurl);
+
+					var feedtext = "";
+
 					try
 					{
-						per_feed_metadata_cache = new Dictionary<string, Dictionary<string, string>>();
-
-						string source = feeds[feedurl];
-
-						string load_msg = string.Format("loading {0}: {1} ({2})", id, source, feedurl);
-						GenUtils.LogMsg("info", load_msg, null);
-
-						fr.stats[feedurl].whenchecked = DateTime.Now.ToUniversalTime();
-
-						iCalendar ical;
-
-						var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.calinfo.delicious_account);
-						var _feedurl = MaybeRedirect(feedurl, feed_metadict);
-
-						MaybeValidate(fr, feedurl, _feedurl);
-
-						var feedtext = "";
-
-						try
-						{
-							feedtext = GetFeedTextFromRedirectedFeedUrl(fr, source, feedurl, _feedurl);
-						}
-						catch
-						{
-							var msg = String.Format("{0}: {1} cannot retrieve feed", id, source);
-							GenUtils.LogMsg("warning", msg, null);
-							//continue;
-							return; // http://stackoverflow.com/questions/3765038/is-there-an-equivalent-to-continue-in-a-parallel-foreach
-						}
-
-						StringReader sr = new StringReader(feedtext);
-
-						try
-						{
-							ical = iCalendar.LoadFromStream(sr);
-
-							var events_to_include = new List<DDay.iCal.Components.Event>();
-							var event_recurrence_types = new Dictionary<DDay.iCal.Components.Event, RecurrenceType>();
-
-							if (ical == null || ical.Events.Count == 0)
-							{
-								var msg = String.Format("{0}: no events found for {1}", id, source);
-								GenUtils.LogMsg("warning", msg, null);
-								//continue;
-								return;
-							}
-
-							var ical_tmp = NewCalendarWithTimezone();
-
-							foreach (DDay.iCal.Components.Event evt in ical.Events)             // gather future events
-								IncludeFutureEvent(events_to_include, event_recurrence_types, evt, utc_midnight_in_tz, then, ical_tmp);
-
-							var titles = events_to_include.Select(evt => evt.Summary.ToString()).OrderBy(title => title);
-
-							var uniques = new Dictionary<string, DDay.iCal.Components.Event>(); // dedupe by summary + start
-							foreach (var evt in events_to_include)
-							{
-								var key = evt.Summary.ToString() + evt.DTStart.ToString();
-								uniques.AddOrUpdateDDayEvent(key, evt);
-							}
-
-							HashSet<string> recurring_uids = new HashSet<string>();
-
-							foreach (var unique in uniques.Values)                       // count as single event or instance of recurring
-							{
-								fr.stats[feedurl].futurecount++;
-								var recurrence_type = event_recurrence_types[unique];
-								if (recurrence_type == RecurrenceType.Recurring)
-								{
-									fr.stats[feedurl].recurringinstancecount++;
-									recurring_uids.Add(unique.UID);
-								}
-								else
-									fr.stats[feedurl].singlecount++;
-							}
-
-							fr.stats[feedurl].recurringcount = recurring_uids.Count;    // count recurring events
-
-							foreach (var unique in uniques.Values)                      // add to eventstore
-								AddIcalEvent(unique, fr, es, feedurl, source);
-						}
-						catch (Exception e)
-						{
-							GenUtils.PriorityLogMsg("exception", "CollectIcal: " + id, e.Message);
-							fr.stats[feedurl].dday_error = e.Message;
-						}
+						feedtext = GetFeedTextFromFeedUrl(fr, source, feedurl, _feedurl);
+					}
+					catch  // exception while loading feed
+					{
+						var msg = String.Format("{0}: {1} cannot retrieve feed", id, source);
+						GenUtils.LogMsg("warning", msg, null);
+						//continue;
+						return; // http://stackoverflow.com/questions/3765038/is-there-an-equivalent-to-continue-in-a-parallel-foreach
 					}
 
-					catch (Exception e)
+					StringReader sr = new StringReader(feedtext);
+
+					try
 					{
-						GenUtils.PriorityLogMsg("exception", feedurl, e.Message);
+						ical = iCalendar.LoadFromStream(sr);
+
+						var events_to_include = new List<DDay.iCal.Components.Event>();
+						var event_recurrence_types = new Dictionary<DDay.iCal.Components.Event, RecurrenceType>();
+
+						if (ical == null || ical.Events.Count == 0)
+						{
+							var msg = String.Format("{0}: no events found for {1}", id, source);
+							GenUtils.LogMsg("warning", msg, null);
+							//continue;
+							return;
+						}
+
+						var ical_tmp = NewCalendarWithTimezone();
+
+						foreach (DDay.iCal.Components.Event evt in ical.Events)             // gather future events
+							IncludeFutureEvent(events_to_include, event_recurrence_types, evt, utc_midnight_in_tz, then, ical_tmp);
+
+						events_to_include = RestrictFacebookIcsToOrganizersEvents(feed_metadict, events_to_include); // restrict facebook feeds to organizer's events
+
+						var titles = events_to_include.Select(evt => evt.Summary.ToString()).OrderBy(title => title);
+
+						var uniques = new Dictionary<string, DDay.iCal.Components.Event>(); // dedupe by summary + start
+						foreach (var evt in events_to_include)
+						{
+							var key = evt.Summary.ToString() + evt.DTStart.ToString();
+							//uniques.AddOrUpdateDDayEvent(key, evt);
+							uniques.AddOrUpdateDictionary<string, DDay.iCal.Components.Event>(key, evt);
+						}
+
+						HashSet<string> recurring_uids = new HashSet<string>();
+						UpdateIcalStats(fr, feedurl, event_recurrence_types, uniques, recurring_uids);
+
+						fr.stats[feedurl].recurringcount = recurring_uids.Count;    // count recurring events
+
+						foreach (var unique in uniques.Values)                      // add to eventstore
+							AddIcalEvent(unique, fr, es, feedurl, source);
+					}
+					catch (Exception e) // exception while processing feed
+					{
+						GenUtils.PriorityLogMsg("exception", "CollectIcal: " + id, e.Message);
+						fr.stats[feedurl].dday_error = e.Message;
 					}
 
 				}
 
-				);
+				); // 
 
 				if (nosave == false) // why ever true? see CalendarRenderer.Viewer 
 					SerializeStatsAndIntermediateOutputs(fr, es, ical_ical, new NonIcalStats(), EventFlavor.ical);
 			}
+		}
+
+		private static void UpdateIcalStats(FeedRegistry fr, string feedurl, Dictionary<DDay.iCal.Components.Event, RecurrenceType> event_recurrence_types, Dictionary<string, DDay.iCal.Components.Event> uniques, HashSet<string> recurring_uids)
+		{
+
+			foreach (var unique in uniques.Values)                       // count as single event or instance of recurring
+			{
+				fr.stats[feedurl].futurecount++;
+				var recurrence_type = event_recurrence_types[unique];
+				if (recurrence_type == RecurrenceType.Recurring)
+				{
+					fr.stats[feedurl].recurringinstancecount++;
+					recurring_uids.Add(unique.UID);
+				}
+				else
+					fr.stats[feedurl].singlecount++;
+			}
+		}
+
+		/*  BEGIN:VEVENT
+			ORGANIZER;CN=Luann Udell
+			DTSTART:20110528T210000Z
+			DTEND:20110528T230000Z
+			UID:e216380751720294@facebook.com
+			SUMMARY:Luann Udell Art Exhibit--Reception in Keene NH
+			LOCATION:The Starving Artist\, 10 West Street
+		 * 
+		 * In this example from Luann's Facebook, this is the only event for which she appears in the ICS feed as ORGANIZER.
+		 * If the ICS feed is tagged with facebook_organizer=Luann+Udell then this event will be included.
+		 */
+
+		private static List<DDay.iCal.Components.Event> RestrictFacebookIcsToOrganizersEvents(Dictionary<string, string> feed_metadict, List<DDay.iCal.Components.Event> events_to_include)
+		{
+			var copy_of_events_to_include = new List<DDay.iCal.Components.Event>(events_to_include);
+			try
+			{
+				foreach (DDay.iCal.Components.Event evt in events_to_include)
+				{
+					var meta_key = "facebook_organizer";
+					if (feed_metadict.ContainsKey(meta_key))
+					{
+						var organizer = feed_metadict[meta_key];
+
+						if (evt.Organizer.CommonName != null && evt.Organizer.CommonName.ToString() == organizer)
+							continue;
+
+						if (evt.Organizer != null && evt.Organizer.ToString() == organizer)
+							continue;
+
+						copy_of_events_to_include.Remove(evt);
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "CollectIcal: facebook filter", e.Message);
+			}
+
+			return copy_of_events_to_include;
 		}
 
 		private static void MaybeValidate(FeedRegistry fr, string feedurl, string _feedurl)
@@ -260,11 +302,11 @@ namespace CalendarAggregator
 			}
 		}
 
-		private TableStorageResponse StoreRedirectedUrl(string feedurl, string redirected_url, Dictionary<string, string> feed_metadict)
+		private HttpResponse StoreRedirectedUrl(string feedurl, string redirected_url, Dictionary<string, string> feed_metadict)
 		{
 			string rowkey = Utils.MakeSafeRowkeyFromUrl(feedurl);
 			feed_metadict["redirected_url"] = redirected_url;
-			return TableStorage.UpdateDictToTableStore(ObjectUtils.DictStrToDictObj(feed_metadict), Delicious.ts_table, this.id, rowkey);
+			return TableStorage.UpdateDictToTableStore(ObjectUtils.DictStrToDictObj(feed_metadict), Delicious.ts_table, this.id, rowkey).http_response;
 		}
 
 		public string MaybeRedirect(string feedurl, Dictionary<string, string> feed_metadict)
@@ -285,7 +327,7 @@ namespace CalendarAggregator
 			return _feedurl;
 		}
 
-		private string GetFeedTextFromRedirectedFeedUrl(FeedRegistry fr, string source, string feedurl, string _feedurl)
+		public string GetFeedTextFromFeedUrl(FeedRegistry fr, string source, string feedurl, string _feedurl)
 		{
 			var request = (HttpWebRequest)WebRequest.Create(new Uri(_feedurl));
 			var response = HttpUtils.RetryExpectingOK(request, data: null, wait_secs: this.wait_secs, max_tries: this.max_retries, timeout_secs: this.timeout_secs);
@@ -336,7 +378,8 @@ namespace CalendarAggregator
 					if (IsCurrentOrFutureDTStartInTz(evt.DTStart))
 					{
 						events_to_include.Add(evt);
-						event_recurrence_types.AddOrUpdateEventWithRecurrenceType(evt, RecurrenceType.NonRecurring);
+						//event_recurrence_types.AddOrUpdateEventWithRecurrenceType(evt, RecurrenceType.NonRecurring);
+						event_recurrence_types.AddOrUpdateDictionary<DDay.iCal.Components.Event, Collector.RecurrenceType>(evt, RecurrenceType.NonRecurring);
 					}
 				}
 				else // recurring
@@ -348,7 +391,9 @@ namespace CalendarAggregator
 						{
 							var instance = PeriodizeRecurringEvent(evt, ical, occurrence.Period);
 							events_to_include.Add(instance);
-							event_recurrence_types.AddOrUpdateEventWithRecurrenceType(instance, RecurrenceType.Recurring);
+							//event_recurrence_types.AddOrUpdateEventWithRecurrenceType(instance, RecurrenceType.Recurring);
+							event_recurrence_types.AddOrUpdateDictionary<DDay.iCal.Components.Event, Collector.RecurrenceType>(instance, RecurrenceType.Recurring);
+
 						}
 					}
 				}
@@ -356,17 +401,15 @@ namespace CalendarAggregator
 
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "IncludeFutureEvent", e.Message);
+				GenUtils.PriorityLogMsg("exception", "IncludeFutureEvent: " + this.calinfo.delicious_account + ", " + evt.Summary.ToString(), e.Message);
 			}
 		}
 
 		// clone the DDay.iCal event, update dtstart (and maybe dtend) with Year/Month/Day for this occurrence
 		private DDay.iCal.Components.Event PeriodizeRecurringEvent(DDay.iCal.Components.Event evt, iCalendar ical, Period period)
 		{
-			iCalDateTime dtstart = null;
-			iCalDateTime dtend = null;
 
-			dtstart = new iCalDateTime(
+			iCalDateTime dtstart = new iCalDateTime(
 				period.StartTime.Year,
 				period.StartTime.Month,
 				period.StartTime.Day,
@@ -375,6 +418,8 @@ namespace CalendarAggregator
 				evt.DTStart.Second,
 				evt.DTStart.TZID,
 				ical);
+
+			iCalDateTime dtend = new iCalDateTime();
 
 			if (evt.DTEnd != null)
 			{
@@ -391,7 +436,8 @@ namespace CalendarAggregator
 
 			var instance = new DDay.iCal.Components.Event(ical);
 			instance.DTStart = instance.Start = dtstart;
-			instance.DTEnd = instance.DTEnd = dtend;
+			if (dtend.UTC != null)   // work around DDay.iCal .8 bug that allows the UTC prop to return null (http://www.google.com/calendar/ical/prentice@restaurantmagnus.com/public/basic/ics)
+				instance.DTEnd = instance.End = dtend;
 			instance.Summary = evt.Summary;
 			instance.Description = evt.Description;
 			instance.Categories = evt.Categories;
@@ -586,11 +632,6 @@ namespace CalendarAggregator
 			return evt.Location.ToString().Contains(evt.Url.ToString()) == false;
 		}
 
-		private static bool UrlNotEmptyAndDescriptionContainsUrl(DDay.iCal.Components.Event evt)
-		{
-			return (!String.IsNullOrEmpty(evt.Url.ToString())) && evt.Description.ToString().Contains(evt.Url.ToString()) == false;
-		}
-
 		// alter feed url if it should be handled by the internal "fusecal" service, or the vcal or xcal converters
 		// todo: make this table-driven 
 		public string MaybeRedirectFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
@@ -699,6 +740,22 @@ namespace CalendarAggregator
 		{
 			var timezone = DDay.iCal.Components.iCalTimeZone.FromSystemTimeZone(tzinfo);
 
+			timezone.TZID = tzinfo.Id; // not being set in DDay.iCal 0.8 for some reason
+
+			/*
+			 *  Interesting situation if the source calendar says, e.g., America/Chicago, but
+			 *  the OS says, e.g., Central. In that case, DDay's UTC property method will fail to match
+			 *  the names and it will fall back to the OS conversion:
+			 *  
+			 *  value = DateTime.SpecifyKind(Value, DateTimeKind.Local).ToUniversalTime();   
+			 *  
+			 *  This happens when:
+			 *    - A recurring event has a start and end
+			 *    - DDay substracts DTEnd.UTC - DTStart.UTC
+			 *    
+			 *  Todo: Recheck all this when upgraded to DDay 1.0
+			 */
+
 			if (timezone.TimeZoneInfos.Count == 0)
 			{
 				var dday_tzinfo_standard = new DDay.iCal.Components.iCalTimeZoneInfo();
@@ -713,6 +770,7 @@ namespace CalendarAggregator
 			}
 
 			ical.AddChild(timezone);
+
 		}
 
 		#endregion ical
@@ -741,7 +799,8 @@ namespace CalendarAggregator
 
 				var uniques = new Dictionary<string, XElement>(); // dedupe by title + start
 				foreach (XElement evt in EventfulIterator(page_count, args))
-					uniques.AddOrUpdateXElement(
+					//uniques.AddOrUpdateXElement(
+					  uniques.AddOrUpdateDictionary<string,XElement>(
 						XmlUtils.GetXeltValue(evt, ElmcityUtils.Configurator.no_ns, "title") +
 							XmlUtils.GetXeltValue(evt, ElmcityUtils.Configurator.no_ns, "start_time"),
 						evt);
@@ -904,7 +963,8 @@ namespace CalendarAggregator
 
 				var uniques = new Dictionary<string, XElement>();  // dedupe by name + start
 				foreach (var evt in UpcomingIterator(page_count, method))
-					uniques.AddOrUpdateXElement(evt.Attribute("name").ToString() + evt.Attribute("start_date").ToString(), evt);
+					//uniques.AddOrUpdateXElement(evt.Attribute("name").ToString() + evt.Attribute("start_date").ToString(), evt);
+					uniques.AddOrUpdateDictionary<string, XElement>(evt.Attribute("name").ToString() + evt.Attribute("start_date").ToString(), evt);
 
 				foreach (XElement evt in uniques.Values)
 				{
@@ -1188,7 +1248,8 @@ namespace CalendarAggregator
 
 				var uniques = new Dictionary<string, FacebookEvent>();  // dedupe by title + start
 				foreach (var fb_event in FacebookIterator(method, args))
-					uniques.AddOrUpdateFacebookEvent(fb_event.name + fb_event.start_time, fb_event);
+					//uniques.AddOrUpdateFacebookEvent(fb_event.name + fb_event.start_time, fb_event);
+					uniques.AddOrUpdateDictionary<string, FacebookEvent>(fb_event.name + fb_event.start_time, fb_event);
 
 				foreach (FacebookEvent fb_event in uniques.Values)
 				{
@@ -1374,7 +1435,7 @@ namespace CalendarAggregator
 		private void SerializeStatsAndIntermediateOutputs(FeedRegistry fr, EventStore es, iCalendar ical, NonIcalStats stats, EventFlavor flavor)
 		{
 			BlobStorageResponse bsr;
-			TableStorageResponse tsr;
+			HttpResponse tsr;
 			var flavor_str = flavor.ToString();
 
 			if (BlobStorage.ExistsContainer(this.id) == false)
@@ -1385,7 +1446,7 @@ namespace CalendarAggregator
 				bsr = fr.SerializeIcalStatsToJson();
 				GenUtils.LogMsg("info", this.id + ": SerializeIcalStatsToJson: " + stats.blobname, bsr.HttpResponse.status.ToString());
 				tsr = fr.SaveStatsToAzure();
-				GenUtils.LogMsg("info", this.id + ": FeedRegistry.SaveStatsToAzure: " + stats.blobname, tsr.http_response.status.ToString());
+				GenUtils.LogMsg("info", this.id + ": FeedRegistry.SaveStatsToAzure: " + stats.blobname, tsr.status.ToString());
 			}
 			else
 			{
@@ -1393,7 +1454,7 @@ namespace CalendarAggregator
 				bsr = Utils.SerializeObjectToJson(stats, this.id, stats.blobname + ".json");
 				GenUtils.LogMsg("info", this.id + ": Collector: SerializeObjectToJson: " + stats.blobname + ".json", bsr.HttpResponse.status.ToString());
 				tsr = this.SaveStatsToAzure(flavor);
-				GenUtils.LogMsg("info", this.id + ": Collector: SaveStatsToAzure", tsr.http_response.status.ToString());
+				GenUtils.LogMsg("info", this.id + ": Collector: SaveStatsToAzure", tsr.status.ToString());
 
 			}
 
@@ -1409,7 +1470,7 @@ namespace CalendarAggregator
 			SerializeStatsAndIntermediateOutputs(new FeedRegistry(this.id), es, ical, stats, flavor);
 		}
 
-		private TableStorageResponse SaveStatsToAzure(EventFlavor flavor)
+		private HttpResponse SaveStatsToAzure(EventFlavor flavor)
 		{
 			var entity = new Dictionary<string, object>();
 			entity["PartitionKey"] = entity["RowKey"] = this.id;
@@ -1428,7 +1489,7 @@ namespace CalendarAggregator
 					entity["eventbrite_events"] = this.ebstats.eventcount;
 					break;
 			}
-			return ts.MergeEntity("metadata", this.id, this.id, entity);
+			return ts.MergeEntity("metadata", this.id, this.id, entity).http_response;
 		}
 	}
 
