@@ -33,42 +33,6 @@ using Newtonsoft.Json;
 
 namespace CalendarAggregator
 {
-	public static class DictionaryExtensions
-	{
-		public static void AddOrUpdateDDayEvent(this Dictionary<string, DDay.iCal.Components.Event> dict, string key, DDay.iCal.Components.Event evt)
-		{
-			if (dict.ContainsKey(key))
-				dict[key] = evt;
-			else
-				dict.Add(key, evt);
-		}
-
-		public static void AddOrUpdateXElement(this Dictionary<string, XElement> dict, string key, XElement element)
-		{
-			if (dict.ContainsKey(key))
-				dict[key] = element;
-			else
-				dict.Add(key, element);
-		}
-
-		public static void AddOrUpdateFacebookEvent(this Dictionary<string, FacebookEvent> dict, string key, FacebookEvent fb_event)
-		{
-			if (dict.ContainsKey(key))
-				dict[key] = fb_event;
-			else
-				dict.Add(key, fb_event);
-		}
-
-		public static void AddOrUpdateEventWithRecurrenceType(this Dictionary<DDay.iCal.Components.Event, Collector.RecurrenceType> dict, DDay.iCal.Components.Event evt, Collector.RecurrenceType recurrence_type)
-		{
-			if (dict.ContainsKey(evt))
-				dict[evt] = recurrence_type;
-			else
-				dict.Add(evt, recurrence_type);
-		}
-
-	}
-
 	public static class Utils
 	{
 		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
@@ -633,8 +597,8 @@ namespace CalendarAggregator
 			if (String.IsNullOrEmpty(conditions) == false)
 				query += conditions;
 			//TableStorageResponse r = ts.QueryEntities(tablename, query);
-			TableStorageResponse r = ts.QueryAllEntities(tablename, query, TableStorage.QueryAllReturnType.as_dicts);
-			var dicts = r.response as List<Dictionary<string, object>>;
+			TableStorageListDictResponse r = ts.QueryAllEntitiesAsListDict(tablename, query);
+			var dicts = r.list_dict_obj;
 			if (dicts.Count == 0)
 				return;
 			var dict_str = new Dictionary<string, string>();
