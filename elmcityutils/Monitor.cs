@@ -49,7 +49,7 @@ namespace ElmcityUtils
 		{
 			var query = "$filter=(PartitionKey eq 'prioritylogtriggers')";
 			var ts_response = ts.QueryEntities("prioritylogtriggers", query);
-			var list_dict_obj = (List<Dictionary<string, object>>)ts_response.response;
+			var list_dict_obj = ts_response.list_dict_obj;
 			var list_dict_str = new List<Dictionary<string, string>>();
 			foreach (var dict_obj in list_dict_obj)
 				list_dict_str.Add(ObjectUtils.DictObjToDictStr(dict_obj));
@@ -268,7 +268,7 @@ namespace ElmcityUtils
 
 			var query = "$filter=(PartitionKey eq 'counters')";
 			var ts_response = ts.QueryEntities("counters", query);
-			var counter_names_and_categories = (List<Dictionary<string, object>>)ts_response.response;
+			var counter_names_and_categories = ts_response.list_dict_obj;
 
 			foreach (var counter_name_and_category in counter_names_and_categories)
 			{
@@ -572,12 +572,12 @@ namespace ElmcityUtils
 			var tablename = Configurator.azure_log_table;
 
 			var q = String.Format("$filter=(PartitionKey eq 'log' and RowKey gt '{0}' and RowKey lt '{1}')", since.Ticks, until.Ticks);
-			var ts_response = ts.QueryAllEntities(tablename, q, TableStorage.QueryAllReturnType.as_dicts);
+			var ts_response = ts.QueryAllEntitiesAsListDict(tablename, q);
 			string rowkey = null;
 
 			elmcity_log_entry elmcity_log_entry;
 
-			foreach (var dict in (List<Dictionary<string, object>>)ts_response.response)
+			foreach (var dict in ts_response.list_dict_obj)
 			{
 				rowkey = (String)dict["RowKey"];
 				ts.MaybeDeleteEntity(tablename, tablename, rowkey);
