@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -22,6 +23,7 @@ using ElmcityUtils;
 
 namespace CalendarAggregator
 {
+
 	// encapsulates:
 	// 1. a dict<str,str> derived from a delicious url whose bookmark carries name=value tags
 	// 2. the http response from looking up that url
@@ -82,23 +84,60 @@ namespace CalendarAggregator
 
 		# region feeds
 
-		public Dictionary<string, string> LoadFeedsFromAzureTableForId(string id)
+		public Dictionary<string, string> LoadFeedsFromAzureTableForId(string id, FeedLoadOption option)
 		{
 			var q = string.Format("$filter=(PartitionKey eq '{0}' and feedurl ne '' )", id);
-			var qdicts = (List<Dictionary<string, object>>)ts.QueryEntities("metadata", q).response;
+			var qdicts = ts.QueryEntities("metadata", q).list_dict_obj;
 			var feed_dict = new Dictionary<string, string>();
 			foreach (var dict in qdicts)
 			{
-				var source = (string)dict["source"];
-				var feedurl = (string)dict["feedurl"];
-				feed_dict[feedurl] = source;
+				var is_private = dict.ContainsKey("private") && (bool)dict["private"] == true;
+
+				switch ( option )
+				{
+					case FeedLoadOption.all:
+						AddSourceAndFeedUrlToDict(feed_dict, dict);
+						break;
+					case FeedLoadOption.only_public:
+						if (is_private == false)
+							AddSourceAndFeedUrlToDict(feed_dict, dict);
+						break;
+					case FeedLoadOption.only_private:
+						if (is_private == true)
+							AddSourceAndFeedUrlToDict(feed_dict, dict);
+						break;
+				}
+
 			}
 			return feed_dict;
+		}
+
+		private static void AddSourceAndFeedUrlToDict(Dictionary<string, string> feed_dict, Dictionary<string, object> dict)
+		{
+			var source = (string)dict["source"];
+			var feedurl = (string)dict["feedurl"];
+			feed_dict[feedurl] = source;
 		}
 
 		public static Dictionary<string, string> FetchFeedsForIdWithTagsFromDelicious(string id, string tags)
 		{
 			return Delicious.LinkTitleDictFromDeliciousRssQuery(id, Configurator.delicious_rssbase, tags);
+		}
+
+		public static bool IsPrivateFeed(string id, string feedurl)
+		{
+			var ts = TableStorage.MakeDefaultTableStorage();
+			var is_private = true; // safe default
+			var q = string.Format("$filter=(PartitionKey eq '{0}' and RowKey eq '{1}' )", id, Utils.MakeSafeRowkeyFromUrl(feedurl));
+			var qdicts = ts.QueryEntities(ts_table, q).list_dict_obj;
+			if (qdicts.Count != 1)
+				GenUtils.PriorityLogMsg("warning", "IsPrivateFeed", "non-singular result for " + q);
+			else
+			{
+				var dict = qdicts.First();
+				is_private = dict.ContainsKey("private") && (bool)dict["private"] == true;
+			}
+			return is_private;
 		}
 
 		# endregion feeds
@@ -176,7 +215,7 @@ namespace CalendarAggregator
 		{
 			FeedRegistry fr_azure = new FeedRegistry(id);
 
-			fr_azure.LoadFeedsFromAzure();
+			fr_azure.LoadFeedsFromAzure(FeedLoadOption.only_public);
 
 			var delicious_feeds = fr_delicious.feeds.Keys;
 			var azure_feeds = fr_azure.feeds.Keys;
@@ -289,20 +328,7 @@ namespace CalendarAggregator
 
 			if (response.outcome != MetadataQueryOutcome.Success) // delicious can't look up metadata url? try scanning whole rss feed
 			{
-				var raw_rss_url = string.Format("http://feeds.delicious.com/v2/rss/{0}?count=200", id);
-				Utils.Wait(Configurator.delicious_delay_seconds);
-				var http_response = HttpUtils.FetchUrl(new Uri(raw_rss_url));
-				var xdoc = XmlUtils.XdocFromXmlBytes(http_response.bytes);
-
-				var items = from item in xdoc.Descendants("item")
-							where item.Descendants("link").First().Value.EndsWith(string.Format("{0}/metadata", id))
-							select item;
-
-				var xml_bytes = Encoding.UTF8.GetBytes(items.First().ToString());
-
-				var tmp_dict = new Dictionary<string, string>();
-				var outcome = MaybeReadDeliciousMetadata(metadata_url, id, tmp_dict, xml_bytes, response.outcome);
-				response = new DeliciousResponse(http_response, tmp_dict, outcome: outcome);
+				response = ScanRssForMetadataUrl(id, metadata_url);
 			}
 
 			if (response.outcome != MetadataQueryOutcome.Success)
@@ -319,7 +345,31 @@ namespace CalendarAggregator
 			return new DeliciousResponse(response2.http_response, dict_response: dict, outcome: response2.outcome);
 		}
 
-		public enum MetadataQueryOutcome { InProgress, Success, Error, NoRedirect, HttpRequestFailed, NotBookmarkedOrTagged, Blocked }
+		private static bool CompareMetaUrl(XElement elt, string metadata_url)
+		{
+			return elt.Descendants("link").First().Value.ToString() == metadata_url;
+		}
+
+		private static DeliciousResponse ScanRssForMetadataUrl(string id, string metadata_url)
+		{
+			var raw_rss_url = string.Format("http://feeds.delicious.com/v2/rss/{0}?count=200", id);
+			Utils.Wait(Configurator.delicious_delay_seconds);
+			var http_response = HttpUtils.FetchUrl(new Uri(raw_rss_url));
+			var xdoc = XmlUtils.XdocFromXmlBytes(http_response.bytes);
+
+			var items = from item in xdoc.Descendants("item")
+						//where item.Descendants("link").First().Value.EndsWith(string.Format("{0}/metadata", id))
+						where CompareMetaUrl(item, metadata_url)
+						select item;
+
+			var xml_bytes = Encoding.UTF8.GetBytes(items.First().ToString());
+
+			var tmp_dict = new Dictionary<string, string>();
+			var outcome = MaybeReadDeliciousMetadata(metadata_url, id, tmp_dict, xml_bytes);
+			return new DeliciousResponse(http_response, tmp_dict, outcome: outcome);
+		}
+
+		public enum MetadataQueryOutcome { InProgress, Success, Error, NoRedirect, HttpRequestFailed, NotBookmarkedOrTagged, NotIndexed, Blocked }
 
 		// this implements the delicious "Look up an URL" feature, which interactively looks like
 		// a 1-step process but behind the scenes involves redirection.
@@ -330,16 +380,21 @@ namespace CalendarAggregator
 		// way, so we convert to the rss variant of the url, thus:
 		// http://feeds.delicious.com/v2/rss/url/8bf9fae384ed3c765540e1103b967237
 		// the "feed" will have only one entry: a packet of xml we can read more easily than 
-		// scraping the html
+		// scraping the html.
+		//
+		// This can fail if the Location sends us to a result that exists but is empty. (Presumably because
+		// delicious didn't yet update the index behind "Lookup this URL") In that case the fallback is
+		// to read the whole feed for the ID, hoping that the target is within range of the 200 entry limit,
+		// pick out the target from the feed, and extract metadata from that item in the feed.
 		public static DeliciousResponse FetchMetadataFromDeliciousForUrlAndId(string metadata_url, string id)
 		{
 			var dict = new Dictionary<string, string>();
 
-			metadata_url = System.Uri.EscapeDataString(metadata_url);
+			var escaped_metadata_url = System.Uri.EscapeDataString(metadata_url);
 
 			// lookup url in delicious
 
-			var url = new Uri(string.Format("http://www.delicious.com/url/view?url={0}", metadata_url));
+			var url = new Uri(string.Format("http://www.delicious.com/url/view?url={0}", escaped_metadata_url));
 
 			Utils.Wait(Configurator.delicious_delay_seconds);
 			var http_response = HttpUtils.FetchUrlNoRedirect(url);
@@ -375,9 +430,10 @@ namespace CalendarAggregator
 				if (http_response.status != HttpStatusCode.OK) // bail if delicious failed
 					return new DeliciousResponse(http_response, dict, outcome: MetadataQueryOutcome.HttpRequestFailed);
 
-				// read metadata (if any)
+				outcome = MaybeReadDeliciousMetadata(metadata_url, id, dict, http_response.bytes);
 
-				outcome = MaybeReadDeliciousMetadata(metadata_url, id, dict, http_response.bytes, outcome);
+				if (outcome != MetadataQueryOutcome.Success) // delicious can't look up metadata url? try scanning whole rss feed
+					return ScanRssForMetadataUrl(id, metadata_url);
 			}
 			catch (Exception e)
 			{
@@ -406,7 +462,11 @@ namespace CalendarAggregator
 			 */
 		}
 
-		private static MetadataQueryOutcome MaybeReadDeliciousMetadata(string metadata_url, string id, Dictionary<string, string> dict, byte[] xml_bytes, MetadataQueryOutcome outcome)
+		/* metadata_url is either:
+		 *  1. the hub metadata URL of the form http://[www.]delicious.com/{id}/metadata
+		 *  2. a feed URL which can have any http:// pattern
+		 */
+		private static MetadataQueryOutcome  MaybeReadDeliciousMetadata(string metadata_url, string id, Dictionary<string, string> dict, byte[] xml_bytes)
 		{
 			var xdoc = XmlUtils.XdocFromXmlBytes(xml_bytes);
 
@@ -422,10 +482,14 @@ namespace CalendarAggregator
 					dict[key_value[0]] = key_value[1].Replace('+', ' ');
 			}
 
-			if (dict.Keys.Count == 0 && metadata_url.EndsWith("metadata"))
+			var metadata_url_type = metadata_url.EndsWith("metadata") ? "metadata" : "feed";
+
+			MetadataQueryOutcome outcome;
+
+			if (dict.Keys.Count == 0)
 			{
 				outcome = MetadataQueryOutcome.NotBookmarkedOrTagged;
-				GenUtils.LogMsg("info", "FetchMetadataFromDeliciousForUrlAndId: " + id, "metadata url not found or has no tags");
+				GenUtils.LogMsg("info", "MaybeReadDeliciousMetadata: " + id, metadata_url_type + " not found or has no tags");
 			}
 			else
 				outcome = MetadataQueryOutcome.Success;
@@ -438,30 +502,13 @@ namespace CalendarAggregator
 		{
 			var completed_delegate = new GenUtils.Actions.CompletedDelegate<DeliciousResponse, Object>(CompletedIfOutcomeIsSuccess);
 			return GenUtils.Actions.Retry<DeliciousResponse>(delegate() { return _FetchMetadataFromDeliciousForUrlAndId(metadata_url, id); }, completed_delegate, completed_delegate_object: null, wait_secs: 5, max_tries: 10, timeout_secs: TimeSpan.FromSeconds(100));
-		}*/
+		}
 
 		public static bool CompletedIfOutcomeIsSuccess(DeliciousResponse r, Object o)
 		{
 			return (r.outcome == MetadataQueryOutcome.Success);
 		}
-
-		/*
-        public void StoreMetadataForIdToAzure(string id, bool merge, Dictionary<string, string> extra)
-        {
-            var response = FetchMetadataForIdFromDelicious(id);
-            if (response.outcome != MetadataQueryOutcome.Success)
-            {
-                GenUtils.LogMsg("warning", "StoreMetadataForIdToAzure: " + id, "could not fetch");
-                return;
-            }
-            response.dict_response = InjectTestKeysAndVals(response.dict_response, extra);
-            var dict_obj = ObjectUtils.DictStrToDictObj(response.dict_response);
-            if (merge == true)
-                TableStorage.UpmergeDictToTableStore(dict_obj, table: ts_table, partkey: id, rowkey: id);
-            else
-                TableStorage.UpdateDictToTableStore(dict_obj, table: ts_table, partkey: id, rowkey: id);
-        }
-		*/
+		 */
 
 		public Dictionary<string, string> StoreMetadataForIdToAzure(string id, bool merge, Dictionary<string, string> extra)
 		{
@@ -568,7 +615,7 @@ namespace CalendarAggregator
 		public Dictionary<string, string> LoadExcludedUrlsForIdFromAzure(string id)
 		{
 			var q = string.Format("$filter=(PartitionKey eq '{0}' and excluded_url ne '' )", id);
-			var qdicts = (List<Dictionary<string, object>>)ts.QueryEntities("metadata", q).response;
+			var qdicts = ts.QueryEntities("metadata", q).list_dict_obj;
 			var excluded_dict = new Dictionary<string, string>();
 			foreach (var dict in qdicts)
 			{
@@ -670,7 +717,6 @@ namespace CalendarAggregator
 		}
 
 
-
 		public HttpResponse PostDeliciousBookmark(string description, string url, string tags)
 		{
 			var post_url = MakePostUrl(description, url, tags);
@@ -732,21 +778,20 @@ this information: ",
 					html += "</table>";
 				}
 
-				var feeds = d.LoadFeedsFromAzureTableForId(id);
-				if (feeds.Keys.Count > 0)
+				var public_feeds = d.LoadFeedsFromAzureTableForId(id, FeedLoadOption.only_public);
+				if (public_feeds.Keys.Count > 0)
 				{
-					html += "<p>Here are the trusted iCalendar feeds: ";
+					html += "<p>Here are your public iCalendar feeds: ";
 					html += "<table>";
-					foreach (var key in feeds.Keys)
-						html += String.Format("<tr><td>{0}</td><td>{1}</td></tr>", feeds[key], key);
+					foreach (var key in public_feeds.Keys)
+						html += String.Format("<tr><td>{0}</td><td>{1}</td></tr>", public_feeds[key], key);
 					html += "</table>";
 				}
 
 				return html;
 			}
 
-			GenUtils.LogMsg("warning", "DeliciousCheck", "unexpected case");
-			TwitterApi.SendTwitterDirectMessage(Configurator.twitter_account, "DeliciousCheck: unexpected case for: " + id);
+			GenUtils.PriorityLogMsg("warning", "DeliciousCheck", "unexpected case");
 			html = "<p>Sorry, there was a problem. It has been logged and will be investigated.";
 			return html;
 		}
