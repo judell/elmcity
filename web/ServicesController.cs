@@ -620,11 +620,11 @@ namespace WebRole
 
 			public override void ExecuteResult(ControllerContext context)
 			{
-				var tsr = this.ts.QueryAllEntities(this.table, this.query, TableStorage.QueryAllReturnType.as_string);
+				var tsr = this.ts.QueryAllEntitiesAsStringOfXml(this.table, this.query).str;
 				new ContentResult
 				{
 					ContentType = "application/atom+xml",
-					Content = (string)tsr.response,
+					Content = (string)tsr,
 					ContentEncoding = UTF8
 				}.ExecuteResult(context);
 			}
