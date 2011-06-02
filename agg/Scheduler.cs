@@ -72,13 +72,14 @@ namespace CalendarAggregator
 
 		public static void InitTaskForId(string id)
 		{
-			var ts_response = Scheduler.UnlockId(id);
+			Scheduler.UnlockId(id);
 
 			var task = new Task(id, start: dtzero, stop: dtzero, running: false);
 			var dict_obj = ObjectUtils.ObjToDictObj(task);
 
-			ts_response = TableStorage.UpdateDictToTableStore(dict_obj, table: tasktable, partkey: master_pk, rowkey: id);
-			GenUtils.LogMsg("info", "Scheduler.InitTaskForId: " + id, ts_response.http_response.status.ToString());
+			var ts_response = TableStorage.UpdateDictToTableStore(dict_obj, table: tasktable, partkey: master_pk, rowkey: id);
+			var http_response = ts_response.http_response;
+			GenUtils.LogMsg("info", "Scheduler.InitTaskForId: " + id, http_response.status.ToString());
 		}
 
 		public static void StoreTaskForId(Task task, string id)
@@ -96,18 +97,19 @@ namespace CalendarAggregator
 			return task;
 		}
 
-		public static TableStorageResponse StartTaskForId(string id)
+		public static HttpResponse StartTaskForId(string id)
 		{
 			var task = new Dictionary<string, object>();
 			task["id"] = id;
 			task["start"] = DateTime.Now.ToUniversalTime();
 			task["running"] = true;
 			var ts_response = TableStorage.UpmergeDictToTableStore(task, tasktable, partkey: master_pk, rowkey: id);
-			GenUtils.LogMsg("info", "Scheduler.StartTaskForId: " + id, ts_response.http_response.status.ToString());
-			return ts_response;
+			var http_response = ts_response.http_response;
+			GenUtils.LogMsg("info", "Scheduler.StartTaskForId: " + id, http_response.status.ToString());
+			return http_response;
 		}
 
-		public static TableStorageResponse StopTaskForId(string id)
+		public static void StopTaskForId(string id)
 		{
 			var task = new Dictionary<string, object>();
 			task["id"] = id;
@@ -115,7 +117,6 @@ namespace CalendarAggregator
 			task["running"] = false;
 			var ts_response = TableStorage.UpmergeDictToTableStore(task, table: tasktable, partkey: master_pk, rowkey: id);
 			GenUtils.LogMsg("info", "Scheduler.StopTaskForId: " + id, ts_response.http_response.status.ToString());
-			return ts_response;
 		}
 
 		public static bool MaybeStartTaskForId(DateTime now, Calinfo calinfo)
@@ -134,25 +135,23 @@ namespace CalendarAggregator
 
 			var start = task.start;
 
-			TableStorageResponse ts_response;
-
 			if (now - interval > start)  // interval has expired
 			{
-				ts_response = StartTaskForId(id);
+				StartTaskForId(id);
 				return true;
 			}
 			else
 				return false;
 		}
 
-		public static TableStorageResponse LockId(string id)
+		public static HttpResponse LockId(string id)
 		{
 			var entity = new Dictionary<string, object>();
 			entity.Add("PartitionKey", lock_pk);
 			entity.Add("RowKey", id);
 			entity.Add("LockedAt", DateTime.Now.ToUniversalTime());
 			var ts_response = ts.InsertEntity(tasktable, entity);
-			return ts_response;
+			return ts_response.http_response;
 		}
 
 		public static bool IsLockedId(string id)
@@ -161,13 +160,12 @@ namespace CalendarAggregator
 			return ts.ExistsEntity(tasktable, q);
 		}
 
-		public static TableStorageResponse UnlockId(string id)
+		public static HttpResponse UnlockId(string id)
 		{
-			TableStorageResponse ts_response = default(TableStorageResponse);
 			if (ExistsLockRecordForId(id))
-				ts_response = ts.DeleteEntity(tasktable, lock_pk, id);
-
-			return ts_response;
+				return ts.DeleteEntity(tasktable, lock_pk, id).http_response;
+			else
+				return default(HttpResponse);
 		}
 
 		public static bool IsAbandoned(string id, TimeSpan interval)

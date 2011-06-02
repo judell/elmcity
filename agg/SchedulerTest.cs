@@ -99,19 +99,19 @@ namespace CalendarAggregator
 		[Test]
 		public void LockIdSucceedsWhenLockRecordDoesNotExist()
 		{
-			var ts_response = Scheduler.UnlockId(testid);
-			ts_response = Scheduler.LockId(testid);
-			Assert.AreEqual(HttpStatusCode.Created, ts_response.http_response.status);
+			var http_response = Scheduler.UnlockId(testid);
+			http_response = Scheduler.LockId(testid);
+			Assert.AreEqual(HttpStatusCode.Created, http_response.status);
 			Assert.AreEqual(true, Scheduler.IsLockedId(testid));
 		}
 
 		[Test]
 		public void LockIdFailsWhenLockRecordExists()
 		{
-			var ts_response = Scheduler.UnlockId(testid);
-			ts_response = Scheduler.LockId(testid);
-			ts_response = Scheduler.LockId(testid);
-			Assert.AreEqual(HttpStatusCode.Conflict, ts_response.http_response.status);
+			var http_response = Scheduler.UnlockId(testid);
+			http_response = Scheduler.LockId(testid);
+			http_response = Scheduler.LockId(testid);
+			Assert.AreEqual(HttpStatusCode.Conflict, http_response.status);
 		}
 
 
