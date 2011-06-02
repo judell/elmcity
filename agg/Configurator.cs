@@ -27,6 +27,8 @@ namespace CalendarAggregator
 
 	public enum NonIcalType { eventful, upcoming, eventbrite, facebook };
 
+	public enum FeedLoadOption { only_private, only_public, all };
+
 	public static class Configurator
 	{
 		private static Dictionary<string, string> settings = new Dictionary<string, string>();
