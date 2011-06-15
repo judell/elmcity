@@ -76,7 +76,7 @@ try:
   uri = System.Uri('http://elmcity.blob.core.windows.net/admin/python_library.zip')
   ElmcityUtils.FileUtils.UnzipFromUrlToDirectory(uri, local_storage)    
 except:
-  log.write('exception', 'startup.py', format_traceback() )    
+  GenUtils.PriorityLogMsg('exception', 'startup.py', format_traceback() )    
 
 try:
   log.write('...changing permissions on local_storage %s\n' % local_storage)
