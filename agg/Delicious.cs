@@ -59,6 +59,8 @@ namespace CalendarAggregator
 		public const string eventful_url_template = "http://eventful.com/users/USERNAME/created/events";
 		public const string apibase = "https://api.del.icio.us/v1";
 		//public const string deliciousbase = "http://www.delicious.com/";
+
+		public enum MetadataUrlType { metadata, feed };
 		private string username;
 		private string password;
 		private TableStorage ts;
@@ -199,15 +201,6 @@ namespace CalendarAggregator
 
 			return dicts;
 		}
-
-		/*
-		public void PurgeDeletedFeedsFromAzure()
-		{
-			foreach (var id in LoadHubIdsFromAzureTable())
-			{
-				PurgeDeletedFeedFromAzure(id);
-			}
-		}*/
 
 		// if a curator deletes a feed from the delicious registry, it 
 		// needs to also get deleted from the corresponding azure table
@@ -369,7 +362,7 @@ namespace CalendarAggregator
 			return new DeliciousResponse(http_response, tmp_dict, outcome: outcome);
 		}
 
-		public enum MetadataQueryOutcome { InProgress, Success, Error, NoRedirect, HttpRequestFailed, NotBookmarkedOrTagged, NotIndexed, Blocked }
+		public enum MetadataQueryOutcome { InProgress, Success, Error, NoRedirect, NotTrustedIcsFeed, NotWhatOrWhereMetadataUrl, HttpRequestFailed, NotIndexed, Blocked }
 
 		// this implements the delicious "Look up an URL" feature, which interactively looks like
 		// a 1-step process but behind the scenes involves redirection.
@@ -475,40 +468,54 @@ namespace CalendarAggregator
 							 where category.Attribute("domain").Value.ToLower() == domain.ToLower()
 							 select new { category.Value };
 
-			foreach (var category in categories)
+			var trusted = false;
+			var ics = false;
+			var feed = false;
+
+			foreach (var category in categories)    // look for feed tag trio
+			{
+				if ( category.Value == "trusted" )
+					trusted = true;
+				if ( category.Value == "ics" )
+					ics = true;
+				if ( category.Value == "feed" )
+					feed = true;
+			}
+
+			foreach (var category in categories)   // look for name=value pairs
 			{
 				var key_value = GenUtils.RegexFindKeyValue(category.Value);
 				if (key_value.Count == 2)
 					dict[key_value[0]] = key_value[1].Replace('+', ' ');
 			}
 
-			var metadata_url_type = metadata_url.EndsWith("metadata") ? "metadata" : "feed";
-
+			var metadata_url_type = metadata_url.EndsWith("metadata") ? MetadataUrlType.metadata : MetadataUrlType.feed;
+			
 			MetadataQueryOutcome outcome;
 
-			if (dict.Keys.Count == 0)
+			switch (metadata_url_type)
 			{
-				outcome = MetadataQueryOutcome.NotBookmarkedOrTagged;
-				GenUtils.LogMsg("info", "MaybeReadDeliciousMetadata: " + id, metadata_url_type + " not found or has no tags");
+				case MetadataUrlType.metadata:
+					if ( dict.ContainsKey("what") == false &&
+						 dict.ContainsKey("where") == false )
+						outcome = MetadataQueryOutcome.NotWhatOrWhereMetadataUrl;
+					else
+						outcome = MetadataQueryOutcome.Success;
+					break;
+				case MetadataUrlType.feed:
+					if ( trusted && ics && feed )
+						outcome = MetadataQueryOutcome.Success;
+					else
+						outcome = MetadataQueryOutcome.NotTrustedIcsFeed;
+					break;
+				default:
+					GenUtils.PriorityLogMsg("exception", "MaybeReadDeliciousMetadata", metadata_url_type.ToString() + " unexpected");
+					outcome = MetadataQueryOutcome.Error;
+					break;
 			}
-			else
-				outcome = MetadataQueryOutcome.Success;
 
 			return outcome;
 		}
-
-		/*
-		public static DeliciousResponse FetchMetadataFromDeliciousForUrlAndId(string metadata_url, string id)
-		{
-			var completed_delegate = new GenUtils.Actions.CompletedDelegate<DeliciousResponse, Object>(CompletedIfOutcomeIsSuccess);
-			return GenUtils.Actions.Retry<DeliciousResponse>(delegate() { return _FetchMetadataFromDeliciousForUrlAndId(metadata_url, id); }, completed_delegate, completed_delegate_object: null, wait_secs: 5, max_tries: 10, timeout_secs: TimeSpan.FromSeconds(100));
-		}
-
-		public static bool CompletedIfOutcomeIsSuccess(DeliciousResponse r, Object o)
-		{
-			return (r.outcome == MetadataQueryOutcome.Success);
-		}
-		 */
 
 		public Dictionary<string, string> StoreMetadataForIdToAzure(string id, bool merge, Dictionary<string, string> extra)
 		{
@@ -589,44 +596,6 @@ namespace CalendarAggregator
 
 		# endregion metadata for venues
 
-		#region exclusions
-
-		public static Dictionary<string, string> FetchExcludedUrlsForId(string id)
-		{
-			return FetchFeedsForIdWithTagsFromDelicious(id, "exclude=yes");
-		}
-
-		public void StoreExcludedUrlsForIdToAzure(string id)
-		{
-			var excluded_urls = FetchExcludedUrlsForId(id);
-			foreach (var excluded_url in excluded_urls.Keys)
-				StoreExcludedUrlForIdToAzure(id, excluded_url);
-		}
-
-		public void StoreExcludedUrlForIdToAzure(string id, string excluded_url)
-		{
-			string rowkey = Utils.MakeSafeRowkeyFromUrl(excluded_url);
-			var dict = new Dictionary<string, string>();
-			dict = GenUtils.DictTryAddStringValue(dict, "excluded_url", excluded_url);
-			var dict_obj = ObjectUtils.DictStrToDictObj(dict);
-			TableStorage.UpdateDictToTableStore(dict_obj, table: ts_table, partkey: id, rowkey: rowkey);
-		}
-
-		public Dictionary<string, string> LoadExcludedUrlsForIdFromAzure(string id)
-		{
-			var q = string.Format("$filter=(PartitionKey eq '{0}' and excluded_url ne '' )", id);
-			var qdicts = ts.QueryEntities("metadata", q).list_dict_obj;
-			var excluded_dict = new Dictionary<string, string>();
-			foreach (var dict in qdicts)
-			{
-				var excluded_url = (string)dict["excluded_url"];
-				excluded_dict[excluded_url] = excluded_url;
-			}
-			return excluded_dict;
-		}
-
-		#endregion
-
 		#region trusted feeds
 
 		public bool IsTrustedIcsFeed(string url)
@@ -653,62 +622,6 @@ namespace CalendarAggregator
 		}
 
 		#endregion trusted feeds
-
-		#region contributors
-
-		public bool IsTrustedEventfulContributor(string contrib)
-		{
-			var dict = FetchFeedsForIdWithTagsFromDelicious(this.username, Configurator.delicious_trusted_eventful_contributor);
-			var re = new Regex(eventful_url_template.Replace("USERNAME", "([^/]+)"));
-			var url = eventful_url_template.Replace("USERNAME", contrib);
-			return DictContainsOneMatchingKey(dict, re, url);
-		}
-
-		public HttpResponse AddNewEventfulContributor(string contrib)
-		{
-			return AddNewContributor(contrib, "eventful");
-		}
-
-		public HttpResponse AddTrustedEventfulContributor(string contrib)
-		{
-			return AddTrustedContributor(contrib, "eventful");
-		}
-
-		public HttpResponse DeleteTrustedEventfulContributor(string contrib)
-		{
-			return DeleteTrustedContributor(contrib, "eventful");
-		}
-
-		private HttpResponse AddNewContributor(string contrib, string service)
-		{
-			contrib = contrib.Replace(' ', '+');
-			var bookmark_url = BuildBookmarkUrl(contrib, service);
-			string tags = "new+contributor+" + service;
-			string args = string.Format("&url={0}&tags={1}&description={2}", bookmark_url, tags, contrib);
-			var url = string.Format("{0}/posts/add?{1}", apibase, args);
-			return DoAuthorizedRequest(url);
-		}
-
-		private HttpResponse AddTrustedContributor(string contrib, string service)
-		{
-			contrib = contrib.Replace(' ', '+');
-			var bookmark_url = BuildBookmarkUrl(contrib, service);
-			string tags = "trusted+contributor+" + service;
-			string args = string.Format("&url={0}&tags={1}&description={2}", bookmark_url, tags, contrib);
-			var url = string.Format("{0}/posts/add?{1}", apibase, args);
-			return DoAuthorizedRequest(url);
-		}
-
-		private HttpResponse DeleteTrustedContributor(string contrib, string service)
-		{
-			contrib = contrib.Replace(' ', '+');
-			string bookmark_url = BuildBookmarkUrl(contrib, service);
-			string args = string.Format("&url={0}", bookmark_url);
-			var url = string.Format("{0}/posts/delete?{1}", apibase, args);
-			return DoAuthorizedRequest(url);
-		}
-
-		#endregion contributors
 
 		public HttpResponse PostDeliciousBookmark(string description, string url, string tags, string user, string pass)
 		{
@@ -738,24 +651,18 @@ namespace CalendarAggregator
 				return html;
 			}
 
-			if (r.outcome == MetadataQueryOutcome.NotBookmarkedOrTagged)
-			{
-				html = String.Format("<p>There is either no delicious bookmark for http://delicious.com/{0}/metadata in the delicious account {0}, or the bookmark exists but has no tags.", id);
-				return html;
-			}
-
-			if (r.outcome == MetadataQueryOutcome.Success && !r.dict_response.ContainsKey("where") && !r.dict_response.ContainsKey("what"))
+			if (r.outcome == MetadataQueryOutcome.NotWhatOrWhereMetadataUrl)
 			{
 				html = String.Format(
 @"<p>Found a delicious bookmark for http://delicious.com/{0}/metadata but
 did not find a where= or what= tag. If you're creating a place hub you 
-need a tag that says where=city,st or you you're creating a topic hub you need 
+need a tag that says where=city,st or if you're creating a topic hub you need 
 a tag that says what=topic",
 					id);
 				return html;
 			}
 
-			if (r.outcome == MetadataQueryOutcome.Success && r.dict_response.ContainsKey("where") || !r.dict_response.ContainsKey("what"))
+			if (r.outcome == MetadataQueryOutcome.Success)
 			{
 				html = "<table>";
 				html += String.Format(
