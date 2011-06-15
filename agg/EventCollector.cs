@@ -129,7 +129,7 @@ namespace CalendarAggregator
 				// enforce the limit. necessary because processing of icalendar sources can involve
 				// the unrolling of recurrence, and that can't go on forever
 
-				DateTime then = utc_midnight_in_tz.AddDays(Configurator.icalendar_horizon_in_days);
+				DateTime then = utc_midnight_in_tz.AddDays(Configurator.icalendar_horizon_days);
 
 				var feedurls = test ? feeds.Keys.ToList().Take(test_feeds) : feeds.Keys;
 
@@ -191,7 +191,7 @@ namespace CalendarAggregator
 						foreach (DDay.iCal.Components.Event evt in ical.Events)             // gather future events
 							IncludeFutureEvent(events_to_include, event_recurrence_types, evt, utc_midnight_in_tz, then, ical_tmp);
 
-						events_to_include = RestrictFacebookIcsToOrganizersEvents(feed_metadict, events_to_include); // restrict facebook feeds to organizer's events
+						events_to_include = RestrictFacebookIcsToOrganizersPublicEvents(feed_metadict, events_to_include); // restrict facebook feeds to organizer's events
 
 						var titles = events_to_include.Select(evt => evt.Summary.ToString()).OrderBy(title => title);
 
@@ -255,7 +255,7 @@ namespace CalendarAggregator
 		 * If the ICS feed is tagged with facebook_organizer=Luann+Udell then this event will be included.
 		 */
 
-		private static List<DDay.iCal.Components.Event> RestrictFacebookIcsToOrganizersEvents(Dictionary<string, string> feed_metadict, List<DDay.iCal.Components.Event> events_to_include)
+		private static List<DDay.iCal.Components.Event> RestrictFacebookIcsToOrganizersPublicEvents(Dictionary<string, string> feed_metadict, List<DDay.iCal.Components.Event> events_to_include)
 		{
 			var copy_of_events_to_include = new List<DDay.iCal.Components.Event>(events_to_include);
 			try
@@ -266,6 +266,9 @@ namespace CalendarAggregator
 					if (feed_metadict.ContainsKey(meta_key))
 					{
 						var organizer = feed_metadict[meta_key];
+
+						if (evt.Class.ToString() != "PUBLIC")
+							continue;
 
 						if (evt.Organizer.CommonName != null && evt.Organizer.CommonName.ToString() == organizer)
 							continue;
