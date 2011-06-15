@@ -75,6 +75,22 @@ namespace CalendarAggregator
 
 		#endregion
 
+		#region facebook
+
+		public static string test_fb_key
+		{ get { return _test_fb_key; } }
+
+		private static string _test_fb_key
+		{ get { return GetSettingValue("test_fb_key"); } }
+
+		public static string test_fb_id
+		{ get { return _test_fb_id; } }
+
+		private static string _test_fb_id
+		{ get { return GetSettingValue("test_fb_id"); } }
+
+		#endregion
+
 		#region delicious
 
 		public static string delicious_master_account
@@ -164,6 +180,12 @@ namespace CalendarAggregator
 
 		private static int _eventbrite_max_events
 		{ get { return Convert.ToInt32(GetSettingValue("eventbrite_max_events")); } }
+
+		public static int icalendar_horizon_days
+		{ get { return _icalendar_horizon_days; } }
+
+		private static int _icalendar_horizon_days
+		{ get { return Convert.ToInt32(GetSettingValue("icalendar_horizon_days")); } }
 
 		public static int webrole_instance_count
 		{ get { return _webrole_instance_count; } }
@@ -384,9 +406,6 @@ namespace CalendarAggregator
 
 		public const string local_ical_validator = "http://elmcity.cloudapp.net/validate";
 		public const string remote_ical_validator = "http://icalvalid.cloudapp.net/?uri=";
-
-		// todo: make this configurable in hub metadata
-		public const int icalendar_horizon_in_days = 90;
 
 		// used by the (nascent) recreation of the fusecal html->ical service.
 		// example: myspace
