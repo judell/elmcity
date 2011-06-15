@@ -34,7 +34,7 @@ def make_html(local_storage, bin, type, in_spec, title, query):
       cmd = cmd.replace('__XML_FNAMES__', '-fnames:xpath')
     else:
       cmd = cmd.replace('__XML_FNAMES__', '')
-    GenUtils.PriorityLogMsg("info", "make_html", cmd)
+    GenUtils.LogMsg("info", "make_html", cmd)
     os.system(cmd)
     d = System.Xml.XmlDocument()
     d.Load(out_spec)
