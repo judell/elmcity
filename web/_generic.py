@@ -158,7 +158,7 @@ if ( arg0 == 'feeds' ):
   id = arg1
   calinfo = Calinfo(id)
   fr = FeedRegistry(id)
-  fr.LoadFeedsFromAzure()
+  fr.LoadFeedsFromAzure(FeedLoadOption.all)
   for key in fr.feeds.Keys:
     result += "%s: %s\n" % (fr.feeds[key], key)
 
