@@ -177,14 +177,14 @@ function goDay(date_str)
   var month = parsed['month'];
   var day = parsed['day'];
   location.href = '#d' + year + month + day;
-  setDate(year, month, day);
+//  setDate(year, month, day);
   }
 
 function goMonth(year, month)
   {
   month = maybeZeroPad(month.toString());
   location.href = '#ym' + year + month;
-  setDate(year, parseInt(month), 1);
+//  setDate(year, parseInt(month), 1);
   }
 
 function maybeZeroPad(str)
