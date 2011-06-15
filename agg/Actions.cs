@@ -41,6 +41,11 @@ namespace CalendarAggregator
 	{
 		public virtual bool Validate(TwitterCommand command)
 		{
+			if (command.command == null)
+			{
+				this.Complain(command, "message didn't start with a command verb");
+				return false;
+			}
 			var args_include_required = command.required_args.IsSubsetOf<string>(command.args_dict.Keys.ToList());
 			if (args_include_required == false)
 			{
