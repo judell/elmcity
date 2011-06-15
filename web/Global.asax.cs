@@ -64,7 +64,7 @@ namespace WebRole
 
 			// trust requests from hosts named in an azure table
 			var query = "$filter=(PartitionKey eq 'trustedhosts')";
-			var trusted_host_dicts = (List<Dictionary<string, object>>)this.ts.QueryEntities(tablename: "trustedhosts", query: query).response;
+			var trusted_host_dicts = this.ts.QueryAllEntitiesAsListDict(table: "trustedhosts", query: query).list_dict_obj;
 			foreach (var trusted_host_dict in trusted_host_dicts)
 			{
 				if (trusted_host_dict.ContainsKey("host"))
@@ -95,7 +95,7 @@ namespace WebRole
 
 	public class ElmcityApp : HttpApplication
 	{
-		public static string version = "1113";
+		public static string version = "1158";
 
 #if false // true if testing, false if not testing
 		private static bool testing = true;
