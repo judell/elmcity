@@ -33,8 +33,9 @@ namespace WorkerRole
 #if false // true if testing, false if not testing
         //private static int startup_delay = 100000000; // add delay if want to focus on webrole
 		private static int startup_delay = 0;
-        private static List<string> testids = new List<string>() { "socialhartford" };
-        private static List<string> testfeeds = new List<string>();
+        private static List<string> testids = new List<string>() { "elmcity" };  // focus on a hub
+        private static List<string> testfeeds = new List<string>() // optionally focus on a feed in that hub
+			{ "http://www.facebook.com/ical/u.php?uid=652661115&key=AQDkPMjwIPc30qcT" };
         private static bool testing = true;
 #else     // not testing
 		private static int startup_delay = 0;
@@ -138,7 +139,7 @@ namespace WorkerRole
 
 					settings = GenUtils.GetSettingsFromAzureTable();
 
-					SaveSettings(settings);
+					// SaveSettings(settings); // not needed
 
 					ids = delicious.LoadHubIdsFromAzureTable();
 
@@ -149,23 +150,35 @@ namespace WorkerRole
 					foreach (var id in ids)
 					{
 						var calinfo = new Calinfo(id);
-						var twitter_account = calinfo.twitter_account;
 
-						var messages = twitter_direct_messages.FindAll(msg => msg.sender_screen_name.ToLower() == twitter_account.ToLower());
-						// see http://friendfeed.com/elmcity/53437bec/copied-original-css-file-to-my-own-server for why ToLower()
+						bool got_start_request = false;
+						bool got_meta_refresh_request = false;
 
-						var got_meta_refresh_request = messages.FindAll(msg => msg.text == "meta_refresh").Count > 0;
+						if ( twitter_direct_messages.Count > 0 && calinfo.twitter_account != null) // any messages for this id?
+							try
+							{
+								var messages = twitter_direct_messages.FindAll(msg => msg.sender_screen_name.ToLower() == calinfo.twitter_account.ToLower());
+								// see http://friendfeed.com/elmcity/53437bec/copied-original-css-file-to-my-own-server for why ToLower()
 
-						if (got_meta_refresh_request)
-						{
-							logger.LogMsg("info", "Received meta_refresh message from " + id, null);
-							TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your meta_refresh message");
-							UpdateMetadataToAzure(id);
-							TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://elmcity.cloudapp.net/services/" + id + "/metadata");
-							calinfo = new Calinfo(id);
-						}
+								got_meta_refresh_request = messages.FindAll(msg => msg.text == "meta_refresh").Count > 0;
 
-						var got_start_request = messages.FindAll(msg => msg.text == "start").Count > 0;
+								if (got_meta_refresh_request)
+								{
+									logger.LogMsg("info", "Received meta_refresh message from " + id, null);
+									TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your meta_refresh message");
+									UpdateMetadataToAzure(id);
+									TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://elmcity.cloudapp.net/services/" + id + "/metadata");
+									calinfo = new Calinfo(id);
+								}
+
+								got_start_request = messages.FindAll(msg => msg.text == "start").Count > 0;
+
+								HandleMessages(messages, id);  // handle all other messages
+							}
+							catch (Exception e)
+							{
+								GenUtils.PriorityLogMsg("exception", "WorkerRole.Run: handling twitter messages", e.Message);
+							}
 
 						if (StartTask(id, calinfo, got_start_request) == false)
 							continue;
@@ -188,6 +201,33 @@ namespace WorkerRole
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "Worker.Run", e.Message + e.StackTrace);
+			}
+		}
+
+		public void HandleMessages(List<TwitterDirectMessage> messages, string id)
+		{
+			foreach (var message in messages)
+			{
+				try
+				{
+					var twitter_command = new TwitterCommand(message.id, message.sender_screen_name, message.recipient_screen_name, message.text);
+					if (twitter_command.command != null)
+					{
+						switch (twitter_command.command)
+						{
+							case "add_fb_feed":
+								var action = new AddFacebookFeed();
+								action.Perform(twitter_command, id);
+								break;
+							default:
+								break;
+						}
+					}
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "HandleMessages", e.Message);
+				}
 			}
 		}
 
@@ -255,10 +295,17 @@ namespace WorkerRole
 
 		public static void UpdateWrdForId(string id)
 		{
-			var uri = BlobStorage.MakeAzureBlobUri("admin", "wrd.obj");
-			var wrd = (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri); // acquire wrd
-			WebRoleData.UpdateCalinfoAndRendererForId(id, wrd);
-			bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
+			try
+			{
+				var uri = BlobStorage.MakeAzureBlobUri("admin", "wrd.obj");
+				var wrd = (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri); // acquire wrd
+				WebRoleData.UpdateCalinfoAndRendererForId(id, wrd);
+				bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "WorkerRole.UpdateWrdForId: " + id, e.Message);
+			}
 		}
 
 		private static void PurgePickledCalinfoAndRenderer(string id)
@@ -324,7 +371,7 @@ namespace WorkerRole
 		{
 			var lock_response = Scheduler.LockId(id);
 
-			if (lock_response.http_response.status != HttpStatusCode.Created)
+			if (lock_response.status != HttpStatusCode.Created)
 			{
 				logger.LogMsg("warning", "LockId", "expected to create lock but could not");
 				return false;
@@ -444,7 +491,7 @@ namespace WorkerRole
 				foreach (var testfeed in testfeeds)
 					fr.AddFeed(testfeed, "testing: " + testfeed);
 			else
-				fr.LoadFeedsFromAzure();
+				fr.LoadFeedsFromAzure(FeedLoadOption.all);
 
 			var id = calinfo.delicious_account;
 			ZonedEventStore ical = new ZonedEventStore(calinfo, ".ical");
@@ -551,7 +598,7 @@ namespace WorkerRole
 			var redirected_url = GenUtils.DictTryGetValueAsStr(feed_metadict, "redirected_url");
 			if (String.IsNullOrEmpty(redirected_url))
 				redirected_url = feedurl;
-			DoStatsRow(istats, ref report, ref futurecount, feedurl, redirected_url, homeurl);
+			DoStatsRow(id, istats, ref report, ref futurecount, feedurl, redirected_url, homeurl);
 		}
 
 		public static void SaveWhatStats(FeedRegistry fr, Calinfo calinfo)
@@ -579,7 +626,7 @@ namespace WorkerRole
 <table class=""icalstats"">
 <tr>
 <td>feed</td>
-<td>score</td>
+<td>validation</td>
 <td>future</td>
 <td>single</td>
 <td>recurring</td>
@@ -640,39 +687,45 @@ All events {8}, population {9}, events/person {10:f}
 			return preamble;
 		}
 
-		private static void DoStatsRow(Dictionary<string, IcalStats> istats, ref string report, ref int futurecount, string feedurl, string redirected_url, string homeurl)
+		private static void DoStatsRow(string id, Dictionary<string, IcalStats> istats, ref string report, ref int futurecount, string feedurl, string redirected_url, string homeurl)
 		{
 			try
 			{
 				var ical_stats = istats[feedurl];
+				var is_private = Delicious.IsPrivateFeed(id, feedurl);
+
+				var feed_column = is_private
+					? String.Format(@"{0} (<a title=""click to visit calendar's home page"" href=""{1}"">home</a>)", ical_stats.source, homeurl)
+					: String.Format(@"<a title=""click to load calendar"" href=""{0}"">{1}</a> (<a title=""click to visit calendar's home page"" href=""{2}"">home</a>)", feedurl, ical_stats.source, homeurl);
+	
+				var validation_column = is_private
+					? ""
+					: String.Format(@"<a href=""{0}"">validate</a>", Utils.ValidationUrlFromFeedUrl(redirected_url));
+										
 				futurecount += istats[feedurl].futurecount;
 				report += string.Format(@"
 <tr>
-<td><a title=""click to load calendar"" href=""{0}"">{1}</a> (<a title=""click to visit calendar's home page"" href=""{2}"">home</a>)</td>
+<td>{0}</td>
+<td>{1}</td>
+<td>{2}</td>
 <td>{3}</td>
 <td>{4}</td>
 <td>{5}</td>
 <td>{6}</td>
 <td>{7}</td>
 <td>{8}</td>
-<td>{9}</td>
-<td>{10}</td>
 </tr>
 ",
-				feedurl,                                                 // 0
-				ical_stats.source,                                       // 1
-				homeurl,                                                 // 2
-				string.Format(@"<a title=""click to validate"" href=""{0}"">{1}</a>",    // 3
-				 Utils.ValidationUrlFromFeedUrl(redirected_url),
-				  ical_stats.score),
-				ical_stats.futurecount,                                  // 4
-				ical_stats.singlecount,                                  // 5
-				ical_stats.recurringcount,                               // 6
-				ical_stats.recurringinstancecount,                       // 7
-				ical_stats.loaded,                                       // 8
-				ical_stats.whenchecked,                                  // 9
-					//ical_stats.dday_error,                                 // 10
-				ical_stats.prodid                                        // 10
+				feed_column,                                             // 0
+				validation_column,                                       // 1
+				ical_stats.futurecount,                                  // 2
+				ical_stats.singlecount,                                  // 3
+				ical_stats.recurringcount,                               // 4
+				ical_stats.recurringinstancecount,                       // 5
+				ical_stats.loaded,                                       // 6
+				ical_stats.whenchecked,                                  // 7
+				//ical_stats.dday_error,                                 // 
+				ical_stats.prodid                                        // 8
 				);
 			}
 			catch (Exception ex)
@@ -874,10 +927,20 @@ All events {8}, population {9}, events/person {10:f}
 		public static void TestRunnerAdmin(object o, ElapsedEventArgs args)
 		{
 			logger.LogMsg("info", "TestRunnerAdmin", null);
+			var calinfo = new Calinfo(CalendarAggregator.Configurator.delicious_test_account);
 			try
 			{
-				GenUtils.RunTests("CalendarAggregator");
-				GenUtils.RunTests("ElmcityUtils");
+				var failed = GenUtils.RunTests("CalendarAggregator");
+				if (failed > 0)
+					TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed: CalendarAggregator");
+
+				failed = GenUtils.RunTests("ElmcityUtils");
+				if (failed > 0)
+					TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed: CalendarElmcityUtils");
+
+				failed = GenUtils.RunTests("WorkerRole");
+				if (failed > 0)
+					TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed: WorkerRole");
 			}
 			catch (Exception e)
 			{
