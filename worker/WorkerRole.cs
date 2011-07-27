@@ -31,8 +31,8 @@ namespace WorkerRole
 	public class WorkerRole : RoleEntryPoint
 	{
 #if false // true if testing, false if not testing
-        //private static int startup_delay = 100000000; // add delay if want to focus on webrole
-		private static int startup_delay = 0;
+        private static int startup_delay = 100000000; // add delay if want to focus on webrole
+		//private static int startup_delay = 0;
         private static List<string> testids = new List<string>() { "elmcity" };  // focus on a hub
         private static List<string> testfeeds = new List<string>() // optionally focus on a feed in that hub
 			{ "http://www.facebook.com/ical/u.php?uid=652661115&key=AQDkPMjwIPc30qcT" };
@@ -86,7 +86,7 @@ namespace WorkerRole
 
 				//Utils.ScheduleTimer(DeliciousAdmin, minutes: CalendarAggregator.Configurator.delicious_admin_interval_hours * 60, name: "DeliciousAdmin", startnow: false);
 
-				Utils.ScheduleTimer(GeneralAdmin, minutes: CalendarAggregator.Configurator.worker_general_admin_interval_hours * 60, name: "StartupAdmin", startnow: false);
+				Utils.ScheduleTimer(GeneralAdmin, minutes: CalendarAggregator.Configurator.worker_general_admin_interval_hours * 60, name: "GeneralAdmin", startnow: false);
 
 				Utils.ScheduleTimer(TestRunnerAdmin, minutes: CalendarAggregator.Configurator.testrunner_interval_hours * 60, name: "TestRunnerAdmin", startnow: false);
 
@@ -164,9 +164,10 @@ namespace WorkerRole
 
 								if (got_meta_refresh_request)
 								{
-									logger.LogMsg("info", "Received meta_refresh message from " + id, null);
+									GenUtils.PriorityLogMsg("info", "Received meta_refresh message from " + id, null);
 									TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your meta_refresh message");
-									UpdateMetadataToAzure(id);
+									UpdateFeedsAndMetadataForIdToAzure(id);
+									Utils.MakeMetadataPage(id);
 									TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://elmcity.cloudapp.net/services/" + id + "/metadata");
 									calinfo = new Calinfo(id);
 								}
@@ -242,7 +243,7 @@ namespace WorkerRole
 
 				DoIcal(fr, calinfo);
 
-				if (calinfo.hub_type == CalendarAggregator.HubType.where.ToString())
+				if (calinfo.hub_enum == CalendarAggregator.HubType.where)
 				{
 					DoEventful(calinfo);
 					DoUpcoming(calinfo);
@@ -254,10 +255,10 @@ namespace WorkerRole
 
 				RenderHtmlXmlJson(id, calinfo);
 
-				if (calinfo.hub_type == CalendarAggregator.HubType.where.ToString())
+				if (calinfo.hub_enum == CalendarAggregator.HubType.where)
 					SaveWhereStats(fr, calinfo);
 
-				if (calinfo.hub_type == CalendarAggregator.HubType.what.ToString())
+				if (calinfo.hub_enum == CalendarAggregator.HubType.what)
 					SaveWhatStats(fr, calinfo);
 
 				MergeIcs(calinfo);
@@ -280,11 +281,17 @@ namespace WorkerRole
 			try
 			{
 				var dict = delicious.StoreMetadataForIdToAzure(id, true, new Dictionary<string, string>());
+				if (dict == null)  // bail if feed metadata query returns null (because MetadataQueryOutcome != Success)
+				{
+					logger.LogMsg("info", "StoreMetadataForid: " + id + " : null response", null);
+					return;
+				}
 				var snapshot_changed = ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.DictStr, "metadata", dict);
 				if (snapshot_changed == true)
 				{
-					PurgePickledCalinfoAndRenderer(id); // delete [id].calinfo.obj and [id].renderer.obj
-					UpdateWrdForId(id);   // recreate [id].calinfo.obj with changed metadadict, recreate [id].renderer.obj, update wrd.obj              
+					PurgePickledCalinfoAndRenderer(id);    // delete [id].calinfo.obj and [id].renderer.obj
+					RecreatePickledCalinfoAndRenderer(id); // recreate them
+					UpdateWrdForId(id);   // update wrd.obj (webrole data)
 				}
 			}
 			catch (Exception e)
@@ -428,11 +435,13 @@ namespace WorkerRole
 			try
 			{
 				var dicts = delicious.StoreFeedsAndMaybeMetadataToAzure(fr_delicious, id);
-				var snapshot_changed = ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.ListDictStr, "feeds", dicts);
+				var nulls = dicts.FindAll(x => x == null).Count;  
+				if (nulls == 0)     // don't save a snapshot if any of the id's feed metadata queries returns null (because MetadataQueryOutcome != Success)
+					ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.ListDictStr, "feeds", dicts);
 			}
 			catch (Exception e)
 			{
-				logger.LogMsg("exception", "UpdateFeedsToAzure", e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "UpdateFeedsToAzure", e.Message + e.StackTrace);
 			}
 		}
 
@@ -594,8 +603,10 @@ namespace WorkerRole
 		private static void StatsRow(string id, Dictionary<string, IcalStats> istats, ref string report, ref int futurecount, string feedurl)
 		{
 			var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
-			var homeurl = GenUtils.DictTryGetValueAsStr(feed_metadict, "url");
-			var redirected_url = GenUtils.DictTryGetValueAsStr(feed_metadict, "redirected_url");
+			string homeurl;
+			feed_metadict.TryGetValue("url", out homeurl);
+			string redirected_url;
+			feed_metadict.TryGetValue("redirected_url", out redirected_url);
 			if (String.IsNullOrEmpty(redirected_url))
 				redirected_url = feedurl;
 			DoStatsRow(id, istats, ref report, ref futurecount, feedurl, redirected_url, homeurl);
@@ -739,7 +750,7 @@ All events {8}, population {9}, events/person {10:f}
 			var id = calinfo.delicious_account;
 			logger.LogMsg("info", "MergeIcs: " + id, null);
 			List<string> suffixes = new List<string>() { "ical" };
-			if (calinfo.hub_type == CalendarAggregator.HubType.where.ToString())
+			if (calinfo.hub_enum == CalendarAggregator.HubType.where)
 				foreach (NonIcalType type in Enum.GetValues(typeof(CalendarAggregator.NonIcalType)))
 				{
 					if (Utils.UseNonIcalService(type, settings, calinfo) == true)
@@ -858,7 +869,7 @@ All events {8}, population {9}, events/person {10:f}
 
 		public void GeneralAdmin(object o, ElapsedEventArgs args)
 		{
-			logger.LogMsg("info", "GeneralAdmin", null);
+			GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
 
 			try    // acquire new hubs added since last cycle
 			{
@@ -870,11 +881,10 @@ All events {8}, population {9}, events/person {10:f}
 			}
 
 			var ids = delicious.LoadHubIdsFromAzureTable();
+			ids = MaybeAdjustIdsForTesting(ids);
 
-			try  // fetch feeds and metadata from delicious, store in azure table
+			try  // fetch feeds and metadata from delicious, store in azure table, update metadata pages
 			{
-				ids = MaybeAdjustIdsForTesting(ids);
-
 				foreach (var id in ids)
 				{
 					UpdateFeedsAndMetadataForIdToAzure(id);
@@ -883,21 +893,6 @@ All events {8}, population {9}, events/person {10:f}
 			catch (Exception e1)
 			{
 				GenUtils.PriorityLogMsg("exception", "GeneralAdmin", e1.Message);
-			}
-
-			foreach (var id in ids)
-			{
-				try  // create and cache calinfo and renderer
-				{
-					var calinfo = new Calinfo(id);
-					var cr = new CalendarRenderer(calinfo);
-					bs.SerializeObjectToAzureBlob(calinfo, id, id + ".calinfo.obj");
-					bs.SerializeObjectToAzureBlob(cr, id, id + ".renderer.obj");
-				}
-				catch (Exception e2)
-				{
-					GenUtils.PriorityLogMsg("exception", "GeneralAdmin: saving calinfo and renderer: " + id, e2.Message);
-				}
 			}
 
 			WebRoleData wrd;
@@ -914,6 +909,21 @@ All events {8}, population {9}, events/person {10:f}
 
 		}
 
+		public static void RecreatePickledCalinfoAndRenderer(string id)
+		{
+			try  // create and cache calinfo and renderer, these are nonessential and recreated on demand if needed
+			{
+				var calinfo = new Calinfo(id);
+				var cr = new CalendarRenderer(calinfo);
+				bs.SerializeObjectToAzureBlob(calinfo, id, id + ".calinfo.obj");
+				bs.SerializeObjectToAzureBlob(cr, id, id + ".renderer.obj");
+			}
+			catch (Exception e2)
+			{
+				GenUtils.PriorityLogMsg("exception", "GeneralAdmin: saving calinfo and renderer: " + id, e2.Message);
+			}
+		}
+
 		public static void UpdateFeedsAndMetadataForIdToAzure(string id)
 		{
 			var fr_delicious = new FeedRegistry(id);
@@ -922,6 +932,7 @@ All events {8}, population {9}, events/person {10:f}
 			UpdateFeedsToAzure(fr_delicious, id);
 			UpdateFeedCountToAzure(id);
 			UpdateMetadataToAzure(id);
+			Utils.MakeMetadataPage(id);
 		}
 
 		public static void TestRunnerAdmin(object o, ElapsedEventArgs args)
