@@ -700,7 +700,7 @@ namespace CalendarAggregator
 
 		#endregion
 
-		#region vcal
+		 #region vcal
 
 		static public string IcsFromAtomPlusVCalAsContent(string atom_plus_vcal_url, string source, TimeZoneInfo tzinfo)
 		{
@@ -728,6 +728,165 @@ namespace CalendarAggregator
 			var serializer = new DDay.iCal.Serialization.iCalendarSerializer(ical);
 			var ics_text = serializer.SerializeToString();
 			return ics_text;
+		}
+
+		#endregion
+
+		#region metadata history
+
+		//	ViewData["result"] = CalendarAggregator.Utils.GetMetaHistory(a_name, b_name, id, flavor);
+
+		static public string GetMetaHistory(string a_name, string b_name, string id, string flavor)
+		{
+			var host = "http://elmcity.blob.core.windows.net";
+			var path = host + "/" + id + "/";
+
+			string json_a;
+			string json_b;
+
+			if (flavor == "feeds")
+			{
+				json_a = JsonListToJsonDict(path + a_name, "feedurl");
+				json_b = JsonListToJsonDict(path + b_name, "feedurl");
+			}
+			else // flavor == "metadata"
+			{
+				json_a = HttpUtils.FetchUrl(new Uri(path + a_name)).DataAsString();
+				json_b = HttpUtils.FetchUrl(new Uri(path + b_name)).DataAsString();
+			}
+
+			var page = HttpUtils.FetchUrl(new Uri(host + "/admin/jsondiff.html")).DataAsString();
+
+			page = page.Replace("__JSON_A__", json_a);
+			page = page.Replace("__JSON_B__", json_b);
+
+			return page;
+		}
+
+		static private string JsonListToJsonDict(string url, string key)
+		{
+			var json = HttpUtils.FetchUrl(new Uri(url)).DataAsString();
+			var list = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
+			var dict = new Dictionary<string, Dictionary<string, string>>();
+			foreach (var d in list)
+			{
+				var k = d[key];
+				dict.Add(k, d);
+			}
+			var new_json = JsonConvert.SerializeObject(dict);
+			return new_json;
+		}
+
+		public static List<string> GetMetadataHistoryNamesForId(string id, string flavor) // flavor: "metadata" or "feeds"
+		{
+			var bs = BlobStorage.MakeDefaultBlobStorage();
+			var r = bs.ListBlobs(id);
+			var list_dict_str = (List<Dictionary<string, string>>)r.response;
+			var re = new Regex(@"\d+\." + flavor + @"\.json");
+			var snapshots = list_dict_str.FindAll(x => re.Match(x["Name"]).Success);
+			var names = snapshots.Select(x => x["Name"] );
+			var list = names.ToList();
+			list.Sort();
+			list.Reverse();
+			return list;
+		}
+
+		public static string GetHubMetadataAsHtml(string id)
+		{
+			var sb = new StringBuilder();
+			sb.Append("<table>");
+			var metadict = delicious.LoadMetadataForIdFromAzureTable(id);
+			foreach (var key in metadict.Keys)
+				sb.Append(string.Format("<tr><td>{0}</td><td>{1}</td></tr>", key, metadict[key]));
+			sb.Append("</table>");
+			return sb.ToString();
+		}
+
+		public static string GetFeedMetadataAsHtml(string id)
+		{
+			var sb = new StringBuilder();
+			sb.Append("<div>");
+
+			var rows = new List<string>();
+
+			Dictionary<string, string> feeds = delicious.LoadFeedsFromAzureTableForId(id, FeedLoadOption.only_public);
+			var include_attrs = new List<string>() { "url", "category" };
+			foreach (var feedurl in feeds.Keys)
+			{
+				var source = feeds[feedurl];
+				var row = new StringBuilder();
+				row.Append("<table>");
+				row.Append(string.Format("<tr><td>{0}</td><td>{1}</td></tr>", "source", source));
+				row.Append(string.Format("<tr><td>{0}</td><td>{1}</td></tr>", "feed url", feedurl));
+				var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
+				foreach (var attr in include_attrs)
+				{
+					if (feed_metadict.ContainsKey(attr) && feed_metadict[attr] != "")
+						//sb.AppendLine(attr + ": " + feed_metadict[attr]);
+						row.Append(string.Format("<tr><td>{0}</td><td>{1}</td></tr>", attr, feed_metadict[attr]));
+				}
+				row.Append("</table>");
+
+				rows.Add(row.ToString());
+			}
+
+			sb.Append(string.Join("<div>............</div>", rows));
+
+			sb.Append("</div>");
+			return sb.ToString();
+		}
+
+		public static string GetMetadataHistoryChooser(string id, string flavor) // flavor: "metadata" or "feeds" 
+		{
+			var names = GetMetadataHistoryNamesForId(id, flavor);
+			var sb = new StringBuilder();
+			sb.Append("<table>");
+			var row_template = @"<tr>
+<td><input id=""{0}_history_1"" name=""{0}_history_1"" type=""radio"" value=""{1}"">{1}</td>
+<td><input id=""{0}_history_2"" name=""{0}_history_2"" type=""radio"" value=""{1}"">{1}</td>
+</tr>";
+			foreach (var name in names)
+			{
+				var row = String.Format(row_template, flavor, name);
+				sb.Append(row);
+			}
+
+			sb.Append("</table>");
+			return sb.ToString();
+		}
+
+		public static string GetMetadataChooserHandler(string id, string flavor)
+		{
+			var script = HttpUtils.FetchUrl(new Uri("http://elmcity.blob.core.windows.net/admin/metadata_chooser_handler.tmpl")).DataAsString();
+			script = script.Replace("__FLAVOR__", flavor);
+			script = script.Replace("__ID__", id);
+			return script;
+		}
+
+		public static void MakeMetadataPage(string id)
+		{
+			var template = new Uri("http://elmcity.blob.core.windows.net/admin/meta_history.html");
+			var page = HttpUtils.FetchUrl(template).DataAsString();
+
+			var hub_metadata = Utils.GetHubMetadataAsHtml(id);
+			page = page.Replace("__HUB_METADATA__", hub_metadata);
+
+			var hub_history = Utils.GetMetadataHistoryChooser(id, "metadata");
+			page = page.Replace("__HUB_HISTORY__", hub_history);
+
+			var hub_handler = Utils.GetMetadataChooserHandler(id, "metadata");
+			page = page.Replace("__HUB_HANDLER__", hub_handler);
+
+			var feed_metadata = Utils.GetFeedMetadataAsHtml(id);
+			page = page.Replace("__FEED_METADATA__", feed_metadata);
+
+			var feed_history = Utils.GetMetadataHistoryChooser(id, "feeds");
+			page = page.Replace("__FEED_HISTORY__", feed_history);
+
+			var feed_handler = Utils.GetMetadataChooserHandler(id, "feeds");
+			page = page.Replace("__FEED_HANDLER__", feed_handler);
+
+			bs.PutBlob(id, "metadata.html", Encoding.UTF8.GetBytes(page));
 		}
 
 		#endregion
@@ -859,17 +1018,6 @@ namespace CalendarAggregator
 		   snippet);
 		}
 
-		public static string GetMetadataForId(string id)
-		{
-			var metadict = delicious.LoadMetadataForIdFromAzureTable(id);
-			var sb = new StringBuilder();
-			foreach (var key in metadict.Keys)
-			{
-				sb.AppendLine(key + ": " + metadict[key]);
-			}
-			return sb.ToString();
-		}
-
 		public static T DeserializeObjectFromJson<T>(string containername, string blobname)
 		{
 			var uri = BlobStorage.MakeAzureBlobUri(containername, blobname);
@@ -922,6 +1070,8 @@ namespace CalendarAggregator
 
 		public List<string> where_ids = new List<string>();
 		public List<string> what_ids = new List<string>();
+
+		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
 		// on startup, and then periodically, this list of "ready" hubs is constructed
 		// ready means that the hub has been added to the system, and there has been at 
@@ -976,20 +1126,37 @@ namespace CalendarAggregator
 			GenUtils.LogMsg("info", "GatherWebRoleData: str_ready_ids: " + this.str_ready_ids, null);
 		}
 
+		public static Calinfo AcquireCalinfo(string id)
+		{
+			Calinfo calinfo;
+			try
+			{
+				var name = id + ".calinfo.obj";
+				var calinfo_uri = BlobStorage.MakeAzureBlobUri(id, name);
+				calinfo = (Calinfo)BlobStorage.DeserializeObjectFromUri(calinfo_uri);
+			}
+			catch (Exception e)
+			{
+				var msg = "AcquireCalinfo: " + id;
+				GenUtils.PriorityLogMsg("exception", msg, e.Message);
+				calinfo = new Calinfo(id);
+			}
+			return calinfo;
+		}
+
 		public static CalendarRenderer AcquireRenderer(string id, Calinfo calinfo)
 		{
 			CalendarRenderer cr;
 			try
 			{
-				//var renderer_uri = new Uri(string.Format("{0}/{1}/{2}.renderer.obj", ElmcityUtils.Configurator.azure_blobhost, id.ToLower(), id));
 				var name = id + ".renderer.obj";
 				var renderer_uri = BlobStorage.MakeAzureBlobUri(id, name);
 				cr = (CalendarRenderer)BlobStorage.DeserializeObjectFromUri(renderer_uri);
 			}
 			catch (Exception e)
 			{
-				var msg = "GatherWebRoleData: renderer rehydration: " + id;
-				GenUtils.PriorityLogMsg("exception", msg, e.Message, TableStorage.MakeDefaultTableStorage());
+				var msg = "AcquireRenderer: " + id;
+				GenUtils.PriorityLogMsg("exception", msg, e.Message);
 				cr = new CalendarRenderer(calinfo);
 			}
 			return cr;
@@ -999,7 +1166,7 @@ namespace CalendarAggregator
 		{
 			try
 			{
-				var calinfo = new Calinfo(id);
+				var calinfo = AcquireCalinfo(id);
 				wrd.calinfos[id] = calinfo;
 			}
 			catch (Exception e1)
@@ -1020,11 +1187,11 @@ namespace CalendarAggregator
 
 		private void MakeWhereAndWhatIdLists()
 		{
-			this.where_ids = this.calinfos.Keys.ToList().FindAll(id => this.calinfos[id].hub_type == CalendarAggregator.HubType.where.ToString());
+			this.where_ids = this.calinfos.Keys.ToList().FindAll(id => this.calinfos[id].hub_enum == CalendarAggregator.HubType.where);
 			var where_ids_as_str = string.Join(",", this.where_ids.ToArray());
 			GenUtils.LogMsg("info", "where_ids: " + where_ids_as_str, null);
 
-			this.what_ids = this.calinfos.Keys.ToList().FindAll(id => this.calinfos[id].hub_type == CalendarAggregator.HubType.what.ToString());
+			this.what_ids = this.calinfos.Keys.ToList().FindAll(id => this.calinfos[id].hub_enum == CalendarAggregator.HubType.what);
 			var what_ids_as_str = string.Join(",", this.what_ids.ToArray());
 			GenUtils.LogMsg("info", "what_ids: " + what_ids_as_str, null);
 
