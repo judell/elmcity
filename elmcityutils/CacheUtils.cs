@@ -238,14 +238,18 @@ namespace ElmcityUtils
 			return html.ToString();
 		}
 
+		// called from CombineZonedEventStoresToZonelessEventStore at the end of an aggregation
+		// bumps the counters in the cacheurls table to equal the number of webroles running
 		public static void MarkBaseCacheEntryForRemoval(string cached_uri, int instance_count)
 		{
 			var entity = new Dictionary<string, object>();
 			entity.Add("cached_uri", cached_uri);
 			entity.Add("count", instance_count);
-			TableStorage.DictObjToTableStore(TableStorage.Operation.merge, entity, cache_control_tablename, cache_control_partkey, TableStorage.MakeSafeRowkeyFromUrl(cached_uri));
+			var rowkey = TableStorage.MakeSafeRowkeyFromUrl(cached_uri);
+			ts.UpdateEntity(cache_control_tablename, cache_control_partkey, rowkey, entity);
 		}
 
+		// scan the cacheurls table, compare uris with counts > 0 to uris in cache, if match then evict uri and decrement count
 		public static void MaybePurgeCache(ICache cache)
 		{
 			try
