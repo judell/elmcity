@@ -95,11 +95,11 @@ namespace WebRole
 
 	public class ElmcityApp : HttpApplication
 	{
-		public static string version = "1158";
+		public static string version = "1226";
 
 #if false // true if testing, false if not testing
 		private static bool testing = true;
-		private static string test_id = "socialhartford";
+		private static string test_id = "elmcity";
 #else    // not testing
 		private static bool testing = false;
 		private static string test_id = "";
@@ -193,6 +193,16 @@ namespace WebRole
 				"hubfiles",
 				"services/{id}/",
 				new { controller = "Home", action = "hubfiles" },
+				new { id = wrd.str_ready_ids }
+				);
+
+			// visualize changes between two json snapshots (flavor feeds is list of dicts, flavor metadata is single dict)
+			// http://elmcity.cloudapp.net/services/elmcity/meta_history?id=elmcity&flavor=feeds&a_name=elmcity.2011.07.25.00.56.feeds.json&b_name=elmcity.2011.07.25.10.00.feeds.json
+			// http://elmcity.cloudapp.net/services/elmcity/meta_history?id=elmcity&flavor=metadata&a_name=elmcity.2011.07.25.00.56.metadata.json&b_name=elmcity.2011.07.25.10.00.metadata.json
+			routes.MapRoute(
+				"meta_history",
+				"services/{id}/meta_history",
+				new { controller = "Home", action = "meta_history" },
 				new { id = wrd.str_ready_ids }
 				);
 
@@ -307,7 +317,6 @@ namespace WebRole
 			{
 				var msg = "_reload: cannot unpickle webrole data, recreating";
 				GenUtils.PriorityLogMsg("exception", msg, e1.Message);
-				wrd = new WebRoleData(testing: testing, test_id: test_id);
 			}
 			finally
 			{
@@ -316,6 +325,8 @@ namespace WebRole
 					var msg = "_reload: cannot recreate webrole data!";
 					GenUtils.PriorityLogMsg("exception", msg, null);
 				}
+			if ( testing )
+				wrd = new WebRoleData(testing: testing, test_id: test_id);
 			}
 
 			try

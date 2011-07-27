@@ -148,6 +148,12 @@ namespace WebRole
 			return View();
 		}
 
+		public ActionResult meta_history(string a_name, string b_name, string id, string flavor)
+		{
+			ViewData["result"] = CalendarAggregator.Utils.GetMetaHistory(a_name, b_name, id, flavor);
+			return View();
+		}
+
 		private string make_where_summary()
 		{
 			var summary = new StringBuilder();
