@@ -160,7 +160,7 @@ namespace ElmcityUtils
 
 		public static HttpResponse DoHttpWebRequest(HttpWebRequest request, byte[] data)
 		{
-			request.UserAgent = "elmcity";
+			request.UserAgent = HttpUtils.elmcity_user_agent;
 
 			try
 			{
@@ -295,31 +295,6 @@ namespace ElmcityUtils
 			System.Threading.Thread.Sleep(seconds * 1000);
 		}
 
-		/*
-        public static void LogHttpRequest(System.Web.Mvc.ControllerContext c)
-        {
-            string requestor_ip_addr = "ip_unavailable";
-            //string requestor_dns_name = "dns_unavailable";
-            string url = "url_unavailable";
-            try
-            {
-                requestor_ip_addr = c.HttpContext.Request.UserHostAddress;
-                //requestor_dns_name = DnsUtils.TryGetHostName(requestor_ip_addr);
-                url = c.HttpContext.Request.Url.ToString();
-            }
-            catch // (Exception e)
-            {
-             //   GenUtils.PriorityLogMsg("exception", "LogHttpRequest", e.Message + e.StackTrace);
-            }
-
-            var msg = string.Format("{0} {1} ",
-                requestor_ip_addr,
-                url);
-
-            GenUtils.LogMsg("info", msg, null);
-        }
-		 */
-
 		public static LogMsg MakeHttpLogMsg(System.Web.Mvc.ControllerContext c)
 		{
 			string requestor_ip_addr;
@@ -340,20 +315,29 @@ namespace ElmcityUtils
 			return msg;
 		}
 
-		public static bool CompletedIfStatusOK(HttpResponse r, Object o)
+		public static bool CompletedIfStatusEqualsExpected(HttpResponse r, Object o)
 		{
-			return r.status == HttpStatusCode.OK;
+			return r.status == (HttpStatusCode) o;
 		}
 
-		public static HttpResponse RetryExpectingOK(HttpWebRequest request, byte[] data, int wait_secs, int max_tries, TimeSpan timeout_secs)
+		public static HttpResponse RetryHttpRequestExpectingStatus(HttpWebRequest request, HttpStatusCode expected_status, byte[] data, int wait_secs, int max_tries, TimeSpan timeout_secs)
 		{
-			return GenUtils.Actions.Retry<HttpResponse>(
-				delegate() { return DoHttpWebRequest(request, data); },
-				CompletedIfStatusOK,
-				completed_delegate_object: null,
-				wait_secs: wait_secs,
-				max_tries: max_tries,
-				timeout_secs: timeout_secs);
+			try
+			{
+				return GenUtils.Actions.Retry<HttpResponse>(
+					delegate() { return DoHttpWebRequest(request, data); },
+					CompletedIfStatusEqualsExpected,
+					completed_delegate_object: expected_status,
+					wait_secs: wait_secs,
+					max_tries: max_tries,
+					timeout_secs: timeout_secs);
+			}
+			catch (Exception e)
+			{
+				var msg = "RetryHttpRequest " + e.ToString() + ": " + request.RequestUri;
+				GenUtils.LogMsg("warning", msg, null);
+				return new HttpResponse(HttpStatusCode.NotFound, msg, null, null);
+			}
 		}
 
 		/*
