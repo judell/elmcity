@@ -45,7 +45,8 @@ namespace ElmcityUtils
 				}
 			}
 
-			GenUtils.PriorityLogMsg("exception", String.Format("UnzipFromUrlToDirectory: {0} exceptions", exceptions), null);
+			if (exceptions > 0)
+				GenUtils.PriorityLogMsg("exception", String.Format("UnzipFromUrlToDirectory: {0} exceptions", exceptions), null);
 		}
 
 	}
