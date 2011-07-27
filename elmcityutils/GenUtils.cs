@@ -62,6 +62,15 @@ namespace ElmcityUtils
 			return title;
 		}
 
+		public static bool IsNullable<T>(T obj) // http://stackoverflow.com/questions/374651/how-to-check-if-an-object-is-nullable
+			{        
+			if (obj == null) return true; // obvious        
+			Type type = typeof(T);        
+			if (!type.IsValueType) return true; // ref-type 
+			if (Nullable.GetUnderlyingType(type) != null) return true; // Nullable<T>  
+			return false; // value-type    
+			}
+
 		public class Actions
 		{
 			public static Exception RetryExceededMaxTries = new Exception("RetryExceededMaxTries");
@@ -89,7 +98,7 @@ namespace ElmcityUtils
 					}
 					catch (Exception e)
 					{
-						LogMsg("exception", "RetryDelegate: " + method_name,
+						GenUtils.PriorityLogMsg("exception", "RetryDelegate: " + method_name,
 							e.Message + e.StackTrace);
 						throw e;
 					}
@@ -315,23 +324,6 @@ namespace ElmcityUtils
 			return dict;
 		}
 
-		public static Dictionary<string, int> DictTryIncrementIntValue(Dictionary<string, int> dict, string key, int value)
-		{
-			if (dict.ContainsKey(key))
-				dict[key] = dict[key] + 1;
-			else
-				dict.Add(key, 1);
-			return dict;
-		}
-
-		public static string DictTryGetValueAsStr(Dictionary<string, string> dict, string key)
-		{
-			if (dict.ContainsKey(key))
-				return dict[key].ToString();
-			else
-				return "";
-		}
-
 		public static List<Dictionary<string, object>> GetOdataDicts(byte[] bytes)
 		{
 			var dicts = new List<Dictionary<string, object>>();
@@ -461,15 +453,6 @@ namespace ElmcityUtils
 			return GenUtils.AreEqualLists<TKey>(dict.Keys.ToList(), keys);
 		}
 
-		/*
-		public static TValue TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key)
-		{
-			if (dict.ContainsKey(key))
-				return dict[key];
-			else
-				return default(TValue);
-		}*/
-
 	}
 
 	public static class StringExtensions
@@ -492,63 +475,6 @@ namespace ElmcityUtils
 			return GenUtils.AreEqualLists<TKey>(dict.Keys.ToList(), keys);
 		}
 
-		/*
-		public static TValue TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key)
-		{
-			if (dict.ContainsKey(key))
-				return dict[key];
-			else
-				return default(TValue);
-		}*/
-
-	}
-
-	public static class LevenshteinDistance
-	{
-		public static int Compute(string s, string t)
-		{
-			int n = s.Length;
-			int m = t.Length;
-			int[,] d = new int[n + 1, m + 1];
-
-			// Step 1
-			if (n == 0)
-			{
-				return m;
-			}
-
-			if (m == 0)
-			{
-				return n;
-			}
-
-			// Step 2
-			for (int i = 0; i <= n; d[i, 0] = i++)
-			{
-			}
-
-			for (int j = 0; j <= m; d[0, j] = j++)
-			{
-			}
-
-			// Step 3
-			for (int i = 1; i <= n; i++)
-			{
-				//Step 4
-				for (int j = 1; j <= m; j++)
-				{
-					// Step 5
-					int cost = (t[j - 1] == s[i - 1]) ? 0 : 1;
-
-					// Step 6
-					d[i, j] = Math.Min(
-						Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
-						d[i - 1, j - 1] + cost);
-				}
-			}
-			// Step 7
-			return d[n, m];
-		}
 	}
 
 	public static class MathHelpers
