@@ -1,0 +1,96 @@
+<html>
+<head>
+<style>
+body {
+font-family:verdana,arial;
+}
+</style>
+<title>What elmcity contributor do</title>
+</head>
+
+<h1>
+What elmcity contributors do
+</h1>
+
+<p>
+The <a href="http://elmcity.cloudapp.net">elmcity</a> calendar service is for:
+</p>
+
+<ol>
+
+<li><p>
+<b>Contributors</b> who publish calendars on their own websites.
+</p>
+</li>
+
+<li><p>
+<b>Curators</b> who merge calendars from many contributors into a hub. 
+</p>
+</li>
+
+<li><p>
+<b>Users</b> who view or subscribe to individual calendars on contributors' websites, and/or merged calendars on a hub.
+</p>
+</li>
+
+</ol>
+
+<h2>Overview</h2>
+
+<p>
+This page shows how elmcity contributors publish their calendars and connect them to hubs. (See <a href="http://jonudell.net/elmcity/curator-flow.html">What elmcity curators do</a> for the curators' point view.) Consider a regional wine commission with a merged calendar that features wine-tasting events hosted by all the wineries in the region. Each winery has an events page on its own website, and wants those events to appear also on the commission's merged calendar. The wineries are <i>contributors</i> to an elmcity hub. The wine commission is the <i>curator</i> of the hub. Here's the big picture from the contributors' point of view.
+</p>
+
+<p>
+<img style="border-width:thin;border-style:solid;border-color:gray" src="http://jonudell.net/images/what-elmcity-contributors-do-01.png"/>
+</p>
+
+<p>
+The hub isn't shown here because it works behind the scenes to gather all the wineries' events and combine them into the merged calendar. Wineries don't interact with the hub, and don't really need to know it exists. They just want to 1) publish their events on their own sites and 2) also publish them -- as an automatic side effect -- on the commission's site. 
+</p>
+
+<h2>1) How wineries put calendar widgets on the Events pages of their websites</h2>
+
+<p>
+Each winery keeps its schedule of public events in an online calendar service like Google Calendar or Hotmail Calendar. The wineries' webmasters put widgets from these online calendars on the Events pages of their websites, using HTML code supplied by the calendar services. In this example the Red Grape Winery has put a Hotmail Calendar widget on its events page of red-grape.com, and the White Grape Winery has put a Google Calendar widget on its events page. 
+</p>
+
+<p>
+<img style="border-width:thin;border-style:solid;border-color:gray" src="http://jonudell.net/images/what-elmcity-contributors-do-02.png"/>
+</p>
+	
+<h2>2) How wineries send calendar feed URLs to the hub</h2>
+
+<p>
+In addition to making widgets you can put on Events pages, online calendar services provide <i>feed URLs</i> that computers use to exchange calendars. In this case, the exchange happens between computers at Google Calendar or Hotmail Calendar, which are hosting the wineries' calendars, and the elmcity hub which reads and merges the feeds. But the wineries' webmasters don't really need to know that. They just need to find the feed URLs, following <a href="http://jonudell.net/elmcity/publishing-feeds-from-google-and-hotmail-calendars.html">these instructions</a>, and send them to the curator who in turn adds them to the hub.
+</p>
+
+<p>
+<img style="border-width:thin;border-style:solid;border-color:gray" src="http://jonudell.net/images/what-elmcity-contributors-do-03.png"/>
+</p>
+
+<h2>Other scenarios</h2>
+
+<p>
+Obviously the elmcity service isn't just for wineries. Here are some other scenarios:
+</p>
+
+<table style="border-color:black;border-spacing:15;border-collapse:collapse">
+<tr><td style="text-align:center;font-weight:bold;">scenario</td><td style="text-align:center;font-weight:bold">curator</td><td style="text-align:center;font-weight:bold">contributors</td></tr>
+<tr><td style="border-bottom:dotted 1px;border-right:dotted 1px;padding:10px">regional arts hub</td><td style="border-bottom:dotted 1px;border-right:dotted 1px;padding:10px">non-profit arts commission</td><td style="border-bottom:1px dotted;padding:10px">music, art, dance organizations</td></tr>
+<tr><td style="border-bottom:dotted 1px;border-right:dotted 1px;padding:10px">university hub</td><td style="border-bottom:dotted 1px;border-right:dotted 1px;padding:10px">university public relations</td><td style="border-bottom:1px dotted;padding:10px">departmental administrators</td></tr>
+<tr><td style="border-bottom:dotted 1px;border-right:dotted 1px;padding:10px">city or town hub</td><td style="border-bottom:dotted 1px;border-right:dotted 1px;padding:10px">chamber of commerce</td><td style="border-bottom:1px dotted;padding:10px">local businesses</td></tr>
+<tr><td style="border-bottom:dotted 1px;border-right:dotted 1px;padding:10px">sports hub</td><td style="border-bottom:dotted 1px;border-right:dotted 1px;padding:10px">league administrator</td><td style="border-bottom:1px dotted;padding:10px">teams</td></tr>
+<tr><td style="border-bottom:dotted 1px;border-right:dotted 1px;padding:10px">health care hub</td><td style="border-bottom:dotted 1px;border-right:dotted 1px;padding:10px">hospital public relations</td><td style="border-bottom:1px dotted;padding:10px">departmental administrators</td></tr>
+<tr><td style="border-right:dotted 1px;padding:10px">local news hub</td><td style="border-right:dotted 1px;padding:10px">local newspaper, blog, radio station, etc.</td><td style="padding:10px">anyone promoting public events</td></tr>
+</table>
+
+<p>
+In all these scenarios, contributors manage calendars for their individual groups or departments or teams, and curators reuse those calendars by connecting them to larger hubs.
+</p>
+
+
+
+
+</body>
+</html> 
