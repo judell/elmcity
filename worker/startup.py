@@ -4,6 +4,7 @@ import System
 from System.Security.AccessControl import *
 
 clr.AddReference('ElmcityUtils')
+import ElmcityUtils;
 from ElmcityUtils import *
 
 clr.AddReference('System.Management')
@@ -64,17 +65,13 @@ log.write('...starting at UTC %s...\n' % System.DateTime.UtcNow.ToString())
 
 log.write('owner: %s\n' % get_process_owner() )
 
-log.write('...installing python standard library...\n')
-
-uri = System.Uri('http://elmcity.blob.core.windows.net/admin/python_library.zip')
-FileUtils.UnzipFromUrlToDirectory(uri, get_local_storage() )
-
 sys.path.append(get_local_storage() + '/Lib')
 import traceback
 
 try:
+  log.write('...installing python standard library...\n')    
   uri = System.Uri('http://elmcity.blob.core.windows.net/admin/python_library.zip')
-  ElmcityUtils.FileUtils.UnzipFromUrlToDirectory(uri, local_storage)    
+  FileUtils.UnzipFromUrlToDirectory(uri, local_storage)    
 except:
   GenUtils.PriorityLogMsg('exception', 'startup.py', format_traceback() )    
 
