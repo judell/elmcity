@@ -51,8 +51,8 @@ namespace CalendarAggregator
 		private string test_feed_title = "City of Keene - Meetings";
 		private static string test_feed_linkback = "http://www.ci.keene.nh.us/calendar/meetings-calendar";
 
-		private string test_venue_service = "eventful";
-		private string test_venue_url = "http://eventful.com/peterborough_nh/venues/harlows-pub-/V0-001-000628252-6";
+		//private string test_venue_service = "eventful";
+		//private string test_venue_url = "http://eventful.com/peterborough_nh/venues/harlows-pub-/V0-001-000628252-6";
 
 		public Delicious delicious;
 		//private Calinfo calinfo;
@@ -267,6 +267,8 @@ namespace CalendarAggregator
 
 		#region venues
 
+		/* idle for now
+
 		[Test]
 		public void LoadVenueMetaDataSuccessful()
 		{
@@ -279,7 +281,6 @@ namespace CalendarAggregator
 			Assert.That(dict.ContainsKey("venue_url") && dict["venue_url"] == test_venue_url);
 		}
 
-		/* idle for now
 		[Test]
 		public void FetchVenueMetadataIsSuccessful()
 		{

@@ -168,7 +168,7 @@ namespace CalendarAggregator
 			// a default link
 			var response = FetchFeedMetadataFromDeliciousForFeedurlAndId(feedurl, id);
 			if (response.outcome != MetadataQueryOutcome.Success) // delicious failed, don't overwrite cached info in azure table
-				return dict;
+				return null;
 			dict = response.dict_response;
 			dict = GenUtils.DictTryAddStringValue(dict, "feedurl", feedurl);
 			dict = GenUtils.DictTryAddStringValue(dict, "source", fr.feeds[feedurl]);
@@ -177,6 +177,7 @@ namespace CalendarAggregator
 		}
 
 		// used by worker role (UpdateFeedsToAzure) when caching registry + metadata from delicious to azure table
+
 		public List<Dictionary<string, string>> StoreFeedsAndMaybeMetadataToAzure(FeedRegistry fr_delicious, string id)
 		{
 			string feedurl = "";
@@ -201,6 +202,7 @@ namespace CalendarAggregator
 
 			return dicts;
 		}
+
 
 		// if a curator deletes a feed from the delicious registry, it 
 		// needs to also get deleted from the corresponding azure table
@@ -343,26 +345,37 @@ namespace CalendarAggregator
 			return elt.Descendants("link").First().Value.ToString() == metadata_url;
 		}
 
-		private static DeliciousResponse ScanRssForMetadataUrl(string id, string metadata_url)
+		public static DeliciousResponse ScanRssForMetadataUrl(string id, string metadata_url)
 		{
-			var raw_rss_url = string.Format("http://feeds.delicious.com/v2/rss/{0}?count=200", id);
-			Utils.Wait(Configurator.delicious_delay_seconds);
-			var http_response = HttpUtils.FetchUrl(new Uri(raw_rss_url));
-			var xdoc = XmlUtils.XdocFromXmlBytes(http_response.bytes);
+			HttpResponse http_response = default(HttpResponse);
+			Dictionary<string, string> tmp_dict = new Dictionary<string, string>();
+			try
+			{
+				var raw_rss_url = string.Format("http://feeds.delicious.com/v2/rss/{0}?count=200", id);
+				Utils.Wait(Configurator.delicious_delay_seconds);
+				var request = (HttpWebRequest)WebRequest.Create(raw_rss_url);
+				http_response = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, new byte[0], wait_secs: Configurator.delicious_delay_seconds, max_tries: 5, timeout_secs: TimeSpan.FromSeconds(30));
+				var xdoc = XmlUtils.XdocFromXmlBytes(http_response.bytes);
 
-			var items = from item in xdoc.Descendants("item")
-						//where item.Descendants("link").First().Value.EndsWith(string.Format("{0}/metadata", id))
-						where CompareMetaUrl(item, metadata_url)
-						select item;
+				var items = from item in xdoc.Descendants("item")
+							//where item.Descendants("link").First().Value.EndsWith(string.Format("{0}/metadata", id))
+							where CompareMetaUrl(item, metadata_url)
+							select item;
 
-			var xml_bytes = Encoding.UTF8.GetBytes(items.First().ToString());
+				var xml_bytes = Encoding.UTF8.GetBytes(items.First().ToString());
 
-			var tmp_dict = new Dictionary<string, string>();
-			var outcome = MaybeReadDeliciousMetadata(metadata_url, id, tmp_dict, xml_bytes);
-			return new DeliciousResponse(http_response, tmp_dict, outcome: outcome);
+				tmp_dict = new Dictionary<string, string>();
+				var outcome = MaybeReadDeliciousMetadata(metadata_url, id, tmp_dict, xml_bytes);
+				return new DeliciousResponse(http_response, tmp_dict, outcome: outcome);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ScanRssForMetadataUrl: " + id, e.Message + e.StackTrace);
+				return new DeliciousResponse(http_response, tmp_dict, MetadataQueryOutcome.Error);
+			}
 		}
 
-		public enum MetadataQueryOutcome { InProgress, Success, Error, NoRedirect, NotTrustedIcsFeed, NotWhatOrWhereMetadataUrl, HttpRequestFailed, NotIndexed, Blocked }
+		public enum MetadataQueryOutcome { InProgress, Success, Error, NoRedirect, NotTrustedFeed, NotWhatOrWhereMetadataUrl, HttpRequestFailed, NotIndexed, Blocked }
 
 		// this implements the delicious "Look up an URL" feature, which interactively looks like
 		// a 1-step process but behind the scenes involves redirection.
@@ -390,13 +403,16 @@ namespace CalendarAggregator
 			var url = new Uri(string.Format("http://www.delicious.com/url/view?url={0}", escaped_metadata_url));
 
 			Utils.Wait(Configurator.delicious_delay_seconds);
-			var http_response = HttpUtils.FetchUrlNoRedirect(url);
+
+			var request = (HttpWebRequest)WebRequest.Create(url);
+			request.AllowAutoRedirect = false;
+			var http_response = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.Found, new byte[0], wait_secs:Configurator.delicious_delay_seconds, max_tries:5, timeout_secs:TimeSpan.FromSeconds(30));
 
 			// bail and warn if blocked
 
-			if (http_response.DataAsString().Contains(Configurator.delicious_blocked_message))
+			if (http_response.status.ToString() == "999" || http_response.DataAsString().Contains(Configurator.delicious_blocked_message) )
 			{
-				GenUtils.LogMsg("warning", Configurator.delicious_blocked_message, null);
+				GenUtils.PriorityLogMsg("warning", Configurator.delicious_blocked_message, null);
 				return new DeliciousResponse(http_response, dict, outcome: MetadataQueryOutcome.Blocked);
 			}
 
@@ -418,7 +434,8 @@ namespace CalendarAggregator
 				url = new Uri(string.Format("http://feeds.delicious.com/v2/rss/url/{0}", url_id));
 
 				Utils.Wait(Configurator.delicious_delay_seconds);
-				http_response = HttpUtils.FetchUrl(url);
+				request = (HttpWebRequest)WebRequest.Create(url);
+				http_response = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, new byte[0], wait_secs:Configurator.delicious_delay_seconds, max_tries: 5, timeout_secs: TimeSpan.FromSeconds(30));
 
 				if (http_response.status != HttpStatusCode.OK) // bail if delicious failed
 					return new DeliciousResponse(http_response, dict, outcome: MetadataQueryOutcome.HttpRequestFailed);
@@ -470,14 +487,17 @@ namespace CalendarAggregator
 
 			var trusted = false;
 			var ics = false;
+			var indirect = false;
 			var feed = false;
 
-			foreach (var category in categories)    // look for feed tag trio
+			foreach (var category in categories)    // look for triggers
 			{
 				if ( category.Value == "trusted" )
 					trusted = true;
 				if ( category.Value == "ics" )
 					ics = true;
+				if (category.Value == "indirect")
+					indirect = true;
 				if ( category.Value == "feed" )
 					feed = true;
 			}
@@ -503,10 +523,10 @@ namespace CalendarAggregator
 						outcome = MetadataQueryOutcome.Success;
 					break;
 				case MetadataUrlType.feed:
-					if ( trusted && ics && feed )
+					if ( ( trusted && ics && feed ) || ( trusted && indirect && feed ) )
 						outcome = MetadataQueryOutcome.Success;
 					else
-						outcome = MetadataQueryOutcome.NotTrustedIcsFeed;
+						outcome = MetadataQueryOutcome.NotTrustedFeed;
 					break;
 				default:
 					GenUtils.PriorityLogMsg("exception", "MaybeReadDeliciousMetadata", metadata_url_type.ToString() + " unexpected");
@@ -523,7 +543,7 @@ namespace CalendarAggregator
 			if (response.outcome != MetadataQueryOutcome.Success)
 			{
 				GenUtils.LogMsg("warning", "StoreMetadataForIdToAzure: " + id, "could not fetch");
-				return new Dictionary<string, string>();
+				return null;
 			}
 			response.dict_response = InjectTestKeysAndVals(response.dict_response, extra);
 			var dict_obj = ObjectUtils.DictStrToDictObj(response.dict_response);
@@ -571,6 +591,8 @@ namespace CalendarAggregator
 
 		#region metadata for venues
 
+		/*
+
 		public Dictionary<string, string> LoadVenueMetadataFromAzureTableForIdAndVenueUrl(string id, string venue_url)
 		{
 			string pk = id + "_" + "venues";
@@ -593,6 +615,7 @@ namespace CalendarAggregator
 			TableStorage.UpmergeDictToTableStore(metadict_obj, table: ts_table, partkey: pk, rowkey: rk);
 			return LoadVenueMetadataFromAzureTableForIdAndVenueUrl(id, venue_url);
 		}
+		 */
 
 		# endregion metadata for venues
 
@@ -628,8 +651,7 @@ namespace CalendarAggregator
 			var post_url = MakePostUrl(description, url, tags);
 			return DoAuthorizedRequestUserPass(post_url, user, pass);
 		}
-
-
+		
 		public HttpResponse PostDeliciousBookmark(string description, string url, string tags)
 		{
 			var post_url = MakePostUrl(description, url, tags);
@@ -713,7 +735,8 @@ this information: ",
 			var dict = new Dictionary<string, string>();
 			var url = new Uri(String.Format("{0}/{1}/{2}?count=100", rssbase, account, tags));
 			Utils.Wait(Configurator.delicious_delay_seconds);
-			var response = HttpUtils.FetchUrl(url);
+			var request = (HttpWebRequest)WebRequest.Create(url);
+			var response = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, new byte[0], wait_secs: Configurator.delicious_delay_seconds, max_tries: 5, timeout_secs: TimeSpan.FromSeconds(30));
 			var xdoc = XmlUtils.XdocFromXmlBytes(response.bytes);
 			var items = from item in xdoc.Descendants("item")
 						select new
