@@ -122,7 +122,7 @@ namespace ElmcityUtils
 				}
 				catch
 				{
-					GenUtils.LogMsg("info", "RunIronPython: " + str_script_url, "no result");
+					// GenUtils.LogMsg("info", "RunIronPython: " + str_script_url, "no result");
 				}
 				python.Runtime.Shutdown();
 				//AppDomain.Unload(python_domain);
