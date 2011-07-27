@@ -30,20 +30,11 @@ def message(msg):
   msg = msg.replace('\n','')
   GenUtils.LogMsg(msg, '', '')
   return msg
-
-"""
-def delete_dict(dict):
-  pk = dict['PartitionKey']
-  rk = dict['RowKey']
-  tsr = ts.DeleteEntity(metatable,pk,rk)
-
-  # delete venues from aztable
-  q = "$filter=(PartitionKey eq '%s_venues')" % ( id )
-  ts_response = ts.QueryEntities(metatable,q)
-  for dict in ts_response.response:
-    message('venue_url %s' % dict['venue_url'])
-    delete_dict(dict)
-"""
+  
+def priority_message(msg):
+  msg = msg.replace('\n','')
+  GenUtils.PriorityLogMsg(msg, '', '')
+  return msg
 
 def unpack(ts_response):
   s = ''
@@ -75,7 +66,7 @@ def rebuild_search_output():
         message('_admin: rebuild_search_output: %s' % id)
         Search.SearchLocation(id,calinfos[id].where)
     except:
-      message('_admin: rebuild_search_output %s %s ' %s ( id, traceback.format_exc() ) )
+      priority_message('_admin: rebuild_search_output %s %s ' %s ( id, traceback.format_exc() ) )
   message('_admin: rebuild_search_output done')
 
 def follow_curators():
@@ -87,23 +78,8 @@ def follow_curators():
       if twitterer is not None:
         r = TwitterApi.FollowTwitterAccount(twitterer)
     except:
-      message('_admin: follow_curators %s %s ' ( id, traceback.format_exc() ) )
+      priority_message('_admin: follow_curators %s %s ' ( id, traceback.format_exc() ) )
   message('_admin: follow_curators done')
-
-def add_task_for_new_id():
-  message('_admin: add_task_for_new_id starting')
-  for id in ids:
-    try:
-      task = Scheduler.FetchTaskForId(id)
-    except:
-      message('_admin: add_task_for_new_id %s %s ' % (id, tradeback.format_exc() ) )
-      Scheduler.InitTaskForId(id)
-  message('_admin: add_task_for_new_id done')
-       
-try:
-  add_task_for_new_id()
-except:
-  message('_admin: error in rebuild_search_output')
 
 try:
   follow_curators()
