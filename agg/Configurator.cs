@@ -653,13 +653,9 @@ namespace CalendarAggregator
 	public class Calinfo
 	{
 		// todo: use an enumeration instead of string values "what" and "where"
-		//public HubType hub_enum
-		//{ get { return _hub_enum; } }
-		//private HubType _hub_enum;
-
-		public string hub_type
-		{ get { return _hub_type; } }
-		private string _hub_type;
+		public HubType hub_enum
+		{ get { return _hub_enum; } }
+		private HubType _hub_enum;
 
 		// idle for now, since each hub shares the master delicious account for registry and metadata,
 		// but the idea is that each hub might need its own account
@@ -770,6 +766,10 @@ namespace CalendarAggregator
 		{ get { return _feed_count; } }
 		private string _feed_count = "0";
 
+		public bool has_descriptions
+		{ get { return _has_descriptions; } }
+		private bool _has_descriptions;
+
 		public Dictionary<string, string> metadict
 		{ get { return _metadict; } }
 		private Dictionary<string, string> _metadict;
@@ -790,8 +790,9 @@ namespace CalendarAggregator
 
 			if (metadict.ContainsKey("where"))
 			{
-				this._hub_type = HubType.where.ToString();
-				this._where = metadict[this.hub_type.ToString()];
+				this._hub_enum = HubType.where;
+
+				this._where = metadict[this.hub_enum.ToString()];
 				this._what = Configurator.nothing;
 
 				this._radius = metadict.ContainsKey("radius") ? Convert.ToInt16(metadict["radius"]) : Configurator.default_radius;
@@ -839,8 +840,9 @@ namespace CalendarAggregator
 
 			if (metadict.ContainsKey("what"))
 			{
-				this._hub_type = HubType.what.ToString();
-				this._what = metadict[this.hub_type.ToString()];
+				this._hub_enum = HubType.what;
+
+				this._what = metadict[this.hub_enum.ToString()];
 				this._where = Configurator.nowhere;
 				this._tzname = metadict.ContainsKey("tz") ? metadict["tz"] : "GMT";
 				this._tzinfo = Utils.TzinfoFromName(this._tzname);
@@ -861,6 +863,8 @@ namespace CalendarAggregator
 			this._use_rdfa = metadict.ContainsKey("use_rdfa") && metadict["use_rdfa"] == "no" ? false : true;
 
 			this._feed_count = metadict.ContainsKey("feed_count") ? metadict["feed_count"] : this._display_width;
+
+			this._has_descriptions = metadict.ContainsKey("descriptions") && metadict["descriptions"] == "yes" ? true : false;
 		}
 
 		// how long to wait between aggregator runs
@@ -868,7 +872,7 @@ namespace CalendarAggregator
 		{
 			get
 			{
-				if (this.hub_type == HubType.what.ToString())
+				if (this.hub_enum == HubType.what)
 					return Scheduler.what_interval;
 				else
 					return Scheduler.where_interval;
