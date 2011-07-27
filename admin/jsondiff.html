@@ -1,0 +1,263 @@
+<!doctype html>
+<style>
+body {
+	background-color: lightblue;
+}
+
+#results li > span, #results ul > span {
+	-moz-border-radius: 5px;
+	-webkit-border-radius: 5px;
+	padding-right: 5px;
+	padding-left: 5px;
+}
+
+#results li {
+	margin-top: 1px;
+	padding-left: 15px;
+}
+#results ul {
+	padding-left: 15px;
+	margin-left: -15px;
+	padding-top: 0px;
+	margin-top: 0px;
+	background: url("http://elmcity.blob.core.windows.net/admin/open.png") no-repeat 2px 5px;
+	list-style-type: none;
+}
+#results ul[closed="yes"] {
+	background: url("http://elmcity.blob.core.windows.net/admin/closed.png") no-repeat 2px 5px;
+}
+#results ul[closed="yes"] > * {
+	display: none;
+}
+#results ul[closed="yes"] > *:first-child {
+	display: block;
+}
+.typeName {
+	color: gray;
+}
+.changed {
+	background-color: #fcff7f;
+}
+.added {
+	background-color: #8bff7f;
+}
+.removed {
+	background-color: #fd7f7f;
+}
+
+textarea {
+	width: 49%;
+	height: 200px;
+}
+
+.contentbox {
+	border: 1px dashed black;
+	background-color: white;
+	padding: 15px;
+	margin: 10px;
+}
+
+h2 {
+	text-align: center;
+	margin: 0px;;
+}
+
+#results {
+	padding-left: 40px;
+}
+
+#inputs {
+	text-align: center;
+}
+</style>
+<head>
+    <title>JSON Diff</title>
+    <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.6.2.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+
+        var jsonBoxA, jsonBoxB;
+
+        function init() {
+            //document.addEventListener("click", clickHandler, false);
+            $(document).click( clickHandler );
+
+            jsonBoxA = $('#jsonA');
+            jsonBoxB = $('#jsonB');
+
+            startCompare();
+        }
+
+        function swapBoxes() {
+            var tmp = jsonBoxA.val()
+            jsonBoxA.val(jsonBoxB.val());
+            jsonBoxB.val(tmp);
+        }
+
+        function clearBoxes() {
+            jsonBoxA.val("");
+            jsonBoxB.val("");
+        }
+
+        function startCompare() {
+            var aValue = jsonBoxA.val();
+            var bValue = jsonBoxB.val();
+
+            var objA, objB;
+            try {
+                objA = JSON.parse(aValue);
+                jsonBoxA.css('backgroundColor', "");
+            } catch(e) {
+                jsonBoxA.css('backgroundColor', "rgba(255,0,0,0.5)");
+            }
+            try {
+                objB = JSON.parse(bValue);
+                jsonBoxB.css('backgroundColor',"");
+            } catch(e) {
+                jsonBoxB.css('backgroundColor', "rgba(255,0,0,0.5)");
+            }
+
+            var results = $('#results');
+            results.empty();
+
+            compareTree(objA, objB, "root", results);
+        }
+
+        function compareTree(a, b, name, results) {
+            var typeA = typeofReal(a);
+            var typeB = typeofReal(b);
+
+            var typeSpanA = $('<span>');
+            typeSpanA.append(document.createTextNode("("+typeA+")"))
+            typeSpanA.attr("class", "typeName");
+
+            var typeSpanB = $('<span>');
+            typeSpanB.append(document.createTextNode("("+typeB+")"))
+            typeSpanB.attr("class", "typeName");
+
+            var aString = (typeA === "object" || typeA === "array") ? "" : String(a) + " ";
+            var bString = (typeB === "object" || typeB === "array") ? "" : String(b) + " ";
+
+            var leafNode = $('<span>');
+            leafNode.append(document.createTextNode(name));
+            if (a === undefined) {
+                leafNode.attr("class", "added");
+                leafNode.append(document.createTextNode(": " + bString));
+                leafNode.append(typeSpanB);
+            }
+            else if (b === undefined) {
+                leafNode.attr("class", "removed");
+                leafNode.append(document.createTextNode(": " + aString));
+                leafNode.append(typeSpanA);
+            }
+            else if (typeA !== typeB || (typeA !== "object" && typeA !== "array" && a !== b)) {
+                leafNode.attr("class", "changed");
+                leafNode.append(document.createTextNode(": " + aString));
+                leafNode.append(typeSpanA);
+                leafNode.append(document.createTextNode(" => "+ bString));
+                leafNode.append(typeSpanB);
+            }
+            else {
+                leafNode.append(document.createTextNode(": " + aString));
+                leafNode.append(typeSpanA);
+            }
+
+            if (typeA === "object" || typeA === "array" || typeB === "object" || typeB === "array") {
+                var keys = [];
+                for (var i in a) {
+                    if (a.hasOwnProperty(i)) {
+                        keys.push(i);
+                    }
+                }
+                for (var i in b) {
+                    if (b.hasOwnProperty(i)) {
+                        keys.push(i);
+                    }
+                }
+                keys.sort();
+
+                var listNode = $('<ul>');
+                listNode.append(leafNode);
+
+                for (var i = 0; i < keys.length; i++) {
+                    if (keys[i] === keys[i-1]) {
+                        continue;
+                    }
+                    var li = $('<li>');
+                    listNode.append(li);
+
+                    compareTree(a && a[keys[i]], b && b[keys[i]], keys[i], li);
+                }
+                results.append(listNode);
+            }
+            else {
+                results.append(leafNode);
+            }
+        }
+
+
+        function isArray(value) {
+            return value && typeof value === "object" && value.constructor === Array;
+        }
+        function typeofReal(value) {
+            return isArray(value) ? "array" : typeof value;
+        }
+
+        function clickHandler(e) {
+            var e = e || window.event;
+            if (e.target.nodeName.toUpperCase() === "UL") {
+                if (e.target.getAttribute("closed") === "yes")
+                    e.target.setAttribute("closed", "no");
+                else
+                    e.target.setAttribute("closed", "yes");
+            }
+        }
+    </script>
+</head>
+<body onload="init();">
+    <h2>JSON Diff</h2>
+    <div class="contentbox" id="instructions">
+
+        <ul>
+            <li>Paste some JSON in each of the text fields. Click "Compare" to see the diff.</li>
+            <li>Changed portions are displayed in <span class="changed">yellow</span>. Additions are displayed in <span class="added">green</span>. Deletions are displayed in <span class="removed">red</span>.</li>
+            <li>It also works as a JSON viewer. Click the disclosure triangles to display/hide portions of the JSON.</li>
+
+            <li>Invalid JSON is indicated by the text fields turning red.</li>
+            <li>Swap the contents of the text areas by clicking "Swap". Clear them by clicking "Clear".</li>
+        </ul>
+    </div>
+    <div class="contentbox" id="inputs">
+        <textarea id="jsonA">__JSON_A__</textarea>
+        <textarea id="jsonB">__JSON_B__</textarea>
+
+            <input type="button" value="Compare" id="compare" onclick="startCompare();" />
+            <input type="button" value="Swap" id="swap" onclick="swapBoxes();"/>
+            <input type="button" value="Clear" id="clear" onclick="clearBoxes();"/>
+    </div>
+    <div class="contentbox" id="results">
+    </div>
+    <div class="contentbox" id="issues">
+            <h3>About</h3>
+
+            <p>JSON Diff is a simple way to visualize and compare <a href="http://json.org">JSON</a>.</p>
+
+            <h3>Known Issues</h3>
+            <ul>
+                <li>Diff algorithm not very intelligent when dealing with arrays</li>
+                <li><s>Probably doesn't work in IE</s> (see below)</li> 
+            </ul>
+
+            <h3>elmcity adapations</h3>
+            <ul>
+                <li>JQueryized to maximize browser compatibility</li>
+                <li>Server-side interpolation of JSON chunks into the page</li>
+            </ul>
+     </div>
+
+<p>
+&copy; 2006-2010 Thomas Robinson.&nbsp;<a rel="license" href="http://creativecommons.org/licenses/by-nc/3.0/us/">Some rights reserved</a>.
+</p>
+
+</body>
+</html>
+

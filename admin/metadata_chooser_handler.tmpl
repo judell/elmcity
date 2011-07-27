@@ -1,0 +1,15 @@
+function compare___FLAVOR___versions()
+  {
+  var checked_a = $('input[name=__FLAVOR___history_1]:checked');
+  var checked_b = $('input[name=__FLAVOR___history_2]:checked');
+  if ( checked_a.length == 0 && checked_b.length == 0 )
+	alert('select one from column a and one from column b');
+  var name_a = checked_a[0].value;
+  var name_b = checked_b[0].value;
+  var url = 'http://elmcity.cloudapp.net/services/elmcity/meta_history?' + 
+                  'id=__ID__' +
+                  '&flavor=__FLAVOR__' +
+                  '&a_name=' + name_b +          // swap the order so that
+                  '&b_name=' + name_a;           // jsondiff color semantics will work
+  location.href=url;
+  }
