@@ -106,11 +106,12 @@ namespace ElmcityUtils
 			return BlobStorage.WriteToAzureBlob(bs, container, blob_name, content_type: null, bytes: settings_text_bytes);
 		}
 
+		/*
 		public static BlobStorageResponse SaveDictAsJsonToBlob(Dictionary<string, string> dict_str, BlobStorage bs, string container, string blob_name)
 		{
 			var json_bytes = Encoding.UTF8.GetBytes(DictStrToJson(dict_str));
 			return BlobStorage.WriteToAzureBlob(bs, container, blob_name, content_type: null, bytes: json_bytes);
-		}
+		}*/
 
 		/*
 		public static BlobStorageResponse SaveListDictAsJsonToBlob(List<Dictionary<string, string>> list_dict_str, BlobStorage bs, string container, string blob_name)
@@ -166,8 +167,9 @@ namespace ElmcityUtils
 		{
 			var json_blob_name = id + "." + name + ".json";
 			var existing_obj_uri = BlobStorage.MakeAzureBlobUri(id, json_blob_name);
-			bool objects_equal = NewJsonMatchesExistingJson(type, new_obj, existing_obj_uri);
-			if (objects_equal == false)
+			var exists = BlobStorage.ExistsBlob(existing_obj_uri);
+			JsonCompareResult comparison = NewJsonMatchesExistingJson(type, new_obj, existing_obj_uri);
+			if (! exists || comparison == JsonCompareResult.different)
 			{
 				var bs = BlobStorage.MakeDefaultBlobStorage();
 				var timestamped_json_blob_name = string.Format(id + "." + string.Format("{0:yyyy.MM.dd.HH.mm}" + "." + name + ".json", DateTime.UtcNow));
@@ -181,36 +183,50 @@ namespace ElmcityUtils
 				BlobStorage.WriteToAzureBlob(bs, id, json_blob_name, null, new_obj_as_json_bytes);
 				BlobStorage.WriteToAzureBlob(bs, id, timestamped_json_blob_name, null, new_obj_as_json_bytes);
 			}
-			return objects_equal
-						? false // objects matched, json not saved
-						: true; // did not match, json saved
-
+			
+			if (comparison == JsonCompareResult.same || comparison == JsonCompareResult.invalid)
+				return false; // either the objects matched, or the comparison failed, either way a json snapshot was not saved
+			else
+				return true;  // the objects did not match, a json snapshot was saved
 		}
 
-		private static bool NewJsonMatchesExistingJson(JsonSnapshotType type, Object new_obj, Uri existing_obj_uri)
+		public enum JsonCompareResult { same, different, invalid };
+
+		private static JsonCompareResult NewJsonMatchesExistingJson(JsonSnapshotType type, Object new_obj, Uri existing_obj_uri)
 		{
-			var equal = false;
+			var result = JsonCompareResult.different;
 			if (BlobStorage.ExistsBlob(existing_obj_uri))
 			{
 				if (type == JsonSnapshotType.DictStr)
 				{
-					var dict_str = (Dictionary<string, string>)new_obj;
-					if (dict_str.Keys.Count == 0) // no response from delicious
-						return equal;
-					var existing_obj = ObjectUtils.GetDictStrFromJsonUri(existing_obj_uri);
-					equal = ObjectUtils.DictStrEqualsDictStr((Dictionary<string, string>)existing_obj, dict_str);
+					var new_dict_str = (Dictionary<string, string>)new_obj;
+					if (new_dict_str.Keys.Count == 0) // there was no response from delicious
+						return JsonCompareResult.invalid;
+					var existing_dict_str = ObjectUtils.GetDictStrFromJsonUri(existing_obj_uri);
+					if (existing_dict_str.Keys.Count == 0) // this shouldn't happen, but...
+						return JsonCompareResult.invalid;
+					var equal = ObjectUtils.DictStrEqualsDictStr((Dictionary<string, string>)existing_dict_str, new_dict_str);
+					result = equal ? JsonCompareResult.same : JsonCompareResult.different;
 				}
 				else // JsonSnapshotType.ListDictStr
 				{
-					var list_dict_str = (List<Dictionary<string, string>>)new_obj;
-					foreach (var dict_str in list_dict_str)
-						if (dict_str.Keys.Count == 0) // no response from delicious
-							return equal;
-					var existing_obj = ObjectUtils.GetListDictStrFromJsonUri(existing_obj_uri);
-					equal = ObjectUtils.ListDictStrEqualsDictStr((List<Dictionary<string, string>>)existing_obj, list_dict_str);
+					var new_list_dict_str = (List<Dictionary<string, string>>)new_obj;
+					if ( AllDictsHaveKeys(new_list_dict_str) == false )
+						return JsonCompareResult.invalid;
+					var existing_list_dict_str = ObjectUtils.GetListDictStrFromJsonUri(existing_obj_uri);
+					if (AllDictsHaveKeys(existing_list_dict_str) == false)
+						return JsonCompareResult.invalid;
+					var equal = ObjectUtils.ListDictStrEqualsDictStr((List<Dictionary<string, string>>)existing_list_dict_str, new_list_dict_str);
+					result = equal ? JsonCompareResult.same : JsonCompareResult.different;
 				}
 			}
-			return equal;
+			return result;
+		}
+
+		private static bool AllDictsHaveKeys(List<Dictionary<string,string>> list_dict_str)
+		{
+			var empty_dicts = list_dict_str.FindAll(x => x.Keys.Count == 0);
+			return empty_dicts.Count == 0;
 		}
 
 	}
