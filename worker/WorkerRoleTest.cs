@@ -45,10 +45,12 @@ namespace CalendarAggregator
 			delicious.PostDeliciousBookmark("metadata", "http://delicious.com/" + test_id + "/metadata", tag_string, Configurator.delicious_test_account, Configurator.delicious_test_password);
 
 			// propagate update to azure table
-
 			delicious.StoreMetadataForIdToAzure(id, merge: true, extra: new Dictionary<string, string>());
 
-			// update the wrd structure);
+			// recreate cached calinfo and renderer
+			WorkerRole.WorkerRole.RecreatePickledCalinfoAndRenderer(id);
+
+			// update the wrd structure
 			WebRoleData.UpdateCalinfoAndRendererForId(id, wrd);
 
 			// verify it was updated
