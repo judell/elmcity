@@ -65,17 +65,6 @@ namespace CalendarAggregator
 		}
 		private ICache _cache;
 
-		// used to list ical sources in the html rendering
-		// todo: make this a query that returns the list in all formats
-		/* obsolete
-        public string ical_sources
-        {
-            get { return _ical_sources; }
-            set { _ical_sources = value; }
-        }
-        private string _ical_sources;
-		 */
-
 		// points to a method for rendering individual events in various formats
 		private delegate string EventRenderer(ZonelessEvent evt, Calinfo calinfo);
 
@@ -189,7 +178,9 @@ namespace CalendarAggregator
 				xml.Append(string.Format("<dtend>{0}</dtend>\n", evt.dtend.ToString(DATETIME_FORMAT_FOR_XML)));
 			xml.Append(string.Format("<allday>{0}</allday>\n", evt.allday));
 			xml.Append(string.Format("<categories>{0}</categories>\n", HttpUtility.HtmlEncode(evt.categories)));
-			if (this.calinfo.hub_type == HubType.where.ToString())
+			xml.Append(string.Format("<description>{0}</description>\n", HttpUtility.HtmlEncode(evt.description)));
+			//if (this.calinfo.hub_type == HubType.where.ToString())
+			if (this.calinfo.hub_enum == HubType.where)
 			{
 				var lat = evt.lat != null ? evt.lat : this.calinfo.lat;
 				var lon = evt.lon != null ? evt.lon : this.calinfo.lon;
@@ -233,7 +224,8 @@ namespace CalendarAggregator
 			for (var i = 0; i < eventstore.events.Count; i++)
 			{
 				var evt = eventstore.events[i];
-				if (this.calinfo.hub_type == HubType.where.ToString())
+				//if (this.calinfo.hub_type == HubType.where.ToString())
+				if ( this.calinfo.hub_enum == HubType.where )
 				{
 					evt.lat = evt.lat != null ? evt.lat : this.calinfo.lat;
 					evt.lon = evt.lon != null ? evt.lon : this.calinfo.lon;
@@ -424,7 +416,7 @@ namespace CalendarAggregator
 		private string MakeGeoForRDFa(ZonelessEvent evt)
 		{
 			string geo = "";
-			if (this.calinfo.hub_type == HubType.where.ToString())
+			if (this.calinfo.hub_enum == HubType.where)
 				geo = string.Format(
 @"<span rel=""v:location"">
     <span rel=""v:geo"">
@@ -539,7 +531,7 @@ namespace CalendarAggregator
 
 		private void MaybeAnnounceTimeOfDay(StringBuilder eventstring, ref TimeOfDay current_time_of_day, DateTime dt)
 		{
-			if (this.calinfo.hub_type == HubType.what.ToString())
+			if (this.calinfo.hub_enum == HubType.what)
 				return;
 
 			if (Utils.ClassifyTime(dt) != current_time_of_day)
