@@ -32,6 +32,7 @@ namespace WebRole
 		private static UTF8Encoding UTF8 = new UTF8Encoding(false);
 
 		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
+		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 
 		//private static List<string> cacheable_types = new List<string>() { "ics", "search", "stats" };
 		private static List<string> cacheable_types = new List<string>() { };
@@ -358,10 +359,17 @@ namespace WebRole
 
 			public override void ExecuteResult(ControllerContext context)
 			{
+				var name = "metadata.html";
+				var exists = BlobStorage.ExistsBlob(this.id, name); // periodically recreated in Worker.GeneralAdmin
+				if (!exists)
+					Utils.MakeMetadataPage(this.id);
+				var response = bs.GetBlob(this.id, name);
+				if (response.HttpResponse.status != HttpStatusCode.OK)
+					GenUtils.PriorityLogMsg("warning", "cannot get metadata.html for " + this.id, null);
 				new ContentResult
 				{
-					ContentType = "text/plain",
-					Content = Utils.GetMetadataForId(id),
+					ContentType = "text/html",
+					Content = response.HttpResponse.DataAsString(),
 					ContentEncoding = UTF8
 				}.ExecuteResult(context);
 			}
