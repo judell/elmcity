@@ -34,7 +34,7 @@ namespace CalendarAggregator
 		[Test]
 		public void CanRetrieveDirectMessagesFromTwitter()
 		{
-			var xml = TwitterApi.SendTwitterDirectMessage("elmcity_azure", "test");
+			var xml = TwitterApi.SendTwitterDirectMessage("elmcity_azure", "test: " + System.DateTime.UtcNow.Ticks.ToString());
 			var xdoc = XmlUtils.XdocFromXmlBytes(Encoding.UTF8.GetBytes(xml));
 			var ids = from message in xdoc.Descendants("direct_message")
 					  select message.Descendants("id").First().Value.ToString();
