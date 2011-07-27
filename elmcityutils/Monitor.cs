@@ -23,6 +23,7 @@ using Microsoft.WindowsAzure.Diagnostics;
 
 namespace ElmcityUtils
 {
+
 	public class Monitor
 	{
 		public CounterResponse counters;
@@ -45,6 +46,7 @@ namespace ElmcityUtils
 			priority_log_triggers = GetPriorityLogTriggers(ts);
 		}
 
+		// the prioritylogtriggers table has rules for things in a Counters 
 		private static List<Dictionary<string, string>> GetPriorityLogTriggers(TableStorage ts)
 		{
 			var query = "$filter=(PartitionKey eq 'prioritylogtriggers')";
@@ -106,6 +108,7 @@ namespace ElmcityUtils
 			}
 		}
 
+		// check to see if any of the conditions in prioritylogtriggers is met by an entry in the snapshot
 		public void MaybeWritePriorityLog(Dictionary<string, object> snapshot)
 		{
 			try
@@ -116,7 +119,7 @@ namespace ElmcityUtils
 					var is_min_trigger = trigger_dict.ContainsKey("min");
 					var is_max_trigger = trigger_dict.ContainsKey("max");
 					if (snapshot.ContainsKey(key))
-						EvaluateTrigger(key, trigger_dict, snapshot);
+						EvaluateTrigger(key, snapshot[key], trigger_dict);
 				}
 			}
 			catch (Exception e)
@@ -125,7 +128,9 @@ namespace ElmcityUtils
 			}
 		}
 
-		private void EvaluateTrigger(string key, Dictionary<string, string> trigger_dict, Dictionary<string, object> snapshot)
+		// called when there's a rule for an item in snapshot. eval the rule and if trigger fires log a priority message
+		// todo: simplify this, it's way too verbose
+		private void EvaluateTrigger(string key, object value, Dictionary<string, string> trigger_dict)
 		{
 			int snapshot_int;
 			float snapshot_float;
@@ -135,7 +140,7 @@ namespace ElmcityUtils
 			switch (type)
 			{
 				case "float":
-					snapshot_float = (float)snapshot[key];
+					snapshot_float = (float)value;
 					if (trigger_dict.ContainsKey("max"))
 					{
 						trigger_float = float.Parse(trigger_dict["max"]);
@@ -150,7 +155,7 @@ namespace ElmcityUtils
 					}
 					break;
 				case "int":
-					snapshot_int = Convert.ToInt32(snapshot[key]);
+					snapshot_int = Convert.ToInt32(value);
 					if (trigger_dict.ContainsKey("max"))
 					{
 						trigger_int = Convert.ToInt32(trigger_dict["max"]);
@@ -314,6 +319,7 @@ namespace ElmcityUtils
 
 		}
 
+		// a snapshot combines a bunch of process-level things with a set of counters
 		public static Dictionary<string, object> MakeSnapshot(CounterResponse counters)
 		{
 			var p = Process.GetCurrentProcess();
