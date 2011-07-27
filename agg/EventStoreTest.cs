@@ -30,17 +30,20 @@ namespace CalendarAggregator
 
 		public const string test_container = "events";
 		public const string test_category = "test_category";
+		public const string test_lat = "42.9336";
+		public const string test_lon = "-72.2786";
+		public const string test_description = "test_description";
 
 		static Utils.DateTimeWithZone now_with_zone = Utils.NowInTz(tzinfo);
 		static Utils.DateTimeWithZone min_with_zone = Utils.DateTimeWithZone.MinValue(tzinfo);
 		//private ZonedEvent in_evt0_zoneless = new ZonedEvent("title0", "http://elmcity.info", "source", now_with_zone, min_with_zone, false, test_category);
-		private ZonedEvent in_evt0_zoned = new ZonedEvent("title0", "http://elmcity.info", "source", false, test_category, now_with_zone, min_with_zone);
-		private ZonedEvent in_evt1_zoned = new ZonedEvent("title1", "http://elmcity.info", "source", false, test_category, now_with_zone, min_with_zone);
+		private ZonedEvent in_evt0_zoned = new ZonedEvent("title0", "http://elmcity.info", "source", false, test_lat, test_lon, test_category, now_with_zone, min_with_zone, test_description);
+		private ZonedEvent in_evt1_zoned = new ZonedEvent("title1", "http://elmcity.info", "source", false, test_lat, test_lon, null, now_with_zone, min_with_zone, test_description);
 
 		static DateTime now = DateTime.Now;
 		static private DateTime min = DateTime.MinValue;
-		private ZonelessEvent in_evt0_zoneless = new ZonelessEvent("title0", "http://elmcity.info", "source", false, test_category, now, DateTime.MinValue);
-		private ZonelessEvent in_evt1_zoneless = new ZonelessEvent("title1", "http://elmcity.info", "source", false, test_category, now, DateTime.MinValue);
+		private ZonelessEvent in_evt0_zoneless = new ZonelessEvent("title0", "http://elmcity.info", "source", false, test_lat, test_lon, test_category, now, DateTime.MinValue, test_description);
+		private ZonelessEvent in_evt1_zoneless = new ZonelessEvent("title1", "http://elmcity.info", "source", false, test_lat, test_lon, null, now, DateTime.MinValue, test_description);
 
 		static private int expected_year = 9999;
 		static private int expected_hour = 9;
@@ -67,7 +70,7 @@ namespace CalendarAggregator
 		{
 			var zoneless = new ZonelessEventStore(calinfo, null);
 			Assert.AreEqual(0, zoneless.events.Count);
-			zoneless.AddEvent(in_evt0_zoneless.title, in_evt0_zoneless.url, in_evt0_zoneless.source, in_evt0_zoneless.dtstart, in_evt0_zoneless.dtend, false, in_evt0_zoneless.categories);
+			zoneless.AddEvent(in_evt0_zoneless.title, in_evt0_zoneless.url, in_evt0_zoneless.source, test_lat, test_lon, in_evt0_zoneless.dtstart, in_evt0_zoneless.dtend, allday: false, categories: test_category, description: test_description);
 			Assert.AreEqual(1, zoneless.events.Count);
 		}
 
@@ -75,8 +78,8 @@ namespace CalendarAggregator
 		public void SerializeTwoZonelessEvents()
 		{
 			var zoneless = new ZonelessEventStore(calinfo, null);
-			zoneless.AddEvent(in_evt0_zoneless.title, in_evt0_zoneless.url, in_evt0_zoneless.source, in_evt0_zoneless.dtstart, in_evt0_zoneless.dtend, false, in_evt0_zoneless.categories);
-			zoneless.AddEvent(in_evt1_zoneless.title, in_evt1_zoneless.url, in_evt1_zoneless.source, in_evt1_zoneless.dtstart, in_evt1_zoneless.dtend, false, in_evt1_zoneless.categories);
+			zoneless.AddEvent(in_evt0_zoneless.title, in_evt0_zoneless.url, in_evt0_zoneless.source, test_lat, test_lon, in_evt0_zoneless.dtstart, in_evt0_zoneless.dtend, false, in_evt0_zoneless.categories, test_description);
+			zoneless.AddEvent(in_evt1_zoneless.title, in_evt1_zoneless.url, in_evt1_zoneless.source, test_lat, test_lon, in_evt1_zoneless.dtstart, in_evt1_zoneless.dtend, false, in_evt1_zoneless.categories, test_description);
 			Assert.AreEqual(2, zoneless.events.Count);
 			var response = bs.SerializeObjectToAzureBlob(zoneless, test_container, zoneless.objfile);
 			//Console.WriteLine(response.HttpResponse.DataAsString());
@@ -103,8 +106,8 @@ namespace CalendarAggregator
 		{
 			var es = new ZonelessEventStore(calinfo, null);
 
-			es.AddEvent(title1, "http://foo", source1, lat: null, lon: null, dtstart: dt1, dtend: min, allday: false, categories: test_category);
-			es.AddEvent(title2, "http://bar", source2, lat: null, lon: null, dtstart: dt2, dtend: min, allday: false);
+			es.AddEvent(title:title1, url:"http://foo", source:source1, lat: null, lon: null, dtstart: dt1, dtend: min, allday: false, categories: test_category, description: test_description);
+			es.AddEvent(title:title2, url:"http://bar", source:source2, lat: null, lon: null, dtstart: dt2, dtend: min, allday: false, categories:null, description: test_description);
 
 			bs.SerializeObjectToAzureBlob(es, test_container, es.objfile);
 
@@ -144,7 +147,7 @@ namespace CalendarAggregator
 		{
 			var zoned = new ZonedEventStore(calinfo, null);
 			Assert.AreEqual(0, zoned.events.Count);
-			zoned.AddEvent(in_evt0_zoned.title, in_evt0_zoned.url, in_evt0_zoned.source, in_evt0_zoned.dtstart, in_evt0_zoned.dtend, false, in_evt0_zoned.categories);
+			zoned.AddEvent(in_evt0_zoned.title, in_evt0_zoned.url, in_evt0_zoned.source, in_evt0_zoned.dtstart, in_evt0_zoned.dtend, test_lat, test_lon, false, in_evt0_zoned.categories, test_description);
 			Assert.AreEqual(1, zoned.events.Count);
 		}
 
@@ -152,8 +155,8 @@ namespace CalendarAggregator
 		public void SerializeTwoZonedEvents()
 		{
 			var zoned = new ZonedEventStore(calinfo, null);
-			zoned.AddEvent(in_evt0_zoned.title, in_evt0_zoned.url, in_evt0_zoned.source, in_evt0_zoned.dtstart, in_evt0_zoned.dtend, in_evt0_zoned.allday);
-			zoned.AddEvent(in_evt1_zoned.title, in_evt1_zoned.url, in_evt1_zoned.source, in_evt1_zoned.dtstart, in_evt1_zoned.dtend, in_evt1_zoned.allday);
+			zoned.AddEvent(in_evt0_zoned.title, in_evt0_zoned.url, in_evt0_zoned.source, in_evt0_zoned.dtstart, in_evt0_zoned.dtend, test_lat, test_lon, in_evt0_zoned.allday, test_category, test_description);
+			zoned.AddEvent(in_evt1_zoned.title, in_evt1_zoned.url, in_evt1_zoned.source, in_evt1_zoned.dtstart, in_evt1_zoned.dtend, test_lat, test_lon, in_evt1_zoned.allday, test_category, test_description);
 			Assert.AreEqual(2, zoned.events.Count);
 			var response = bs.SerializeObjectToAzureBlob(zoned, test_container, zoned.objfile);
 			//Console.WriteLine(response.HttpResponse.DataAsString());
@@ -179,8 +182,8 @@ namespace CalendarAggregator
 		public void SerializeAndDeserializeZonedEventStoreYieldsExpectedEvents()
 		{
 			var es = new ZonedEventStore(calinfo, null);
-			es.AddEvent(title1, "http://foo", source1, dt1_with_zone, min_with_zone, false, test_category);
-			es.AddEvent(title2, "http://bar", source2, dt2_with_zone, min_with_zone, false);
+			es.AddEvent(title:title1, url:"http://foo", source:source1, dtstart:dt1_with_zone, dtend:min_with_zone, allday:false, lat:test_lat, lon:test_lon, categories:test_category, description:test_description);
+			es.AddEvent(title:title2, url:"http://bar", source:source2, dtstart:dt2_with_zone, dtend:min_with_zone, lat:test_lat, lon:test_lon, allday:false, categories:test_category, description:test_description);
 
 			bs.SerializeObjectToAzureBlob(es, test_container, es.objfile);
 
