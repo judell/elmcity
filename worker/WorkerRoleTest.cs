@@ -48,7 +48,7 @@ namespace CalendarAggregator
 			delicious.StoreMetadataForIdToAzure(id, merge: true, extra: new Dictionary<string, string>());
 
 			// recreate cached calinfo and renderer
-			WorkerRole.WorkerRole.RecreatePickledCalinfoAndRenderer(id);
+			Utils.RecreatePickledCalinfoAndRenderer(id);
 
 			// update the wrd structure
 			WebRoleData.UpdateCalinfoAndRendererForId(id, wrd);
