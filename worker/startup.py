@@ -58,22 +58,22 @@ def format_traceback():
  
 #endregion  
 
-local_storage = get_local_storage()
-      
 log = open('Startup\startup.py.log', 'a')
 log.write('...starting at UTC %s...\n' % System.DateTime.UtcNow.ToString())  
-
-log.write('owner: %s\n' % get_process_owner() )
-
-sys.path.append(get_local_storage() + '/Lib')
-import traceback
+local_storage = get_local_storage()
 
 try:
-  log.write('...installing python standard library...\n')    
   uri = System.Uri('http://elmcity.blob.core.windows.net/admin/python_library.zip')
-  FileUtils.UnzipFromUrlToDirectory(uri, local_storage)    
+  ElmcityUtils.FileUtils.UnzipFromUrlToDirectory(uri, local_storage)  
 except:
-  GenUtils.PriorityLogMsg('exception', 'startup.py', format_traceback() )    
+  log.write('exception', 'startup.py', format_traceback() )  
+
+python_lib = local_storage + '/Lib'
+log.write('python lib: %s\n' % python_lib)  
+sys.path.append(python_lib)
+import traceback  
+
+log.write('owner: %s\n' % get_process_owner() )
 
 try:
   log.write('...changing permissions on local_storage %s\n' % local_storage)
