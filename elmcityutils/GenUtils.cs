@@ -21,6 +21,8 @@ using System.Net;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using System.Web;
+using System.Web.Mvc;
 
 namespace ElmcityUtils
 {
@@ -100,7 +102,7 @@ namespace ElmcityUtils
 					{
 						GenUtils.PriorityLogMsg("exception", "RetryDelegate: " + method_name,
 							e.Message + e.StackTrace);
-						throw e;
+						throw (e);
 					}
 					HttpUtils.Wait(wait_secs);
 				}
@@ -230,10 +232,15 @@ namespace ElmcityUtils
 		// the source of truth for settings is in an azure table called settings
 		public static Dictionary<string, string> GetSettingsFromAzureTable()
 		{
+			return GetSettingsFromAzureTable("settings");
+		}
+
+		public static Dictionary<string, string> GetSettingsFromAzureTable(string tablename)
+		{
 			var settings = new Dictionary<string, string>();
-			var query = "$filter=PartitionKey eq 'settings'";
+			var query = string.Format("$filter=PartitionKey eq '{0}'", tablename);
 			var ts = TableStorage.MakeSecureTableStorage();
-			var ts_response = ts.QueryEntities("settings", query);
+			var ts_response = ts.QueryEntities(tablename, query);
 			var dicts = ts_response.list_dict_obj;
 			foreach (var dict in dicts)
 			{
@@ -451,6 +458,14 @@ namespace ElmcityUtils
 		public static bool KeySetEqual<TKey, TValue>(this IDictionary<TKey, TValue> dict, List<TKey> keys)
 		{
 			return GenUtils.AreEqualLists<TKey>(dict.Keys.ToList(), keys);
+		}
+
+		public static TValue GetValueOrDefault<TKey, TValue> (this IDictionary<TKey, TValue> dict, TKey key)
+		{
+			if (dict.ContainsKey(key))
+				return dict[key];
+			else
+				return default(TValue);
 		}
 
 	}
