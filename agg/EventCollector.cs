@@ -88,7 +88,7 @@ namespace CalendarAggregator
 		{
 			this.calinfo = calinfo;
 			this.settings = settings;
-			this.id = calinfo.delicious_account;
+			this.id = calinfo.id;
 			this.bs = BlobStorage.MakeDefaultBlobStorage();
 			this.delicious = Delicious.MakeDefaultDelicious();
 
@@ -102,9 +102,16 @@ namespace CalendarAggregator
 			this.facebook_ical = NewCalendarWithTimezone();
 
 			// cache the metadata for this hub
-			this.metadict = delicious.LoadMetadataForIdFromAzureTable(this.id);
+			this.metadict = Metadata.LoadMetadataForIdFromAzureTable(this.id);
 
-			this.population = this.metadict.ContainsKey("population") ? Convert.ToInt32(this.calinfo.metadict["population"]) : 0;
+			try
+			{
+				this.population = this.metadict.ContainsKey("population") ? Convert.ToInt32(this.calinfo.metadict["population"]) : 0;
+			}
+			catch
+			{
+				this.population = 0;
+			}
 
 			this.estats = new NonIcalStats();
 			this.estats.blobname = "eventful_stats";
@@ -150,7 +157,7 @@ namespace CalendarAggregator
 
 					iCalendar ical;
 
-					var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.calinfo.delicious_account);
+					var feed_metadict = Metadata.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.calinfo.id);
 					var _feedurl = MaybeRedirect(feedurl, feed_metadict);
 
 					MaybeValidate(fr, feedurl, _feedurl);
@@ -404,7 +411,7 @@ namespace CalendarAggregator
 
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "IncludeFutureEvent: " + this.calinfo.delicious_account + ", " + evt.Summary.ToString(), e.Message);
+				GenUtils.PriorityLogMsg("exception", "IncludeFutureEvent: " + this.calinfo.id + ", " + evt.Summary.ToString(), e.Message);
 			}
 		}
 
@@ -572,7 +579,7 @@ namespace CalendarAggregator
 			{
 				try
 				{
-					feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.id);
+					feed_metadict = Metadata.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.id);
 					per_feed_metadata_cache[feedurl] = feed_metadict;
 				}
 				catch (Exception e)
@@ -707,7 +714,7 @@ namespace CalendarAggregator
 			{
 				var tzname = this.calinfo.tzname;
 				var source = feed_metadict["source"];
-				if (feed_metadict.ContainsKey(trigger_key))
+				if (feed_metadict.ContainsKey(trigger_key) && feed_metadict[trigger_key] == "yes")
 				{
 					str_final_url = String.Format(service_url,  // e.g. ics_from_xcal?url={0}&tzname={1}&source={2}";
 							Uri.EscapeDataString(str_url),
