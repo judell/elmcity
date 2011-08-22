@@ -109,6 +109,13 @@ namespace CalendarAggregator
 			return dict;
 		}
 
+		public static Dictionary<string, string> LoadFeedMetadataFromAzureTableForFeedurlAndId(string feedurl, string id)
+		{
+			string rowkey = Utils.MakeSafeRowkeyFromUrl(feedurl);
+			var q = string.Format("$filter=(PartitionKey eq '{0}' and RowKey eq '{1}')", id, rowkey);
+			return TableStorage.QueryForSingleEntityAsDictStr(ts, "metadata", q);
+		}
+
 
 	}
 	
