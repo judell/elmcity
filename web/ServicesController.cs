@@ -285,7 +285,7 @@ namespace WebRole
 
 		#region logentries
 
-		public ActionResult GetLogEntries(string id, string minutes, string priority)
+		public ActionResult GetLogEntries(string id, string minutes)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
