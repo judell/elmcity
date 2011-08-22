@@ -19,6 +19,7 @@ import os, traceback
 
 metatable = 'metadata'
 tasktable = 'tasks'
+elmcity_twitter_name = 'elmcity_azure'
 
 delicious = Delicious.MakeDefaultDelicious()
 bs = BlobStorage.MakeDefaultBlobStorage()
@@ -76,7 +77,9 @@ def follow_curators():
       calinfo = Calinfo(id)
       twitterer = calinfo.twitter_account
       if twitterer is not None:
-        r = TwitterApi.FollowTwitterAccount(twitterer)
+        is_already_followed = TwitterApi.UserFollowsUser(elmcity_twitter_name, twitterer)
+        if ( is_already_followed == False ):
+          r = TwitterApi.FollowTwitterAccount(twitterer)
     except:
       priority_message('_admin: follow_curators %s %s ' ( id, traceback.format_exc() ) )
   message('_admin: follow_curators done')
