@@ -52,51 +52,38 @@ The hub is a service that works behind the scenes to gather all the wineries' ev
 <h2>1) How curators create hubs</h2>
 
 <p>
-A hub is defined by two sets of data. One defines basic information about the hub: its location, its timezone. The other is a list of feeds that flow into the hub and then flow out as a merged feed. Because both these sets of data can be managed using existing services on the web, curators don't have to (and in fact currently cannot) create accounts on the elmcity service. Instead they use accounts on a social bookmarking service: Delicious. If the wine commission already has an account on Delicious it can use that one. Otherwise it creates one. Either way, the examples here show how the wine commission's hub is controlled by a Delicious account called WineCommission.
+A hub is defined by two sets of data. One defines basic information about the hub: its location, its timezone. The other is a list of feeds that flow into the hub and then flow out as a merged feed. 
 </p>
 
 <h3>How curators define basic information about hubs</h3>
 
 <p>
-<img style="border-width:thin;border-style:solid;border-color:gray" src="http://jonudell.net/images/what-elmcity-curators-do-02.png"/>
-</p>
-
-<p>
-In this example the wine commission's administrator logs into the Delicious account <i>wine-commission</i> and declares three facts about its calendar hub:
+In this example the wine commission's administrator asks the elmcity administrator to start a new hub, providing these facts:
 </p>
 
 <ol>
-<li><p>The name: WineCommission</p></li>
+<li><p>An ID for the hub: WineCommission</p></li>
 
-<li><p>The location: Washington State</p></li>
+<li><p>A location: Washington State</p></li>
 
-<li><p>The timezone: Pacific</p></li>
+<li><p>A timezone: Pacific</p></li>
+
+<li><p>A Twitter account name: WashingtonWineries</p></li>
 </ol>
 
 <p>
-Then the wine commission's administrator asks the administrator of the elmcity service to start the hub.
+After the the elmcity administrator approves the hub, the wine commission's administrator signs into elmcity, using the Twitter account, to: 
 </p>
 
-<p>
-<img style="border-width:thin;border-style:solid;border-color:gray" src="http://jonudell.net/images/what-elmcity-curators-do-03.png"/>
-</p>
+<ol>
+<li><p>Adjust the hub's default settings (if needed)</p></li>
 
-<h3>How curators add feeds to hubs</h3>
+<li><p>Add feeds to the hub</p></li>
+</ol>
 
-<p>
-<img style="border-width:thin;border-style:solid;border-color:gray" src="http://jonudell.net/images/what-elmcity-curators-do-04.png"/>
-</p>
 
-<p>
-Now the wine commission's administrator creates bookmarks on the wine commission's Delicious account. Each bookmarked URL is the URL of a calendar feed, e.g. http://red-grape.com/events.ics or http://white-grape.com/events.ics. A special triplet of Delicious tags -- trusted + ics + feed -- identifies the bookmark as a request to add a feed to the hub.
-</p>
-	
 
-<h3>2) How curators publish merged calendars</h3>
-
-<p>
-<img style="border-width:thin;border-style:solid;border-color:gray" src="http://jonudell.net/images/what-elmcity-curators-do-05.png"/>
-</p>
+<h3>How curators publish merged calendars</h3>
 
 
 <p>

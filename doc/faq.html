@@ -18,19 +18,13 @@
 
 <p><strong>Q:</strong> <a href="#howtocustomize">How can I customize the collector for my location?</a></p>
 
-<p><strong>Q:</strong> <a href="#tzvalues">What are the tz= values?</a></p>
-
 <p><strong>Q:</strong> <a href="#categorizing">How do I categorize feeds and events?</a></p>
 
 <p><strong>Q:</strong> <a href="#viewingcategories">How do I view categorized events?</a></p>
 
-<p><strong>Q:</strong> <a href="#delicious">Why Delicious?</a></p>
-
 <p><strong>Q:</strong> <a href="#twitter">I just added a feed. Can I run the aggregator now instead of waiting up to 8 hours for the next cycle?</a></p>
 
 <p><strong>Q:</strong> <a href="#friendfeed">Where do curators hang out?</a></p>
-
-
 
 
 <hr />
@@ -114,31 +108,18 @@ Publish your own iCalendar feed, and give its URL to the hub's curator. You can 
 <p><a name="quickstart"></a>&nbsp;</p>
 <p><strong>Q:</strong> How do I become a calendar curator for my community (or topic)?</p>
 
-<strong>A:</strong> Follow these three steps:
+<strong>A:</strong> 
+<p>
+Notify the <a href="mailto:jonu@microsoft.com">elmcity administrator</a> that you'd like to start a new hub, specifying:
+</p>
 <ol>
-	<li>Designate a <a href="http://delicious.com">Delicious</a> account for this purpose. If you already have one, you can use that. If not, create one.
-
-The account that manages the Fredericksburg, VA collector, for example, is <a href="http://delicious.com/aroundfred">aroundfred</a>.</li>
-	<li>Log in to the account, click <a href="http://delicious.com/save">Save a bookmark</a>, and enter your version of the information shown here:
-
-<img src="http://jonudell.net/img/elmcity-faq-01.png" alt="" />
-
-So, for example, if your account was a2cals and your location Ann Arbor, MI, you would say:
-<ol>
-	<li>URL: http://delicious.com/a2cals/metadata</li>
-	<li>TITLE: metadata</li>
-	<li>TAGS: elmcity where=ann+arbor,mi
-
-There are two tags here: "elmcity" and "where=ann+arbor,mi" -- the second is written with no spaces (note: use a + when the name contains a space), and it looks like more than one tag, but it is really only a single tag that works as a name/value pair.
-</li>
+	<li><p>An identifier for the hub, e.g. BrattleboroCals or WashingtonStateWineries</p></li>
+	<li><p>A Twitter account for authenticating to (and controlling) the hub</p></li>
+	<li><p>A location, if the hub is location-specific (e.g. Brattleboro, VT or Sunbury-on-Thames, UK</p></li>
 </ol>
 
-To check that you've done it right, use <a href="http://elmcity.cloudapp.net/delicious_check">elmcity.cloudapp.net/delicious_check</a>
-
-</li>
-	<li>Send me <a href="mailto:jonu@microsoft.com">an email</a> to let me know you want to start up an instance of the collector for your location.</li>
-</ol>
-With just this minimal setup, the service will find and merge events for your location from Eventful, Upcoming, Eventbrite, and (optionally) Facebook. But you'll also want to include iCalendar feeds for schools, businesses, sports clubs, cultural venues, because most of what's going on in your community won't be available from those other sources.
+<p>
+When the hub starts up, the elmcity service will find and merge events for your location from Eventful, Upcoming, Eventbrite, and (optionally) Facebook. But you'll also want to include iCalendar feeds for schools, businesses, sports clubs, cultural venues, because most of what's going on in your community won't be available from those other sources.
 
 <hr />
 <p><a name="secondstep"></a>&nbsp;</p>
@@ -146,7 +127,7 @@ With just this minimal setup, the service will find and merge events for your lo
 <strong>Q:</strong> OK, I started a hub, where's my stuff? 
 </p>
 
-<strong>A:</strong> Go to http://elmcity.cloudapp.net/services/ID (substituting the name of your delicious account for ID). You'll find a family of  URLs for HTML, XML, RSS, iCalendar, and other resources related to your hub.
+<strong>A:</strong> Go to http://elmcity.cloudapp.net/services/ID (substituting your elmcity identifier for ID). You'll find a family of  URLs for HTML, XML, RSS, iCalendar, and other resources related to your hub.
 
 <hr />
 <p><a name="findfeeds"></a>&nbsp;</p>
@@ -201,25 +182,7 @@ When you publish an iCalendar feed, it can syndicate to one or more services lik
 <strong>Q:</strong> OK, I've found or created some iCalendar feeds. How do I get the collector to collect and process them?
 </p>
 
-<strong>A:</strong> You bookmark them in Delicious. Here are a couple of examples for Providence, RI, which uses the Delicious account <a href="http://delicious.com/mashablecity">mashablecity</a>:
-
-<img src="http://jonudell.net/img/elmcity-faq-02.png" alt="" />
-
-The RI Council for Humanities feed was created using FuseCal. It was bookmarked like so:
-
-<img src="http://jonudell.net/img/elmcity-faq-03.png" alt="" />
-
-The URL is the address of the iCalendar feed.
-
-The title will be cited as the source of all events flowing from this feed.
-
-There are four tags:
-<ol>
-	<li><strong>feed</strong>: This tag identifies the bookmarked URL as a feed.</li>
-	<li><strong>ics</strong>: We specify ICS to distinguish this feed from other formats (e.g. XML) that might exist.</li>
-	<li><strong>trusted</strong>: This tag indicates that the curator trusts the feed as a reliable source of legitimate events. Since all three of these tags are required, removing the trusted tag effectively revokes trust, and will prevent a feed's events from being included in the merged outputs.</li>
-	<li><strong>url=http://www.rihumanities.org/calendar</strong>: This tag provides a "home page" for events from this feed. It's the link that people will follow to find out more about any event from this source. In some cases, events in an iCalendar feed provide direct links to information about specific events. If these exist, they'll be used. But often they don't exist, so this "home page" link provides a default.</li>
-</ol>
+<strong>A:</strong> You sign into <a href="http://elmcity.cloudapp.net/">elmcity</a>, using the Twitter account you provided when you started your hub, and use the feed editor to add feeds.
 
 <hr />
 <p><a name="howtocustomize"></a>&nbsp;</p>
@@ -227,151 +190,14 @@ There are four tags:
 <strong>Q:</strong> How can I customize the collector for my location?
 </p>
 
-<strong>A:</strong> Using Delicious tags, again. There are two kinds of bookmarks used to manage an instance of the collector:
-<ol>
-	<li><strong>The metadata bookmark</strong>. That's the one that refers to the URL formed like so:
-
-http://delicious.com/ACCOUNTNAME/metadata
-
-There's only one metadata URL per location.</li>
-	<li><strong>Feed bookmarks</strong>. These are the ones that refer to iCalendar feeds. There can be any number of these per location.</li>
-</ol>
-In the minimal setup shown above, the metadata URL only used one tag:
-
-where=fredericksburg,va
-
-But there's a set of defaults that you can override by adding additional tags. They are:
-<pre>tz=Eastern
-title=event+calendar
-contact=nobody_yet
-img=http://elmcity.blob.core.windows.net/admin/keene-night-360.jpg
-css=http://elmcity.blob.core.windows.net/admin/elmcity.css
-template=http://elmcity.blob.core.windows.net/admin/events.tmpl
-lat={computed from where}
-lon={computed from where}
-radius=10</pre>
-<strong>tz</strong>: If you're in Utah, you'd add the tag tz=Mountain.
-
-<strong>title</strong>: If you're in Providence, RI, you might change this to title=events+in+and+around+providence. The title appears in the <a href="http://elmcity.cloudapp.net/services/mashablecity/html">default HTML rendering</a> of the merged calendar.
-
-<strong>contact</strong>: The Providence curator is Matt Gillooly, so he used the tag contact=matt@mattgilloly.com.
-
-<strong>img</strong>: This is the header image for the default HTML rendering. Matt Gillooly changed his from the default by specifying img=http://mashablecity.org/elmcity/providence-waterfire-header.jpg.
-
-<strong>header_image</strong>: Default is yes, include a header image. But if you're sourcing the HTML rendering into a page that already has one, you'll want to omit it like so: header_image=no.
-
-<strong>css</strong>: This is the CSS stylesheet for the default HTML rendering. Change to suit your taste.
-
-<strong>template</strong>: This is the template for the default HTML rendering. You can point to an alternate template that radically alters the default rendering.
-
-<strong>lat, lon</strong>: The latitude and longitude for your location are automatically derived from the location specified in where=LOCATION. But you can override the computed defaults here.
-
-<strong>radius</strong>: When the collector scans Eventful and Upcoming for your location, it defaults to a 5-mile radius. You can change that here.
-
-<strong>facebook</strong>: The default is no, because Facebook's public search API can yield <a href="http://blog.jonudell.net/2010/04/30/surprise-your-facebook-visibility-isnt-what-you-thought-it-was/">surprising results</a>, but if those results work for you, you can include like so: facebook=yes.
-
-
-<hr />
-<p><a name="tzvalues"></a>&nbsp;</p>
-<p>
-<strong>Q:</strong> What are the tz= values?
-</p>
-
-<strong>A:</strong>
-<pre>afghanistan
-alaskan
-arab
-arabian
-arabic
-argentina
-atlantic
-aus+central
-aus+eastern
-azerbaijan
-azores
-canada+central
-cape+verde
-caucasus
-cen.+australia
-central+america
-central+asia
-central+brazilian
-central+europe
-central+european
-central+pacific
-central
-central+(mexico)
-china
-dateline
-e.+africa
-e.+australia
-e.+europe
-e.+south+america
-eastern
-egypt
-ekaterinburg
-fiji
-fle
-georgian
-gmt
-greenland
-greenwich
-gtb
-hawaiian
-india
-iran
-israel
-jordan
-korea
-mauritius
-mid-atlantic
-middle+east
-montevideo
-morocco
-mountain
-mountain+(mexico)
-myanmar
-n.+central+asia
-namibia
-nepal
-new+zealand
-newfoundland
-north+asia+east
-north+asia
-pacific+sa
-pacific
-pacific+(mexico)
-pakistan
-romance
-russian
-sa+eastern
-sa+pacific
-sa+western
-samoa
-se+asia
-singapore
-south+africa
-sri+lanka
-taipei
-tasmania
-tokyo
-tonga
-us+eastern
-us+mountain
-venezuela
-vladivostok
-w.+australia
-w.+central+africa
-w.+europe
-west+asia
-west+pacific</pre>
+<strong>A:</strong> You sign into <a href="http://elmcity.cloudapp.net/">elmcity</a>, using the Twitter account you provided when you started your hub, and use the hub editor to adjust the default settings as needed.
 
 <hr />
 <p><a name="categorizing"></a>&nbsp;</p>
 <p>
 <strong>Q:</strong> How do I categorize feeds and events?
 </p>
-<strong>A:</strong> On a per-feed basis, if all of the events from a feed can be categorized, you can name that category in the Delicious metadata, using category=CATEGORY. All events from the feed will inherit it  in the same way that they all inherit the default clickthrough link specified with url=URL.
+<strong>A:</strong> On a per-feed basis, if all of the events from a feed can be categorized, you can name that category in the elmcity feed editor. 
 
 On a per-event basis, if events in the iCalendar feed use the CATEGORIES property, it'll come through automatically.
 
@@ -393,29 +219,13 @@ http://elmcity.cloudapp.net/services/elmcity/html?view=government
 
 http://elmcity.cloudapp.net/services/elmcity/rss?view=music
 
-<p><a name="delicious"></a>&nbsp;</p>
-<hr />
-<p>
-<strong>Q:</strong> Why Delicious?
-</p>
-
-<p>
-<strong>A:</strong> It's just a convenient way to manage hub metadata and feed registries.</p>
-
-<p><b>2010.12.17 update:</b> Yesterday news leaked that Yahoo plans to close Delicious. Curators are naturally wondering how this affects the elmcity service. There's no need to take any immediate action. The hub configuration and feed lists that you've been storing in Delicious are all cached in an Azure database. And the elmcity service doesn't depend on live access to Delicious, it uses that cache instead. 
-</p>
-
-<p>
-If Yahoo does close Delicious, we'll need to decide which other service we'll use to feed that cache. I'm leaning toward pinboard.in, because it clones both the visible part of delicious and also the behind-the-scenes API. Of course there's no need to use any kind of social bookmarking service for hub configuration and feed registries, there are lots of other ways to manage this small amount of data. For now, let's wait and see what develops.
-</p>
-
 <hr />
 <p><a name="twitter"></a>&nbsp;</p>
 <p>
 <strong>Q:</strong> I just added a feed. Can I run the aggregator now instead of waiting up to 8 hours for the next cycle?
 </p>
 
-<strong>A:</strong> Yes. First, add the tag twitter=YourTwitterUsername to your metadata URL. The elmcity service, represented on Twitter as @elmcity_azure, will notice and follow you. Then you can send messages to the service. To start the aggregator without waiting, send a Twitter direct message to @elmcity_azure that simply says: start.
+<strong>A:</strong> Yes. When you start your hub the elmcity service, represented on Twitter as @elmcity_azure, will follow the Twitter account you used to start the hub. That means you can send messages to the service from Twitter. To start the aggregator without waiting, send a Twitter direct message to @elmcity_azure that simply says: start.
 
 <hr />
 <p><a name="friendfeed"></a>&nbsp;</p>
@@ -425,7 +235,7 @@ If Yahoo does close Delicious, we'll need to decide which other service we'll us
 
 <strong>A:</strong> We are currently using the FriendFeed room <a href="http://friendfeed.com/rooms/elmcity">friendfeed.com/rooms/elmcity</a>. The room subscribes to the following sources:
 <ul>
-	<li>All the curatorial feeds on Delicious.</li>
+	<li>A feed of all new feeds added to all elmcity hubs</li>
 	<li>The <a href="http://delicious.com/judell/elmcity+azure">subset of my blog's feed</a> that is specific to the project</li>
 	<li>The <a href="http://pipes.yahoo.com/pipes/pipe.info?_id=d4529aab6d88a333bab8e438c4e7ca48">Pipes feed</a> that gathers news about a related effort to improve <a href="http://pipes.yahoo.com/pipes/pipe.run?_id=d4529aab6d88a333bab8e438c4e7ca48&amp;tag=icalvalid">iCalendar validation</a>.</li>
 	<li>Updates to the <a href="http://blog.jonudell.net/elmcityazure-project-status/">project status</a> page.</li>
