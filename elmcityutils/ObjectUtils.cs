@@ -67,7 +67,10 @@ namespace ElmcityUtils
 		{
 			Dictionary<string, string> dict_str = new Dictionary<string, string>();
 			foreach (string key in dict_obj.Keys)
-				dict_str.Add(key, dict_obj[key].ToString());
+			{
+				var val = dict_obj[key] == null ? "" : dict_obj[key];
+				dict_str.Add(key, val.ToString());
+			}
 			return dict_str;
 		}
 
@@ -100,26 +103,6 @@ namespace ElmcityUtils
 			return serializer.Serialize(list_dict_str);
 		}
 
-		public static BlobStorageResponse SaveDictAsTextToBlob(Dictionary<string, string> dict_str, BlobStorage bs, string container, string blob_name)
-		{
-			var settings_text_bytes = Encoding.UTF8.GetBytes(ObjectUtils.DictStrToKeyValText(dict_str));
-			return BlobStorage.WriteToAzureBlob(bs, container, blob_name, content_type: null, bytes: settings_text_bytes);
-		}
-
-		/*
-		public static BlobStorageResponse SaveDictAsJsonToBlob(Dictionary<string, string> dict_str, BlobStorage bs, string container, string blob_name)
-		{
-			var json_bytes = Encoding.UTF8.GetBytes(DictStrToJson(dict_str));
-			return BlobStorage.WriteToAzureBlob(bs, container, blob_name, content_type: null, bytes: json_bytes);
-		}*/
-
-		/*
-		public static BlobStorageResponse SaveListDictAsJsonToBlob(List<Dictionary<string, string>> list_dict_str, BlobStorage bs, string container, string blob_name)
-		{
-			var json_bytes = Encoding.UTF8.GetBytes(ListDictStrToJson(list_dict_str));
-			return BlobStorage.WriteToAzureBlob(bs, container, blob_name, content_type: null, bytes: json_bytes);
-		}*/
-
 		public static Dictionary<string, string> GetDictStrFromJsonUri(Uri uri)
 		{
 			var json = HttpUtils.FetchUrl(uri).DataAsString();
@@ -146,6 +129,17 @@ namespace ElmcityUtils
 			var d1vals = d1.Values.ToList(); d1vals.Sort();
 			var d2vals = d2.Values.ToList(); d2vals.Sort();
 			return (Enumerable.SequenceEqual(d1keys, d2keys) && Enumerable.SequenceEqual(d1vals, d2vals));
+		}
+
+		public static bool DictStrContainsDictStr(Dictionary<string, string> d1, Dictionary<string, string> d2)
+		{
+			var d1keys = d1.Keys.ToList();
+			foreach (var key in d1keys)
+			{
+				if (d2.ContainsKey(key) == false)  
+					d1.Remove(key);
+			}
+			return DictStrEqualsDictStr(d1, d2);
 		}
 
 		public static bool ListDictStrEqualsDictStr(List<Dictionary<string, string>> l1, List<Dictionary<string, string>> l2)
@@ -179,9 +173,8 @@ namespace ElmcityUtils
 					new_obj_as_json = ObjectUtils.DictStrToJson((Dictionary<string, string>)new_obj);
 				else // JsonSnapshotType.ListDictStr
 					new_obj_as_json = ObjectUtils.ListDictStrToJson((List<Dictionary<string, string>>)new_obj);
-				var new_obj_as_json_bytes = Encoding.UTF8.GetBytes(new_obj_as_json);
-				BlobStorage.WriteToAzureBlob(bs, id, json_blob_name, null, new_obj_as_json_bytes);
-				BlobStorage.WriteToAzureBlob(bs, id, timestamped_json_blob_name, null, new_obj_as_json_bytes);
+				bs.PutBlob(id, json_blob_name, new_obj_as_json, "application/json");
+				bs.PutBlob(id, timestamped_json_blob_name, new_obj_as_json, "application/json");
 			}
 			
 			if (comparison == JsonCompareResult.same || comparison == JsonCompareResult.invalid)
