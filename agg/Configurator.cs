@@ -361,7 +361,7 @@ namespace CalendarAggregator
 		private static List<string> _ical_description_metakeys = new List<string>() { "url", "category" };
 
 		// used commonly by various tests, so collected here
-		public const string testid = "events";
+		public const string testid = "zzztest";
 		public const string test_metadata_property_key_prefix = "property";
 		public const string test_metadata_property_key = "testkey";
 		public const string test_metadata_property_value = "testvalue";
