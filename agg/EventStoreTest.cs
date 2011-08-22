@@ -28,7 +28,7 @@ namespace CalendarAggregator
 
 		static TimeZoneInfo tzinfo = Utils.TzinfoFromName(Configurator.default_tz);
 
-		public const string test_container = "events";
+		public const string test_container = Configurator.testid;
 		public const string test_category = "test_category";
 		public const string test_lat = "42.9336";
 		public const string test_lon = "-72.2786";

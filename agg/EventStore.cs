@@ -193,7 +193,7 @@ namespace CalendarAggregator
 
 		public EventStore(Calinfo calinfo)
 		{
-			this.id = calinfo.delicious_account;
+			this.id = calinfo.id;
 			this.calinfo = calinfo;
 			this.tzinfo = calinfo.tzinfo;
 		}
