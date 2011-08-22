@@ -69,21 +69,20 @@ local_storage = get_local_storage()
 log = open('Startup\startup.py.log', 'a')
 log.write('...starting at UTC %s...\n' % System.DateTime.UtcNow.ToString())  
 
-log.write('owner: %s\n' % get_process_owner())
-  
-python_lib = local_storage + '/Lib'
-log.write('python lib: %s\n' % python_lib)  
-  
 try:
   uri = System.Uri('http://elmcity.blob.core.windows.net/admin/python_library.zip')
   ElmcityUtils.FileUtils.UnzipFromUrlToDirectory(uri, local_storage)  
   uri = System.Uri('http://elmcity.blob.core.windows.net/admin/ElmcityLib.zip')
   ElmcityUtils.FileUtils.UnzipFromUrlToDirectory(uri, local_storage)  
 except:
-  log.write('exception', 'startup.py', format_traceback() )    
-
+  log.write('exception', 'startup.py', None ) 
+  
+python_lib = local_storage + '/Lib'
+log.write('python lib: %s\n' % python_lib)  
 sys.path.append(python_lib)
-import traceback
+import traceback 
+
+log.write('owner: %s\n' % get_process_owner())
 
 mgr = ServerManager()
 site = mgr.Sites[0]
