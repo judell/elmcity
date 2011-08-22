@@ -826,7 +826,7 @@ namespace CalendarAggregator
 				row.Append("<table>");
 				row.Append(string.Format("<tr><td>{0}</td><td>{1}</td></tr>", "source", source));
 				row.Append(string.Format("<tr><td>{0}</td><td>{1}</td></tr>", "feed url", feedurl));
-				var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
+				var feed_metadict = Metadata.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
 				foreach (var attr in include_attrs)
 				{
 					if (feed_metadict.ContainsKey(attr) && feed_metadict[attr] != "")
