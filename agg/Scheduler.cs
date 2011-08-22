@@ -121,7 +121,7 @@ namespace CalendarAggregator
 
 		public static bool MaybeStartTaskForId(DateTime now, Calinfo calinfo)
 		{
-			var id = calinfo.delicious_account;
+			var id = calinfo.id;
 
 			if (Scheduler.ExistsTaskRecordForId(id) == false)
 			{
