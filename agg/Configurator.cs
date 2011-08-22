@@ -31,7 +31,9 @@ namespace CalendarAggregator
 
 	public static class Configurator
 	{
-		private static Dictionary<string, string> settings = new Dictionary<string, string>();
+		public static Dictionary<string, string> settings = GetSettings("settings");
+
+		public static Dictionary<string, string> usersettings = GetSettings("usersettings");
 
 		// encapsulated settings
 
@@ -340,31 +342,6 @@ namespace CalendarAggregator
 
 		#endregion
 
-		#region template settings
-
-		public static string default_css { get { return _default_css; } }
-		private static string _default_css = ElmcityUtils.Configurator.azure_blobhost + "/admin/" + GetSettingValue("elmcity_css");
-
-		public static string default_img_html { get { return _default_img_html; } }
-		private static string _default_img_html { get { return GetSettingValue("default_img_html"); } }
-
-		public static Uri default_img_url { get { return _default_img_url; } }
-		private static Uri _default_img_url = new Uri(ElmcityUtils.Configurator.azure_blobhost + "/admin/" + GetSettingValue("elmcity_img"));
-
-		public static Uri default_template_url { get { return _default_template_url; } }
-		private static Uri _default_template_url = new Uri(ElmcityUtils.Configurator.azure_blobhost + "/admin/" + GetSettingValue("elmcity_tmpl"));
-
-		public static Uri default_contribute_url { get { return _default_contribute_url; } }
-		private static Uri _default_contribute_url = new Uri(GetSettingValue("elmcity_contribute"));
-
-		public static string default_display_width { get { return _default_display_width; } }
-		private static string _default_display_width = GetSettingValue("elmcity_display_width");
-
-		public static Uri what_template_url { get { return _what_template_url; } }
-		private static Uri _what_template_url = new Uri(ElmcityUtils.Configurator.azure_blobhost + "/admin/" + GetSettingValue("elmcity_tmpl"));
-
-		#endregion template settings
-
 		// non-encapsulated (for now) settings
 
 		public const int azure_log_max_minutes = 500;
@@ -492,6 +469,104 @@ namespace CalendarAggregator
 		// part of experimental pshb implementation, idle for now
 		//public static string pubsubhubub_uri = "http://pubsubhubbub.appspot.com/";
 
+
+		public static int GetIntSetting(Dictionary<string,string> metadict, Dictionary<string,string> usersettings, string key)
+		    {
+			string value;
+			value = GetMetadictValueOrSettingsValue(metadict, usersettings, key);
+			metadict[key] = value;
+			return Convert.ToInt32(value);
+		    }
+
+		 public static string GetStrSetting(Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
+		 {
+			 string value = GetMetadictValueOrSettingsValue(metadict, usersettings, key);
+			 metadict[key] = value;
+			 return value;
+		 }
+
+		 public static bool GetBoolSetting(Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
+		 {
+			 string value = GetMetadictValueOrSettingsValue(metadict, usersettings, key);
+			 metadict[key] = value;
+			 return value == "yes";
+		 }
+
+		 public static Uri GetUriSetting(Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
+		 {
+			 string value = GetMetadictValueOrSettingsValue(metadict, usersettings, key);
+			 string final;
+			 if (!value.StartsWith("http://"))
+				 final = BlobStorage.MakeAzureBlobUri("admin", value).ToString();
+			 else
+				 final = value;
+			 metadict[key] = final;
+			 return new Uri(final);
+		 }
+
+		 public static string GetTitleSetting(Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
+		 {
+			 string value = GetStrSetting(metadict, usersettings, key);
+			 string final;
+			 if (value == null)
+				 final = metadict["PartitionKey"];
+			 else
+				 final = value;
+			 metadict[key] = final;
+			 return final;
+		 }
+
+		 public static int GetPopSetting(string id, Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
+		 {
+			 int pop = GetIntSetting(metadict, usersettings, key);
+			 int final;
+			 if (pop == 0 && metadict["type"] == "where")
+			 {
+				 string[] response = Utils.FindCityOrTownAndStateAbbrev(metadict["where"]);
+				 var city_or_town = response[0];
+				 var state_abbrev = response[1];
+				 final = Utils.FindPop(id, city_or_town, state_abbrev);
+			 }
+			 else
+				 final = pop;
+			 metadict[key] = final.ToString();
+			 return final;
+		 }
+
+		 public static string GetFeedCountSetting(string id, Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
+		 {
+			 int feedcount = GetIntSetting(metadict, usersettings, key);
+			 int final;
+			 if (feedcount == 0 )
+			 {
+				 var q = string.Format("$filter=(PartitionKey eq '{0}' and feedurl ne '' )", id);
+				 var ts = TableStorage.MakeDefaultTableStorage();
+				 final = ts.QueryEntities("metadata", q).list_dict_obj.Count;
+			 }
+			 else
+				 final = feedcount;
+			 metadict[key] = final.ToString();
+			 return final.ToString();
+		 }
+
+		 public static string GetMetadictValueOrSettingsValue(Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
+		 {
+			 if (metadict.ContainsKey(key) )
+				 return metadict[key];
+
+			 if (!metadict.ContainsKey(key) && usersettings.ContainsKey(key))
+			 {
+				 return usersettings[key];
+			 }
+
+			 if (!metadict.ContainsKey(key) && !usersettings.ContainsKey(key))
+			 {
+				 return null;
+			 }
+
+			 return null;
+		 }
+
 		// used by Utils.LookupUsPop
 		public static Dictionary<string, string> state_abbrevs
 		{
@@ -599,6 +674,11 @@ namespace CalendarAggregator
 			return GetSettingValue(setting_name, reload: false);
 		}
 
+		private static Dictionary<string,string> GetSettings(string table)
+		{
+			return GenUtils.GetSettingsFromAzureTable(table);
+		}
+
 		private static Delicious delicious = Delicious.MakeDefaultDelicious();
 
 		// one Calinfo per hub, each an encapsulation of hub metadata
@@ -607,14 +687,15 @@ namespace CalendarAggregator
 			get
 			{
 				var calinfos = new Dictionary<string, Calinfo>();
-				var ids = delicious.LoadHubIdsFromAzureTable(); // could come from delicious, but prefer azure cache of that data
+				var ids = Metadata.LoadHubIdsFromAzureTable(); // could come from delicious, but prefer azure cache of that data
 				//Parallel.ForEach(ids, id =>
 				foreach (var id in ids)
 				{
 					try
 					{
 						//var calinfo = new Calinfo(id);
-						var calinfo_uri = new Uri(string.Format("{0}/{1}/{2}.calinfo.obj", ElmcityUtils.Configurator.azure_blobhost, id.ToLower(), id));
+						//var calinfo_uri = new Uri(string.Format("{0}/{1}/{2}.calinfo.obj", ElmcityUtils.Configurator.azure_blobhost, id.ToLower(), id));
+						var calinfo_uri = BlobStorage.MakeAzureBlobUri(id, id + ".calinfo.obj");
 						var calinfo = (Calinfo)BlobStorage.DeserializeObjectFromUri(calinfo_uri);
 						calinfos.Add(id, calinfo);
 					}
@@ -657,11 +738,14 @@ namespace CalendarAggregator
 		{ get { return _hub_enum; } }
 		private HubType _hub_enum;
 
-		// idle for now, since each hub shares the master delicious account for registry and metadata,
-		// but the idea is that each hub might need its own account
+		// an alias for id, remove after id is deployed to all cached objects
 		public string delicious_account
 		{ get { return _delicious_account; } }
 		private string _delicious_account;
+
+		public string id
+		{ get { return _id; } }
+		private string _id;
 
 		// the twitter account for a hub enables the curator to send authenticated messages to the hub
 		// see: http://blog.jonudell.net/2009/10/21/to-elmcity-from-curator-message-start/
@@ -728,7 +812,7 @@ namespace CalendarAggregator
 		// values documented at: http://blog.jonudell.net/elmcity-project-faq/#tzvalues
 		public string tzname
 		{ get { return _tzname; } }
-		private string _tzname = Configurator.default_tz;
+		private string _tzname;
 
 		public System.TimeZoneInfo tzinfo
 		{ get { return _tzinfo; } }
@@ -736,7 +820,7 @@ namespace CalendarAggregator
 
 		public string css
 		{ get { return _css; } }
-		private string _css = Configurator.default_css;
+		private string _css;
 
 		public bool has_img
 		{ get { return _has_img; } }
@@ -744,27 +828,34 @@ namespace CalendarAggregator
 
 		public Uri img_url
 		{ get { return _img_url; } }
-		private Uri _img_url = Configurator.default_img_url;
+		private Uri _img_url;
+
+		public string default_img_html
+		{ get { return _default_image_html; } }
+		private string _default_image_html;
 
 		public string contact
 		{ get { return _contact; } }
-		private string _contact = Configurator.default_contact;
+		private string _contact;
 
 		public Uri template_url
 		{ get { return _template_url; } }
-		private Uri _template_url = Configurator.default_template_url;
+		private Uri _template_url;
 
 		public Uri contribute_url
 		{ get { return _contribute_url; } }
-		private Uri _contribute_url = Configurator.default_contribute_url;
+		private Uri _contribute_url;
 
 		public string display_width
 		{ get { return _display_width; } }
-		private string _display_width = Configurator.default_display_width;
+		private string _display_width;
 
 		public string feed_count
-		{ get { return _feed_count; } }
-		private string _feed_count = "0";
+		{ 
+			get { return _feed_count; }
+			set { _feed_count = value; } // settable so worker can update on the fly
+		}
+		private string _feed_count;
 
 		public bool has_descriptions
 		{ get { return _has_descriptions; } }
@@ -776,95 +867,109 @@ namespace CalendarAggregator
 
 		public Calinfo(string id)
 		{
-			this._delicious_account = id;
-			var delicious = Delicious.MakeDefaultDelicious();
-			this._metadict = delicious.LoadMetadataForIdFromAzureTable(id);
-
-			this._tzinfo = Utils.TzinfoFromName(this.tzname); // start with default
-
-			if (metadict.ContainsKey("where") == false && metadict.ContainsKey("what") == false)
-				GenUtils.PriorityLogMsg("exception", "new calinfo: neither what nor where", id);
-
-			if (metadict.ContainsKey("where") == true && metadict.ContainsKey("what") == true)
-				GenUtils.PriorityLogMsg("exception", "new calinfo: both what and where", id);
-
-			if (metadict.ContainsKey("where"))
+			try
 			{
-				this._hub_enum = HubType.where;
+				this._delicious_account = id; // todo: remove later
+				this._id = id;
 
-				this._where = metadict[this.hub_enum.ToString()];
-				this._what = Configurator.nothing;
-
-				this._radius = metadict.ContainsKey("radius") ? Convert.ToInt16(metadict["radius"]) : Configurator.default_radius;
-				// enforce the default max radius
-				if (Convert.ToInt16(this._radius) > Convert.ToInt16(Configurator.max_radius))
-					this._radius = Configurator.max_radius;
-
-				this._population = metadict.ContainsKey("population") ? Convert.ToInt32(metadict["population"]) : Configurator.default_population;
-				this._tzname = metadict.ContainsKey("tz") ? metadict["tz"] : this._tzname;
-				this._tzinfo = Utils.TzinfoFromName(this._tzname);
-				this._title = metadict.ContainsKey("title") ? metadict["title"] : this._where;
-
-				this._eventful = (metadict.ContainsKey("eventful") && metadict["eventful"] == "no") ? false : true;
-				this._upcoming = (metadict.ContainsKey("upcoming") && metadict["upcoming"] == "no") ? false : true;
-				this._eventbrite = (metadict.ContainsKey("eventbrite") && metadict["eventbrite"] == "no") ? false : true;
-				this._facebook = (metadict.ContainsKey("facebook") && metadict["facebook"] == "yes") ? true : false;
-
-				// curator gets to override the lat/lon that will otherwise be looked up based on the location
-				// ( from where= in the metadata )
-				if (this.metadict.ContainsKey("lat") && this.metadict.ContainsKey("lon"))
+				this._metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
+				if (metadict.ContainsKey("type") == false)
 				{
-					this._lat = this.metadict["lat"];
-					this._lon = this.metadict["lon"];
+					GenUtils.PriorityLogMsg("exception", "new calinfo: no hub type", id);
+					return;
 				}
-				else
-				{
-					var apikeys = new Apikeys();
-					var lookup_lat = Utils.LookupLatLon(apikeys.yahoo_api_key, this.where)[0];
-					var lookup_lon = Utils.LookupLatLon(apikeys.yahoo_api_key, this.where)[1];
 
-					if (!String.IsNullOrEmpty(lookup_lat) && !String.IsNullOrEmpty(lookup_lon))
+				this._contact = Configurator.GetStrSetting(metadict, Configurator.usersettings, "contact");
+
+				this._contribute_url = Configurator.GetUriSetting(metadict, Configurator.usersettings, "contribute_url");
+
+				this._css = Configurator.GetUriSetting(metadict, Configurator.usersettings, "css").ToString();
+
+				this._default_image_html = Configurator.GetStrSetting(metadict, Configurator.usersettings, "default_img_html");
+
+				this._has_descriptions = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "descriptions");
+
+				this._display_width = Configurator.GetStrSetting(metadict, Configurator.usersettings, "display_width");
+
+				this._feed_count = Configurator.GetFeedCountSetting(this.id, metadict, Configurator.usersettings, "feed_count");
+
+				this._has_img = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "header_image");
+
+				this._img_url = Configurator.GetUriSetting(metadict, Configurator.usersettings, "img");
+
+				this._title = Configurator.GetTitleSetting(metadict, Configurator.usersettings, "title");
+
+				this._template_url = Configurator.GetUriSetting(metadict, Configurator.usersettings, "template");
+
+				this._twitter_account = Configurator.GetStrSetting(metadict, Configurator.usersettings, "twitter");
+
+				this._tzname = Configurator.GetStrSetting(metadict, Configurator.usersettings, "tz");
+				this._tzinfo = Utils.TzinfoFromName(this._tzname);
+
+				this._use_rdfa = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "use_rdfa");
+
+				//if (metadict.ContainsKey("where"))
+				if (metadict["type"] == "where")
+				{
+					this._hub_enum = HubType.where;
+					this._where = metadict[this.hub_enum.ToString()];
+					this._what = Configurator.nothing;
+
+					//this._radius = metadict.ContainsKey("radius") ? Convert.ToInt16(metadict["radius"]) : Configurator.default_radius;
+					this._radius = Configurator.GetIntSetting(metadict, Configurator.usersettings, "radius");
+
+					// enforce the default max radius
+					if (this._radius > Configurator.max_radius)
+						this._radius = Configurator.max_radius;
+
+					this._population = Configurator.GetPopSetting(this.id, metadict, Configurator.usersettings, "population");
+
+					this._eventful = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "eventful");
+					this._upcoming = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "upcoming");
+					this._eventbrite = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "eventbrite");
+					this._facebook = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "facebook");
+
+					// curator gets to override the lat/lon that will otherwise be looked up based on the location
+
+					if (!metadict.ContainsKey("lat") && !metadict.ContainsKey("lon"))
 					{
-						this._lat = lookup_lat;
-						this._lon = lookup_lon;
-						Utils.StoreLatLonToAzureForId(id, this.lat, this.lon);
+						var apikeys = new Apikeys();
+						var lookup_lat = Utils.LookupLatLon(apikeys.yahoo_api_key, this.where)[0];
+						var lookup_lon = Utils.LookupLatLon(apikeys.yahoo_api_key, this.where)[1];
+
+						if (!String.IsNullOrEmpty(lookup_lat) && !String.IsNullOrEmpty(lookup_lon))
+						{
+							this._lat = metadict["lat"] = lookup_lat;
+							this._lon = metadict["lon"] = lookup_lon;
+						}
 					}
+					else
+					{
+						this._lat = metadict["lat"];
+						this._lon = metadict["lon"];
+					}
+
+					if (String.IsNullOrEmpty(this.lat) && String.IsNullOrEmpty(this.lon))
+					{
+						GenUtils.PriorityLogMsg("warning", "Configurator: no lat and/or lon for " + id, null);
+					}
+
 				}
 
-				if (this.lat == null || this.lon == null)
+				// if (metadict.ContainsKey("what"))
+				if (metadict["type"] == "what")
 				{
-					throw new Exception("Configurator: no lat/lon for " + id);
+					this._hub_enum = HubType.what;
+					this._what = metadict[this.hub_enum.ToString()];
+					this._where = Configurator.nowhere;
 				}
-
 			}
 
-			if (metadict.ContainsKey("what"))
+			catch (Exception e)
 			{
-				this._hub_enum = HubType.what;
-
-				this._what = metadict[this.hub_enum.ToString()];
-				this._where = Configurator.nowhere;
-				this._tzname = metadict.ContainsKey("tz") ? metadict["tz"] : "GMT";
-				this._tzinfo = Utils.TzinfoFromName(this._tzname);
-				this._title = metadict.ContainsKey("title") ? metadict["title"] : this._what;
-				this._template_url = Configurator.what_template_url;
+				GenUtils.PriorityLogMsg("exception", "new Calinfo: " + id, e.Message + e.StackTrace);
 			}
 
-			this._twitter_account = (metadict.ContainsKey("twitter") ? metadict["twitter"] : null);
-			this._css = metadict.ContainsKey("css") ? metadict["css"] : this._css;
-
-			this._has_img = metadict.ContainsKey("header_image") && metadict["header_image"] == "no" ? false : true;
-			this._img_url = metadict.ContainsKey("img") ? new Uri(metadict["img"]) : this._img_url;
-
-			this._contact = metadict.ContainsKey("contact") ? metadict["contact"] : this._contact;
-			this._template_url = metadict.ContainsKey("template") ? new Uri(metadict["template"]) : this._template_url;
-
-			this._display_width = metadict.ContainsKey("display_width") ? metadict["display_width"] : this._display_width;
-			this._use_rdfa = metadict.ContainsKey("use_rdfa") && metadict["use_rdfa"] == "no" ? false : true;
-
-			this._feed_count = metadict.ContainsKey("feed_count") ? metadict["feed_count"] : this._display_width;
-
-			this._has_descriptions = metadict.ContainsKey("descriptions") && metadict["descriptions"] == "yes" ? true : false;
 		}
 
 		// how long to wait between aggregator runs
