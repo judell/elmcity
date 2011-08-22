@@ -427,6 +427,12 @@ namespace ElmcityUtils
 			return new TableStorageListDictResponse(http_response, GetTsDicts(http_response));
 		}
 
+		public static TableStorageListDictResponse QueryEntities(string tablename, string query, TableStorage ts)
+		{
+			var http_response = ts.DoTableStoreRequest(tablename, query_string: query, method: "GET", headers: new Hashtable(), data: null);
+			return new TableStorageListDictResponse(http_response, GetTsDicts(http_response));
+		}
+
 		public string QueryEntitiesAsFeed(string tablename, string query)
 		{
 			var http_response = DoTableStoreRequest(tablename, query_string: query, method: "GET", headers: new Hashtable(), data: null);
