@@ -183,7 +183,7 @@ function show_metadicts()
 
 function show_metadict(index, metadict) 
   {
-  var keys = Object.keys(metadict);
+  var keys = $.keys(metadict);
   for ( var i = 0; i < keys.length; i++  )
     {
     var key = keys[i];
@@ -205,7 +205,7 @@ function show_metadict(index, metadict)
   if ( flavor == 'feeds' )
     record_keys = [ 'source', 'feedurl', 'url', 'category', 'xcal', 'vcal' ]; 
   else
-    record_keys = Object.keys(include_fields).sort();
+    record_keys = $.keys(include_fields).sort();
 
   for ( var i in record_keys )
     {
@@ -267,7 +267,7 @@ function make_metadict_editable(index)
 
   if ( flavor == 'feeds' )  // focus on just this feed
     {
-    var keys = Object.keys(json);
+    var keys = $.keys(json);
     for ( i in keys )
       {
       if ( i != index )
@@ -504,7 +504,7 @@ function delete_metadict(index)
 
   $('#newfeed').attr('disabled',true);
 
-  var keys = Object.keys(json);
+  var keys = $.keys(json);
   for ( i in keys )                 // hide other edit/delete controls while this delete in progress
     {
     if ( i != index )
@@ -533,7 +533,8 @@ function save_deleted_metadict(index)
 
 function add_metadict()
   {
-  json.splice(0,0,feeds_defaults);
+  var defaults = $.extend({}, feeds_defaults);
+  json.splice(0,0,defaults);
   show_metadicts();
   make_metadict_editable(0,'feed');
   }
@@ -555,6 +556,13 @@ function validate_feedurl(feedurl)
   return '';
   }
 
+$.extend({
+    keys:  function(obj){
+        var a = [];
+        $.each(obj, function(k){ a.push(k) });
+        return a;
+    }
+})
 
 </script>
 
