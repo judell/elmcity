@@ -13,6 +13,7 @@
  * *******************************************************************************/
 
 using System;
+using System.Net;
 using System.Collections.Generic;
 using NUnit.Framework;
 
@@ -58,6 +59,22 @@ namespace ElmcityUtils
 			var body = (byte[])dict_obj["response_body"];
 			var etag = HttpUtils.GetMd5Hash(body);
 			Assert.That(etag == (string)dict_obj["ETag"]);
+		}
+
+		[Test]
+		public void RetryReportsOkForExistingResource()
+		{
+		var request = (HttpWebRequest) WebRequest.Create(new Uri("http://jonudell.net/"));
+		var r = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, null, 1, 3, TimeSpan.FromSeconds(30));
+		Assert.That(r.status == HttpStatusCode.OK);
+		}
+
+		[Test]
+		public void RetryReportsNotFoundForMissingResource()
+		{
+			var request = (HttpWebRequest)WebRequest.Create(new Uri("http://jonudell.net/missing"));
+		var r = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, null, 1, 3, TimeSpan.FromSeconds(30));
+		Assert.That(r.status == HttpStatusCode.NotFound);
 		}
 
 		private Uri MakeViewUri(string path, string query)

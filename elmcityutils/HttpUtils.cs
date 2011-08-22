@@ -178,7 +178,7 @@ namespace ElmcityUtils
 			catch (Exception ex_write)
 			{
 				GenUtils.PriorityLogMsg("exception", "DoHttpWebRequest: writing data", ex_write.Message + ex_write.InnerException.Message + ex_write.StackTrace);
-				throw;
+				throw (ex_write);
 			}
 
 			try
@@ -199,7 +199,7 @@ namespace ElmcityUtils
 			catch (Exception ex_read)
 			{
 				GenUtils.PriorityLogMsg("exception", "DoHttpWebRequest: reading data", ex_read.Message + ex_read.InnerException.Message + ex_read.StackTrace);
-				throw;
+				throw (ex_read);
 			}
 		}
 
@@ -235,7 +235,7 @@ namespace ElmcityUtils
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "HttpUtils.GetResponseData", e.Message + e.StackTrace);
-				throw;
+				throw (e);
 			}
 		}
 
@@ -325,7 +325,19 @@ namespace ElmcityUtils
 			try
 			{
 				return GenUtils.Actions.Retry<HttpResponse>(
-					delegate() { return DoHttpWebRequest(request, data); },
+					delegate()
+					{
+						try
+						{
+							return DoHttpWebRequest(request, data);
+						}
+						catch (Exception e)
+						{
+							var msg = "RetryHttpRequest " + e.ToString() + ": " + request.RequestUri;
+							GenUtils.LogMsg("warning", msg, null);
+							return new HttpResponse(HttpStatusCode.NotFound, msg, null, null);
+						}
+					},
 					CompletedIfStatusEqualsExpected,
 					completed_delegate_object: expected_status,
 					wait_secs: wait_secs,
@@ -335,7 +347,7 @@ namespace ElmcityUtils
 			catch (Exception e)
 			{
 				var msg = "RetryHttpRequest " + e.ToString() + ": " + request.RequestUri;
-				GenUtils.LogMsg("warning", msg, null);
+				GenUtils.LogMsg("exception", msg, null);
 				return new HttpResponse(HttpStatusCode.NotFound, msg, null, null);
 			}
 		}
