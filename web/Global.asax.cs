@@ -88,6 +88,37 @@ namespace WebRole
 			}
 		}
 
+		public string GetAuthenticatedTwitterUserOrNull()
+		{
+			var cookie = Request.Cookies["ElmcityTwitter"];
+			if (cookie == null) return null;
+			var session_id = Request.Cookies["ElmcityTwitter"].Value;
+			var q = String.Format("$filter=PartitionKey eq 'sessions' and RowKey eq '{0}'", session_id);
+			var results = ts.QueryEntities("sessions", q);
+			if (results.list_dict_obj.Count > 0)
+				return (string) results.list_dict_obj[0]["screen_name"];
+			else
+				return null;
+		}
+
+		public bool AuthenticateViaTwitter()  // authenticate any trusted twitter name 
+			                                  // (e.g. appears as TwitterName in trustedtwitters table) to the home page
+		{
+			var screen_name = GetAuthenticatedTwitterUserOrNull();
+			return (screen_name != null && Utils.IsTrustedTwitterer(screen_name));
+		}
+
+		public bool AuthenticateViaTwitter(string id) // authenticate only mapped twitter accounts 
+			                                          // (e.g. elmcity id appears as RowKey in trustedtwitterers table)
+			                                          // to elmcity-id-specific services
+		{
+			var screen_name = GetAuthenticatedTwitterUserOrNull();
+			if (screen_name == null)
+				return false;
+			var mapped_ids = Utils.ElmcityIdsFromTwitterName(screen_name);
+			return mapped_ids.Exists(x => x == id);
+		}
+
 		public ElmcityController()
 		{
 		}
@@ -95,11 +126,11 @@ namespace WebRole
 
 	public class ElmcityApp : HttpApplication
 	{
-		public static string version = "1226";
+		public static string version = "1346";
 
 #if false // true if testing, false if not testing
 		private static bool testing = true;
-		private static string test_id = "elmcity";
+		private static string test_id = "ypsicals";
 #else    // not testing
 		private static bool testing = false;
 		private static string test_id = "";
@@ -133,25 +164,86 @@ namespace WebRole
 		public static void RegisterRoutes(RouteCollection routes, WebRoleData wrd)
 		{
 			GenUtils.LogMsg("info", "RegisterRoutes", "ready_ids: " + wrd.ready_ids.Count());
+
+			#region HomeController
+
+			// check a delicious account
+			routes.MapRoute(
+				"delicious_check",
+				"delicious_check",
+				 new { controller = "Home", action = "delicious_check" }
+				);
+
+
+			routes.MapRoute(
+				"get_editable_metadata",
+				"services/{id}/get_editable_metadata",
+				new { controller = "Home", action = "get_editable_metadata" },
+				new { id = wrd.str_ready_ids }
+			);
+
+			routes.MapRoute(
+				"get_json_metadata",
+				"services/{id}/get_json_metadata",
+				new { controller = "Home", action = "get_json_metadata" },
+				new { id = wrd.str_ready_ids }
+			);
+
+
+			// for a bare url like /services/a2cal, emit a page that documents all the available formats
+			routes.MapRoute(
+				"hubfiles",
+				"services/{id}/",
+				new { controller = "Home", action = "hubfiles" },
+				new { id = wrd.str_ready_ids }
+				);
+
+			// parse atom+vcal, return ics
+			routes.MapRoute(
+				"ics_from_vcal",
+				"ics_from_vcal",
+				 new { controller = "Home", action = "ics_from_vcal" }
+				);
+
+			// parse rss+xcal, return ics
+			routes.MapRoute(
+				"ics_from_xcal",
+				"ics_from_xcal",
+				 new { controller = "Home", action = "ics_from_xcal" }
+				);
+
+
 			routes.MapRoute(
 				"home",
 				"",
 				new { controller = "Home", action = "index" }
 			);
 
-			// run an ics feed through the machinery and dump the html rendering
+
+			// visualize changes between two json snapshots (flavor feeds is list of dicts, flavor metadata is single dict)
+			// http://elmcity.cloudapp.net/services/elmcity/meta_history?id=elmcity&flavor=feeds&a_name=elmcity.2011.07.25.00.56.feeds.json&b_name=elmcity.2011.07.25.10.00.feeds.json
+			// http://elmcity.cloudapp.net/services/elmcity/meta_history?id=elmcity&flavor=metadata&a_name=elmcity.2011.07.25.00.56.metadata.json&b_name=elmcity.2011.07.25.10.00.metadata.json
 			routes.MapRoute(
-				"viewer",
-				"viewer",
-				new { controller = "Home", action = "viewer" }
+				"meta_history",
+				"services/{id}/meta_history",
+				new { controller = "Home", action = "meta_history" },
+				new { id = wrd.str_ready_ids }
 				);
 
-			// dump a snapshot of diagnostic data
 			routes.MapRoute(
-				"snapshot",
-				"snapshot",
-				new { controller = "Home", action = "snapshot" }
-				 );
+				"put_json_metadata",
+				"services/{id}/put_json_metadata",
+				new { controller = "Home", action = "put_json_metadata" },
+				new { id = wrd.str_ready_ids }
+			);
+
+			routes.MapRoute(
+				"put_json_feeds",
+				"services/{id}/put_json_feeds",
+				new { controller = "Home", action = "put_json_feeds" },
+				new { id = wrd.str_ready_ids }
+			);
+
 
 			// run the method named arg1 in _generic.py, passing arg2 and arg3
 			routes.MapRoute(
@@ -167,44 +259,29 @@ namespace WebRole
 				 new { controller = "Home", action = "reload" }
 				);
 
-			// check a delicious account
+			// dump a snapshot of diagnostic data
 			routes.MapRoute(
-				"delicious_check",
-				"delicious_check",
-				 new { controller = "Home", action = "delicious_check" }
+				"snapshot",
+				"snapshot",
+				new { controller = "Home", action = "snapshot" }
+				 );
+
+			routes.MapRoute(
+				"twitter_auth",
+				"twitter_auth",
+				new { controller = "Home", action = "twitter_auth" }
 				);
 
-			// parse rss+xcal, return ics
+			// run an ics feed through the machinery and dump the html rendering
 			routes.MapRoute(
-				"ics_from_xcal",
-				"ics_from_xcal",
-				 new { controller = "Home", action = "ics_from_xcal" }
+				"viewer",
+				"viewer",
+				new { controller = "Home", action = "viewer" }
 				);
 
-			// parse atom+vcal, return ics
-			routes.MapRoute(
-				"ics_from_vcal",
-				"ics_from_vcal",
-				 new { controller = "Home", action = "ics_from_vcal" }
-				);
+#endregion 
 
-			// for a bare url like /services/a2cal, emit a page that documents all the available formats
-			routes.MapRoute(
-				"hubfiles",
-				"services/{id}/",
-				new { controller = "Home", action = "hubfiles" },
-				new { id = wrd.str_ready_ids }
-				);
-
-			// visualize changes between two json snapshots (flavor feeds is list of dicts, flavor metadata is single dict)
-			// http://elmcity.cloudapp.net/services/elmcity/meta_history?id=elmcity&flavor=feeds&a_name=elmcity.2011.07.25.00.56.feeds.json&b_name=elmcity.2011.07.25.10.00.feeds.json
-			// http://elmcity.cloudapp.net/services/elmcity/meta_history?id=elmcity&flavor=metadata&a_name=elmcity.2011.07.25.00.56.metadata.json&b_name=elmcity.2011.07.25.10.00.metadata.json
-			routes.MapRoute(
-				"meta_history",
-				"services/{id}/meta_history",
-				new { controller = "Home", action = "meta_history" },
-				new { id = wrd.str_ready_ids }
-				);
+			#region ServicesController
 
 			// this pattern covers most uses. gets events for a given hub id in many formats. allows
 			// only the specified formats, and only hub ids that are "ready"
@@ -273,6 +350,8 @@ namespace WebRole
 				 "services/call_twitter_api",
 				 new { controller = "Services", action = "CallTwitterApi" }
 				 );
+
+			#endregion
 
 			GenUtils.LogMsg("info", routes.Count() + " routes", null);
 
