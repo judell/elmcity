@@ -216,16 +216,16 @@ namespace ElmcityUtils
 		/// <param name="signatureType">The signature type. To use the default values use <see cref="OAuthBase.SignatureTypes">OAuthBase.SignatureTypes</see>.</param>
 		/// <returns>The signature base</returns>
 		public string GenerateSignatureBase(
-			Uri url,
-			string consumerKey,
-			string token,
-			string tokenSecret,
-			string httpMethod,
-			string timeStamp,
-			string nonce,
-			string signatureType,
-			out string normalizedUrl,
-			out string normalizedRequestParameters)
+				Uri url,
+				string consumerKey,
+				string token,
+				string tokenSecret,
+				string httpMethod,
+				string timeStamp,
+				string nonce,
+				string signatureType,
+				out string normalizedUrl,
+				out string normalizedRequestParameters)
 		{
 			if (token == null)
 			{
@@ -298,7 +298,7 @@ namespace ElmcityUtils
 
 		/// <summary>
 		/// Generates a signature using the HMAC-SHA1 algorithm
-		/// </summary>		
+		/// </summary>          
 		/// <param name="url">The full url that needs to be signed including its non OAuth url parameters</param>
 		/// <param name="consumerKey">The consumer key</param>
 		/// <param name="consumerSecret">The consumer seceret</param>
@@ -313,7 +313,7 @@ namespace ElmcityUtils
 
 		/// <summary>
 		/// Generates a signature using the specified signatureType 
-		/// </summary>		
+		/// </summary>          
 		/// <param name="url">The full url that needs to be signed including its non OAuth url parameters</param>
 		/// <param name="consumerKey">The consumer key</param>
 		/// <param name="consumerSecret">The consumer seceret</param>
@@ -400,8 +400,14 @@ namespace ElmcityUtils
 
 		public OAuthTwitter()
 		{
-			consumer_key = settings["twitter_consumer_key"];
-			consumer_secret = settings["twitter_consumer_secret"];
+			this.consumer_key = settings["twitter_consumer_key"];
+			this.consumer_secret = settings["twitter_consumer_secret"];
+		}
+
+		public OAuthTwitter(string consumer_key, string consumer_secret)
+		{
+			this.consumer_key = consumer_key;
+			this.consumer_secret = consumer_secret;
 		}
 
 		public string oAuthWebRequest(Method method, string url, string post_data)
@@ -449,17 +455,17 @@ namespace ElmcityUtils
 
 			//Generate Signature
 			string sig = this.GenerateSignature(
-				uri,
-				this.consumer_key,
-				this.consumer_secret,
-				this.token,
-				this.token_secret,
-				method.ToString(),
-				timeStamp,
-				nonce,
-				SignatureTypes.HMACSHA1,
-				out outUrl,
-				out querystring);
+					uri,
+					this.consumer_key,
+					this.consumer_secret,
+					this.token,
+					this.token_secret,
+					method.ToString(),
+					timeStamp,
+					nonce,
+					SignatureTypes.HMACSHA1,
+					out outUrl,
+					out querystring);
 
 			querystring += "&oauth_signature=" + this.UrlEncode(sig);
 
@@ -497,16 +503,16 @@ namespace ElmcityUtils
 				requestWriter = new StreamWriter(webRequest.GetRequestStream());
 				try
 				{
-					requestWriter.Write(postData);
+						requestWriter.Write(postData);
 				}
 				catch
 				{
-					throw;
+						throw;
 				}
 				finally
 				{
-					requestWriter.Close();
-					requestWriter = null;
+						requestWriter.Close();
+						requestWriter = null;
 				}*/
 
 			}
