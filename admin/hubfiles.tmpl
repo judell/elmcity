@@ -253,30 +253,26 @@ A default HTML rendering of just today's events. Can be sourced like so:
 &lt;script  src="/services/__ID__/jswidget">&lt;/script>
 </p>
 
+<h2>2. View hub configuration and feed registry</h2>
 
-<h2>2. Feeds</h2>
+<p>URL: <a href="/services/__ID__/metadata">/services/__ID__/metadata</a></p>
 
-<p>URL: <a href="http://delicious.com/__ID__/trusted+ics+feed">http://delicious.com/__ID__/trusted+ics+feed</a></p>
+<h2>3. Edit hub configuration and feed registry</h2>
 
 <p>
-This delicious query shows you the iCalendar feeds you have bookmarked and tagged for inclusion in your aggregation.
+To use these links, first visit the home page and authenticate using the Twitter account linked to your elmcity hub.
 </p>
 
+<p>Hub URL: <a href="/services/__ID__/get_editable_metadata?flavor=metadata">/services/__ID__/get_editable_metadata?flavor=metadata</a></p>
 
-<h2>3. Stats</h2>
+<p>Feeds URL: <a href="/services/__ID__/get_editable_metadata?flavor=feeds">/services/__ID__/get_editable_metadata?flavor=feeds</a></p>
+
+<h2>4. Stats</h2>
 
 <p>URL: <a href="/services/__ID__/stats">/services/__ID__/stats</a></p>
 
 <p>
 A report showing how many events were loaded from your various sources on the last run of the aggregator.
-</p>
-
-<h2>4. Metadata</h2>
-
-<p>URL: <a href="/services/__ID__/metadata">/services/__ID__/metadata</a></p>
-
-<p>
-A view of your hub's metadata. 
 </p>
 
 <h2>5. Tags</h2>
