@@ -20,8 +20,7 @@ import ElmcityUtils
 from ElmcityUtils import *
 
 ts = TableStorage.MakeDefaultTableStorage()
-delicious = Delicious.MakeDefaultDelicious()
-ids = delicious.LoadHubIdsFromAzureTable()
+ids = Metadata.LoadHubIdsFromAzureTable()
 
 logtable = 'log'
 metatable = 'metadata'
@@ -70,7 +69,7 @@ def message(msg):
   return msg
 
 def get_task(task,calinfo):
-  id = calinfo.delicious_account
+  id = calinfo.id
   interval = System.TimeSpan(CalendarAggregator.Configurator.where_aggregate_interval_hours, 0, 0);
   s = """%s
     start: %s
@@ -93,7 +92,7 @@ def unlock_and_init(id):
    Scheduler.InitTaskForId(id)
 
 def get_task_for_calinfo(calinfo):
-  task = Scheduler.FetchTaskForId(calinfo.delicious_account)
+  task = Scheduler.FetchTaskForId(calinfo.id)
   return get_task(task,calinfo)
 
 def delete_dict(dict):
@@ -122,12 +121,6 @@ if (arg0 == 'test'):
 
     result += 'cwd: ' + os.getcwd() + '\n\n'
     result += 'contents of cwd: ' + ', '.join(glob.glob('./*')) + '\n\n'
-
-
-    result += "Delicious.FetchFeedMetadataFromDeliciousForFeedurlAndId('http://openmikes.org/listings/darkstarpub?ical', 'elmcity')" + '\n\n'
-    r = Delicious.FetchFeedMetadataFromDeliciousForFeedurlAndId('http://openmikes.org/listings/darkstarpub?ical', 'elmcity')
-    result += r.http_response.DataAsString()
-    result += '\n\n'
 
     result += "webrole_reload_interval_hours: %s\n\n" % CalendarAggregator.Configurator.webrole_reload_interval_hours
 
@@ -162,29 +155,6 @@ if ( arg0 == 'feeds' ):
   for key in fr.feeds.Keys:
     result += "%s: %s\n" % (fr.feeds[key], key)
 
-if ( arg0 == 'recache_feeds' ):
-  id = arg1
-  # delete feedurls from aztable
-  q = "$filter=(PartitionKey eq '%s' and feedurl ne '' )" % id 
-  result += q
-  ts_response = ts.QueryEntities(metatable,q)
-  for dict in ts_response.response:
-    result += message('purging: source %s, feedurl %s\n' % ( dict['source'], dict['feedurl'] ) )
-    delete_dict(dict)
-  # recache feedurls to aztable
-  fr = FeedRegistry(id)
-  fr.LoadFeedsFromDelicious()
-  result += 'recaching feeds...'
-  delicious.StoreMetadataForFeedsToAzure(id,fr)
-  result += '...done recaching'
-
-if ( arg0 == 'recache_metadict' ):
-  id = arg1
-  result += 'recaching metadict...'
-  dict = System.Collections.Generic.Dictionary[str,str]()
-  delicious.StoreMetadataForIdToAzure(id,True,dict)
-  result += '...done recaching'
-
 if ( arg0 == 'web_charts' ):
   result += 'starting web charts...'
   args = System.Collections.Generic.List[str]()
@@ -209,9 +179,10 @@ if ( arg0 == 'dashboard' ):
     result += tb
     GenUtils.PriorityLogMsg('info', '_run.py', tb)
 
-
 if ( arg0 == 'pylib' ):
   result = os.path.realpath('.')
+  
+ 
 
 
 
