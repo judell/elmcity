@@ -184,7 +184,7 @@ namespace CalendarAggregator
 			var extra_dict = MakeExtraDict(test_feed_key, test_feed_value);
 			fr.AddFeed(test_feedurl, test_feed_title);
 			delicious.StoreFeedAndMaybeMetadataToAzure(delicious_account, fr, test_feedurl);
-			var dict = delicious.LoadMetadataForIdFromAzureTable(delicious_account);
+			var dict = Metadata.LoadMetadataForIdFromAzureTable(delicious_account);
 			Assert.AreEqual(test_feed_value, dict[test_feed_key]);
 		}
 
@@ -195,7 +195,7 @@ namespace CalendarAggregator
 		[Test]
 		public void LoadHubsIsSuccessful()
 		{
-			List<string> list = delicious.LoadHubIdsFromAzureTable();
+			List<string> list = Metadata.LoadHubIdsFromAzureTable();
 			Assert.That(ContainsTestAccount(list));
 		}
 
@@ -212,7 +212,7 @@ namespace CalendarAggregator
 		public void MergeStoreHubsIsSuccessful()
 		{
 			delicious.StoreHubIdsToAzureTable();
-			var list = delicious.LoadHubIdsFromAzureTable();
+			var list = Metadata.LoadHubIdsFromAzureTable();
 			Assert.That(ContainsTestAccount(list));
 		}
 
@@ -220,7 +220,7 @@ namespace CalendarAggregator
 		public void UpdateStoreHubsIsSuccessful()
 		{
 			delicious.StoreHubIdsToAzureTable();
-			var list = delicious.LoadHubIdsFromAzureTable();
+			var list = Metadata.LoadHubIdsFromAzureTable();
 			Assert.That(ContainsTestAccount(list));
 		}
 
@@ -231,7 +231,7 @@ namespace CalendarAggregator
 		[Test]
 		public void LoadHubMetadataIsSuccessful()
 		{
-			var dict = delicious.LoadMetadataForIdFromAzureTable(delicious_account);
+			var dict = Metadata.LoadMetadataForIdFromAzureTable(delicious_account);
 			AssertMetadata(dict, test_hub_key, test_hub_value);
 		}
 
@@ -249,7 +249,7 @@ namespace CalendarAggregator
 		{
 			var extra_dict = MakeExtraDict(test_feed_key, test_feed_value);
 			delicious.StoreMetadataForIdToAzure(delicious_account, merge: true, extra: extra_dict);
-			var dict = delicious.LoadMetadataForIdFromAzureTable(delicious_account);
+			var dict = Metadata.LoadMetadataForIdFromAzureTable(delicious_account);
 			Assert.AreEqual(test_feed_value, dict[test_feed_key]);
 		}
 

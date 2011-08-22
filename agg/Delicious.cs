@@ -241,15 +241,7 @@ namespace CalendarAggregator
 
 		#region ids
 
-		public List<string> LoadHubIdsFromAzureTable()
-		{
-			var q = string.Format("$filter=(PartitionKey eq '{0}' and RowKey eq '{1}')", "master", "accounts");
-			var dict = TableStorage.QueryForSingleEntityAsDictStr(ts, ts_table, q);
-			var str_list = dict["list"];
-			var array = str_list.Split(',');
-			var list = array.ToList();
-			return list;
-		}
+
 
 		public List<string> FetchHubIdsFromDelicious()
 		{
@@ -302,13 +294,6 @@ namespace CalendarAggregator
 		#endregion
 
 		#region metadata for ids
-
-		public Dictionary<string, string> LoadMetadataForIdFromAzureTable(string id)
-		{
-			var q = string.Format("$filter=(PartitionKey eq '{0}' and RowKey eq '{1}')", id, id);
-			var dict = TableStorage.QueryForSingleEntityAsDictStr(ts, "metadata", q);
-			return dict;
-		}
 
 		public static DeliciousResponse FetchMetadataForIdFromDelicious(string id)
 		{
@@ -697,7 +682,7 @@ this information: ",
 
 				var d = Delicious.MakeDefaultDelicious();
 
-				var azure_metadata = d.LoadMetadataForIdFromAzureTable(id);
+				var azure_metadata = Metadata.LoadMetadataForIdFromAzureTable(id);
 				if (azure_metadata.Keys.Count > 0)
 				{
 					html += "<p>Here is the permanent record, along with extra info added by the elmcity service: ";
