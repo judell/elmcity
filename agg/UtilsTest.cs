@@ -188,6 +188,46 @@ import System
 
 		#endregion events
 
+		#region auth
+
+		[Test]
+		public void IsTrustedTwittererSucceeds()
+		{
+			Assert.That(Utils.IsTrustedTwitterer("judell"));
+		}
+
+		[Test]
+		public void IsTrustedTwittererFails()
+		{
+			Assert.IsFalse(Utils.IsTrustedTwitterer("ev"));
+		}
+
+		[Test]
+		public void ElmcityIdsFromTwitterNameSucceeds()
+		{
+			Assert.That(Utils.ElmcityIdsFromTwitterName("judell").Count > 0);
+		}
+
+		[Test]
+		public void ElmcityIdsFromTwitterNameFails()
+		{
+			Assert.That(Utils.ElmcityIdsFromTwitterName("ev").Count == 0);
+		}
+
+		[Test]
+		public void ElmcityIdUsesTwitterAuthSucceeds()
+		{
+			Assert.That(Utils.ElmcityIdUsesTwitterAuth("elmcity") == true);
+		}
+
+		[Test]
+		public void ElmcityIdUsesTwitterAuthFails()
+		{
+			Assert.That(Utils.ElmcityIdUsesTwitterAuth("a2cal") == false);
+		}
+
+		#endregion
+
 		#region other
 
 		[Test]

@@ -368,7 +368,7 @@ namespace CalendarAggregator
 		{
 			var pop = Configurator.default_population;
 
-			var metadict = delicious.LoadMetadataForIdFromAzureTable(id);
+			var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
 
 			if (metadict.ContainsKey("population"))
 				return Convert.ToInt32(metadict["population"]);
@@ -700,7 +700,7 @@ namespace CalendarAggregator
 
 		#endregion
 
-		 #region vcal
+		#region vcal
 
 		static public string IcsFromAtomPlusVCalAsContent(string atom_plus_vcal_url, string source, TimeZoneInfo tzinfo)
 		{
@@ -738,6 +738,8 @@ namespace CalendarAggregator
 
 		static public string GetMetaHistory(string a_name, string b_name, string id, string flavor)
 		{
+			id = BlobStorage.LegalizeContainerName(id);
+
 			var host = "http://elmcity.blob.core.windows.net";
 			var path = host + "/" + id + "/";
 
@@ -751,11 +753,11 @@ namespace CalendarAggregator
 			}
 			else // flavor == "metadata"
 			{
-				json_a = HttpUtils.FetchUrl(new Uri(path + a_name)).DataAsString();
-				json_b = HttpUtils.FetchUrl(new Uri(path + b_name)).DataAsString();
+				json_a = HttpUtils.FetchUrlNoCache(new Uri(path + a_name)).DataAsString();
+				json_b = HttpUtils.FetchUrlNoCache(new Uri(path + b_name)).DataAsString();
 			}
 
-			var page = HttpUtils.FetchUrl(new Uri(host + "/admin/jsondiff.html")).DataAsString();
+			var page = HttpUtils.FetchUrlNoCache(new Uri(host + "/admin/jsondiff.html")).DataAsString();
 
 			page = page.Replace("__JSON_A__", json_a);
 			page = page.Replace("__JSON_B__", json_b);
@@ -795,9 +797,15 @@ namespace CalendarAggregator
 		{
 			var sb = new StringBuilder();
 			sb.Append("<table>");
-			var metadict = delicious.LoadMetadataForIdFromAzureTable(id);
+			var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
+			var exclude_keys = new List<string>() { "PartitionKey", "RowKey", "Timestamp", "contribute_url", "default_img_html", 
+				"eventful_events", "events", "events_per_person", "facebook_events", "ical_events", "upcoming_events" };
 			foreach (var key in metadict.Keys)
+			{
+				if (exclude_keys.Exists(k => k == key))
+					continue;
 				sb.Append(string.Format("<tr><td>{0}</td><td>{1}</td></tr>", key, metadict[key]));
+			}
 			sb.Append("</table>");
 			return sb.ToString();
 		}
@@ -842,8 +850,11 @@ namespace CalendarAggregator
 			var sb = new StringBuilder();
 			sb.Append("<table>");
 			var row_template = @"<tr>
-<td><input id=""{0}_history_1"" name=""{0}_history_1"" type=""radio"" value=""{1}"">{1}</td>
-<td><input id=""{0}_history_2"" name=""{0}_history_2"" type=""radio"" value=""{1}"">{1}</td>
+<td>
+<input id=""{0}_history_1"" name=""{0}_history_1"" type=""radio"" value=""{1}"">
+<input id=""{0}_history_2"" name=""{0}_history_2"" type=""radio"" value=""{1}"">
+{1}
+</td>
 </tr>";
 			foreach (var name in names)
 			{
@@ -889,9 +900,94 @@ namespace CalendarAggregator
 			bs.PutBlob(id, "metadata.html", Encoding.UTF8.GetBytes(page));
 		}
 
+		public static void UpdateWrdForId(string id)
+		{
+			try
+			{
+				var uri = BlobStorage.MakeAzureBlobUri("admin", "wrd.obj");
+				var wrd = (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri); // acquire wrd
+				WebRoleData.UpdateCalinfoAndRendererForId(id, wrd);
+				bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "WorkerRole.UpdateWrdForId: " + id, e.Message);
+			}
+		}
+
+		public static void PurgePickledCalinfoAndRenderer(string id)
+		{
+			foreach (string pickle in new List<string>() { "renderer", "calinfo" })
+			{
+				var pickle_name = String.Format("{0}.{1}.obj", id, pickle);
+				bs.DeleteBlob(id, pickle_name);
+			}
+		}
+
+		public static void RecreatePickledCalinfoAndRenderer(string id)
+		{
+			try  // create and cache calinfo and renderer, these are nonessential and recreated on demand if needed
+			{
+				var calinfo = new Calinfo(id);
+				var cr = new CalendarRenderer(calinfo);
+				bs.SerializeObjectToAzureBlob(calinfo, id, id + ".calinfo.obj");
+				bs.SerializeObjectToAzureBlob(cr, id, id + ".renderer.obj");
+			}
+			catch (Exception e2)
+			{
+				GenUtils.PriorityLogMsg("exception", "GeneralAdmin: saving calinfo and renderer: " + id, e2.Message);
+			}
+		}
+
 		#endregion
 
 		#region other
+
+		public static int UpdateFeedCount(string id)
+		{
+			var fr = new FeedRegistry(id);
+			fr.LoadFeedsFromAzure(FeedLoadOption.all);
+			var new_feed_count = fr.feeds.Count();
+			var dict = new Dictionary<string, object>() { { "feed_count", new_feed_count.ToString() } };
+			TableStorage.DictObjToTableStore(TableStorage.Operation.merge, dict, "metadata", id, id);
+			return new_feed_count;
+		}
+
+		public static List<string> ElmcityIdsFromTwitterName(string screen_name)
+		{
+			var q = String.Format("$filter=TwitterName eq '{0}'", screen_name);
+			try
+			{
+				var list = ts.QueryEntities("trustedtwitterers", q).list_dict_obj;
+				return list.Select(x => (string) x["RowKey"]).ToList();
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ElmcityIdsFromTwitterName", e.Message);
+				return null;
+			}
+		}
+
+		public static bool IsTrustedTwitterer(string screen_name)
+		{
+			var q = String.Format("$filter=PartitionKey eq 'trustedtwitterers' and TwitterName eq '{0}'", screen_name);
+			return ts.QueryEntities("trustedtwitterers", q).list_dict_obj.Count > 0; // twitter name to elmcity id is many to one
+		}
+
+		public static bool ElmcityIdUsesTwitterAuth(string id)
+		{
+			try
+			{
+				var q = String.Format("$filter=RowKey eq '{0}'", id);
+				var list = ts.QueryEntities("trustedtwitterers", q).list_dict_obj;
+				return list.Count == 1;  
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ElmcityIdUsesTwitterAuth", e.Message);
+				return false;
+			}
+		}
 
 		public static bool UseNonIcalService(NonIcalType type, Dictionary<string, string> settings, Calinfo calinfo)
 		{
@@ -998,7 +1094,7 @@ namespace CalendarAggregator
 			return Uri.EscapeDataString(Convert.ToBase64String(b64array)).Replace('%', '_');
 		}
 
-		public static string EmbedHtmlSnippetInDefaultPageWrapper(string id, string snippet, string title)
+		public static string EmbedHtmlSnippetInDefaultPageWrapper(Calinfo calinfo, string snippet, string title)
 		{
 
 			return string.Format(@"
@@ -1012,9 +1108,9 @@ namespace CalendarAggregator
 </body>
 </html>
 ",
-		   id,
+		   calinfo.delicious_account,
 		   title,
-		   Configurator.default_css,
+		   calinfo.css,
 		   snippet);
 		}
 
@@ -1070,8 +1166,6 @@ namespace CalendarAggregator
 
 		public List<string> where_ids = new List<string>();
 		public List<string> what_ids = new List<string>();
-
-		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
 		// on startup, and then periodically, this list of "ready" hubs is constructed
 		// ready means that the hub has been added to the system, and there has been at 
