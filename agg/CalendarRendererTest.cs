@@ -26,7 +26,7 @@ namespace CalendarAggregator
 	[TestFixture]
 	public class CalendarRendererTest
 	{
-		private Calinfo calinfo = new Calinfo(Configurator.testid);
+		private Calinfo calinfo = new Calinfo(Configurator.testid); // e.g. elmcity
 		private CalendarRenderer cr;
 		private ZonelessEventStore es;
 		private string event_html_header = "<div class=\"eventBlurb\"";
