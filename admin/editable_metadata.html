@@ -1,0 +1,577 @@
+<!doctype html>
+
+<!--
+/* ********************************************************************************
+ *
+ * Copyright 2011 Microsoft Corporation
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0 
+ * Unless required by applicable law or agreed to in writing, software distributed 
+ * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the 
+ * specific language governing permissions and limitations under the License. 
+ *
+ * *******************************************************************************/
+-->
+
+
+<head>
+
+<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+
+<link href="http://elmcity.blob.core.windows.net/admin/elmcity.css" rel="stylesheet" type="text/css" />
+<title>elmcity __FLAVOR__</title>
+
+
+<script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.4.2.min.js"></script>
+<script src="http://elmcity.blob.core.windows.net/admin/jquery.jeditable.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+
+//var host = 'http://127.0.0.1';
+var host = 'http://elmcity.cloudapp.net';
+
+var flavor = '__FLAVOR__';
+
+var json_url = host + '/services/__ID__/get_json_metadata?flavor=__FLAVOR__';
+
+var completion_result = $.ajax({
+   url: json_url,
+   cache: false,
+   async: false
+   });
+
+var json = JSON.parse(completion_result.responseText);
+var original = JSON.stringify(json);
+
+var editable_metadict = {};
+
+var editable_metadict_index;
+
+var metadata_select_fields = {
+  'eventbrite'   : null,
+  'eventful'     : null,
+  'facebook'     : null,
+  'header_image' : null,
+  'upcoming'     : null
+  }
+
+var metadata_include_fields = {
+  'contact'       : 'Email address for the curator of the hub',
+  'css'           : 'URL for alternate CSS (default: http://elmcity.blob.core.windows.net/admin/elmcity-1.2.css)',
+  'descriptions'  : 'Include iCalendar DESCRIPTION in XML and JSON outputs (default: no)',
+  'display_width' : 'Width of the default HTML view (default: 470)',
+  'eventbrite'    : 'Search EventBrite for events within radius of the hub (default: yes)',
+  'eventful'      : 'Search Eventful for events within radius of the hub (default: yes)',
+  'facebook'      : 'Search Facebook for events within radius of the hub (default: yes)',
+//  'feed_count'    : 'Number of iCalendar feeds (read only)',
+  'header_image'  : 'URL of a header image for the default HTML view (default: none)',
+  'img'           : 'Display the image specified by header_image (default: no)',
+  'lat'           : 'Latitude of center of hub (default: derived from location name if location hub)',
+  'lon'           : 'Longitude of center of hub (default: derived from location name if location hub)',
+  'population'    : '(only for location hub) (default: derived from location name)',
+  'radius'        : 'Search radius for EventBrite/Eventful/Upcoming (default: 5 miles)',
+  'template'      : 'URL for alternate HTML template (default: http://elmcity.blob.core.windows.net/admin/events-1.2.tmpl)',
+  'title'         : 'Title of hub (Events for Huntington, WV) (default: hub id)',
+  'twitter'       : 'Twitter name used to authenticate to, and control, the hub (read only)',
+  'upcoming'      : 'Search EventBrite for events within radius of the hub (default: yes)',
+  'tz'            : 'Time zone for hub (default: Eastern) (required only for location hub)',
+  'type'          : 'Type of hub. (where for location hub, otherwise what) (read only)',
+  'use_rdfa'      : 'Include RDFa metadata in default HTML view (default: yes)',
+  'where'         : 'Location name if hub is a location hub (Ithaca, NY) (read only)'
+  }
+
+var metadata_readonly_fields = {
+//  'feed_count'    : null,
+  'twitter'       : null,
+  'type'          : null,
+  'where'         : null
+  }
+
+
+var feeds_select_fields = {
+  'xcal'   : null,
+  'vcal'   : null
+}
+
+var feeds_include_fields = {
+  'url'           : 'The home page for the event sponsor (e.g.: http://westsidesoccer.org/)',
+  'feedurl'       : 'The iCalendar (ICS) feed (e.g.: http://westsidesoccer.org/events.ics)',
+  'source'        : 'Name for the feed (e.g.: West Side Youth Soccer)',
+  'category'      : 'One or more tags for the feed (e.g.: sports,soccer) (comma-delimited if more than one)',
+  'xcal'          : 'Convert from xCal-style RSS to ICS (default: no) (works for, e.g., http://events.pressdemocrat.com',
+  'vcal'          : 'Convert from vCal-style RSS to ICS (default: no) (works for, e.g., http://www.techhui.com)'
+  }
+
+var feeds_defaults = {
+  'url'           : '',
+  'feedurl'       : '',
+  'source'        : '',
+  'category'      : '',
+  'xcal'          : 'no',
+  'vcal'          : 'no'
+  }
+
+var feeds_readonly_fields = {
+}
+
+
+var select_fields  = {};
+var include_fields = {};
+var readonly_fields = {};
+
+var divider = '<hr class="divider" style="width:50%;margin:0 auto 0 0">';
+
+function gup( name )
+  {  
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");  
+  var regexS = "[\\?&]"+name+"=([^&#]*)";  
+  var regex = new RegExp( regexS );  
+  var results = regex.exec( window.location.href );   
+  if( results == null )    
+    return "";  
+  else    
+    return results[1];
+  }
+
+
+function load_meta()
+  {
+
+  if ( flavor == 'metadata' )
+    {
+    json = [ json ];
+    select_fields =  metadata_select_fields;
+    include_fields = metadata_include_fields;	
+    readonly_fields = metadata_readonly_fields;	
+    show_metadicts();
+    }
+
+  if ( flavor == 'feeds' )
+    {
+    select_fields =  feeds_select_fields;
+    include_fields = feeds_include_fields;
+    readonly_fields = feeds_readonly_fields;	
+    show_metadicts();
+    }
+
+  }
+
+function show_metadicts()
+  {   
+  $('#metadata').empty();
+
+  for ( i = 0; i < json.length; i++)
+    {
+    var metadict = json[i];
+    $('#metadata').append('<div id="' + i + '"/>');
+    show_metadict(i, metadict);
+    }
+
+  if ( flavor == 'feeds' )
+    {
+    $('#add_controls').css('display','block');
+    $('#feedcount').html(json.length + ' feeds');
+    $('#addfeed').html('<input type="submit" id="newfeed" value="add new feed" onclick="add_metadict()">');
+    $('#top_divider').html(divider);
+    }
+
+
+  }
+
+function show_metadict(index, metadict) 
+  {
+  var keys = Object.keys(metadict);
+  for ( var i = 0; i < keys.length; i++  )
+    {
+    var key = keys[i];
+    if ( ! include_fields.hasOwnProperty(key) )
+       delete metadict[key];
+    }
+
+  var div_id = index;
+
+  var div = $('#' + index);
+  div.empty();
+
+  var table_id = index + '_metatable';
+  div.append('<table id="' + table_id + '">');
+  var table = $('#' + table_id);
+
+  var record_keys;
+
+  if ( flavor == 'feeds' )
+    record_keys = [ 'source', 'feedurl', 'url', 'category', 'xcal', 'vcal' ]; 
+  else
+    record_keys = Object.keys(include_fields).sort();
+
+  for ( var i in record_keys )
+    {
+    var key = record_keys[i];
+    var row_id = index + '_' + key;
+    if ( ! metadict.hasOwnProperty(key) )
+      metadict[key] = '...';
+    val = metadict[key] == '' ? '...' : metadict[key];
+
+    if ( flavor == 'feeds' && key == 'feedurl' )
+      {
+      var feedurl = metadict[key];
+      val += validate_feedurl(feedurl);
+      }
+ 
+    table.append('<tr id="' + row_id + '">' + 
+      '<td name="key">' + 
+      '<a title="' + include_fields[key] + '">' + key + '</a>' +
+      '</td><td name="val">' + 
+      val + 
+      '</td></tr>');
+    }
+
+  table.prepend('<tr><td id="names_col">&nbsp;</td><td id="vals_col">&nbsp;</td></tr>');  
+
+  div.append('</table>');
+
+  var edit_delete_controls_id = make_id(index, 'edit_delete_controls');
+  div.append('<p id="' + edit_delete_controls_id + '"></p>');
+
+  var edit_delete_controls = $('#' + edit_delete_controls_id);
+
+  var edit_button_id = make_id(index, 'edit_button');
+  edit_delete_controls.append(
+      '<input type="submit" id="' + edit_button_id   + '" value="edit" onclick="make_metadict_editable(' + index + ')">'
+      );
+
+  if ( flavor == 'feeds' )
+    {
+    var delete_button_id = make_id(index, 'delete_button');
+
+    edit_delete_controls.append(
+             '<input type="submit" id="' + delete_button_id + '" value="delete" onclick="delete_metadict(' + index + ')">');
+
+     append_divider(div);
+    }
+
+  }
+
+
+function make_metadict_editable(index)
+  {
+  var edit_delete_controls_id = make_id(index, 'edit_delete_controls');  // remove edit/delete controls
+  $('#' + edit_delete_controls_id).empty();
+
+  $('#add_controls').css('display','none');                      // hide add controls
+
+  var save_changes_id = make_id(index, 'save_changes') // hide save changes until there is a change
+
+  if ( flavor == 'feeds' )  // focus on just this feed
+    {
+    var keys = Object.keys(json);
+    for ( i in keys )
+      {
+      if ( i != index )
+        $('#' + i).css('display','none');
+      }
+    }   
+
+  var editlink_id = make_id(index, 'editlink');
+  $('#' + editlink_id).html('');
+  var metadict = json[index];
+
+  $('#names_col').html('<i>names</i>');
+  $('#vals_col').html('<i>values</i>');
+
+  for (key in metadict)
+    {
+    var row_id = index + '_' + key;
+    var tr = $('#' + row_id);
+    make_field_editable(tr, key, metadict[key], index);
+    }
+
+  var submit_id = make_id(index, 'submit');
+
+  var save_changes_id = make_id(index,'save_changes');
+  var cancel_changes_id = make_id(index,'cancel_changes');
+
+  $('#' + index).append(
+    '<p id="' + submit_id + '">'    + 
+    '<input type="submit" id="' + save_changes_id + '" value="save changes" onclick="update_json_blob()" /> ' + 
+    '<input type="submit" id="' + cancel_changes_id + '" value="cancel" onclick="undo_all()" /> ' + 
+    '</p>'
+     );
+
+  $('#' + save_changes_id).css('display','none');
+
+ var table_id = make_id(index,'metatable');
+ var table = $('#' + table_id);
+ table.append('<tr><td style="font-style:italic">hover names<br/> for help</td><td style="font-style:italic">click values<br/> to edit</td></tr>');
+
+ activate_editables();
+ }
+
+
+function make_field_editable(tr, key, value, index)
+  {
+  var type = 'textarea';
+
+  if ( select_fields.hasOwnProperty(key) )
+      type = 'select_yes_no';
+
+    if ( key == 'tz' )
+      type = 'select_tz';
+
+    var field_id = make_prefixed_id('fld', index, key);
+
+    switch (type)
+    {
+    case 'select_yes_no':
+      editable = '<span class="editable_changeable editable_select_yes_no" id="' +  field_id + '">' + value + '</span>'; 
+      break;
+    case 'select_tz':
+      editable = '<span class="editable_changeable editable_select_tz" id="' +  field_id + '">' + value + '</span>'; 
+      break;
+    default:
+      editable = '<div class="editable_changeable editable_textarea" id="' +  field_id + '">' + value + '</div>'; 
+    }
+
+    if ( readonly_fields.hasOwnProperty(key) )
+      editable = '<a title="read only">' + value + '</a>';
+  
+    tr.html (
+         '<td name="key">' + 
+         '<a title="' + include_fields[key] + '">' + key + '</a>' +
+         '</td><td name="val">' + 
+         editable + 
+         '</td></tr>'
+         );
+  }
+
+
+function activate_editables()
+  {
+  $.fn.editable.defaults['height'] = '30px';
+  $.fn.editable.defaults['width'] =  '300px';
+  $.fn.editable.defaults['placeholder'] = '...';
+
+  $(".editable_textarea").editable(handle_submit, { 
+      type   : 'textarea',
+      select : true,
+      submit : 'ok',
+      onsubmit: onsubmit,
+      onedit:   onedit,
+      onreset:  onreset,
+      cancel :  'cancel',
+      tooltip: 'click to edit'
+    });
+
+  $(".editable_select_yes_no").editable(handle_submit, { 
+      type   : 'select',
+      data   : "{ 'yes':'yes', 'no':'no', 'selected':'no' }",
+      select : true,
+      submit : 'ok',
+      onsubmit: onsubmit,
+      onedit:   onedit,
+      onreset:  onreset,
+      cancel : 'cancel',
+      tooltip: 'click to edit'
+    });
+
+  $(".editable_select_tz").editable(handle_submit, { 
+      type   : 'select',
+      data   : "{'afghanistan':'afghanistan','alaskan':'alaskan','arab':'arab','arabian':'arabian','arabic':'arabic','argentina':'argentina','atlantic':'atlantic','aus+central':'aus+central','aus+eastern':'aus+eastern','azerbaijan':'azerbaijan','azores':'azores','canada+central':'canada+central','cape+verde':'cape+verde','caucasus':'caucasus','cen.+australia':'cen.+australia','central+america':'central+america','central+asia':'central+asia','central+brazilian':'central+brazilian','central+europe':'central+europe','central+european':'central+european','central+pacific':'central+pacific','central':'central','central+(mexico)':'central+(mexico)','china':'china','dateline':'dateline','e.+africa':'e.+africa','e.+australia':'e.+australia','e.+europe':'e.+europe','e.+south+america':'e.+south+america','eastern':'eastern','egypt':'egypt','ekaterinburg':'ekaterinburg','fiji':'fiji','fle':'fle','georgian':'georgian','gmt':'gmt','greenland':'greenland','greenwich':'greenwich','gtb':'gtb','hawaiian':'hawaiian','india':'india','iran':'iran','israel':'israel','jordan':'jordan','korea':'korea','mauritius':'mauritius','mid-atlantic':'mid-atlantic','middle+east':'middle+east','montevideo':'montevideo','morocco':'morocco','mountain':'mountain','mountain+(mexico)':'mountain+(mexico)','myanmar':'myanmar','n.+central+asia':'n.+central+asia','namibia':'namibia','nepal':'nepal','new+zealand':'new+zealand','newfoundland':'newfoundland','north+asia+east':'north+asia+east','north+asia':'north+asia','pacific+sa':'pacific+sa','pacific':'pacific','pacific+(mexico)':'pacific+(mexico)','pakistan':'pakistan','romance':'romance','russian':'russian','sa+eastern':'sa+eastern','sa+pacific':'sa+pacific','sa+western':'sa+western','samoa':'samoa','se+asia':'se+asia','singapore':'singapore','south+africa':'south+africa','sri+lanka':'sri+lanka','taipei':'taipei','tasmania':'tasmania','tokyo':'tokyo','tonga':'tonga','us+eastern':'us+eastern','us+mountain':'us+mountain','venezuela':'venezuela','vladivostok':'vladivostok','w.+australia':'w.+australia','w.+central+africa':'w.+central+africa','w.+europe':'w.+europe','west+asia':'west+asia','west+pacific':'west+pacific'}",
+      select : true,
+      submit : 'ok',
+      onsubmit: onsubmit,
+      onedit:   onedit,
+      onreset:  onreset,
+      cancel : 'cancel',
+      tooltip: 'click to edit'
+    });
+  }
+
+function handle_submit(value)
+ {
+ return value;
+ }
+
+function onedit(form)
+  {
+  }
+
+function onreset(form)
+  {
+  }
+
+
+function onsubmit(form)
+  {
+   var field_id = form.onsubmit.arguments[1].attributes["id"].value;  // fld_11_category
+
+   index = field_id.match(/^fld_(\d+)/)[1];    // 11
+
+   key = field_id.replace(/^fld_/,'');         // 11_category
+   key = key.replace(index + '_','')           // category
+
+   var val = form.onsubmit.arguments[1].firstChild.firstChild.value; // agriculture
+
+   if ( json[index][key] != val )             // json[11]['category'] != 'agriculture'
+      {
+      json[index][key] = val;                
+      $('#' + field_id).addClass('editable_changed');
+      var save_changes_id = make_id(index, 'save_changes');
+      $('#' + save_changes_id).css('display','inline');
+      }
+  }
+
+function undo_all()
+  {
+  json = JSON.parse(original);
+  if ( flavor == 'metadata' )
+    json = [ json ];
+  show_metadicts();
+  }
+
+
+function update_json_blob()
+  {
+
+  try 
+  {
+
+  var post_json = ( flavor == 'feeds' )
+                ? JSON.stringify(json) 
+                : JSON.stringify(json[0]);
+
+  var success = true;
+
+  var url = host + '/services/__ID__/put_json___FLAVOR__?name=__ID__.__FLAVOR__.json';
+
+  var completion_result = $.ajax({
+  url: url,
+  data: 'json=' + encodeURIComponent(post_json),
+  type: 'POST',
+  async: false,
+  complete: function(xhr, status) {
+     var echo_matches = (post_json == xhr.responseText.replace(/\s*$/g,""));
+     if ( ( status != 'success' ) || ( echo_matches != true  ) )
+        { 
+        success = false;
+        alert('update failed, status ' + status + ' ' + xhr.status + ', change not saved');
+        }
+
+     }
+   });
+
+  }
+
+  catch (error)  { alert (error); }
+
+  if ( success )
+    {
+    show_metadicts();
+    return;
+    }
+  else
+    {
+    undo_all();
+    }
+
+
+  show_metadicts();
+  }
+
+
+function make_id(index, name)
+  {
+  return index + '_' + name;
+  }
+
+function make_prefixed_id(prefix,index, name)
+  {
+  return prefix + '_' + index + '_' + name;
+  }
+
+function delete_metadict(index)
+  {
+  var table_id = make_id(index, 'metatable');
+  $('#' + table_id).css('background-color','lightgray');
+
+  var edit_delete_controls_id = make_id(index, 'edit_delete_controls');
+  $('#' + edit_delete_controls_id).empty();
+
+  var delete_metadict_id = make_id(index, 'delete_metadict');
+
+  $('#newfeed').attr('disabled',true);
+
+  var keys = Object.keys(json);
+  for ( i in keys )                 // hide other edit/delete controls while this delete in progress
+    {
+    if ( i != index )
+      {
+      $('#' + i + '_edit_button').attr('disabled',true);
+      $('#' + i + '_delete_button').attr('disabled',true);
+      }
+    }
+
+  var html = '<p id="' + delete_metadict_id + '">' + 
+   '<input type="submit" value="save deletion" onclick="save_deleted_metadict(' + index + ')"/>' +
+   '<input type="submit" value="undo deletion" onclick="undo_all()"/>' +
+    '</p>';
+
+  
+  $('#' + index).append(html);
+
+  }
+
+function save_deleted_metadict(index)
+  {
+  json.splice(index,1);
+  update_json_blob();
+  show_metadicts();
+  }
+
+function add_metadict()
+  {
+  json.splice(0,0,feeds_defaults);
+  show_metadicts();
+  make_metadict_editable(0,'feed');
+  }
+
+
+function append_divider(element)
+  {
+  element.append(divider);
+  }
+
+String.prototype.startsWith = function(str){
+    return (this.indexOf(str) === 0);
+}
+
+function validate_feedurl(feedurl)
+  {
+  //var url = 'http://icalvalid.cloudapp.net/?uri=' + encodeURIComponent(feedurl);
+  //return ' <a href="' + url + '">check it</a>';
+  return '';
+  }
+
+
+</script>
+
+</head>
+
+<body onload="load_meta();">
+
+<p><a href="/services/__ID__/metadata">view all hub/feed info</a></p>
+
+<p id="add_controls">
+<span id="feedcount"></span>
+<span id="addfeed"></span>
+</p>
+
+<p id="top_divider"></p>
+
+<p id="metadata"></p>
+
+</body>
+</html>
