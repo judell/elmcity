@@ -141,7 +141,7 @@ namespace WorkerRole
 
 					// SaveSettings(settings); // not needed
 
-					ids = delicious.LoadHubIdsFromAzureTable();
+					ids = Metadata.LoadHubIdsFromAzureTable();
 
 					twitter_direct_messages = TwitterApi.GetNewTwitterDirectMessages(); // get new control messages
 
@@ -166,7 +166,8 @@ namespace WorkerRole
 								{
 									GenUtils.PriorityLogMsg("info", "Received meta_refresh message from " + id, null);
 									TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your meta_refresh message");
-									UpdateFeedsAndMetadataForIdToAzure(id);
+									if (Utils.ElmcityIdUsesTwitterAuth(id) == false) // revert to old delicious-based mechanism
+										UpdateFeedsAndMetadataForIdToAzure(id);
 									Utils.MakeMetadataPage(id);
 									TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://elmcity.cloudapp.net/services/" + id + "/metadata");
 									calinfo = new Calinfo(id);
@@ -289,38 +290,12 @@ namespace WorkerRole
 				var snapshot_changed = ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.DictStr, "metadata", dict);
 				if (snapshot_changed == true)
 				{
-					PurgePickledCalinfoAndRenderer(id);    // delete [id].calinfo.obj and [id].renderer.obj
-					RecreatePickledCalinfoAndRenderer(id); // recreate them
-					UpdateWrdForId(id);   // update wrd.obj (webrole data)
+					Metadata.UpdateDependentStructures(id);
 				}
 			}
 			catch (Exception e)
 			{
 				logger.LogMsg("exception", "UpdateMetadataToAzure", e.Message + e.StackTrace);
-			}
-		}
-
-		public static void UpdateWrdForId(string id)
-		{
-			try
-			{
-				var uri = BlobStorage.MakeAzureBlobUri("admin", "wrd.obj");
-				var wrd = (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri); // acquire wrd
-				WebRoleData.UpdateCalinfoAndRendererForId(id, wrd);
-				bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "WorkerRole.UpdateWrdForId: " + id, e.Message);
-			}
-		}
-
-		private static void PurgePickledCalinfoAndRenderer(string id)
-		{
-			foreach (string pickle in new List<string>() { "renderer", "calinfo" })
-			{
-				var pickle_name = String.Format("{0}.{1}.obj", id, pickle);
-				bs.DeleteBlob(id, pickle_name);
 			}
 		}
 
@@ -435,9 +410,17 @@ namespace WorkerRole
 			try
 			{
 				var dicts = delicious.StoreFeedsAndMaybeMetadataToAzure(fr_delicious, id);
-				var nulls = dicts.FindAll(x => x == null).Count;  
-				if (nulls == 0)     // don't save a snapshot if any of the id's feed metadata queries returns null (because MetadataQueryOutcome != Success)
-					ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.ListDictStr, "feeds", dicts);
+				var has_no_nulls = dicts.Count > 0 && dicts.FindAll(x => x == null).Count == 0;
+				if (has_no_nulls)  // don't save a snapshot if null or incomplete response from delicious
+				{
+					var saved = ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.ListDictStr, "feeds", dicts);
+					if (saved)
+						GenUtils.PriorityLogMsg("info", "SavedJsonSnapshot for " + id, null);
+				}
+				else
+				{
+					GenUtils.PriorityLogMsg("warning", "StoreFeedsAndMaybeMetadataToAzure: " + id, "null or incomplete response");
+				}
 			}
 			catch (Exception e)
 			{
@@ -502,7 +485,14 @@ namespace WorkerRole
 			else
 				fr.LoadFeedsFromAzure(FeedLoadOption.all);
 
-			var id = calinfo.delicious_account;
+			if ( Convert.ToInt32(calinfo.feed_count) != fr.feeds.Count ) // feeds were added or deleted
+			{
+				var new_feed_count = Utils.UpdateFeedCount(calinfo.id);
+				calinfo.feed_count = new_feed_count.ToString();                // update this instance
+			}
+
+			var id = calinfo.id;
+
 			ZonedEventStore ical = new ZonedEventStore(calinfo, ".ical");
 			try
 			{
@@ -559,7 +549,7 @@ namespace WorkerRole
 
 		public static void SaveWhereStats(FeedRegistry fr, Calinfo calinfo)
 		{
-			var id = calinfo.delicious_account;
+			var id = calinfo.id;
 			logger.LogMsg("info", "SaveWhereStats: " + id, null);
 			NonIcalStats estats = GetNonIcalStats(NonIcalType.eventful, id, calinfo, settings);
 			NonIcalStats ustats = GetNonIcalStats(NonIcalType.upcoming, id, calinfo, settings);
@@ -591,7 +581,7 @@ namespace WorkerRole
 			var events_per_person = Convert.ToInt32(futurecount) / (float)pop;
 			string preamble = MakeWherePreamble(estats, ustats, ebstats, fbstats, pop, futurecount, events_per_person);
 			report = preamble + report;
-			report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(id, report, "stats");
+			report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(calinfo, report, "stats");
 			bs.PutBlob(id, id + ".stats.html", new Hashtable(), Encoding.UTF8.GetBytes(report), null);
 
 			var dict = new Dictionary<string, object>();
@@ -602,7 +592,7 @@ namespace WorkerRole
 
 		private static void StatsRow(string id, Dictionary<string, IcalStats> istats, ref string report, ref int futurecount, string feedurl)
 		{
-			var feed_metadict = delicious.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
+			var feed_metadict = Metadata.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
 			string homeurl;
 			feed_metadict.TryGetValue("url", out homeurl);
 			string redirected_url;
@@ -614,7 +604,7 @@ namespace WorkerRole
 
 		public static void SaveWhatStats(FeedRegistry fr, Calinfo calinfo)
 		{
-			var id = calinfo.delicious_account;
+			var id = calinfo.id;
 			logger.LogMsg("info", "SaveWhatStats: " + id, null);
 			Dictionary<string, IcalStats> istats = GetIcalStats(id);
 			string report = "";
@@ -627,7 +617,7 @@ namespace WorkerRole
 			report += "</table>\n";
 			string preamble = MakeWhatPreamble(futurecount);
 			report = preamble + report;
-			report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(id, report, "stats");
+			report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(calinfo, report, "stats");
 			bs.PutBlob(id, id + ".stats.html", new Hashtable(), Encoding.UTF8.GetBytes(report), null);
 		}
 
@@ -747,7 +737,7 @@ All events {8}, population {9}, events/person {10:f}
 
 		public static void MergeIcs(Calinfo calinfo)
 		{
-			var id = calinfo.delicious_account;
+			var id = calinfo.id;
 			logger.LogMsg("info", "MergeIcs: " + id, null);
 			List<string> suffixes = new List<string>() { "ical" };
 			if (calinfo.hub_enum == CalendarAggregator.HubType.where)
@@ -758,7 +748,7 @@ All events {8}, population {9}, events/person {10:f}
 				}
 			try
 			{
-				var metadict = delicious.LoadMetadataForIdFromAzureTable(id);
+				var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
 
 				var all_ical = new iCalendar();
 				Collector.AddTimezoneToDDayICal(all_ical, calinfo.tzinfo);
@@ -880,14 +870,15 @@ All events {8}, population {9}, events/person {10:f}
 				GenUtils.PriorityLogMsg("exception", "GeneralAdmin.RecacheHubs", e0.Message);
 			}
 
-			var ids = delicious.LoadHubIdsFromAzureTable();
+			var ids = Metadata.LoadHubIdsFromAzureTable();
 			ids = MaybeAdjustIdsForTesting(ids);
 
 			try  // fetch feeds and metadata from delicious, store in azure table, update metadata pages
 			{
 				foreach (var id in ids)
 				{
-					UpdateFeedsAndMetadataForIdToAzure(id);
+					if ( Utils.ElmcityIdUsesTwitterAuth(id) == false ) // revert to old delicious-based mechanism
+						UpdateFeedsAndMetadataForIdToAzure(id);
 				}
 			}
 			catch (Exception e1)
@@ -907,21 +898,6 @@ All events {8}, population {9}, events/person {10:f}
 				GenUtils.PriorityLogMsg("exception", "GeneralAdmin: creating wrd", e3.Message);
 			}
 
-		}
-
-		public static void RecreatePickledCalinfoAndRenderer(string id)
-		{
-			try  // create and cache calinfo and renderer, these are nonessential and recreated on demand if needed
-			{
-				var calinfo = new Calinfo(id);
-				var cr = new CalendarRenderer(calinfo);
-				bs.SerializeObjectToAzureBlob(calinfo, id, id + ".calinfo.obj");
-				bs.SerializeObjectToAzureBlob(cr, id, id + ".renderer.obj");
-			}
-			catch (Exception e2)
-			{
-				GenUtils.PriorityLogMsg("exception", "GeneralAdmin: saving calinfo and renderer: " + id, e2.Message);
-			}
 		}
 
 		public static void UpdateFeedsAndMetadataForIdToAzure(string id)
@@ -985,12 +961,6 @@ All events {8}, population {9}, events/person {10:f}
 			{
 				logger.LogMsg("exception", "HighFrequencyScript", ex.Message + ex.StackTrace);
 			}
-		}
-
-		private static void SaveSettings(Dictionary<string, string> dict)
-		{
-			var blob_name = DnsUtils.TryGetHostName("127.0.0.1") + ".settings.txt";
-			ObjectUtils.SaveDictAsTextToBlob(dict, bs, "admin", blob_name);
 		}
 
 		/*
