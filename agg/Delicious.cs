@@ -146,13 +146,6 @@ namespace CalendarAggregator
 
 		#region metadata for feeds
 
-		public Dictionary<string, string> LoadFeedMetadataFromAzureTableForFeedurlAndId(string feedurl, string id)
-		{
-			string rowkey = Utils.MakeSafeRowkeyFromUrl(feedurl);
-			var q = string.Format("$filter=(PartitionKey eq '{0}' and RowKey eq '{1}')", id, rowkey);
-			return TableStorage.QueryForSingleEntityAsDictStr(ts, "metadata", q);
-		}
-
 		public static DeliciousResponse FetchFeedMetadataFromDeliciousForFeedurlAndId(string feedurl, string id)
 		{
 			return FetchMetadataFromDeliciousForUrlAndId(feedurl, id);
