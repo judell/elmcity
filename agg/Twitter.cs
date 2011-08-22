@@ -197,11 +197,7 @@ namespace CalendarAggregator
 		{
 			text = text.TruncateToLength(140);
 			var url = "http://api.twitter.com/direct_messages/new.xml";
-			//var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
-			//request.ServicePoint.Expect100Continue = false; // http://a-kicker-n.blogspot.com/2009/03/how-to-disable-passing-of-http-header.html
-			//request.Method = "POST";
 			var post_data = String.Format("user={0}&text={1}", recipient, text);
-			//var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, data);
 			var xml = CallTwitterApi(OAuthTwitter.Method.POST, url, post_data);
 			return Encoding.UTF8.GetString(xml);
 		}
@@ -210,9 +206,6 @@ namespace CalendarAggregator
 		{
 			var url = String.Format("http://api.twitter.com/direct_messages/destroy/{0}.xml", id);
 			var xml = CallTwitterApi(OAuthTwitter.Method.POST, url, String.Empty);
-			//var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
-			//request.Method = "POST";
-			//var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
 			return Encoding.UTF8.GetString(xml);
 		}
 
@@ -220,10 +213,14 @@ namespace CalendarAggregator
 		{
 			var url = String.Format("http://api.twitter.com/friendships/create/{0}.xml", account);
 			var xml = CallTwitterApi(OAuthTwitter.Method.POST, url, String.Empty);
-			//var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
-			//request.Method = "POST";
-			//var response = HttpUtils.DoAuthorizedHttpRequest(request, Configurator.twitter_account, Configurator.twitter_password, new byte[0]);
 			return Encoding.UTF8.GetString(xml);
+		}
+
+		public static bool UserFollowsUser(string user_a, string user_b)
+		{
+			var url = String.Format("http://api.twitter.com/1/friendships/exists.json?screen_name_a={0}&screen_name_b={1}", user_a, user_b);
+			var json = CallTwitterApi(OAuthTwitter.Method.GET, url, String.Empty);
+			return Encoding.UTF8.GetString(json) == "true";
 		}
 
 		public static List<TwitterDirectMessage> GetNewTwitterDirectMessagesFromId(string id)

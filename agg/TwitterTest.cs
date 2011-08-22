@@ -43,6 +43,14 @@ namespace CalendarAggregator
 			Assert.That(msg.recipient_screen_name == Configurator.twitter_account);
 			TwitterApi.DeleteTwitterDirectMessage(ids.First());
 		}
+
+		[Test]
+		public void ElmcityAzureFollowsJudell()
+		{
+			var result = TwitterApi.UserFollowsUser("elmcity_azure", "judell");
+			Assert.That(result == true);
+		}
+
 	}
 }
 
