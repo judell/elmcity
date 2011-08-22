@@ -91,7 +91,7 @@ namespace CalendarAggregator
 			try
 			{
 				this.calinfo = calinfo;
-				this.id = calinfo.delicious_account;
+				this.id = calinfo.id;
 
 				try
 				{
@@ -100,7 +100,7 @@ namespace CalendarAggregator
 				catch (Exception e)
 				{
 					GenUtils.PriorityLogMsg("exception", "CalendarRenderer: cannot fetch template", e.InnerException.Message);
-					throw;
+					throw (e);
 				}
 
 				this.xmlfile = this.id + ".xml";
@@ -124,7 +124,8 @@ namespace CalendarAggregator
 			string xml = "";
 			xml = this.RenderXml(0);
 			byte[] bytes = Encoding.UTF8.GetBytes(xml.ToString());
-			BlobStorage.WriteToAzureBlob(this.bs, this.id, this.xmlfile, "text/xml", bytes);
+			//BlobStorage.WriteToAzureBlob(this.bs, this.id, this.xmlfile, "text/xml", bytes);
+			this.bs.PutBlob(this.id, this.xmlfile, xml.ToString(), "text/xml");
 			return xml.ToString();
 		}
 
@@ -245,7 +246,8 @@ namespace CalendarAggregator
 		{
 			string html = this.RenderHtml();
 			byte[] bytes = Encoding.UTF8.GetBytes(html);
-			BlobStorage.WriteToAzureBlob(this.bs, this.id, this.htmlfile, "text/html", bytes);
+			//BlobStorage.WriteToAzureBlob(this.bs, this.id, this.htmlfile, "text/html", bytes);
+			this.bs.PutBlob(this.id, this.htmlfile, html, "text/html");
 			return html;
 		}
 
@@ -278,7 +280,7 @@ namespace CalendarAggregator
 
 			if (this.calinfo.has_img)
 			{
-				html = html.Replace("__IMG__", Configurator.default_img_html);
+				html = html.Replace("__IMG__", this.calinfo.default_img_html);
 				html = html.Replace("__IMGURL__", this.calinfo.img_url.ToString());
 			}
 			else
@@ -303,7 +305,7 @@ namespace CalendarAggregator
 				sources_builder.Append(@"<p class=""sources""><a target=""_new"" href=""http://facebook.com"">Facebook</a></p>");
 
 			var ical_feeds = string.Format(@"<p class=""sources""><a target=""_new"" href=""http://elmcity.cloudapp.net/services/{0}/stats"">{1} iCalendar feeds</a></p>",
-				this.calinfo.delicious_account, this.calinfo.feed_count);
+				this.calinfo.id, this.calinfo.feed_count);
 			sources_builder.Append(ical_feeds);
 
 			html = html.Replace("__SOURCES__", sources_builder.ToString());
