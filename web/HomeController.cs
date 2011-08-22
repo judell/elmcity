@@ -16,15 +16,21 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Timers;
+using System.Web;
 using System.Web.Mvc;
+using System.Text.RegularExpressions;
 using CalendarAggregator;
 using ElmcityUtils;
-
+using Newtonsoft.Json;
+using System.Threading;
 
 namespace WebRole
 {
 	public class HomeController : ElmcityController
 	{
+		BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
+		TableStorage ts = TableStorage.MakeDefaultTableStorage();
+		Delicious delicious = Delicious.MakeDefaultDelicious();
 
 		public HomeController()
 		{
@@ -36,6 +42,44 @@ namespace WebRole
 		public ActionResult index()
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+
+			var template_uri = BlobStorage.MakeAzureBlobUri("admin", "home.tmpl");
+			var page = HttpUtils.FetchUrl(template_uri).DataAsString();
+
+			var css_uri = BlobStorage.MakeAzureBlobUri("admin", "elmcity-1.2.css").ToString();
+			page = page.Replace("__CSS__", css_uri);
+
+			string twitter_auth = "";
+			List<string> elmcity_ids;
+
+			if ( AuthenticateViaTwitter() )
+			{
+				try
+				{
+					var auth_uri = BlobStorage.MakeAzureBlobUri("admin", "home_auth.tmpl");
+					var auth = HttpUtils.FetchUrl(auth_uri).DataAsString();
+
+					var twitter_name = GetAuthenticatedTwitterUserOrNull();
+					
+					elmcity_ids = Utils.ElmcityIdsFromTwitterName(twitter_name);
+					string elmcity_id = elmcity_ids[0]; // if > 1 use first by default, others manual for now
+
+					twitter_auth = auth.Replace("__TWITTERNAME__", twitter_name);
+					twitter_auth = auth.Replace("__ELMCITYID__", elmcity_id);
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "home page auth", e.Message + e.StackTrace);
+				}
+			}
+			else
+			{
+				var noauth_uri = BlobStorage.MakeAzureBlobUri("admin", "home_noauth.tmpl");
+				var noauth = HttpUtils.FetchUrl(noauth_uri).DataAsString();
+				twitter_auth = noauth;
+			}
+
+			ViewData["twitter_auth"] = twitter_auth;
 			ViewData["title"] = ElmcityApp.pagetitle;
 			ViewData["where_summary"] = make_where_summary();
 			ViewData["what_summary"] = make_what_summary();
@@ -150,7 +194,149 @@ namespace WebRole
 
 		public ActionResult meta_history(string a_name, string b_name, string id, string flavor)
 		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			ViewData["result"] = CalendarAggregator.Utils.GetMetaHistory(a_name, b_name, id, flavor);
+			return View();
+		}
+
+		public ActionResult put_json_metadata(string id, string json)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+
+			if (this.AuthenticateViaTwitter(id))
+			{
+				ViewData["result"] = json;
+				var args = new Dictionary<string,string>() { {"id",id}, {"json",json} };
+				ThreadPool.QueueUserWorkItem(new WaitCallback(put_json_metadata_handler), args);
+				return View();
+			}
+			else
+			{
+				ViewData["result"] = "not authenticated";
+				return View();
+			}
+		}
+
+		private void put_json_metadata_handler(Object args)
+		{
+			var dict = (Dictionary<string, string>)args;
+			var id = dict["id"];
+			var json = dict["json"];
+			try
+			{
+				Metadata.UpdateMetadataForId(id, json);
+				bs.DeleteBlob(id, "metadata.html");
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "put_json_metadata", e.Message + e.StackTrace);
+				throw (e);
+			}
+		}
+
+		public ActionResult put_json_feeds(string id, string json)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+
+			if (this.AuthenticateViaTwitter(id))
+			{
+				ViewData["result"] = json;
+				var args = new Dictionary<string, string>() { { "id", id }, { "json", json } };
+				ThreadPool.QueueUserWorkItem(new WaitCallback(put_json_feeds_handler), args);
+				return View();
+			}
+			else
+			{
+				ViewData["result"] = "not authenticated";
+				return View();
+			}
+		}
+
+		private void put_json_feeds_handler(Object args)
+		{
+			var dict = (Dictionary<string, string>)args;
+			var id = dict["id"];
+			var json = dict["json"];
+			try
+			{
+				Metadata.UpdateFeedsForId(id, json);
+				bs.DeleteBlob(id, "metadata.html"); 
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "put_json_feeds", e.Message + e.StackTrace);
+				throw (e);
+			}
+		}
+
+		public ActionResult twitter_auth(string method, string url, string post_data, string oauth_token)
+		{
+			var oauth_twitter = new OAuthTwitter(consumer_key: settings["twitter_auth_consumer_key"], consumer_secret: settings["twitter_auth_consumer_secret"]);
+
+			if (Request.Cookies["ElmcityTwitter"] == null)
+			{
+				var cookie = new HttpCookie("ElmcityTwitter", DateTime.UtcNow.Ticks.ToString());
+				Response.SetCookie(cookie);
+			}
+
+			if (oauth_token == null)
+			{
+				var link = oauth_twitter.AuthorizationLinkGet();
+				return new RedirectResult(link);
+			}
+
+			if (oauth_token != null)
+			{
+				var session_id = Request.Cookies["ElmcityTwitter"].Value;
+				oauth_twitter.token = oauth_token;
+				string response = oauth_twitter.oAuthWebRequest(OAuthTwitter.Method.GET, OAuthTwitter.ACCESS_TOKEN, String.Empty);
+				if (response.Length > 0)
+				{
+					System.Collections.Specialized.NameValueCollection qs = HttpUtility.ParseQueryString(response);
+					RememberTwitterUser(session_id, qs["screen_name"]);
+				}
+			}
+
+			return new RedirectResult("/");
+
+		}
+
+		private void RememberTwitterUser(string session_id, string screen_name)
+		{
+			var entity = new Dictionary<string, object>();
+			entity["screen_name"] = screen_name;
+			entity["host_addr"] = Request.UserHostAddress;
+			entity["host_name"] = Request.UserHostName;
+			TableStorage.DictObjToTableStore(TableStorage.Operation.update, entity, "sessions", "sessions", session_id);
+		}
+
+		public ActionResult get_json_metadata(string id, string flavor)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var name = string.Format("{0}.{1}.json", id, flavor);
+			var uri = BlobStorage.MakeAzureBlobUri(id, name );
+			ViewData["result"] = HttpUtils.FetchUrl(uri).DataAsString();
+			return View();
+		}
+
+		public ActionResult get_editable_metadata(string id, string flavor)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			if ( AuthenticateViaTwitter(id) )
+			{
+				var uri = BlobStorage.MakeAzureBlobUri("admin", "editable_metadata.html");
+				var page = HttpUtils.FetchUrl(uri).DataAsString();
+				page = page.Replace("__ID__", id);
+				page = page.Replace("__FLAVOR__", flavor);
+				ViewData["result"] = page;
+			}
+			else
+			{
+				var screen_name = GetAuthenticatedTwitterUserOrNull();
+				ViewData["result"] = @"You are authenticated via the Twitter name " +
+					screen_name + " but that identity isn't linked to the elmcity hub " + id + "." + 
+					" If you'd like connect them please contact " + settings["elmcity_admin"];
+			}
 			return View();
 		}
 
