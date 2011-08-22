@@ -39,8 +39,7 @@ h3.eventBlurb { font-size:9pt; width: 70%; }
 
 
 table { 
-border-spacing:8px;
-padding:8px;
+border-spacing:4px;
 font-size:9pt;
  }
 
@@ -65,3 +64,15 @@ margin-top:20px;
 display:none;
 width:60%;
 }
+
+
+/*
+.editable_changeable:before {
+content:"* ";
+}
+*/
+
+.editable_changed {
+background-color:lightgray;
+}
+
