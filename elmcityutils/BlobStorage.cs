@@ -220,7 +220,7 @@ namespace ElmcityUtils
 
 		public static bool ExistsBlob(Uri uri)
 		{
-			var response = HttpUtils.FetchUrl(uri);
+			var response = HttpUtils.HeadFetchUrl(uri);
 			return (response.status == HttpStatusCode.OK);
 		}
 
