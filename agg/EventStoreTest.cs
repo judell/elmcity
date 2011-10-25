@@ -34,8 +34,8 @@ namespace CalendarAggregator
 		public const string test_lon = "-72.2786";
 		public const string test_description = "test_description";
 
-		static Utils.DateTimeWithZone now_with_zone = Utils.NowInTz(tzinfo);
-		static Utils.DateTimeWithZone min_with_zone = Utils.DateTimeWithZone.MinValue(tzinfo);
+		static DateTimeWithZone now_with_zone = Utils.NowInTz(tzinfo);
+		static DateTimeWithZone min_with_zone = DateTimeWithZone.MinValue(tzinfo);
 		//private ZonedEvent in_evt0_zoneless = new ZonedEvent("title0", "http://elmcity.info", "source", now_with_zone, min_with_zone, false, test_category);
 		private ZonedEvent in_evt0_zoned = new ZonedEvent("title0", "http://elmcity.info", "source", false, test_lat, test_lon, test_category, now_with_zone, min_with_zone, test_description);
 		private ZonedEvent in_evt1_zoned = new ZonedEvent("title1", "http://elmcity.info", "source", false, test_lat, test_lon, null, now_with_zone, min_with_zone, test_description);
@@ -58,8 +58,8 @@ namespace CalendarAggregator
 		static private string source1 = "s1";
 		static private string source2 = "s2";
 
-		static private Utils.DateTimeWithZone dt1_with_zone = new Utils.DateTimeWithZone(dt1, tzinfo);
-		static private Utils.DateTimeWithZone dt2_with_zone = new Utils.DateTimeWithZone(dt2, tzinfo);
+		static private DateTimeWithZone dt1_with_zone = new DateTimeWithZone(dt1, tzinfo);
+		static private DateTimeWithZone dt2_with_zone = new DateTimeWithZone(dt2, tzinfo);
 
 		static private BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 
@@ -107,23 +107,27 @@ namespace CalendarAggregator
 			var es = new ZonelessEventStore(calinfo, null);
 
 			es.AddEvent(title:title1, url:"http://foo", source:source1, lat: null, lon: null, dtstart: dt1, dtend: min, allday: false, categories: test_category, description: test_description);
+
+			var evt1 = es.events.Find(e => e.title == title1);
+			evt1.urls_and_sources = new Dictionary<string, string>() { { "http://foo", source1 } };
+
 			es.AddEvent(title:title2, url:"http://bar", source:source2, lat: null, lon: null, dtstart: dt2, dtend: min, allday: false, categories:null, description: test_description);
+
+			var evt2 = es.events.Find(e => e.title == title2);
+			evt2.urls_and_sources = new Dictionary<string, string>() { { "http://bar", source2 } };
 
 			bs.SerializeObjectToAzureBlob(es, test_container, es.objfile);
 
 			var uri = BlobStorage.MakeAzureBlobUri(test_container, es.objfile);
 			var es2 = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
 
-			es2.SortEventSublists();
-			es2.GroupEventsByDatekey();
-			es2.SortDatekeys();
-			es2.SortEventSublists();
+			CalendarRenderer.OrganizeByDate(es2);
 
 			Assert.That(es2.event_dict.Keys.Count == 2);
 			var list1 = es2.event_dict[es2.event_dict.Keys.First()];
 			var list2 = es2.event_dict[es2.event_dict.Keys.Last()];
-			var evt1 = list1.First();
-			var evt2 = list2.First();
+			evt1 = list1.First();
+			evt2 = list2.First();
 
 			Assert.AreEqual(evt1.dtstart, dt1);
 			Assert.AreEqual(evt2.dtstart, dt2);
@@ -137,8 +141,6 @@ namespace CalendarAggregator
 			Assert.AreEqual(evt2.dtstart, dt2);
 			Assert.AreEqual(evt1.title, title1);
 			Assert.AreEqual(evt2.title, title2);
-
-
 		}
 
 

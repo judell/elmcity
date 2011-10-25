@@ -93,6 +93,7 @@ namespace CalendarAggregator
 			var ts = new System.TimeSpan(0, (Configurator.where_aggregate_interval_hours * 60) + 10, 0);
 			var now = task.start + ts;
 			Scheduler.MaybeStartTaskForId(now, test_calinfo);
+			task = Scheduler.FetchTaskForId(testid);
 			Assert.AreEqual(task.start + ts, now);
 		}
 
