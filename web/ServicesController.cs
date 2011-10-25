@@ -43,7 +43,7 @@ namespace WebRole
 
 		#region events
 
-		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		//[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -204,7 +204,8 @@ namespace WebRole
 
 					case "stats":
 						blob_uri = BlobStorage.MakeAzureBlobUri(this.id, this.id + ".stats.html");
-						this.response_bytes = (byte[])CacheUtils.RetrieveBlobAndEtagFromServerCacheOrUri(this.cr.cache, blob_uri)["response_body"];
+						//this.response_bytes = (byte[])CacheUtils.RetrieveBlobAndEtagFromServerCacheOrUri(this.cr.cache, blob_uri)["response_body"];
+						this.response_bytes = HttpUtils.FetchUrl(blob_uri).bytes;
 						new ContentResult
 						{
 							ContentEncoding = UTF8,
@@ -214,13 +215,13 @@ namespace WebRole
 						break;
 
 					case "ics":
-						this.response_bytes = (byte[])CacheUtils.RetrieveBlobAndEtagFromServerCacheOrUri(this.cr.cache, blob_uri)["response_body"];
+						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderIcs);
+						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
+						string ics_text = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count);
 						new ContentResult
 						{
 							ContentType = "text/calendar",
-							// todo: implement cr.RenderICS(string view)
-							// for now, return whole ICS file
-							Content = Encoding.UTF8.GetString(this.response_bytes),
+							Content = ics_text,
 							ContentEncoding = UTF8
 						}.ExecuteResult(context);
 						break;
@@ -285,7 +286,7 @@ namespace WebRole
 
 		#region logentries
 
-		public ActionResult GetLogEntries(string id, string minutes)
+		public ActionResult GetLogEntries(string log, string type, string id, string minutes, string targets)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
@@ -293,7 +294,7 @@ namespace WebRole
 
 			try
 			{
-				r = new LogEntriesResult(id, minutes);
+				r = new LogEntriesResult(log, type, id, minutes, targets);
 			}
 			catch (Exception e)
 			{
@@ -304,20 +305,26 @@ namespace WebRole
 
 		public class LogEntriesResult : ActionResult
 		{
+			string log;
+			string type;
 			string id;
 			int minutes;
+			string targets;
 
-			public LogEntriesResult(string id, string minutes)
+			public LogEntriesResult(string log, string type, string id, string minutes, string targets)
 			{
+				this.log = log;
+				this.type = type;
 				this.id = id;
 				this.minutes = Convert.ToInt16(minutes);
+				this.targets = targets;
 			}
 
 			public override void ExecuteResult(ControllerContext context)
 			{
 				// it can take a while to fetch a large result
 				context.HttpContext.Server.ScriptTimeout = CalendarAggregator.Configurator.webrole_script_timeout_seconds;
-				var content = this.id != "priority" ? Utils.GetRecentLogEntries(this.minutes, this.id) : Utils.GetRecentLogEntries("prioritylog", this.minutes, this.id);
+				var content = Utils.GetRecentLogEntries(this.log, this.type, this.minutes, this.targets);
 				new ContentResult
 				{
 					ContentType = "text/plain",

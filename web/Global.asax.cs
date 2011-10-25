@@ -22,12 +22,14 @@ using System.Web.Mvc;
 using System.Web.Routing;
 using CalendarAggregator;
 using ElmcityUtils;
+using System.Net;
 
 namespace WebRole
 {
-
 	public class ElmcityController : Controller
 	{
+
+
 		public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 		public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
 		public static string domain_name = AppDomain.CurrentDomain.FriendlyName;
@@ -88,36 +90,29 @@ namespace WebRole
 			}
 		}
 
-		public string GetAuthenticatedTwitterUserOrNull()
+		#region foreign auth
+
+		public string Authenticated()
 		{
-			var cookie = Request.Cookies["ElmcityTwitter"];
-			if (cookie == null) return null;
-			var session_id = Request.Cookies["ElmcityTwitter"].Value;
-			var q = String.Format("$filter=PartitionKey eq 'sessions' and RowKey eq '{0}'", session_id);
-			var results = ts.QueryEntities("sessions", q);
-			if (results.list_dict_obj.Count > 0)
-				return (string) results.list_dict_obj[0]["screen_name"];
-			else
-				return null;
+			foreach (var auth in Authentications.AuthenticationList )
+			{
+				if ( auth.AuthenticatedVia(this.Request) != null )
+					return auth.mode.ToString();
+			}
+			return null;
 		}
 
-		public bool AuthenticateViaTwitter()  // authenticate any trusted twitter name 
-			                                  // (e.g. appears as TwitterName in trustedtwitters table) to the home page
+		public string Authenticated(string id)
 		{
-			var screen_name = GetAuthenticatedTwitterUserOrNull();
-			return (screen_name != null && Utils.IsTrustedTwitterer(screen_name));
+			foreach (var auth in Authentications.AuthenticationList)
+			{
+				if (auth.AuthenticatedVia(this.Request, id) != null)
+					return auth.mode.ToString();
+			}
+			return null;
 		}
 
-		public bool AuthenticateViaTwitter(string id) // authenticate only mapped twitter accounts 
-			                                          // (e.g. elmcity id appears as RowKey in trustedtwitterers table)
-			                                          // to elmcity-id-specific services
-		{
-			var screen_name = GetAuthenticatedTwitterUserOrNull();
-			if (screen_name == null)
-				return false;
-			var mapped_ids = Utils.ElmcityIdsFromTwitterName(screen_name);
-			return mapped_ids.Exists(x => x == id);
-		}
+		#endregion
 
 		public ElmcityController()
 		{
@@ -126,22 +121,14 @@ namespace WebRole
 
 	public class ElmcityApp : HttpApplication
 	{
-		public static string version = "1346";
-
-#if false // true if testing, false if not testing
-		private static bool testing = true;
-		private static string test_id = "ypsicals";
-#else    // not testing
-		private static bool testing = false;
-		private static string test_id = "";
-#endif
+		public static string version = "1525";
 
 		public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 		public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
 		public static string domain_name = AppDomain.CurrentDomain.FriendlyName;
 		public static int thread_id = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
-		private BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
+		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 
 		public static Logger logger = new Logger();
 
@@ -156,6 +143,8 @@ namespace WebRole
 
 		public static WebRoleData wrd = null;
 
+		public static Dictionary<string, CalendarRenderer> renders = new Dictionary<string, CalendarRenderer>();
+
 		public ElmcityApp()
 		{
 			GenUtils.LogMsg("info", String.Format("ElmcityApp {0} {1} {2} {3}", procname, procid, domain_name, thread_id), null);
@@ -167,13 +156,18 @@ namespace WebRole
 
 			#region HomeController
 
-			// check a delicious account
 			routes.MapRoute(
-				"delicious_check",
-				"delicious_check",
-				 new { controller = "Home", action = "delicious_check" }
+				"facebook_auth",
+				"facebook_auth",
+				new { controller = "Home", action = "facebook_auth" }
 				);
 
+			// target for facebook oauth redirect, used periodically to refresh fb api access token
+			routes.MapRoute(
+				"fb_access",
+				"fb_access",
+				new { controller = "Home", action = "fb_access" }
+				);
 
 			routes.MapRoute(
 				"get_editable_metadata",
@@ -189,6 +183,17 @@ namespace WebRole
 				new { id = wrd.str_ready_ids }
 			);
 
+			routes.MapRoute(
+				"google_auth",
+				"google_auth",
+				new { controller = "Home", action = "google_auth" }
+				);
+
+			routes.MapRoute(
+				"home",
+				"",
+				new { controller = "Home", action = "index" }
+			);
 
 			// for a bare url like /services/a2cal, emit a page that documents all the available formats
 			routes.MapRoute(
@@ -196,6 +201,13 @@ namespace WebRole
 				"services/{id}/",
 				new { controller = "Home", action = "hubfiles" },
 				new { id = wrd.str_ready_ids }
+				);
+
+			// parse facebook page events, return ics
+			routes.MapRoute(
+				"ics_from_fb_page",
+				"ics_from_fb_page",
+				 new { controller = "Home", action = "ics_from_fb_page" }
 				);
 
 			// parse atom+vcal, return ics
@@ -212,12 +224,11 @@ namespace WebRole
 				 new { controller = "Home", action = "ics_from_xcal" }
 				);
 
-
 			routes.MapRoute(
-				"home",
-				"",
-				new { controller = "Home", action = "index" }
-			);
+				"live_auth",
+				"live_auth",
+				new { controller = "Home", action = "live_auth" }
+				);
 
 
 			// visualize changes between two json snapshots (flavor feeds is list of dicts, flavor metadata is single dict)
@@ -252,7 +263,7 @@ namespace WebRole
 			   new { controller = "Home", action = "py", arg1 = "", arg2 = "", arg3 = "" }
 			   );
 
-			// force a reload
+			// reload settings and webrole data object
 			routes.MapRoute(
 				"reload",
 				"reload",
@@ -266,17 +277,18 @@ namespace WebRole
 				new { controller = "Home", action = "snapshot" }
 				 );
 
+			// query the query-safe tables
+			routes.MapRoute(
+				"table_query",
+				"table_query/{table}",
+				new { controller = "Home", action = "table_query" },
+				new { table = ElmcityController.settings["query_safe_tables"] }
+			);
+
 			routes.MapRoute(
 				"twitter_auth",
 				"twitter_auth",
 				new { controller = "Home", action = "twitter_auth" }
-				);
-
-			// run an ics feed through the machinery and dump the html rendering
-			routes.MapRoute(
-				"viewer",
-				"viewer",
-				new { controller = "Home", action = "viewer" }
 				);
 
 #endregion 
@@ -297,11 +309,10 @@ namespace WebRole
 				"logs",
 				"logs/{id}/{minutes}",
 				new { controller = "Services", action = "GetLogEntries" },
-				new { id = "priority|all|" + wrd.str_ready_ids, minutes = new LogMinutesConstraint() }
+				new { id = "all|" + wrd.str_ready_ids, minutes = new LogMinutesConstraint() }
 			  );
 
-			// dump the hub's metadata that was acquired from delicious, extended with computed values,
-			// and cached to the azure metadata table
+			// dump the hub's metadata, extended with computed values,
 			routes.MapRoute(
 				"metadata",
 				"services/{id}/metadata",
@@ -361,21 +372,24 @@ namespace WebRole
 		{
 			var msg = "WebRole: Application_Start";
 			GenUtils.PriorityLogMsg("info", msg, null);
+
+			Utils.ScheduleTimer(UpdateWrdAndPurgeCache, CalendarAggregator.Configurator.webrole_cache_purge_interval_minutes, name: "UpdateWrdAndPurgeCache", startnow: false);
+			Utils.ScheduleTimer(ReloadSettingsAndRoutes, minutes: CalendarAggregator.Configurator.webrole_reload_interval_minutes, name: "ReloadSettingsAndRoutes", startnow: false);
+			Utils.ScheduleTimer(MakeTablesAndCharts, minutes: CalendarAggregator.Configurator.web_make_tables_and_charts_interval_minutes, name: "MakeTablesAndCharts", startnow: false);
+
 			ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
-			Utils.ScheduleTimer(WebRole.MaybePurgeCache, minutes: CalendarAggregator.Configurator.webrole_cache_purge_interval_minutes, name: "maybe_purge_cache", startnow: false);
-			// scheduling cache purge here because context will be w3wp not WaIISHost
-			_reload();
+			_ReloadSettingsAndRoutes();
 		}
 
 		// encapsulate _reload with the signature needed by Utils.ScheduleTimer
-		public static void reload(Object o, ElapsedEventArgs e)
+		public static void ReloadSettingsAndRoutes(Object o, ElapsedEventArgs e)
 		{
-			_reload();
+			_ReloadSettingsAndRoutes();
 		}
 
-		public static void _reload()
+		public static void _ReloadSettingsAndRoutes()
 		{
-			GenUtils.LogMsg("info", "webrole _reload start", null);
+			GenUtils.LogMsg("info", "webrole _ReloadRoutes", null);
 
 			try
 			{
@@ -383,46 +397,70 @@ namespace WebRole
 			}
 			catch (Exception e0)
 			{
-				var msg = "_reload: cannot get settings from azure!";
+				var msg = "_ReloadSettingsAndRoutes: cannot get settings from azure!";
 				GenUtils.PriorityLogMsg("exception", msg, e0.Message);
 			}
 
 			try
 			{
-				var uri = BlobStorage.MakeAzureBlobUri("admin", "wrd.obj");
-				wrd = (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri);
-			}
-			catch (Exception e1)
-			{
-				var msg = "_reload: cannot unpickle webrole data, recreating";
-				GenUtils.PriorityLogMsg("exception", msg, e1.Message);
-			}
-			finally
-			{
-				if (wrd.GetType() != typeof(WebRoleData))
-				{
-					var msg = "_reload: cannot recreate webrole data!";
-					GenUtils.PriorityLogMsg("exception", msg, null);
-				}
-			if ( testing )
-				wrd = new WebRoleData(testing: testing, test_id: test_id);
-			}
-
-			try
-			{
-				GenUtils.LogMsg("info", "_reload: registering routes", null);
+				wrd = Utils.GetWrd();
+				GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes: registering routes", null);
 				RouteTable.Routes.Clear();
 				ElmcityApp.RegisterRoutes(RouteTable.Routes, wrd);
 				//RouteDebug.RouteDebugger.RewriteRoutesForTesting(RouteTable.Routes);
-				GenUtils.LogMsg("info", "_reload: registered routes", null);
+				GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes: registered routes", null);
 			}
-			catch (Exception e2)
+			catch (Exception e3)
 			{
-				var msg = "_reload: registering routes";
-				GenUtils.PriorityLogMsg("exception", msg, e2.Message, ts);
+				var msg = "_ReloadSettingsAndRoutes: registering routes";
+				GenUtils.PriorityLogMsg("exception", msg, e3.Message);
+			}
+		}
+
+		public static void UpdateWrdAndPurgeCache(Object o, ElapsedEventArgs e)
+		{
+			try
+			{
+				wrd = Utils.GetWrd();   // if renderer(s) updated, update before cache purge so next recache uses fresh renderer(s)
+				var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
+				ElmcityUtils.CacheUtils.MaybePurgeCache(cache);
+			}
+			catch (Exception e1)
+			{
+				wrd = null;
+				var msg = "UpdateWrdAndPurgeCache: cannot unpickle webrole data";
+				GenUtils.PriorityLogMsg("exception", msg, e1.Message);
 			}
 
-			GenUtils.LogMsg("info", "webrole _reload stop", null);
+			if (wrd == null)
+			{
+				try
+				{
+					var msg = "UpdateWrdAndPurgeCache: recreating webrole data";
+					GenUtils.PriorityLogMsg("warning", msg, null);
+					wrd = new WebRoleData(testing: false, test_id: null);
+					bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
+				}
+				catch (Exception e2)
+				{
+					var msg = "UpdateWrdAndPurgeCache: could not recreate webrole data";
+					GenUtils.PriorityLogMsg("exception", msg, e2.Message + e2.StackTrace);
+				}
+			}
+
+		}
+
+		public static void MakeTablesAndCharts(Object o, ElapsedEventArgs e)
+		{
+			GenUtils.LogMsg("info", "MakeTablesAndCharts", null);
+			try
+			{
+				PythonUtils.RunIronPython(WebRole.local_storage_path, CalendarAggregator.Configurator.charts_and_tables_script_url, new List<string>() { "", "", "" });
+			}
+			catch (Exception ex)
+			{
+				GenUtils.PriorityLogMsg("exception", "MonitorAdmin", ex.Message + ex.StackTrace);
+			}
 		}
 
 		// don't allow log requests to reach back more than 1000 minutes

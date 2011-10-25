@@ -33,35 +33,16 @@ usage = """
 Usage:
 
 /test
-/messages/TYPE/HOURS_AGO
 /schedule/ID
 /reset/ID
-/metadict/ID
 /feeds/ID
-/recache_feeds/ID
-/recache_metadict/ID
 /web_charts
 /dashboard
+/repickle/ID
 -----------------------------
 """
 
 result = "(%s) arg0: [%s], arg1: [%s] arg2: [%s] [%s]\n %s \n\n" % (System.Net.Dns.GetHostName(), arg0,arg1,arg2, lib_dir, usage)
-
-def MessagesSince(type='exception',hours_ago=1,ticks=None):
-  global result
-  result += 'MessagesSince: Type %s, HoursAgo %s, TicksThen %s\n' % ( type, hours_ago, ticks)
-  if ticks is None:
-    delta = System.TimeSpan.FromHours(System.Convert.ToInt32(hours_ago))
-    then = System.DateTime.Now - delta
-    result += 'Then: %s\n\n' % then
-    ticks = then.Ticks
-  q = "$filter=(PartitionKey eq 'log' and RowKey gt '%s' and type eq '%s' )" % ( ticks, type )
-  result += q
-  ts_response = ts.QueryEntities(logtable,q)
-  if len(ts_response.response) > 0:
-    for dict in ts_response.response:
-      result += '%s: %s\n%s\n\n'  % ( dict['Timestamp'], dict['message'], dict['data'] ) 
-    MessagesSince(type, hours_ago, dict['RowKey'])
 
 def message(msg):
   print msg
@@ -127,9 +108,6 @@ if (arg0 == 'test'):
   except:
     result += traceback.format_exc()
 
-if (arg0 == 'messages'):
-  MessagesSince(type=arg1,hours_ago=arg2)
-
 if (arg0 == 'schedule'):
   id = arg1
   calinfo = Calinfo(id)
@@ -139,13 +117,6 @@ if ( arg0 == 'reset' ):
   id = arg1
   Scheduler.InitTaskForId(arg1)
   result += 'ok'
-
-if ( arg0 == 'metadict' ):
-  id = arg1
-  calinfo = Calinfo(id)
-  metadict = calinfo.metadict
-  for key in metadict.Keys:
-    result += "%s: %s\n" % (key, metadict[key])
 
 if ( arg0 == 'feeds' ):
   id = arg1
@@ -181,6 +152,10 @@ if ( arg0 == 'dashboard' ):
 
 if ( arg0 == 'pylib' ):
   result = os.path.realpath('.')
+
+if ( arg0 == 'repickle' ):
+  id = arg1    
+  CalendarAggregator.Utils.RecreatePickledCalinfoAndRenderer(id); 
   
  
 

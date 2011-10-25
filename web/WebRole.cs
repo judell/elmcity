@@ -34,15 +34,12 @@ namespace WebRole
 		public static WebRoleData wrd;
 
 		public static string local_storage_path = RoleEnvironment.GetLocalResource("LocalStorage1").RootPath;
-		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
+		public static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 
 		public override bool OnStart()
 		{
 			var local_resource = RoleEnvironment.GetLocalResource("LocalStorage1");
 			GenUtils.LogMsg("info", "LocalStorage1", local_resource.RootPath);
-
-			Utils.ScheduleTimer(ElmcityApp.reload, minutes: CalendarAggregator.Configurator.webrole_reload_interval_hours * 60, name: "reload", startnow: false);
-			Utils.ScheduleTimer(MakeTablesAndCharts, minutes: CalendarAggregator.Configurator.web_make_tables_and_charts_interval_minutes, name: "make_tables_and_charts", startnow: false);
 
 			RoleEnvironment.Changing += RoleEnvironmentChanging;
 
@@ -115,32 +112,6 @@ namespace WebRole
 
 			var ts = TableStorage.MakeDefaultTableStorage();
 			GenUtils.PriorityLogMsg("Application_End", shutdown_message, shutdown_stack);
-		}
-
-		public static void MaybePurgeCache(Object o, ElapsedEventArgs e)
-		{
-			try
-			{
-				var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
-				ElmcityUtils.CacheUtils.MaybePurgeCache(cache);
-			}
-			catch (Exception ex)
-			{
-				GenUtils.PriorityLogMsg("exception", "WebRole.MaybePurgeCache", ex.Message + ex.StackTrace);
-			}
-		}
-
-		public static void MakeTablesAndCharts(Object o, ElapsedEventArgs e)
-		{
-			GenUtils.LogMsg("info", "MakeTablesAndCharts", null);
-			try
-			{
-				PythonUtils.RunIronPython(WebRole.local_storage_path, CalendarAggregator.Configurator.charts_and_tables_script_url, new List<string>() { "", "", "" });
-			}
-			catch (Exception ex)
-			{
-				GenUtils.PriorityLogMsg("exception", "MonitorAdmin", ex.Message + ex.StackTrace);
-			}
 		}
 
 	}
