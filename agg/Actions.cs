@@ -21,9 +21,6 @@ using System.Xml.Linq;
 using ElmcityUtils;
 using Ionic.Zip;
 
-// not central to the elmcity project, but included as a result of:
-// http://blog.jonudell.net/2009/11/09/where-is-the-money-going/
-
 namespace CalendarAggregator
 {
 	public interface IAction<TCommand>
@@ -155,7 +152,7 @@ namespace CalendarAggregator
 
 			try
 			{
-				ActionHelpers.StoreFeedAndMetadataToAzure(id, (string)metadict["feedurl"], metadict);
+				Metadata.StoreFeedAndMetadataToAzure(id, (string)metadict["feedurl"], metadict);
 			}
 			catch 
 			{
@@ -167,18 +164,6 @@ namespace CalendarAggregator
 			return true;
 		}
 
-	}
-
-	public class ActionHelpers
-	{
-		public static HttpResponse StoreFeedAndMetadataToAzure(string id, string feedurl, Dictionary<string, object> metadict)
-		{
-			string rowkey = Utils.MakeSafeRowkeyFromUrl(feedurl);
-			var r = TableStorage.UpdateDictToTableStore(metadict, Delicious.ts_table, id, rowkey);
-			if (r.http_response.status != System.Net.HttpStatusCode.Created)
-				GenUtils.PriorityLogMsg("warning", "ActionHelpers.StoreFeedAndMetadataToAzure", r.http_response.status.ToString());
-			return r.http_response;
-		}
 	}
 
 }
