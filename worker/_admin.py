@@ -21,11 +21,9 @@ metatable = 'metadata'
 tasktable = 'tasks'
 elmcity_twitter_name = 'elmcity_azure'
 
-delicious = Delicious.MakeDefaultDelicious()
 bs = BlobStorage.MakeDefaultBlobStorage()
 ts = TableStorage.MakeDefaultTableStorage()
 ids = delicious.LoadHubIdsFromAzureTable()
-calinfos = CalendarAggregator.Configurator.Calinfos
 
 def message(msg):
   msg = msg.replace('\n','')
@@ -49,6 +47,7 @@ def datetime_is_older_than(dt,days):
   now = System.DateTime.Now
   return ( now - dt ).Days > days
 
+"""
 def rebuild_search_output():
   message('_admin: rebuild_search_output starting')
   for id in [x for x in ids if calinfos[x].hub_type == CalendarAggregator.HubType.where]:
@@ -69,6 +68,7 @@ def rebuild_search_output():
     except:
       priority_message('_admin: rebuild_search_output %s %s ' %s ( id, traceback.format_exc() ) )
   message('_admin: rebuild_search_output done')
+  """
 
 def follow_curators():
   message('_admin: follow_curators starting')

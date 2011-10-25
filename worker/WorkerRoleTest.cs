@@ -22,42 +22,5 @@ namespace CalendarAggregator
 	[TestFixture]
 	public class WorkerRoleTest
 	{
-
-		const string test_id = "elmcity";
-
-		[Test]
-		public void UpdateWrdForIdSucceeds()
-		{
-			var delicious = Delicious.MakeDefaultDelicious();
-
-			var test_tag = "test_update_wrd";
-			var test_val = System.DateTime.UtcNow.Ticks.ToString();
-
-			var id = "elmcity";
-			// construct a wrd for test hub
-			var wrd = new WebRoleData(true, id);
-
-			// update metadata for a test hub in delicious
-
-			var metadict = Delicious.FetchMetadataForIdFromDelicious(test_id).dict_response;
-			metadict[test_tag] = test_val;
-			var tag_string = Delicious.MetadictToTagString(metadict);
-			delicious.PostDeliciousBookmark("metadata", "http://delicious.com/" + test_id + "/metadata", tag_string, Configurator.delicious_test_account, Configurator.delicious_test_password);
-
-			// propagate update to azure table
-			delicious.StoreMetadataForIdToAzure(id, merge: true, extra: new Dictionary<string, string>());
-
-			// recreate cached calinfo and renderer
-			Utils.RecreatePickledCalinfoAndRenderer(id);
-
-			// update the wrd structure
-			WebRoleData.UpdateCalinfoAndRendererForId(id, wrd);
-
-			// verify it was updated
-
-			Assert.That(wrd.calinfos[id].metadict[test_tag] == test_val);
-		
-		}
-
 	}
 }

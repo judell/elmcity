@@ -31,11 +31,11 @@ namespace WorkerRole
 	public class WorkerRole : RoleEntryPoint
 	{
 #if false // true if testing, false if not testing
-        private static int startup_delay = 100000000; // add delay if want to focus on webrole
-		//private static int startup_delay = 0;
-        private static List<string> testids = new List<string>() { "elmcity" };  // focus on a hub
-        private static List<string> testfeeds = new List<string>() // optionally focus on a feed in that hub
-			{ "http://www.facebook.com/ical/u.php?uid=652661115&key=AQDkPMjwIPc30qcT" };
+        //private static int startup_delay = 100000000; // add delay if want to focus on webrole
+		private static int startup_delay = 0;
+        private static List<string> testids = new List<string>() { "PboroNhEvents" };  // focus on a hub
+		private static List<string> testfeeds = new List<string>(); 
+		//	testfeeds.Add("http://www.facebook.com/ical/u.php?uid=652661115&key=AQDkPMjwIPc30qcT"); // optionally focus on a feed in that hub
         private static bool testing = true;
 #else     // not testing
 		private static int startup_delay = 0;
@@ -46,7 +46,6 @@ namespace WorkerRole
 
 		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
 		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
-		private static Delicious delicious = Delicious.MakeDefaultDelicious();
 		private static Logger logger = new Logger();
 		private static Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
 
@@ -166,8 +165,7 @@ namespace WorkerRole
 								{
 									GenUtils.PriorityLogMsg("info", "Received meta_refresh message from " + id, null);
 									TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your meta_refresh message");
-									if (Utils.ElmcityIdUsesTwitterAuth(id) == false) // revert to old delicious-based mechanism
-										UpdateFeedsAndMetadataForIdToAzure(id);
+									Utils.RecreatePickledCalinfoAndRenderer(id);
 									Utils.MakeMetadataPage(id);
 									TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://elmcity.cloudapp.net/services/" + id + "/metadata");
 									calinfo = new Calinfo(id);
@@ -246,15 +244,61 @@ namespace WorkerRole
 
 				if (calinfo.hub_enum == CalendarAggregator.HubType.where)
 				{
-					DoEventful(calinfo);
-					DoUpcoming(calinfo);
-					DoEventBrite(calinfo);
-					DoFacebook(calinfo);
+					try
+					{
+						DoEventful(calinfo);
+					}
+					catch (Exception e1)
+					{
+						GenUtils.PriorityLogMsg("exception", "DoEventful", e1.Message + e1.StackTrace);
+					}
+					try
+					{
+						DoUpcoming(calinfo);
+					}
+					catch (Exception e2)
+					{
+						GenUtils.PriorityLogMsg("exception", "DoUpcoming", e2.Message + e2.StackTrace);
+					}
+					try
+					{
+						DoEventBrite(calinfo);
+					}
+					catch (Exception e3)
+					{
+						GenUtils.PriorityLogMsg("exception", "DoEventBrite", e3.Message + e3.StackTrace);
+					}
+					try
+					{
+						DoFacebook(calinfo);
+					}
+					catch (Exception e4)
+					{
+						GenUtils.PriorityLogMsg("exception", "DoFacebook", e4.Message + e4.StackTrace);
+
+					}
 				}
 
 				EventStore.CombineZonedEventStoresToZonelessEventStore(id, settings);
 
-				RenderHtmlXmlJson(id, calinfo);
+				// Create or update an entry in the cacheurls table for the base object. 
+				// key is http://elmcity.blob.core.windows.net/ID/ID.zoneless.obj
+				// value is # of webrole instances that could be holding this in cache
+				// each instance will check this table periodically. if value is nonzero and url in cache, it'll evict the object
+				// and decrement the count
+
+				// note when removal occurs it also triggers a purge of dependencies, so if the base entry is
+				// http://elmcity.blob.core.windows.net/a2cal/a2cal.zoneless.obj
+				// then dependencies also ousted from cache include:
+				// /services/a2cal/html?view=&count=0
+				// /services/a2cal/rss?view=government
+				// /services/a2cal/xml?view=music&count=10    ... etc.
+
+				CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseUrl(id), Convert.ToInt32(settings["webrole_instance_count"]));
+
+				WebRoleData.UpdateRendererForId(id);  // ensure webrole will reload fresh renderer for this hub
+
+				RenderHtmlXmlJson(id);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
 
 				if (calinfo.hub_enum == CalendarAggregator.HubType.where)
 					SaveWhereStats(fr, calinfo);
@@ -274,41 +318,6 @@ namespace WorkerRole
 
 			logger.LogMsg("info", "worker done processing: " + id, null);
 
-		}
-
-		public static void UpdateMetadataToAzure(string id)
-		{
-			logger.LogMsg("info", "UpdateMetadataToAzure", null);
-			try
-			{
-				var dict = delicious.StoreMetadataForIdToAzure(id, true, new Dictionary<string, string>());
-				if (dict == null)  // bail if feed metadata query returns null (because MetadataQueryOutcome != Success)
-				{
-					logger.LogMsg("info", "StoreMetadataForid: " + id + " : null response", null);
-					return;
-				}
-				var snapshot_changed = ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.DictStr, "metadata", dict);
-				if (snapshot_changed == true)
-				{
-					Metadata.UpdateDependentStructures(id);
-				}
-			}
-			catch (Exception e)
-			{
-				logger.LogMsg("exception", "UpdateMetadataToAzure", e.Message + e.StackTrace);
-			}
-		}
-
-		public static void RecacheHubIdsToAzure()
-		{
-			try
-			{
-				delicious.StoreHubIdsToAzureTable();
-			}
-			catch (Exception e)
-			{
-				logger.LogMsg("exception", "RecacheHubIdsToAzure", e.Message + e.StackTrace);
-			}
 		}
 
 		private static void StopTask(string id)
@@ -362,72 +371,6 @@ namespace WorkerRole
 				return true;
 		}
 
-		public static void UpdateFeedCountToAzure(string id)
-		{
-			logger.LogMsg("info", "UpdateFeedCountToAzure", null);
-			try
-			{
-				var response = Delicious.FetchFeedCountForIdWithTags(id, CalendarAggregator.Configurator.delicious_trusted_ics_feed);
-
-				if (response.outcome != Delicious.MetadataQueryOutcome.Success)
-				{
-					logger.LogMsg("warning", "FetchFeedCountForIdWithTags: " + id, response.outcome.ToString());
-					return;
-				}
-
-				var count = response.int_response;
-
-				if (feedcounts.ContainsKey(id) && feedcounts[id] != count)
-				{
-					logger.LogMsg("info", "feedcount changed for " + id, null);
-					Scheduler.InitTaskForId(id);
-				}
-
-				feedcounts[id] = count;
-			}
-			catch (Exception e)
-			{
-				ts.WriteLogMessage("exception", "delicious.FetchFeedCountForIdWithTags", e.Message + e.StackTrace);
-			}
-		}
-
-		private static void PurgeDeletedFeeds(FeedRegistry fr_delicious, string id)
-		{
-			logger.LogMsg("info", "PurgeDeletedFeeds", null);
-			try
-			{
-				delicious.PurgeDeletedFeedsFromAzure(fr_delicious, id);
-			}
-			catch (Exception e)
-			{
-				logger.LogMsg("exception", "PurgeDeletedFeed", e.Message + e.StackTrace);
-			}
-		}
-
-		public static void UpdateFeedsToAzure(FeedRegistry fr_delicious, string id)
-		{
-			logger.LogMsg("info", "UpdateFeedsToAzure", null);
-			try
-			{
-				var dicts = delicious.StoreFeedsAndMaybeMetadataToAzure(fr_delicious, id);
-				var has_no_nulls = dicts.Count > 0 && dicts.FindAll(x => x == null).Count == 0;
-				if (has_no_nulls)  // don't save a snapshot if null or incomplete response from delicious
-				{
-					var saved = ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.ListDictStr, "feeds", dicts);
-					if (saved)
-						GenUtils.PriorityLogMsg("info", "SavedJsonSnapshot for " + id, null);
-				}
-				else
-				{
-					GenUtils.PriorityLogMsg("warning", "StoreFeedsAndMaybeMetadataToAzure: " + id, "null or incomplete response");
-				}
-			}
-			catch (Exception e)
-			{
-				GenUtils.LogMsg("exception", "UpdateFeedsToAzure", e.Message + e.StackTrace);
-			}
-		}
-
 		private static List<string> MaybeAdjustIdsForTesting(List<string> ids)
 		{
 			if (testids.Count > 0)
@@ -444,9 +387,9 @@ namespace WorkerRole
 			return ids;
 		}
 
-		public static void RenderHtmlXmlJson(string id, Calinfo calinfo)
+		public static void RenderHtmlXmlJson(string id)
 		{
-			var cr = new CalendarRenderer(calinfo);
+			var cr = new CalendarRenderer(id);
 
 			try
 			{
@@ -484,12 +427,6 @@ namespace WorkerRole
 					fr.AddFeed(testfeed, "testing: " + testfeed);
 			else
 				fr.LoadFeedsFromAzure(FeedLoadOption.all);
-
-			if ( Convert.ToInt32(calinfo.feed_count) != fr.feeds.Count ) // feeds were added or deleted
-			{
-				var new_feed_count = Utils.UpdateFeedCount(calinfo.id);
-				calinfo.feed_count = new_feed_count.ToString();                // update this instance
-			}
 
 			var id = calinfo.id;
 
@@ -693,7 +630,7 @@ All events {8}, population {9}, events/person {10:f}
 			try
 			{
 				var ical_stats = istats[feedurl];
-				var is_private = Delicious.IsPrivateFeed(id, feedurl);
+				var is_private = Metadata.IsPrivateFeed(id, feedurl);
 
 				var feed_column = is_private
 					? String.Format(@"{0} (<a title=""click to visit calendar's home page"" href=""{1}"">home</a>)", ical_stats.source, homeurl)
@@ -740,7 +677,7 @@ All events {8}, population {9}, events/person {10:f}
 			var id = calinfo.id;
 			logger.LogMsg("info", "MergeIcs: " + id, null);
 			List<string> suffixes = new List<string>() { "ical" };
-			if (calinfo.hub_enum == CalendarAggregator.HubType.where)
+			if (calinfo.hub_enum == HubType.where)
 				foreach (NonIcalType type in Enum.GetValues(typeof(CalendarAggregator.NonIcalType)))
 				{
 					if (Utils.UseNonIcalService(type, settings, calinfo) == true)
@@ -748,12 +685,8 @@ All events {8}, population {9}, events/person {10:f}
 				}
 			try
 			{
-				var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
-
 				var all_ical = new iCalendar();
 				Collector.AddTimezoneToDDayICal(all_ical, calinfo.tzinfo);
-				foreach (var tz in all_ical.TimeZones)
-					tz.TZID = calinfo.tzinfo.Id;
 
 				foreach (var suffix in suffixes)  // todo: skip if disabled in settings
 				{
@@ -762,9 +695,7 @@ All events {8}, population {9}, events/person {10:f}
 					{
 						var feedtext = HttpUtils.FetchUrl(url).DataAsString();
 						var sr = new StringReader(feedtext);
-						var ical = iCalendar.LoadFromStream(sr);
-						foreach (var tz in ical.TimeZones)
-							tz.TZID = calinfo.tzinfo.Id;
+						var ical = iCalendar.LoadFromStream(sr).First().Calendar;
 						all_ical.MergeWith(ical);
 					}
 					catch (Exception e)
@@ -773,12 +704,8 @@ All events {8}, population {9}, events/person {10:f}
 					}
 				}
 
-				//var deduped = new iCalendar().iCalendar;
-				//DedupeIcal(all_ical, deduped);
-				//var serializer = new iCalendarSerializer(deduped);
-
-				var serializer = new iCalendarSerializer(all_ical);
-				var icsbytes = Encoding.UTF8.GetBytes(serializer.SerializeToString());
+				var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer(all_ical);
+				var icsbytes = Encoding.UTF8.GetBytes(serializer.SerializeToString(all_ical));
 				bs.PutBlob(id, id + ".ics", new Hashtable(), icsbytes, "text/calendar");
 			}
 			catch (Exception e)
@@ -789,8 +716,8 @@ All events {8}, population {9}, events/person {10:f}
 
 		private static void DedupeIcal(iCalendar all_ical, iCalendar deduped)
 		{
-			var dict = new Dictionary<string, DDay.iCal.Components.Event>();
-			foreach (DDay.iCal.Components.Event evt in all_ical.Events)
+			var dict = new Dictionary<string, DDay.iCal.Event>();
+			foreach (DDay.iCal.Event evt in all_ical.Events)
 			{
 				var key = evt.Summary.ToString() + "_" + evt.DTStart.ToString();
 				var val = evt;
@@ -861,73 +788,43 @@ All events {8}, population {9}, events/person {10:f}
 		{
 			GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
 
-			try    // acquire new hubs added since last cycle
-			{
-				RecacheHubIdsToAzure();
-			}
-			catch (Exception e0)
-			{
-				GenUtils.PriorityLogMsg("exception", "GeneralAdmin.RecacheHubs", e0.Message);
-			}
-
 			var ids = Metadata.LoadHubIdsFromAzureTable();
 			ids = MaybeAdjustIdsForTesting(ids);
 
-			try  // fetch feeds and metadata from delicious, store in azure table, update metadata pages
-			{
-				foreach (var id in ids)
-				{
-					if ( Utils.ElmcityIdUsesTwitterAuth(id) == false ) // revert to old delicious-based mechanism
-						UpdateFeedsAndMetadataForIdToAzure(id);
-				}
-			}
-			catch (Exception e1)
-			{
-				GenUtils.PriorityLogMsg("exception", "GeneralAdmin", e1.Message);
-			}
+			foreach (var id in ids)
+				Utils.RecreatePickledCalinfoAndRenderer(id);  
 
-			WebRoleData wrd;
+			WebRoleData.MakeWebRoleData();  // update wrd.obj to include changed pickles (if any) and new hubs ( if any )
 
-			try  // create WebRoleData structure and store as blob, available to webrole on next _reload
+			Utils.MakeWhereSummary();
+			Utils.MakeWhatSummary();
+
+			try // refresh fb api access 
 			{
-				wrd = new WebRoleData(testing: false, test_id: null);
-				bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
+				var url = String.Format("https://www.facebook.com/dialog/oauth?client_id={0}&redirect_uri={1}&scope=offline_access",
+					settings["facebook_token_getter_id"],
+					settings["facebook_token_getter_redirect_uri"]);
 			}
-			catch (Exception e3)
+			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "GeneralAdmin: creating wrd", e3.Message);
+				GenUtils.PriorityLogMsg("exception", "GeneralAdmin: refresh fb access", e.Message + e.StackTrace);
 			}
-
-		}
-
-		public static void UpdateFeedsAndMetadataForIdToAzure(string id)
-		{
-			var fr_delicious = new FeedRegistry(id);
-			fr_delicious.LoadFeedsFromDelicious();
-			PurgeDeletedFeeds(fr_delicious, id);
-			UpdateFeedsToAzure(fr_delicious, id);
-			UpdateFeedCountToAzure(id);
-			UpdateMetadataToAzure(id);
-			Utils.MakeMetadataPage(id);
+			
 		}
 
 		public static void TestRunnerAdmin(object o, ElapsedEventArgs args)
 		{
 			logger.LogMsg("info", "TestRunnerAdmin", null);
-			var calinfo = new Calinfo(CalendarAggregator.Configurator.delicious_test_account);
+			var calinfo = new Calinfo(ElmcityUtils.Configurator.azure_compute_account);
 			try
 			{
-				var failed = GenUtils.RunTests("CalendarAggregator");
+				int failed;
+				failed = GenUtils.RunTests("CalendarAggregator");
+				failed += GenUtils.RunTests("ElmcityUtils");
+				failed += GenUtils.RunTests("WorkerRole");
+				failed += GenUtils.RunTests("WebRole");
 				if (failed > 0)
-					TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed: CalendarAggregator");
-
-				failed = GenUtils.RunTests("ElmcityUtils");
-				if (failed > 0)
-					TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed: CalendarElmcityUtils");
-
-				failed = GenUtils.RunTests("WorkerRole");
-				if (failed > 0)
-					TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed: WorkerRole");
+					TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed");
 			}
 			catch (Exception e)
 			{
