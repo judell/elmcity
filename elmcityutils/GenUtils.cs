@@ -73,6 +73,11 @@ namespace ElmcityUtils
 			return false; // value-type    
 			}
 
+		public static bool KeyExistsAndHasValue(Dictionary<string, string> metadict, string key)
+		 {
+			 return metadict.ContainsKey(key) && metadict[key] != String.Empty;
+		 }
+
 		public class Actions
 		{
 			public static Exception RetryExceededMaxTries = new Exception("RetryExceededMaxTries");
@@ -437,11 +442,54 @@ namespace ElmcityUtils
 
 	}
 
+	#region extensions
+
 	public static class ListExtensions
 	{
 		public static bool IsSubsetOf<T>(this List<T> list_one, List<T> list_two)
 		{
 			return !list_one.Except(list_two).Any();
+		}
+
+		public static IEnumerable<T> Unique<T>(this IEnumerable<T> source) 
+		{
+			var result = new HashSet<T>();
+
+			foreach (T element in source)
+			{
+				result.Add(element);
+			}
+			// yield to get deferred execution
+			foreach (T element in result)
+			{
+				yield return element;
+			}
+		}
+
+
+		public static IEnumerable<T> OnlyUnique<T>(this IEnumerable<T> source) // http://stackoverflow.com/questions/724479/any-chance-to-get-unique-records-using-linq-c
+		{
+			// No error checking :)
+
+			HashSet<T> toReturn = new HashSet<T>();
+			HashSet<T> seen = new HashSet<T>();
+
+			foreach (T element in source)
+			{
+				if (seen.Add(element))
+				{
+					toReturn.Add(element);
+				}
+				else
+				{
+					toReturn.Remove(element);
+				}
+			}
+			// yield to get deferred execution
+			foreach (T element in toReturn)
+			{
+				yield return element;
+			}
 		}
 	}
 
@@ -455,6 +503,29 @@ namespace ElmcityUtils
 				dict.Add(key, value);
 		}
 
+		public static void AddOrUpdateDictOfListStr(this IDictionary<string, List<string>> dict, string key, List<string> values)
+		{
+			if (dict.ContainsKey(key))
+			{
+				var diffs = values.Except(dict[key]);
+				foreach (var value in diffs)
+					dict[key].Add(value);
+			}
+			else
+			{
+				dict[key] = values;
+			}
+		}
+
+		public static void AddOrUpdateDictOfDictStr(this IDictionary<string, Dictionary<string,string>> dict, string key, Dictionary<string,string> subdict)
+		{
+			if ( dict.ContainsKey(key) )
+				foreach (var subkey in subdict.Keys)
+					dict[key][subkey] = subdict[subkey];
+			else
+				dict[key] = subdict;
+		}
+
 		public static bool KeySetEqual<TKey, TValue>(this IDictionary<TKey, TValue> dict, List<TKey> keys)
 		{
 			return GenUtils.AreEqualLists<TKey>(dict.Keys.ToList(), keys);
@@ -466,6 +537,14 @@ namespace ElmcityUtils
 				return dict[key];
 			else
 				return default(TValue);
+		}
+
+		public static void IncrementOrAdd<TKey>(this IDictionary<string,int> dict, string key)
+		{
+		if (dict.ContainsKey(key))
+			dict[key] += 1;
+		else
+			dict[key] = 1;
 		}
 
 	}
@@ -492,6 +571,8 @@ namespace ElmcityUtils
 
 	}
 
+    #endregion
+
 	public static class MathHelpers
 	{
 		public static bool Between(this int num, int lower, int upper, bool inclusive = false)
@@ -499,6 +580,14 @@ namespace ElmcityUtils
 			return inclusive
 				? lower <= num && num <= upper
 				: lower < num && num < upper;
+		}
+	}
+
+	public class CaseInsensitiveComparer : IComparer<string>
+	{
+		public int Compare(string x, string y)
+		{
+			return string.Compare(x, y, StringComparison.OrdinalIgnoreCase);
 		}
 	}
 }
