@@ -12,8 +12,8 @@ namespace CalendarAggregator
 		private static string test_fb_id = Configurator.test_fb_id;
 		private static string test_fb_key = Configurator.test_fb_key;
 		private static string test_fb_url = String.Format("http://www.facebook.com/ical/u.php?uid={0}&key={1}", test_fb_id, test_fb_key);
-		private string id = Configurator.delicious_test_account;
-		private string twitter_sender = Configurator.delicious_master_account;
+		private string id = "elmcity";  // todo: externalize these
+		private string twitter_sender = "judell";
 		private string twitter_receiver = Configurator.twitter_account;
 		private string row_key = Utils.MakeSafeRowkeyFromUrl(test_fb_url);
 		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
