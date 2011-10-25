@@ -25,13 +25,10 @@ using System.Threading.Tasks;
 using System.Timers;
 using System.Xml;
 using System.Xml.Linq;
+using DDay.iCal.DataTypes;
 using ElmcityUtils;
 using LINQtoCSV;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Web;
-using DDay.iCal;
-using DDay.iCal.Serialization;
 
 
 namespace CalendarAggregator
@@ -40,6 +37,7 @@ namespace CalendarAggregator
 	{
 		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
 		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
+		private static Delicious delicious = Delicious.MakeDefaultDelicious();
 
 		//private static Int32 pid = System.Diagnostics.Process.GetCurrentProcess().Id;
 		private static string hostname = System.Net.Dns.GetHostName();
@@ -76,6 +74,38 @@ namespace CalendarAggregator
 		#endregion
 
 		#region datetime
+
+		[Serializable]
+		public struct DateTimeWithZone
+		{
+			private readonly DateTime utcDateTime;
+			private readonly TimeZoneInfo timeZone;
+
+			public DateTimeWithZone(DateTime dt, TimeZoneInfo tz)
+			{
+				var _dt = new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second);
+				this.utcDateTime = TimeZoneInfo.ConvertTimeToUtc(_dt, tz);
+				this.timeZone = tz;
+			}
+
+			public static DateTimeWithZone MinValue(TimeZoneInfo timeZone)
+			{
+				return new DateTimeWithZone(DateTime.MinValue, timeZone);
+			}
+
+			public DateTime UniversalTime { get { return utcDateTime; } }
+
+			public TimeZoneInfo TimeZone { get { return timeZone; } }
+
+			public DateTime LocalTime
+			{
+				get
+				{
+					return TimeZoneInfo.ConvertTime(utcDateTime, timeZone);
+				}
+			}
+
+		}
 
 		public static DateTimeWithZone DtWithZoneFromICalDateTime(iCalDateTime idt, System.TimeZoneInfo tzinfo)
 		{
@@ -120,29 +150,29 @@ namespace CalendarAggregator
 			return dt;
 		}
 
-		public static DateTime LocalDateTimeFromLocalDateStr(string str_dt)
+		public static DateTime DateTimeFromDateStr(string str_dt)
 		{
 			Regex re = new Regex(@"(\d+)\-(\d+)\-(\d+) (\d+):(\d+)", RegexOptions.None);
-			DateTime dt = ParseDateTime(str_dt, re, DateTimeKind.Local);
+			DateTime dt = ParseDateTime(str_dt, re);
 			return dt;
 		}
 
-		public static DateTime DateTimeFromISO8601DateStr(string str_dt, DateTimeKind kind)
+		public static DateTime DateTimeFromISO8601DateStr(string str_dt)
 		{
 			//2010-11-28T03:00:00+0000
 			Regex re = new Regex(@"(\d+)\-(\d+)\-(\d+)T(\d+):(\d+)", RegexOptions.None);
-			DateTime dt = ParseDateTime(str_dt, re, kind);
+			DateTime dt = ParseDateTime(str_dt, re);
 			return dt;
 		}
 
-		public static DateTime DateTimeFromICalDateStr(string str_dt, DateTimeKind kind)
+		public static DateTime DateTimeFromICalDateStr(string str_dt)
 		{
 			Regex re = new Regex(@"(\d{4,4})(\d{2,2})(\d{2,2})T(\d{2,2})(\d{2,2})", RegexOptions.None);
-			DateTime dt = ParseDateTime(str_dt, re, kind);
+			DateTime dt = ParseDateTime(str_dt, re);
 			return dt;
 		}
 
-		private static DateTime ParseDateTime(string str_dt, Regex re, DateTimeKind kind)
+		private static DateTime ParseDateTime(string str_dt, Regex re)
 		{
 			Match m = re.Match(str_dt);
 			int year = Convert.ToInt16(m.Groups[1].Value);
@@ -150,25 +180,25 @@ namespace CalendarAggregator
 			int day = Convert.ToInt16(m.Groups[3].Value);
 			int hour = Convert.ToInt16(m.Groups[4].Value);
 			int min = Convert.ToInt16(m.Groups[5].Value);
-			DateTime dt = new DateTime(year, month, day, hour, min, 0, kind);
+			DateTime dt = new DateTime(year, month, day, hour, min, 0);
 			return dt;
 		}
 
 		public static DateTime LocalDateTimeFromUtcDateStr(string str_dt, TimeZoneInfo tzinfo)
 		{
-			var dt = LocalDateTimeFromLocalDateStr(str_dt);
+			var dt = DateTimeFromDateStr(str_dt);
 			return TimeZoneInfo.ConvertTimeFromUtc(dt, tzinfo);
 		}
 
-		public static DateTime DateTimeFromISO8601UtcDateStr(string str_dt, TimeZoneInfo tzinfo)
+		public static DateTime LocalDateTimeFromISO8601UtcDateStr(string str_dt, TimeZoneInfo tzinfo)
 		{
-			var dt = DateTimeFromISO8601DateStr(str_dt, DateTimeKind.Utc );
+			var dt = DateTimeFromISO8601DateStr(str_dt);
 			return TimeZoneInfo.ConvertTimeFromUtc(dt, tzinfo);
 		}
 
 		public static DateTime LocalDateTimeFromFacebookDateStr(string str_dt, TimeZoneInfo tzinfo)
 		{
-			var dt = DateTimeFromISO8601DateStr(str_dt, DateTimeKind.Local);     // 2010-07-18 01:00
+			var dt = DateTimeFromISO8601DateStr(str_dt);     // 2010-07-18 01:00
 			// off by 7 or 8 hours: why?
 			var adjusted_dt = dt - new TimeSpan(Configurator.facebook_mystery_offset_hours, 0, 0);    // 2010-07-17 18:00
 			return adjusted_dt;
@@ -211,10 +241,18 @@ namespace CalendarAggregator
 			return dt + ts;
 		}
 
+		public static DateTimeWithZone NowInTz()
+		{
+			var tzinfo = Utils.TzinfoFromName("GMT");
+			return new DateTimeWithZone(DateTime.UtcNow, tzinfo);
+		}
+
 		public static DateTimeWithZone NowInTz(System.TimeZoneInfo tzinfo)
 		{
-			var dt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tzinfo);
-			return new DateTimeWithZone(dt, tzinfo);
+			var utc_now = DateTime.UtcNow;
+			var offset = tzinfo.GetUtcOffset(utc_now);
+			var now_in_tz = utc_now + offset;
+			return new DateTimeWithZone(now_in_tz, tzinfo);
 		}
 
 		public static DateTimeWithZone MidnightInTz(System.TimeZoneInfo tzinfo)
@@ -225,18 +263,18 @@ namespace CalendarAggregator
 			return midnight_in_tz;
 		}
 
-		public static bool DtWithZoneIsTodayInTz(DateTimeWithZone dt_with_zone, System.TimeZoneInfo tzinfo)
+		public static bool DtWithZoneIsTodayInTz(Utils.DateTimeWithZone dt_with_zone, System.TimeZoneInfo tzinfo)
 		{
-			DateTimeWithZone midnight_in_tz = MidnightInTz(tzinfo);
-			DateTime next_midnight = TwentyFourHoursAfter(midnight_in_tz.LocalTime);
-			DateTimeWithZone next_midnight_in_tz = new DateTimeWithZone(next_midnight, tzinfo);
+			Utils.DateTimeWithZone midnight_in_tz = MidnightInTz(tzinfo);
+			DateTime next_midnight = Utils.TwentyFourHoursAfter(midnight_in_tz.LocalTime);
+			Utils.DateTimeWithZone next_midnight_in_tz = new Utils.DateTimeWithZone(next_midnight, tzinfo);
 			bool result = (midnight_in_tz.UniversalTime <= dt_with_zone.UniversalTime) && (dt_with_zone.UniversalTime < next_midnight_in_tz.UniversalTime);
 			return result;
 		}
 
 		public static bool DtIsTodayInTz(DateTime dt, System.TimeZoneInfo tzinfo)
 		{
-			var dt_with_zone = new DateTimeWithZone(dt, tzinfo);
+			var dt_with_zone = new Utils.DateTimeWithZone(dt, tzinfo);
 			return DtWithZoneIsTodayInTz(dt_with_zone, tzinfo);
 		}
 
@@ -251,41 +289,21 @@ namespace CalendarAggregator
 		{
 			name = name.ToLower();
 			name = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
-			if ( ! name.EndsWith ("Standard Time") )
-				name = name + " Standard Time";
+			name = name + " Standard Time";
 			TimeZoneInfo tzinfo;
 			try
 			{
+				//tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById(name + suffix);
+				//tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById(tzinfo.StandardName);
 				tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById(name);
 			}
 			catch (Exception e)
 			{
-				tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById("GMT");
+				tzinfo = System.TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
 				GenUtils.PriorityLogMsg("exception", "no such tz: " + name, e.Message);
 			}
 
 			return tzinfo;
-		}
-
-		public static TimeZoneInfo TzInfoFromOlsonName(string olson_name)
-		{
-			string tzname = "GMT";
-			try
-			{
-				var olson_windows_map = new Uri("http://unicode.org/repos/cldr/trunk/common/supplemental/windowsZones.xml");
-				var xml = HttpUtils.FetchUrl(olson_windows_map).DataAsString();
-				xml = xml.Replace(@"<!DOCTYPE supplementalData SYSTEM ""../../common/dtd/ldmlSupplemental.dtd"">", "");
-				var xdoc = XmlUtils.XdocFromXmlBytes(Encoding.UTF8.GetBytes(xml));
-				var mapZones = from mapZone in xdoc.Descendants("mapZone")
-							   where mapZone.Attribute("type").Value == olson_name
-							   select mapZone.Attribute("other").Value;
-				tzname = mapZones.First();
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "TzInfoFromOlsonName: " + olson_name, "falling back to GMT\n" + e.Message + e.StackTrace);
-			}
-			return TzinfoFromName(tzname);
 		}
 
 		public static TimeOfDay ClassifyTime(DateTime dt)
@@ -348,44 +366,25 @@ namespace CalendarAggregator
 
 		public static int FindPop(string id, string city_or_town, string qualifier)
 		{
-			 var pop = Configurator.default_population;
+			var pop = Configurator.default_population;
 
 			var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
 
 			if (metadict.ContainsKey("population"))
-			{
-				try
-				{
-					pop = Convert.ToInt32(metadict["population"]);
-				}
-				catch (Exception e)
-				{
-					GenUtils.PriorityLogMsg("warning", id + " FindPop", e.Message + e.StackTrace);
-				}
-			}
+				return Convert.ToInt32(metadict["population"]);
+
+			pop = LookupUsPop(city_or_town, qualifier);
 
 			if (pop == Configurator.default_population)
-			{
-				try
-				{
-					pop = LookupUsPop(city_or_town, qualifier);
-				}
-				catch (Exception e)
-				{
-					GenUtils.PriorityLogMsg("warning", id + " FindPop / LookupUsPop", e.Message + e.StackTrace);
-				}
-			}
+				pop = LookupNonUsPop(city_or_town, qualifier);
 
-			if (pop == Configurator.default_population)
+			if (pop != Configurator.default_population)
 			{
-				try
-				{
-					pop = LookupNonUsPop(city_or_town, qualifier);
-				}
-				catch (Exception e)
-				{
-					GenUtils.PriorityLogMsg("warning", id + " FindPop / LookupNonUsPop", e.Message + e.StackTrace);
-				}
+				var dict = new Dictionary<string, string>();
+				dict.Add("population", pop.ToString());
+				var dict_obj = ObjectUtils.DictStrToDictObj(dict);
+				TableStorage.UpmergeDictToTableStore(dict_obj, table: "metadata", partkey: id, rowkey: id);
+				return pop;
 			}
 
 			return pop;
@@ -451,28 +450,9 @@ namespace CalendarAggregator
 			return pop;
 		}
 
-		public static void UpdatePopulationToAzureForId(string id, int pop)
-		{
-			var dict = new Dictionary<string, string>();
-			dict.Add("population", pop.ToString());
-			var dict_obj = ObjectUtils.DictStrToDictObj(dict);
-			TableStorage.UpmergeDictToTableStore(dict_obj, table: "metadata", partkey: id, rowkey: id);
-		}
-
 		#endregion population
 
 		#region filtering
-
-		public static List<DDay.iCal.Event> UniqueByTitleAndStart(List<DDay.iCal.Event> events)
-		{
-			var uniques = new Dictionary<string, DDay.iCal.Event>(); // dedupe by summary + start
-			foreach (var evt in events)
-			{
-				var key = evt.TitleAndTime();
-				uniques.AddOrUpdateDictionary<string, DDay.iCal.Event>(key, evt);
-			}
-			return (List<DDay.iCal.Event>)uniques.Values.ToList();
-		}
 
 		public class Filter<T> where T : class
 		{
@@ -493,7 +473,6 @@ namespace CalendarAggregator
 
 		#region geo
 
-		/*
 		public static string[] LookupLatLon(string appid, string where)
 		{
 			var url = new Uri(string.Format("http://local.yahooapis.com/MapsService/V1/geocode?appid={0}&city={1}", appid, where));
@@ -507,36 +486,11 @@ namespace CalendarAggregator
 				lon = GenUtils.RegexFindGroups(xml, "<Longitude>([^<]+)")[1];
 			}
 			return new string[] { lat, lon };
-		}*/
-
-		public static string[] LookupLatLon(string bing_api_key, string where)
-		{
-			var url = string.Format("http://dev.virtualearth.net/REST/v1/Locations?key={0}&query={1}", bing_api_key, where);
-
-			string lat = null;
-			string lon = null;
-
-			try
-			{
-			var json = HttpUtils.FetchUrl( new Uri(url)).DataAsString();
-			json = json.Replace("__type", "type"); // http://stackoverflow.com/questions/2005534/json-serialization-deserialization-mismatch-asp-net
-			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-			var dict = (Dictionary<string,object>) serializer.DeserializeObject(json);
-
-			lat = ((Object[])((Dictionary<string, object>)((Dictionary<string, object>)(((Object[])((Dictionary<string, object>)(((Object[])dict["resourceSets"])[0]))["resources"])[0]))["point"])["coordinates"])[0].ToString();
-			lon = ((Object[])((Dictionary<string, object>)((Dictionary<string, object>)(((Object[])((Dictionary<string, object>)(((Object[])dict["resourceSets"])[0]))["resources"])[0]))["point"])["coordinates"])[1].ToString();
-			}
-
-			catch (Exception e)
-			{
-				GenUtils.LogMsg("exception", "LookupLatLon", e.Message + e.StackTrace);
-			}
-
-			return new string[] { lat, lon };
 		}
 
-		public static void UpdateLatLonToAzureForId(string id, string lat, string lon)
+		public static void StoreLatLonToAzureForId(string id, string lat, string lon)
 		{
+			var d = Delicious.MakeDefaultDelicious();
 			var latlon_dict = new Dictionary<string, object>();
 			latlon_dict["lat"] = lat;
 			latlon_dict["lon"] = lon;
@@ -616,25 +570,17 @@ namespace CalendarAggregator
 			return dt;
 		}
 
-		public static string GetRecentLogEntries(string log, string type, int minutes, string targets)
+		public static string GetRecentLogEntries(string log, int minutes, string id)
 		{
 			var sb = new StringBuilder();
 			var dt = Since(minutes);
-
-			var filters = new List<LogFilter>();
-
-			List<string> target_list = new List<string>();
-			if ( targets != null )
-				target_list = targets.Split(',').ToList();
-
-			if (type != null)
-				filters.Add( new LogFilter( type, null) );
-
-			foreach (var target in target_list)
-				filters.Add(new LogFilter(null, target));
-
-			GetLogEntriesLaterThanTicks(log, dt.Ticks, filters, sb);
+			GetLogEntriesLaterThanTicks(log, dt.Ticks, id, FilterByAllOrId, sb);
 			return sb.ToString();
+		}
+
+		public static string GetRecentLogEntries(int minutes, string id)
+		{
+			return GetRecentLogEntries("log", minutes, id);
 		}
 
 		public static string GetRecentMonitorEntries(int minutes, string conditions)
@@ -645,7 +591,7 @@ namespace CalendarAggregator
 			return sb.ToString();
 		}
 
-		public static void GetTableEntriesLaterThanTicks(string tablename, string partition_key, string row_key, string conditions, List<Dictionary<string, string>> entities)
+		public static void GetTableEntriesLaterThanTicks(string tablename, string partition_key, string row_key, string conditions, List<Dictionary<string, string>> entries)
 		{
 			string query = String.Format("$filter=(PartitionKey eq '{0}') and (RowKey gt '{1}')", partition_key, row_key);
 			if (String.IsNullOrEmpty(conditions) == false)
@@ -659,32 +605,30 @@ namespace CalendarAggregator
 			foreach (var dict in dicts)
 			{
 				dict_str = ObjectUtils.DictObjToDictStr(dict);
-				entities.Add(dict_str);
+				entries.Add(dict_str);
 			}
 			var new_ticks = dict_str["RowKey"];
-			GetTableEntriesLaterThanTicks(tablename, partition_key, row_key: new_ticks, conditions: conditions, entities: entities);
+			GetTableEntriesLaterThanTicks(tablename, partition_key, row_key: new_ticks, conditions: conditions, entries: entries);
 		}
 
-		public static List<Dictionary<string, string>> FilterByAny(List<Dictionary<string, string>> entries, string any_string)
+		public delegate List<Dictionary<string, string>> ByAllOrId(List<Dictionary<string, string>> filter, string id);
+
+		public static List<Dictionary<string, string>> FilterByAllOrId(List<Dictionary<string, string>> entries, string id)
 		{
-			return entries.FindAll(entry => (entry["message"].Contains(any_string)));
+			return entries.FindAll(entry => (id == "priority" || id == "all" || entry["message"].Contains(id)));
 		}
 
-		public static List<Dictionary<string, string>> FilterByType(List<Dictionary<string, string>> entries, string type)
+		public static void GetLogEntriesLaterThanTicks(long ticks, string id, ByAllOrId filter, StringBuilder sb)
 		{
-			return entries.FindAll(entry => (entry["type"].Contains(type)));
+			GetLogEntriesLaterThanTicks("log", ticks, id, filter, sb);
 		}
 
-		public static void GetLogEntriesLaterThanTicks(string log, long ticks, List<CalendarAggregator.LogFilter> filters, StringBuilder sb)
+		public static void GetLogEntriesLaterThanTicks(string log, long ticks, string id, ByAllOrId filter, StringBuilder sb)
 		{
-			var entities = new List<Dictionary<string, string>>();
-			GetTableEntriesLaterThanTicks(tablename: log, partition_key: "log", row_key: ticks.ToString(), conditions: null, entities: entities );
-			foreach (var filter in filters)
-			{
-				filter.SetEntities(entities);
-				entities = filter.Apply();
-			}
-			FormatLogEntries(sb, entities);
+			var entries = new List<Dictionary<string, string>>();
+			GetTableEntriesLaterThanTicks(tablename: log, partition_key: "log", row_key: ticks.ToString(), conditions: null, entries: entries);
+			var filtered_entries = filter(entries, id);
+			FormatLogEntries(sb, filtered_entries);
 		}
 
 		private static void FormatLogEntries(StringBuilder sb, List<Dictionary<string, string>> filtered_entries)
@@ -696,7 +640,7 @@ namespace CalendarAggregator
 		public static void GetMonitorEntriesLaterThanTicks(long ticks, string tablename, string conditions, StringBuilder sb)
 		{
 			var entries = new List<Dictionary<string, string>>();
-			GetTableEntriesLaterThanTicks(tablename: tablename, partition_key: tablename, row_key: ticks.ToString(), conditions: conditions, entities: entries);
+			GetTableEntriesLaterThanTicks(tablename: tablename, partition_key: tablename, row_key: ticks.ToString(), conditions: conditions, entries: entries);
 			FormatLogEntries(sb, entries);
 		}
 
@@ -730,7 +674,7 @@ namespace CalendarAggregator
 			{
 				var title = item.Element("title").Value;
 				var url = item.Element("link").Value;
-				var dtstart = Utils.LocalDateTimeFromLocalDateStr(item.Element(xcal + "dtstart").Value);
+				var dtstart = Utils.DateTimeFromDateStr(item.Element(xcal + "dtstart").Value);
 				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
 				var location = item.Element(xcal + "location").Value;
 				string lat = null;
@@ -744,11 +688,13 @@ namespace CalendarAggregator
 				{
 					GenUtils.LogMsg("warning", "IcsFromRssPlusXcal", "unable to parse lat/lon");
 				}
-				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, lat: lat, lon: lon, allday: false);
+				//var evt = Collector.MakeTmpEvt(dtstart_with_zone, title, url, source, allday: false, use_utc: use_utc);
+				//var evt = Collector.MakeTmpEvt(dtstart_with_zone,  Utils.DateTimeWithZone.MinValue(tzinfo), title, source, allday: false, use_utc: use_utc);
+				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, lat: lat, lon: lon, allday: false, use_utc: false);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
-			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer(ical);
-			var ics_text = serializer.SerializeToString(ical);
+			var serializer = new DDay.iCal.Serialization.iCalendarSerializer(ical);
+			var ics_text = serializer.SerializeToString();
 			return ics_text;
 		}
 
@@ -772,65 +718,15 @@ namespace CalendarAggregator
 				var title = entry.Element(ns + "title").Value;
 				var url = entry.Element(ns + "link").Attribute("href").Value;
 				var dtstart_str = entry.Descendants(ns + "dtstart").First().Value;
-				var dtstart = Utils.DateTimeFromICalDateStr(dtstart_str, DateTimeKind.Local);
+				var dtstart = Utils.DateTimeFromICalDateStr(dtstart_str);
 				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
 				var location = entry.Descendants(ns + "location").First().Value;
-				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, lat: null, lon: null, allday: false);
+				//var evt = Collector.MakeTmpEvt(dtstart_with_zone, title, url, source, allday: false, use_utc: use_utc);
+				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, Utils.DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, lat: null, lon: null, allday: false, use_utc: false);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
-			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer();
-			var ics_text = serializer.SerializeToString(ical);
-			return ics_text;
-		}
-
-		#endregion
-
-		#region fbpage
-
-		static public string IcsFromFbPage(string fb_id, string elmcity_id, Dictionary<string,string> settings)
-		{
-			var facebook_access_token = settings["facebook_access_token"];
-
-			// https://graph.facebook.com/https://graph.facebook.com/142525312427391/events?access_token=...
-			var graph_uri_template = "https://graph.facebook.com/{0}/events?access_token={1}";
-			var graph_uri = new Uri(string.Format(graph_uri_template, fb_id, facebook_access_token));
-
-			var json = HttpUtils.FetchUrl(graph_uri).DataAsString();
-
-			var calinfo = new Calinfo(elmcity_id);
-			var tzinfo = calinfo.tzinfo;
-			var ical = new DDay.iCal.iCalendar();
-			Collector.AddTimezoneToDDayICal(ical, tzinfo);
-
-			var dict = JsonConvert.DeserializeObject(json);
-
-			var j_obj = (JObject)JsonConvert.DeserializeObject(json);
-
-			foreach (JObject event_dict in j_obj["data"])
-			{
-				var title = event_dict["name"].Value<string>();
-				var url = string.Format("http://www.facebook.com/pages/{0}?sk=events", fb_id);
-				var dtstart = Utils.LocalDateTimeFromFacebookDateStr(event_dict["start_time"].Value<string>(), tzinfo);
-				var dtstart_with_zone = new DateTimeWithZone(dtstart, calinfo.tzinfo);
-				string location = "";
-				string evt_id = "";
-				try
-				{
-					location = event_dict["location"].Value<string>();
-					evt_id = event_dict["id"].Value<string>();
-					url = "http://www.facebook.com/event.php?eid=" + evt_id;
-				}
-				catch (Exception e)
-				{
-					GenUtils.LogMsg("warning", "ICcsFromFbPage: empty location and/or evt id: " + title + " " + fb_id, e.Message + e.StackTrace);
-				}
-
-				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: location, lat: calinfo.lat, lon: calinfo.lon, allday: false);
-				Collector.AddEventToDDayIcal(ical, evt);
-			}
-
-			var ical_serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer(ical);
-			var ics_text = ical_serializer.SerializeToString(ical);
+			var serializer = new DDay.iCal.Serialization.iCalendarSerializer(ical);
+			var ics_text = serializer.SerializeToString();
 			return ics_text;
 		}
 
@@ -899,15 +795,11 @@ namespace CalendarAggregator
 
 		public static string GetHubMetadataAsHtml(string id)
 		{
-			var settings = GenUtils.GetSettingsFromAzureTable("settings");
-
-			var exclude_keys_str = settings["hub_metadict_exclude_list"];
-			List<string> exclude_keys = exclude_keys_str.Split(',').ToList();
 			var sb = new StringBuilder();
 			sb.Append("<table>");
 			var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
-			// var exclude_keys = new List<string>() { "PartitionKey", "RowKey", "Timestamp", "contribute_url", "default_img_html", 
-			//	"eventbrite_events", "eventful_events", "events", "events_per_person", "facebook_events", "ical_events", "upcoming_events" };
+			var exclude_keys = new List<string>() { "PartitionKey", "RowKey", "Timestamp", "contribute_url", "default_img_html", 
+				"eventful_events", "events", "events_per_person", "facebook_events", "ical_events", "upcoming_events" };
 			foreach (var key in metadict.Keys)
 			{
 				if (exclude_keys.Exists(k => k == key))
@@ -925,7 +817,7 @@ namespace CalendarAggregator
 
 			var rows = new List<string>();
 
-			Dictionary<string, string> feeds = Metadata.LoadFeedsFromAzureTableForId(id, FeedLoadOption.only_public);
+			Dictionary<string, string> feeds = delicious.LoadFeedsFromAzureTableForId(id, FeedLoadOption.only_public);
 			var include_attrs = new List<string>() { "url", "category" };
 			foreach (var feedurl in feeds.Keys)
 			{
@@ -1008,6 +900,21 @@ namespace CalendarAggregator
 			bs.PutBlob(id, "metadata.html", Encoding.UTF8.GetBytes(page));
 		}
 
+		public static void UpdateWrdForId(string id)
+		{
+			try
+			{
+				var uri = BlobStorage.MakeAzureBlobUri("admin", "wrd.obj");
+				var wrd = (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri); // acquire wrd
+				WebRoleData.UpdateCalinfoAndRendererForId(id, wrd);
+				bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "WorkerRole.UpdateWrdForId: " + id, e.Message);
+			}
+		}
+
 		public static void PurgePickledCalinfoAndRenderer(string id)
 		{
 			foreach (string pickle in new List<string>() { "renderer", "calinfo" })
@@ -1017,252 +924,19 @@ namespace CalendarAggregator
 			}
 		}
 
-		public static void PurgeAllPickles()
-		{
-			var ids = Metadata.LoadHubIdsFromAzureTable();
-			foreach (var id in ids)
-				PurgePickledCalinfoAndRenderer(id);
-		}
-
 		public static void RecreatePickledCalinfoAndRenderer(string id)
 		{
 			try  // create and cache calinfo and renderer, these are nonessential and recreated on demand if needed
 			{
 				var calinfo = new Calinfo(id);
+				var cr = new CalendarRenderer(calinfo);
 				bs.SerializeObjectToAzureBlob(calinfo, id, id + ".calinfo.obj");
-
-				var cr = new CalendarRenderer(id);
 				bs.SerializeObjectToAzureBlob(cr, id, id + ".renderer.obj");
 			}
 			catch (Exception e2)
 			{
 				GenUtils.PriorityLogMsg("exception", "GeneralAdmin: saving calinfo and renderer: " + id, e2.Message);
 			}
-		}
-
-		public static void RecreateAllPickles()
-		{
-			var ids = Metadata.LoadHubIdsFromAzureTable();
-			foreach (var id in ids)
-				RecreatePickledCalinfoAndRenderer(id);
-		}
-
-		#endregion
-
-		#region uses_foreign_auth
-
-		public static bool ElmcityIdUsesForeignAuth(string table, string id)
-		{
-			try
-			{
-				var q = String.Format("$filter=RowKey eq '{0}'", id);
-				var list = ts.QueryEntities(table, q).list_dict_obj;
-				return list.Count >= 1;
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "ElmcityIdUsesForeignAuth:" + table + ":" + id, e.Message);
-				return false;
-			}
-		}
-
-		public static bool ElmcityIdUsesTwitterAuth(string id)
-		{
-			return ElmcityIdUsesForeignAuth(ElmcityUtils.Authentication.TrustedTable.trustedtwitterers.ToString(), id);
-		}
-
-		public static bool ElmcityIdUsesFacebookAuth(string id)
-		{
-			return ElmcityIdUsesForeignAuth(ElmcityUtils.Authentication.TrustedTable.trustedfacebookers.ToString(), id);
-		}
-
-		public static bool ElmcityIdUsesLiveAuth(string id)
-		{
-			return ElmcityIdUsesForeignAuth(ElmcityUtils.Authentication.TrustedTable.trustedlivers.ToString(), id);
-		}
-
-		public static bool ElmcityIdUsesGoogleAuth(string id)
-		{
-			return ElmcityIdUsesForeignAuth(ElmcityUtils.Authentication.TrustedTable.trustedgooglers.ToString(), id);
-		}
-
-		public static bool ElmcityIdUsesAuth(string id)
-		{
-			return ElmcityIdUsesTwitterAuth(id) || ElmcityIdUsesFacebookAuth(id) || ElmcityIdUsesLiveAuth(id) || ElmcityIdUsesGoogleAuth(id);
-		}
-
-		#endregion uses_foreign_auth
-
-		#region homepage_summaries
-
-		public static WebRoleData GetWrd()
-		{
-			var uri = BlobStorage.MakeAzureBlobUri("admin","wrd.obj");
-			return (WebRoleData) BlobStorage.DeserializeObjectFromUri(uri);
-		}
-
-		public static string GetWhereSummary()
-		{
-			var uri = BlobStorage.MakeAzureBlobUri("admin", "where_summary.html");
-			return HttpUtils.FetchUrl(uri).DataAsString();
-		}
-
-		public static void MakeWhereSummary()
-		{
-			var wrd = GetWrd();
-
-			var summary = new StringBuilder();
-			summary.Append(@"<table style=""width:90%;margin:auto"">");
-			summary.Append(@"
-<tr>
-<td align=""center""><b>id</b></td>
-<td align=""center""><b>location</b></td>
-<td align=""center""><b>population</b></td>
-<td align=""center""><b>events</b></td>
-<td align=""center""><b>density</b></td>
-</tr>");
-			var row_template = @"
-<tr>
-<td>{0}</td>
-<td>{1}</td>
-<td align=""right"">{2}</td>
-<td align=""right"">{3}</td>
-<td align=""center"">{4}</td>
-</tr>";
-			//foreach (var id in WebRoleData.where_ids)
-			foreach (var id in wrd.where_ids)
-			{
-				if (IsReady(wrd, id) == false)
-					continue;
-				var calinfo = Utils.AcquireCalinfo(id);
-				var population = calinfo.population;
-				var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
-				var events = metadict.ContainsKey("events") ? metadict["events"] : "";
-				var events_per_person = metadict.ContainsKey("events_per_person") ? metadict["events_per_person"] : "";
-				var row = string.Format(row_template,
-					String.Format(@"<a title=""view outputs"" href=""/services/{0}"">{0}</a>", id),
-					metadict["where"],
-					population != 0 ? population.ToString() : "",
-					events,
-					population != 0 ? events_per_person : ""
-					);
-				summary.Append(row);
-			}
-			summary.Append("</table>");
-
-			bs.PutBlob("admin", "where_summary.html", summary.ToString());
-		}
-
-		public static string GetWhatSummary()
-		{
-			var uri = BlobStorage.MakeAzureBlobUri("admin", "what_summary.html");
-			return HttpUtils.FetchUrl(uri).DataAsString();
-		}
-
-		public static void MakeWhatSummary()
-		{
-			var wrd = GetWrd();
-
-			var summary = new StringBuilder();
-			summary.Append(@"<table style=""width:90%;margin:auto"">");
-			summary.Append(@"
-<tr>
-<td align=""center""><b>id</b></td>
-</tr>");
-			var row_template = @"
-<tr>
-<td>{0}</td>
-</tr>";
-			foreach (var id in wrd.what_ids)
-			{
-				if (IsReady(wrd, id) == false)
-					continue;
-				var row = string.Format(row_template,
-					String.Format(@"<a title=""view outputs"" href=""/services/{0}"">{0}</a>", id)
-					);
-				summary.Append(row);
-			}
-			summary.Append("</table>");
-
-			bs.PutBlob("admin", "what_summary.html", summary.ToString());
-		}
-
-		public static bool IsReady(WebRoleData wrd, string id)
-		{
-			return wrd.ready_ids.Contains(id);
-		}
-
-		#endregion
-
-		#region meetup
-
-		public static string FindMeetupGroups(Calinfo calinfo, int delay, Dictionary<string,string> settings)
-		{
-			var meetup_key = settings["meetup_api_key"];
-			var template = "https://api.meetup.com/2/open_events?key={0}&lat={1}&lon={2}&radius={3}";
-			var url = String.Format(template,
-						meetup_key,
-						calinfo.lat,
-						calinfo.lon,
-						calinfo.radius);
-
-			var json = HttpUtils.SlowFetchUrl(new Uri(url), delay).DataAsString();
-
-			var dict = JsonConvert.DeserializeObject<Dictionary<String, object>>(json);
-			var results = (JArray)dict["results"];
-			var ids = from result in results
-					  select Convert.ToString(result["group"]["id"].Value<int>());
-			var uniques = ids.ToList().Unique();
-
-			var group_infos = new List<Dictionary<string, string>>();
-
-			foreach (var group_id in uniques)
-			{
-				try
-				{
-					template = "https://api.meetup.com/2/groups?key={0}&group_id={1}";
-					url = String.Format(template,
-							meetup_key,
-							group_id);
-					json = HttpUtils.SlowFetchUrl(new Uri(url), delay).DataAsString();
-					dict = JsonConvert.DeserializeObject<Dictionary<String, object>>(json);
-					results = (JArray)dict["results"];
-					var result = results.First();
-					var name = result["name"].Value<string>();
-					var urlname = result["urlname"].Value<string>();
-					group_infos.Add(
-						new Dictionary<string, string>() 
-					{
-						{ "name", name },
-						{ "urlname", urlname },
-						{ "homepage", "http://www.meetup.com/" + urlname },
-						{ "ical", string.Format("http://www.meetup.com/{0}/events/ical/{1}/", 
-							urlname,
-							Uri.EscapeUriString(name) ) }
-					}
-					);
-				}
-				catch (Exception e)
-				{
-					GenUtils.PriorityLogMsg("exception", "FindMeetupGroups", e.Message + e.StackTrace);
-				}
-			}
-
-			var html = new StringBuilder();
-
-			foreach (var group_info in group_infos)
-			{
-				var tmpl = @"<p><a href=""{0}"">{1}</a> (<a href=""{0}"">iCal feed</a>)</p>";
-				var chunk = string.Format(tmpl,
-					group_info["homepage"],
-					group_info["name"],
-					group_info["ical"]
-					);
-				html.Append(chunk);
-			}
-
-			return html.ToString();
-
 		}
 
 		#endregion
@@ -1277,6 +951,42 @@ namespace CalendarAggregator
 			var dict = new Dictionary<string, object>() { { "feed_count", new_feed_count.ToString() } };
 			TableStorage.DictObjToTableStore(TableStorage.Operation.merge, dict, "metadata", id, id);
 			return new_feed_count;
+		}
+
+		public static List<string> ElmcityIdsFromTwitterName(string screen_name)
+		{
+			var q = String.Format("$filter=TwitterName eq '{0}'", screen_name);
+			try
+			{
+				var list = ts.QueryEntities("trustedtwitterers", q).list_dict_obj;
+				return list.Select(x => (string) x["RowKey"]).ToList();
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ElmcityIdsFromTwitterName", e.Message);
+				return null;
+			}
+		}
+
+		public static bool IsTrustedTwitterer(string screen_name)
+		{
+			var q = String.Format("$filter=PartitionKey eq 'trustedtwitterers' and TwitterName eq '{0}'", screen_name);
+			return ts.QueryEntities("trustedtwitterers", q).list_dict_obj.Count > 0; // twitter name to elmcity id is many to one
+		}
+
+		public static bool ElmcityIdUsesTwitterAuth(string id)
+		{
+			try
+			{
+				var q = String.Format("$filter=RowKey eq '{0}'", id);
+				var list = ts.QueryEntities("trustedtwitterers", q).list_dict_obj;
+				return list.Count == 1;  
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ElmcityIdUsesTwitterAuth", e.Message);
+				return false;
+			}
 		}
 
 		public static bool UseNonIcalService(NonIcalType type, Dictionary<string, string> settings, Calinfo calinfo)
@@ -1317,20 +1027,6 @@ namespace CalendarAggregator
 		{
 			foreach (var key in dict.Keys)
 				Console.WriteLine(key + ": " + dict[key]);
-		}
-
-		public static void PrintDict(Dictionary<string, object> dict)
-		{
-			foreach (var key in dict.Keys)
-				Console.WriteLine(key + ": " + dict[key]);
-		}
-
-		public static string TextifyDictInt(Dictionary<string, int> dict)
-		{
-			var sb = new StringBuilder();
-			foreach (var key in dict.Keys)
-				sb.Append(key + " : " + dict[key] + "\n");
-			return sb.ToString();
 		}
 
 		public static string ValidationUrlFromFeedUrl(string feed_url)
@@ -1412,7 +1108,7 @@ namespace CalendarAggregator
 </body>
 </html>
 ",
-		   calinfo.id,
+		   calinfo.delicious_account,
 		   title,
 		   calinfo.css,
 		   snippet);
@@ -1432,6 +1128,11 @@ namespace CalendarAggregator
 			return BlobStorage.WriteToAzureBlob(bs, containername, file, "application/json", bytes);
 		}
 
+		public static bool ListContainsItemStartingWithString(List<String> list, string str)
+		{
+			return list.Exists(item => str.StartsWith(item));
+		}
+
 		public static void ReadWholeArray(Stream stream, byte[] data)
 		{
 			int offset = 0;
@@ -1447,148 +1148,21 @@ namespace CalendarAggregator
 			}
 		}
 
-		public static Calinfo AcquireCalinfo(string id)
-		{
-			Calinfo calinfo;
-			try
-			{
-				var name = id + ".calinfo.obj";
-				var calinfo_uri = BlobStorage.MakeAzureBlobUri(id, name);
-				calinfo = (Calinfo)BlobStorage.DeserializeObjectFromUri(calinfo_uri);
-			}
-			catch (Exception e)
-			{
-				var msg = "AcquireCalinfo: " + id;
-				GenUtils.PriorityLogMsg("exception", msg, e.Message);
-				calinfo = new Calinfo(id);
-			}
-			return calinfo;
-		}
+		#endregion other
 
-		public static CalendarRenderer AcquireRenderer(string id)
-		{
-			CalendarRenderer cr;
-			try
-			{
-				var name = id + ".renderer.obj";
-				var renderer_uri = BlobStorage.MakeAzureBlobUri(id, name);
-				cr = (CalendarRenderer)BlobStorage.DeserializeObjectFromUri(renderer_uri);
-			}
-			catch (Exception e)
-			{
-				var msg = "AcquireRenderer: " + id;
-				GenUtils.PriorityLogMsg("exception", msg, e.Message);
-				cr = new CalendarRenderer(id);
-			}
-			return cr;
-		}
-
-		public static string RemoveAttendeeComponent(string calendar_text)  // todo: remove when DDay.ICal can parse ATTENDEE
-		{
-			var lines = calendar_text.Split('\n');
-			var sb = new StringBuilder();
-			bool in_attendee = false;
-			foreach (var line in lines)
-			{
-				if (in_attendee && line.StartsWith(" "))
-					continue;
-
-				if (in_attendee && !line.StartsWith(" "))
-				{
-					in_attendee = false;
-				}
-
-				if (line.StartsWith("ATTENDEE"))
-				{
-					in_attendee = true;
-					continue;
-				}
-
-				sb.Append(line + "\n");
-			}
-
-			return sb.ToString();
-		}
-
-		public static string Handle_X_WR_TIMEZONE(string text)  
-		{
-			var has_x_wr_timezone = Regex.Match(text, "^X-WR-TIMEZONE", RegexOptions.Multiline).Success;
-			var has_vtimezone = Regex.Match(text, "^BEGIN:VTIMEZONE", RegexOptions.Multiline).Success;
-
-			if (has_x_wr_timezone == false)   // nothing to see here
-				return text;
-
-			if (has_vtimezone)                // VTIMEZONE supersedes
-				return text;
-
-			var x_wr_timezone_pattern = @"^X-WR-TIMEZONE:([^\r\n]+)[\r\n]+";
-			var olson_name = Regex.Match(text, x_wr_timezone_pattern, RegexOptions.Multiline).Groups[1].Value.ToString();
-			var tzinfo = Utils.TzInfoFromOlsonName(olson_name);
-
-			var replace_patterns = new Dictionary<string, string>  // alter dates in target calendar, *before* adding VTIMEZONE which can't include TZIDs
-				{
-					{ "^DTSTART:(\\d)", "DTSTART;TZID=" + tzinfo.StandardName + ":$1" },
-					{ "^DTEND:(\\d)", "DTEND;TZID=" + tzinfo.StandardName + ":$1"}
-				};
-			foreach (var replace_pattern in replace_patterns.Keys)
-				text = Regex.Replace(text, replace_pattern, replace_patterns[replace_pattern], RegexOptions.Multiline);
-
-			var ical_tmp = new iCalendar();                        // empty cal to hold fabricated VTIMEZONE
-			Collector.AddTimezoneToDDayICal(ical_tmp, tzinfo);
-			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer();
-			string vtimezone = serializer.SerializeToString(ical_tmp);
-			var delete_patterns = new List<string>()              // things to delete from the vtimezone-only calendar
-				{
-					@"^BEGIN:VCALENDAR.+[\r\n]+",
-					@"^VERSION:.+[\r\n]+",
-					@"^PRODID:.+[\r\n]+",
-					@"^END:VCALENDAR.+[\r\n]+"
-				};
-			foreach (var pattern in delete_patterns)               // reduce to just VTIMEZONE
-				vtimezone = Regex.Replace(vtimezone, pattern, "", RegexOptions.Multiline);
-
-			text = Regex.Replace(text, x_wr_timezone_pattern, vtimezone, RegexOptions.Multiline); // swap VTIMEZONE for X-WR-TIMEZONE
-
-			return text;
-		}
-
-		public static string NormalizeEventfulUrl(string url)
-		{
-			if ( url.StartsWith("http://eventful") )
-				return url.Replace("/events/", "/");
-			else 
-				return url;
-		}
-
-		public static string NormalizeUpcomingUrl(string url)
-		{
-			if ( url.StartsWith("http://upcoming") )
-			{
-				var trimchars = new char[1];
-				trimchars[0] = '/';
-				return url.TrimEnd(trimchars);
-			}
-			else
-				return url;
-		}
-
-		#endregion
 	}
 
 	[Serializable]
 	public class WebRoleData
 	{
-		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
-
 		public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 		public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
 		public static string domain_name = AppDomain.CurrentDomain.FriendlyName;
 		public static int thread_id = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
-		// on startup, and then periodically, a renderer is constructed for each hub
+		// on startup, and then periodically, a calinfo and a renderer is constructed for each hub
+		public Dictionary<string, Calinfo> calinfos = new Dictionary<string, Calinfo>();
 		public Dictionary<string, CalendarRenderer> renderers = new Dictionary<string, CalendarRenderer>();
-
-		//public Dictionary<string, Calinfo> calinfos = new Dictionary<string, Calinfo>(); // todo: remove this vestige 
 
 		public List<string> where_ids = new List<string>();
 		public List<string> what_ids = new List<string>();
@@ -1609,17 +1183,32 @@ namespace CalendarAggregator
 		{
 			GenUtils.LogMsg("info", String.Format("WebRoleData: {0}, {1}, {2}, {3}", procname, procid, domain_name, thread_id), null);
 
+			if (testing) // reduce the list to a single test id
+			{
+				this.calinfos = new Dictionary<string, Calinfo>();
+				this.calinfos.Add(test_id, new Calinfo(test_id));
+			}
+			else  // construct the full list of hubs 
+
+				this.calinfos = CalendarAggregator.Configurator.Calinfos;
+
 			MakeWhereAndWhatIdLists();
 
-			var ids = Metadata.LoadHubIdsFromAzureTable();
+			List<string> calinfo_keys = this.calinfos.Keys.ToList();
 
-			Parallel.ForEach(ids, id =>
-			//foreach (var id in ids)
+			Parallel.ForEach(calinfo_keys, id =>
+			//foreach (var id in calinfo_keys)
 			{
 				GenUtils.LogMsg("info", "GatherWebRoleData: readying: " + id, null);
 
-				var cr = Utils.AcquireRenderer(id);
-				this.renderers.Add(id, cr);
+				CalendarRenderer cr;
+
+				cr = AcquireRenderer(id, this.calinfos[id]);
+
+				if (this.renderers.ContainsKey(id))
+					this.renderers[id] = cr;
+				else
+					this.renderers.Add(id, cr);
 
 				if (BlobStorage.ExistsBlob(id, id + ".html")) // there has been at least one aggregation
 					this.ready_ids.Add(id);
@@ -1631,53 +1220,78 @@ namespace CalendarAggregator
 			GenUtils.LogMsg("info", "GatherWebRoleData: str_ready_ids: " + this.str_ready_ids, null);
 		}
 
-		private void MakeWhereAndWhatIdLists()
+		public static Calinfo AcquireCalinfo(string id)
 		{
-			this.where_ids = Metadata.LoadHubIdsFromAzureTableByType(HubType.where);
-			var where_ids_as_str = string.Join(",", this.where_ids.ToArray());
-			GenUtils.LogMsg("info", "where_ids: " + where_ids_as_str, null);
-
-			this.what_ids = Metadata.LoadHubIdsFromAzureTableByType(HubType.what);
-			var what_ids_as_str = string.Join(",", this.what_ids.ToArray());
-			GenUtils.LogMsg("info", "what_ids: " + what_ids_as_str, null);
-
-			Dictionary<string,string> ids_and_locations = Metadata.QueryIdsAndLocations();
-
-			this.where_ids.Sort((a, b) => ids_and_locations[a].ToLower().CompareTo(ids_and_locations[b].ToLower()));
-			this.what_ids.Sort();
+			Calinfo calinfo;
+			try
+			{
+				var name = id + ".calinfo.obj";
+				var calinfo_uri = BlobStorage.MakeAzureBlobUri(id, name);
+				calinfo = (Calinfo)BlobStorage.DeserializeObjectFromUri(calinfo_uri);
+			}
+			catch (Exception e)
+			{
+				var msg = "AcquireCalinfo: " + id;
+				GenUtils.PriorityLogMsg("exception", msg, e.Message);
+				calinfo = new Calinfo(id);
+			}
+			return calinfo;
 		}
 
-		public static WebRoleData MakeWebRoleData() // todo: lease the blob
+		public static CalendarRenderer AcquireRenderer(string id, Calinfo calinfo)
 		{
-			WebRoleData wrd = null;
-			var bs = BlobStorage.MakeDefaultBlobStorage();
-			try  // create WebRoleData structure and store as blob, available to webrole on next _reload
+			CalendarRenderer cr;
+			try
 			{
-				wrd = new WebRoleData(testing: false, test_id: null);
-				bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
+				var name = id + ".renderer.obj";
+				var renderer_uri = BlobStorage.MakeAzureBlobUri(id, name);
+				cr = (CalendarRenderer)BlobStorage.DeserializeObjectFromUri(renderer_uri);
 			}
-			catch (Exception e3)
+			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "MakeWebRoleData: creating wrd", e3.Message);
+				var msg = "AcquireRenderer: " + id;
+				GenUtils.PriorityLogMsg("exception", msg, e.Message);
+				cr = new CalendarRenderer(calinfo);
+			}
+			return cr;
+		}
+
+		public static WebRoleData UpdateCalinfoAndRendererForId(string id, WebRoleData wrd)
+		{
+			try
+			{
+				var calinfo = AcquireCalinfo(id);
+				wrd.calinfos[id] = calinfo;
+			}
+			catch (Exception e1)
+			{
+				GenUtils.PriorityLogMsg("exception", "UpdateCalinfoAndRendererForId", e1.Message);
+			}
+			try
+			{
+				var cr = AcquireRenderer(id, wrd.calinfos[id]);
+				wrd.renderers[id] = cr;
+			}
+			catch (Exception e2)
+			{
+				GenUtils.PriorityLogMsg("exception", "UpdateCalinfoAndRendererForId", e2.Message);
 			}
 			return wrd;
 		}
 
-		public static void UpdateRendererForId(string id) // todo: lease the blob
+		private void MakeWhereAndWhatIdLists()
 		{
-			var wrd = Utils.GetWrd();
-			try
-			{
-				var cr = Utils.AcquireRenderer(id);
-				wrd.renderers[id] = cr;
-				bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
-			}
-			catch (Exception e2)
-			{
-				GenUtils.PriorityLogMsg("exception", "UpdateRendererForId", e2.Message);
-			}
-		}
+			this.where_ids = this.calinfos.Keys.ToList().FindAll(id => this.calinfos[id].hub_enum == CalendarAggregator.HubType.where);
+			var where_ids_as_str = string.Join(",", this.where_ids.ToArray());
+			GenUtils.LogMsg("info", "where_ids: " + where_ids_as_str, null);
 
+			this.what_ids = this.calinfos.Keys.ToList().FindAll(id => this.calinfos[id].hub_enum == CalendarAggregator.HubType.what);
+			var what_ids_as_str = string.Join(",", this.what_ids.ToArray());
+			GenUtils.LogMsg("info", "what_ids: " + what_ids_as_str, null);
+
+			this.where_ids.Sort((a, b) => this.calinfos[a].where.ToLower().CompareTo(this.calinfos[b].where.ToLower()));
+			this.what_ids.Sort();
+		}
 	}
 
 	public class USCensusPopulationData
@@ -1726,62 +1340,6 @@ namespace CalendarAggregator
 		}
 
 	}
-
-	public class LogFilter
-	{
-		private string type;
-		private string search_text;
-		private List<Dictionary<string, string>> entities;
-
-		public List<Dictionary<string, string>> FilterByType(string search_text)
-		{
-		return this.entities.FindAll(entry => (entry["type"].Contains(type)));
-		}
-
-		public List<Dictionary<string, string>> FilterByAny(string search_text)
-		{
-			return this.entities.FindAll(entry => entry["message"].Contains(search_text) || entry["data"].Contains(search_text) );
-		}
-
-		public LogFilter(string type, string search_text)
-		{
-			this.type = type;
-			this.search_text = search_text;
-		}
-
-		public void SetEntities(List<Dictionary<string,string>> entities)
-		{
-			this.entities = entities;
-		}
-
-		public List<Dictionary<string, string>> Apply()
-		{
-			if (this.type != null)
-				return FilterByType(this.search_text);
-			else
-				return FilterByAny(this.search_text);
-		}
-	}
-
-	#region extensions
-
-	public static class DDayExtensions
-	{
-		public static string TitleAndTime(this DDay.iCal.Event evt)
-		{
-			return evt.Summary.ToString().ToLower() + evt.Start.ToString();
-		}
-	}
-
-	public static class ZonelessEventExtensions
-	{
-		public static string TitleAndTime(this ZonelessEvent evt)
-		{
-			return evt.title.ToLower() + evt.dtstart.ToString();
-		}
-	}
-
-	#endregion
 
 }
 

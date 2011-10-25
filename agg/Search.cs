@@ -49,8 +49,6 @@ namespace CalendarAggregator
 	{
 		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 
-		private static Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
-
 		private static List<string> qualifiers = new List<string>() 
             {
                 "every",
@@ -246,16 +244,7 @@ namespace CalendarAggregator
 
 		private static string CallSearchApi(Uri search_url)
 		{
-			var delay = 2;
-			try
-			{
-				delay = Convert.ToInt32(settings["search_engine_api_delay_secs"]);
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "CallSearchApi", e.Message + e.StackTrace);
-			}
-			Utils.Wait(delay);
+			Utils.Wait(1);
 			var r = HttpUtils.FetchUrl(search_url);
 			if (r.status != HttpStatusCode.OK)
 			{

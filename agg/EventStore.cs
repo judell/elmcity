@@ -118,7 +118,7 @@ namespace CalendarAggregator
 			this.description = description;
 		}
 
-		public static string MakeEventUid(DDay.iCal.Event evt)
+		public static string MakeEventUid(DDay.iCal.Components.Event evt)
 		{
 			//var ticks = DateTime.Now.Ticks;
 			//var randnum = Utils._random.Next();
@@ -136,11 +136,11 @@ namespace CalendarAggregator
 	[Serializable]
 	public class ZonedEvent : Event
 	{
-		public DateTimeWithZone dtstart;
-		public DateTimeWithZone dtend;
+		public Utils.DateTimeWithZone dtstart;
+		public Utils.DateTimeWithZone dtend;
 
 		public ZonedEvent(string title, string url, string source, bool allday, string lat, string lon, string categories,
-			DateTimeWithZone dtstart, DateTimeWithZone dtend, string description) :
+			Utils.DateTimeWithZone dtstart, Utils.DateTimeWithZone dtend, string description) :
 			base(title, url, source, allday, lat, lon, categories, description)
 		{
 			this.dtstart = dtstart;
@@ -148,14 +148,13 @@ namespace CalendarAggregator
 		}
 	}
 
-	// the agggregator combines intermediate results into a pickled list of ZonelessEvent objects
+	// the agggregator combines intermediate results into a pickled list of ZonelessEvents objects
 	// for the convenience of renderers, on the assumption they only care about local time
 	[Serializable]
 	public class ZonelessEvent : Event
 	{
 		public DateTime dtstart;
 		public DateTime dtend;
-		public Dictionary<string,string> urls_and_sources { get; set; } 
 
 		public ZonelessEvent(string title, string url, string source, bool allday, string lat, string lon, string categories,
 			DateTime dtstart, DateTime dtend, string description) :
@@ -164,6 +163,7 @@ namespace CalendarAggregator
 			this.dtstart = dtstart;
 			this.dtend = dtend;
 		}
+
 	}
 
 	[Serializable]
@@ -172,7 +172,7 @@ namespace CalendarAggregator
 
 		public string id { get; set; }
 
-		//public Calinfo calinfo { get; set; }
+		public Calinfo calinfo { get; set; }
 
 		// the datekey looks like d2010-07-04
 		// used by, e.g., CalendarRenderer.RenderEventsAsHtml when creating fragment identifiers
@@ -184,7 +184,7 @@ namespace CalendarAggregator
 
 		private static List<string> _non_ical_types = new List<string>() { "eventful", "upcoming", "eventbrite", "facebook" };
 
-		//private BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
+		private BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 
 		public string xmlfile { get; set; }
 		public string objfile { get; set; }
@@ -194,13 +194,13 @@ namespace CalendarAggregator
 		public EventStore(Calinfo calinfo)
 		{
 			this.id = calinfo.id;
+			this.calinfo = calinfo;
 			this.tzinfo = calinfo.tzinfo;
 		}
 
 		public BlobStorageResponse Serialize(string file)
 		{
-			var bs = BlobStorage.MakeDefaultBlobStorage();
-			return bs.SerializeObjectToAzureBlob(this, this.id, file);
+			return this.bs.SerializeObjectToAzureBlob(this, this.id, file);
 		}
 
 		private static void DeserializeZoned(Uri uri, List<List<ZonedEvent>> lists_of_zoned_events)
@@ -248,59 +248,30 @@ namespace CalendarAggregator
 			var es_zoneless = new ZonelessEventStore(calinfo, null);
 
 			// combine the various List<ZonedEvent> objects into our new ZonelessEventStore
-			// always add the local time
 			foreach (var list in lists_of_zoned_events)
 				foreach (var evt in list)
-				{
-				//	if (evt.dtstart.LocalTime.Kind != DateTimeKind.Local)  // might be unspecified, that's ok
-				//		GenUtils.PriorityLogMsg("warning", "CombineZonedEventStores: expecting DateTimeKind.Local, got " + evt.dtstart.LocalTime.Kind.ToString(), null);
+					//es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories);
 					es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.lat, evt.lon, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories, evt.description);
-				}
-
-			es_zoneless.events = EventStore.UniqueByTitleAndStart(es_zoneless.events); // deduplicate
 
 			es_zoneless.ExcludePastEvents(); // the EventCollector should already have done this, but in case not...
-
 			es_zoneless.SortEventList();     // order by dtstart
 
+			// Create or update an entry in the cacheurls table for the base object. 
+			// key is http://elmcity.blob.core.windows.net/ID/ID.zoneless.obj
+			// value is # of webrole instances that could be holding this in cache
+			// each instance will check this table periodically. if value is nonzero and url in cache, it'll evict the object
+			// and decrement the count
+
+			CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseUrl(id), Convert.ToInt32(settings["webrole_instance_count"]));
+			
+			// note when removal occurs it also triggers a purge of dependencies, so if the base entry is
+			// http://elmcity.blob.core.windows.net/a2cal/a2cal.zoneless.obj
+			// then dependencies also ousted from cache include:
+			// /services/a2cal/html
+			// /services/a2cal/rss?view=government
+			// /services/a2cal/xml?view=music&count=10    ... etc.
+
 			bs.SerializeObjectToAzureBlob(es_zoneless, id, es_zoneless.objfile); // save new object as a blob
-		}
-
-		public static List<ZonelessEvent> UniqueByTitleAndStart(List<ZonelessEvent> events)
-		{
-			 var uniques = new Dictionary<string, ZonelessEvent>(); 
-
-			var tags = new Dictionary<string, List<string>>();
-			var dict_of_urls_and_sources = new Dictionary<string, Dictionary<string, string>>() { };
-
-			foreach (var evt in events)              // build keyed structures
-			{
-				var key = evt.TitleAndTime();
-
-				evt.url = Utils.NormalizeEventfulUrl(evt.url);        // try url normalizations
-				evt.url = Utils.NormalizeUpcomingUrl(evt.url);
-				
-				if ( evt.categories != null )
-					tags.AddOrUpdateDictOfListStr(key, evt.categories.Split(',').ToList());  // update keyed tag list for this key
-
-				evt.urls_and_sources = new Dictionary<string, string>() { { evt.url, evt.source } }; // create url/source dict for this key
-
-				dict_of_urls_and_sources.AddOrUpdateDictOfDictStr(key, evt.urls_and_sources );  // update keyed url/source dict for this key
-			}
-
-			foreach ( var evt in events )            // use keyed structures
-			{
-				var key = evt.TitleAndTime();
-
-				if (tags.ContainsKey(key))
-					evt.categories = string.Join(",", tags[key]);                 // assign each event its keyed tag union
-
-				evt.urls_and_sources = dict_of_urls_and_sources[key];                 // assign each event its keyed url/source dict
-
-				uniques.AddOrUpdateDictionary<string, ZonelessEvent>(key, evt);      // deduplicate
-			}
-
-			return (List<ZonelessEvent>) uniques.Values.ToList();
 		}
 	}
 
@@ -321,7 +292,7 @@ namespace CalendarAggregator
 			this.objfile = this.id + qualifier + ".zoned.obj";
 		}
 
-		public void AddEvent(string title, string url, string source, DateTimeWithZone dtstart, DateTimeWithZone dtend, string lat, string lon, bool allday, string categories, string description)
+		public void AddEvent(string title, string url, string source, Utils.DateTimeWithZone dtstart, Utils.DateTimeWithZone dtend, string lat, string lon, bool allday, string categories, string description)
 		{
 			//ZonedEvent evt = new ZonedEvent(title, url, source, allday, lat, lon, categories: categories, dtstart: dtstart, dtend: dtend, description:description);
 			ZonedEvent evt = new ZonedEvent(title: title, url: url, source: source, dtstart: dtstart, dtend: dtend, lat: lat, lon: lon, allday: allday, categories: categories, description: description);
@@ -357,16 +328,10 @@ namespace CalendarAggregator
 		// used by CalendarRenderer.RenderJson
 		public static ZonelessEvent UniversalFromLocalAndTzinfo(ZonelessEvent evt, TimeZoneInfo tzinfo)
 		{
-			var _dts = evt.dtstart;
-			var _dtstart = new DateTime(_dts.Year, _dts.Month, _dts.Day, _dts.Hour, _dts.Minute, _dts.Second);
-			evt.dtstart = TimeZoneInfo.ConvertTimeToUtc(_dtstart, tzinfo);
+			evt.dtstart = TimeZoneInfo.ConvertTimeToUtc(evt.dtstart, tzinfo);
 
 			if (evt.dtend != null)
-			{
-				var _dte = evt.dtend;
-				var _dtend = new DateTime(_dte.Year, _dte.Month, _dte.Day, _dte.Hour, _dte.Minute, _dte.Second);
-				evt.dtend = TimeZoneInfo.ConvertTimeToUtc(_dtend, tzinfo);
-			}
+				evt.dtend = TimeZoneInfo.ConvertTimeToUtc(evt.dtend, tzinfo);
 
 			return evt;
 		}
@@ -378,7 +343,7 @@ namespace CalendarAggregator
 
 		public void ExcludePastEvents()
 		{
-			this.events = this.events.FindAll(evt => Utils.IsCurrentOrFutureDateTime(evt, this.tzinfo));
+			this.events = this.events.FindAll(evt => Utils.IsCurrentOrFutureDateTime(evt, this.calinfo.tzinfo));
 		}
 
 		// so renderers can traverse day chunks in order
@@ -406,22 +371,13 @@ namespace CalendarAggregator
 			foreach (string datekey in event_dict.Keys)
 			{
 				List<ZonelessEvent> list = event_dict[datekey];
-
-				IEnumerable<ZonelessEvent> sorted =
-					from evt in list
-					orderby evt.dtstart.TimeOfDay ascending, evt.title ascending
-					select evt;
-
-				list = sorted.ToList();
-
+				list = list.OrderBy(evt => evt.dtstart).ToList();
 				var events_having_dt = list.FindAll(evt => IsZeroHourMinSec(evt) == false);
 				var events_not_having_dt = list.FindAll(evt => IsZeroHourMinSec(evt) == true);
 				sorted_dict[datekey] = events_having_dt;
-
 				foreach (var evt in events_not_having_dt)
 					sorted_dict[datekey].Add(evt);
 			}
-	
 			this.event_dict = sorted_dict;
 		}
 
@@ -436,38 +392,21 @@ namespace CalendarAggregator
 				if (!dict.ContainsKey(datekey))
 					dict[datekey] = new List<ZonelessEvent>();
 
-				dict[datekey].Add(evt);
+				//var local_evt = new ZonelessEvent(evt.title, evt.url, evt.source, evt.allday, evt.categories, evt.dtstart, evt.dtend);
+				var local_evt = new ZonelessEvent(evt.title, evt.url, evt.source, evt.allday, evt.lat, evt.lon, evt.categories, evt.dtstart, evt.dtend, evt.description);
+				dict[datekey].Add(local_evt);
 			}
 			this.event_dict = dict;
-		 }
-
-	}
-
-	[Serializable]
-	public class DateTimeWithZone
-	{
-		private DateTime _LocalTime;
-		private DateTime _UniversalTime;
-		private TimeZoneInfo _tzinfo;
-
-		public DateTimeWithZone(DateTime dt, TimeZoneInfo tzinfo)
-		{
-			this._tzinfo = tzinfo;
-			if (dt.Kind == DateTimeKind.Utc)
-				GenUtils.PriorityLogMsg("warning", "DateTimeWithZone: expecting DateTimeKind.Local or Unspecified, got " + dt.Kind.ToString(), null);
-			this._LocalTime = dt;
-			var _dt = new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second);  // can't convert if kind is local
-			this._UniversalTime = TimeZoneInfo.ConvertTimeToUtc(_dt, tzinfo);
 		}
 
-		public DateTime UniversalTime { get { return this._UniversalTime; } }
-		public DateTime LocalTime { get { return this._LocalTime; } }
-
-		public static DateTimeWithZone MinValue(TimeZoneInfo tz)
+		public static ZonelessEventStore ZonedToZoneless(ZonedEventStore es, Calinfo calinfo, string qualifier)
 		{
-			var min = DateTime.MinValue;
-			var local_min = new DateTime(min.Year, min.Month, min.Day, min.Hour, min.Minute, min.Second, DateTimeKind.Local);
-			return new DateTimeWithZone(local_min, tz);
+			var zoned_events = es.events;
+			var zes = new ZonelessEventStore(calinfo, qualifier);
+			foreach (var evt in zoned_events)
+				zes.AddEvent(title:evt.title, url:evt.url, source:evt.source, lat:evt.lat, lon:evt.lon, dtstart:evt.dtstart.LocalTime, dtend:evt.dtend.LocalTime, allday:evt.allday, categories:evt.categories, description:evt.description);
+			zes.SortEventList();
+			return zes;
 		}
 
 	}
