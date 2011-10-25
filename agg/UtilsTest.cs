@@ -16,9 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using ElmcityUtils;
-using System.Linq;
 using NUnit.Framework;
-using DDay.iCal;
 
 namespace CalendarAggregator
 {
@@ -35,10 +33,10 @@ namespace CalendarAggregator
 		static private int expected_hour = 9;
 
 		static DateTime nine_thirty_pm = new DateTime(now.Year, now.Month, now.Day, 21, 30, 0);
-		static DateTimeWithZone nine_thirty_pm_eastern = new DateTimeWithZone(nine_thirty_pm, eastern_tzinfo);
+		static Utils.DateTimeWithZone nine_thirty_pm_eastern = new Utils.DateTimeWithZone(nine_thirty_pm, eastern_tzinfo);
 
 		static DateTime nine_thirty_am = new DateTime(now.Year, now.Month, now.Day, 9, 30, 0);
-		static DateTimeWithZone nine_thirty_am_eastern = new DateTimeWithZone(nine_thirty_am, eastern_tzinfo);
+		static Utils.DateTimeWithZone nine_thirty_am_eastern = new Utils.DateTimeWithZone(nine_thirty_am, eastern_tzinfo);
 
 		static private string edt = "9999-12-25 09:11";
 
@@ -46,15 +44,12 @@ namespace CalendarAggregator
 		static private int expected_snoqualmie_pop = 8100;
 		static private int acceptable_pop_deviation = 1000;
 
-		static private TableStorage ts = TableStorage.MakeDefaultTableStorage();
-		static private Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
-
 		#region datetime
 
 		[Test]
 		public void DateTimeFromEventfulDateTime()
 		{
-			DateTime got_dt = Utils.LocalDateTimeFromLocalDateStr(edt);
+			DateTime got_dt = Utils.DateTimeFromDateStr(edt);
 			Assert.AreEqual(expected_year, got_dt.Year);
 			Assert.AreEqual(expected_hour, got_dt.Hour);
 
@@ -75,6 +70,17 @@ namespace CalendarAggregator
 			var eastern_now = TimeZoneInfo.ConvertTimeFromUtc(utc_now, eastern_tzinfo);
 			Assert.AreEqual(utc_now - eastern_now, -eastern_tzinfo.GetUtcOffset(utc_now));
 		}
+
+		[Test]
+		public void NowGmtIsNowUtc()
+		{
+			var dt1 = Utils.NowInTz();
+			var dt2 = DateTime.UtcNow;
+			Assert.That(dt1.LocalTime.Hour == dt2.Hour);
+			Assert.That(Math.Abs(dt1.LocalTime.Minute - dt2.Minute) <= 1);
+
+		}
+
 
 		[Test]
 		public void TwoAmIsWeeHour()
@@ -185,40 +191,65 @@ import System
 		#region auth
 
 		[Test]
+		public void IsTrustedTwittererSucceeds()
+		{
+			Assert.That(Utils.IsTrustedTwitterer("judell"));
+		}
+
+		[Test]
+		public void IsTrustedTwittererFails()
+		{
+			Assert.IsFalse(Utils.IsTrustedTwitterer("ev"));
+		}
+
+		[Test]
+		public void ElmcityIdsFromTwitterNameSucceeds()
+		{
+			Assert.That(Utils.ElmcityIdsFromTwitterName("judell").Count > 0);
+		}
+
+		[Test]
+		public void ElmcityIdsFromTwitterNameFails()
+		{
+			Assert.That(Utils.ElmcityIdsFromTwitterName("ev").Count == 0);
+		}
+
+		[Test]
 		public void ElmcityIdUsesTwitterAuthSucceeds()
 		{
 			Assert.That(Utils.ElmcityIdUsesTwitterAuth("elmcity") == true);
 		}
 
 		[Test]
-		public void ElmcityIdUsesAuthSucceeds()
-		{
-			Assert.That(Utils.ElmcityIdUsesAuth("elmcity") == true);
-		}
-
-		[Test]
 		public void ElmcityIdUsesTwitterAuthFails()
 		{
-			Assert.IsFalse(Utils.ElmcityIdUsesTwitterAuth("MonadnockArtsAlive") == true);
-		}
-
-		[Test]
-		public void ElmcityIdUsesAuthFails()
-		{
-			Assert.IsFalse(Utils.ElmcityIdUsesAuth("eventsabarna") == true);
+			Assert.That(Utils.ElmcityIdUsesTwitterAuth("a2cal") == false);
 		}
 
 		#endregion
 
-		#region facebook
+		#region other
 
 		[Test]
-		public void IcsFromFbPageSucceeds()
+		public void ListContainsItemStartingWithStringSucceedsWhenItemPresent()
 		{
-			var url = "http://elmcity.cloudapp.net/ics_from_fb_page?fb_id=146837308680597&elmcity_id=socialhartford";
-			var ical = DDay.iCal.iCalendar.LoadFromUri(new Uri(url));
-			Assert.That(ical.First().GetType() == typeof(DDay.iCal.iCalendar));
+			var list = new List<String>() { "http://www.meetup.com/NhHealing", 
+                "http://www.meetup.com/Toms-in-Northborough/" };
+			var str = "http://www.meetup.com/Toms-in-Northborough/calendar/11431318";
+			Assert.IsTrue(Utils.ListContainsItemStartingWithString(list, str));
+			str = "http://www.meetup.com/Toms-in-Northborough/";
+			Assert.IsTrue(Utils.ListContainsItemStartingWithString(list, str));
 		}
+
+		[Test]
+		public void ListContainsItemStartingWithStringFailsWhenItemAbsent()
+		{
+			var list = new List<String>() { "http://www.meetup.com/NhHealing", 
+                "http://www.meetup.com/Tims-in-Southborough/" };
+			var str = "http://www.meetup.com/Toms-in-Northborough/calendar/11431318";
+			Assert.IsFalse(Utils.ListContainsItemStartingWithString(list, str));
+		}
+
 
 		#endregion
 
@@ -231,79 +262,9 @@ import System
 			var tzinfo = Utils.TzinfoFromName("pacific");
 			var ical_str = Utils.IcsFromRssPlusXcal(url, "test source", tzinfo);
 			var sr = new StringReader(ical_str);
-			var ical = iCalendar.LoadFromStream(sr).First().Calendar;
+			var ical = DDay.iCal.iCalendar.LoadFromStream(sr);
 			Assert.AreNotEqual(0, ical.Events.Count);
 		}
-
-		#endregion
-
-		#region WebRoleData
-
-		[Test]
-		public void WrdCanDeserialize()
-		{
-			var wrd = Utils.GetWrd();
-			Assert.That(wrd.what_ids.Count + wrd.where_ids.Count == wrd.ready_ids.Count );
-		}
-
-		[Test]
-		public void WrdAllHubsHaveWhatOrWhere()
-		{
-			var wrd = Utils.GetWrd();
-			foreach ( var id in wrd.ready_ids )
-			{
-				var calinfo = Utils.AcquireCalinfo(id);
-				Assert.That(calinfo.where != null && calinfo.what != null);
-			}
-		}
-
-		[Test]
-		public void NoHubRecordsHaveWhereAndWhat()
-		{
-			var query = "$filter=where ne '' and what ne ''";
-			var tsr = ts.QueryAllEntitiesAsListDict("metadata", query);
-			Assert.That(tsr.list_dict_obj.Count == 0);
-		}
-
-		[Test]
-		public void AllHubRecordsHaveProperType()
-		{
-			var query = "$filter=where ne '' or what ne ''";
-			var tsr = ts.QueryAllEntitiesAsListDict("metadata", query);
-			var list_dict_obj = tsr.list_dict_obj;
-			foreach (var dict_obj in list_dict_obj)
-			{
-				var dict_str = ObjectUtils.DictObjToDictStr(dict_obj);
-				Assert.That(dict_str.ContainsKey("type"));
-				if ( dict_str.ContainsKey("where") && dict_str["where"] != "" )
-					Assert.That(dict_str["type"] == "where");
-			}
-		}
-
-		/*
-		[Test]
-		public void AllFeedRecordsHaveRequiredAttributes()
-		{
-			var ids = Metadata.LoadHubIdsFromAzureTable();
-
-			foreach ( var id in ids )
-			{
-				var fr = new FeedRegistry(id);
-				fr.LoadFeedsFromAzure(FeedLoadOption.all);
-
-				foreach (string feed_url in fr.feeds.Keys)
-				{
-				var source = fr.feeds[feed_url];
-				var rowkey = Utils.MakeSafeRowkeyFromUrl(feed_url);
-				var query = string.Format("$filter=PartitionKey eq '{0}' and RowKey eq '{1}'", id, rowkey);
-				var table_record = TableStorage.QueryForSingleEntityAsDictStr(ts, "metadata", query);
-				//foreach (var key in new List<string>() { "url", "feedurl", "source", "category" })
-				foreach (var key in new List<string>() { "feedurl", "source" })
-					Assert.That(table_record.ContainsKey(key));
-				}
-			}
-		}
-		 */
 
 		#endregion
 

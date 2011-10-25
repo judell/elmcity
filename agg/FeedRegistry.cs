@@ -130,12 +130,14 @@ namespace CalendarAggregator
 
 		private string containername;
 		private string statsfile;
+		private Delicious delicious;
 
 		public FeedRegistry(string id)
 		{
 			this.id = id;
 			this.containername = id;
 			this.statsfile = "ical_stats";
+			this.delicious = new Delicious(id, ""); // e.g. http://delicious.com/a2cal, no auth needed for read-only use
 		}
 
 		public void AddFeed(string feedurl, string source)
@@ -160,10 +162,23 @@ namespace CalendarAggregator
 			stats.Add(feedurl, fs);
 		}
 
+		// used (indirectly) when worker recaches registry + metadata from delicious to azure
+		public void LoadFeedsFromDelicious()
+		{
+			Utils.Wait(Configurator.delicious_delay_seconds);
+			var dict = Delicious.FetchFeedsForIdWithTagsFromDelicious(this.id, Configurator.delicious_trusted_ics_feed);
+			foreach (var url in dict.Keys)
+				AddFeed(url, dict[url]);
+			Utils.Wait(Configurator.delicious_delay_seconds);
+			dict = Delicious.FetchFeedsForIdWithTagsFromDelicious(this.id, Configurator.delicious_trusted_indirect_feed);
+			foreach (var url in dict.Keys)
+				AddFeed(url, dict[url]);
+		}
+
 		// populate feed registry from azure table (includes what is public on delicious, and also private out-of-band)
 		public void LoadFeedsFromAzure(FeedLoadOption option)
 		{
-			var dict = Metadata.LoadFeedsFromAzureTableForId(this.id, option);
+			var dict = delicious.LoadFeedsFromAzureTableForId(this.id, option);
 			foreach (var url in dict.Keys)
 				this.AddFeed(url, dict[url]);
 		}
