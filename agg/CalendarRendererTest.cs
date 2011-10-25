@@ -26,10 +26,10 @@ namespace CalendarAggregator
 	[TestFixture]
 	public class CalendarRendererTest
 	{
-		private Calinfo calinfo = new Calinfo(Configurator.testid); // e.g. elmcity
 		private CalendarRenderer cr;
 		private ZonelessEventStore es;
 		private string event_html_header = "<div class=\"eventBlurb\"";
+		private Calinfo calinfo = Utils.AcquireCalinfo(Configurator.testid);
 
 		static Uri view_uri = new Uri("http://elmcity.cloudapp.net/services/elmcity/xml?view=government");
 		static byte[] view_contents = HttpUtils.FetchUrl(view_uri).bytes;
@@ -38,7 +38,7 @@ namespace CalendarAggregator
 
 		public CalendarRendererTest()
 		{
-			this.cr = new CalendarRenderer(this.calinfo);
+			this.cr = new CalendarRenderer(Configurator.testid);
 			this.cr.cache = new MockCache();
 			var est = new EventStoreTest();
 			est.SerializeAndDeserializeZonelessEventStoreYieldsExpectedEvents();
