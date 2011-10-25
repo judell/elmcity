@@ -75,6 +75,12 @@ namespace CalendarAggregator
 		private static string _bing_api_key
 		{ get { return GetSettingValue("bing_api_key"); } }
 
+		public static string bing_maps_key
+		{ get { return _bing_maps_key; } }
+
+		private static string _bing_maps_key
+		{ get { return GetSettingValue("bing_maps_key"); } }
+
 		#endregion
 
 		#region facebook
@@ -93,6 +99,7 @@ namespace CalendarAggregator
 
 		#endregion
 
+		/*
 		#region delicious
 
 		public static string delicious_master_account
@@ -144,6 +151,7 @@ namespace CalendarAggregator
 		public const string delicious_base = "http://delicious.com";
 
 		#endregion
+		 */
 
 		#region twitter
 
@@ -183,11 +191,11 @@ namespace CalendarAggregator
 		private static int _eventbrite_max_events
 		{ get { return Convert.ToInt32(GetSettingValue("eventbrite_max_events")); } }
 
-		public static int icalendar_horizon_days
-		{ get { return _icalendar_horizon_days; } }
-
-		private static int _icalendar_horizon_days
-		{ get { return Convert.ToInt32(GetSettingValue("icalendar_horizon_days")); } }
+		// todo: remove after transition to calinfo.icalendar_horizon_days / usersettings["icalendar_horizon_days"]
+		//public static int icalendar_horizon_days
+		//{ get { return _icalendar_horizon_days; } }
+		//private static int _icalendar_horizon_days
+		//{ get { return Convert.ToInt32(GetSettingValue("icalendar_horizon_days")); } }
 
 		public static int webrole_instance_count
 		{ get { return _webrole_instance_count; } }
@@ -243,11 +251,11 @@ namespace CalendarAggregator
 		private static int _ironpython_admin_interval_hours
 		{ get { return Convert.ToInt32(GetSettingValue("ironpython_admin_interval_hours")); } }
 
-		public static int webrole_reload_interval_hours
-		{ get { return _webrole_reload_interval_hours; } }
+		public static int webrole_reload_interval_minutes
+		{ get { return _webrole_reload_interval_minutes; } }
 
-		private static int _webrole_reload_interval_hours
-		{ get { return Convert.ToInt32(GetSettingValue("webrole_reload_interval_hours")); } }
+		private static int _webrole_reload_interval_minutes
+		{ get { return Convert.ToInt32(GetSettingValue("webrole_reload_interval_minutes")); } }
 
 		public static int webrole_script_timeout_seconds
 		{ get { return _webrole_script_timeout_seconds; } }
@@ -349,7 +357,7 @@ namespace CalendarAggregator
 		public const int rss_default_items = 50;
 		public const int odata_since_hours_ago = 24;
 
-		public const string default_html_window_name = "elmcity_events";
+		public const string default_html_window_name = "elmcity";
 
 		// these are the keys for key/value pairs parsed from the DESCRIPTION property of any iCalendar event
 		// e.g.:
@@ -442,7 +450,7 @@ namespace CalendarAggregator
 
 		public const int max_radius = 15;         // limit for where hubs
 		public const int default_radius = 5;     // default for where hubs
-		public const int default_population = 1;  // in case pop lookup fails
+		public const int default_population = 0;  // in case pop lookup fails
 
 		public const string default_tz = "Eastern";
 		public const string default_contact = "nobody-yet";
@@ -451,8 +459,10 @@ namespace CalendarAggregator
 		public const string nothing = "nothing";
 
 		// defaults for iis output cache
-		public const int services_output_cache_duration_seconds = 60 * 60; // 1 hour
-		public const int homepage_output_cache_duration_seconds = 60 * 60;
+
+		public const int services_output_cache_duration_seconds = 60 * 5; // 5 min 
+
+		public const int homepage_output_cache_duration_seconds = 60 * 5; 
 
 		// routine admin tasks, run from worker on a scheduled basis, are in this python script
 		public static string iron_python_admin_script_url = ElmcityUtils.Configurator.azure_blobhost + "/admin/_admin.py";
@@ -520,7 +530,7 @@ namespace CalendarAggregator
 		 {
 			 int pop = GetIntSetting(metadict, usersettings, key);
 			 int final;
-			 if (pop == 0 && metadict["type"] == "where")
+			 if (pop == Configurator.default_population && metadict["type"] == "where")
 			 {
 				 string[] response = Utils.FindCityOrTownAndStateAbbrev(metadict["where"]);
 				 var city_or_town = response[0];
@@ -529,37 +539,28 @@ namespace CalendarAggregator
 			 }
 			 else
 				 final = pop;
+
 			 metadict[key] = final.ToString();
 			 return final;
 		 }
 
 		 public static string GetFeedCountSetting(string id, Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
 		 {
-			 int feedcount = GetIntSetting(metadict, usersettings, key);
-			 int final;
-			 if (feedcount == 0 )
-			 {
-				 var q = string.Format("$filter=(PartitionKey eq '{0}' and feedurl ne '' )", id);
-				 var ts = TableStorage.MakeDefaultTableStorage();
-				 final = ts.QueryEntities("metadata", q).list_dict_obj.Count;
-			 }
-			 else
-				 final = feedcount;
-			 metadict[key] = final.ToString();
-			 return final.ToString();
+			 int feedcount = Utils.UpdateFeedCount(id);
+			 return metadict[key] = feedcount.ToString();
 		 }
 
 		 public static string GetMetadictValueOrSettingsValue(Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
 		 {
-			 if (metadict.ContainsKey(key) )
+			 if ( GenUtils.KeyExistsAndHasValue(metadict, key) )
 				 return metadict[key];
 
-			 if (!metadict.ContainsKey(key) && usersettings.ContainsKey(key))
+			 if ( ! GenUtils.KeyExistsAndHasValue(metadict,key) && usersettings.ContainsKey(key))
 			 {
 				 return usersettings[key];
 			 }
 
-			 if (!metadict.ContainsKey(key) && !usersettings.ContainsKey(key))
+			 if ( ! GenUtils.KeyExistsAndHasValue(metadict,key) && ! usersettings.ContainsKey(key))
 			 {
 				 return null;
 			 }
@@ -669,7 +670,7 @@ namespace CalendarAggregator
 			return setting_value;
 		}
 
-		private static string GetSettingValue(string setting_name)
+		public static string GetSettingValue(string setting_name)
 		{
 			return GetSettingValue(setting_name, reload: false);
 		}
@@ -677,47 +678,6 @@ namespace CalendarAggregator
 		private static Dictionary<string,string> GetSettings(string table)
 		{
 			return GenUtils.GetSettingsFromAzureTable(table);
-		}
-
-		private static Delicious delicious = Delicious.MakeDefaultDelicious();
-
-		// one Calinfo per hub, each an encapsulation of hub metadata
-		public static Dictionary<string, Calinfo> Calinfos
-		{
-			get
-			{
-				var calinfos = new Dictionary<string, Calinfo>();
-				var ids = Metadata.LoadHubIdsFromAzureTable(); // could come from delicious, but prefer azure cache of that data
-				//Parallel.ForEach(ids, id =>
-				foreach (var id in ids)
-				{
-					try
-					{
-						//var calinfo = new Calinfo(id);
-						//var calinfo_uri = new Uri(string.Format("{0}/{1}/{2}.calinfo.obj", ElmcityUtils.Configurator.azure_blobhost, id.ToLower(), id));
-						var calinfo_uri = BlobStorage.MakeAzureBlobUri(id, id + ".calinfo.obj");
-						var calinfo = (Calinfo)BlobStorage.DeserializeObjectFromUri(calinfo_uri);
-						calinfos.Add(id, calinfo);
-					}
-					catch (Exception e)
-					{
-						GenUtils.PriorityLogMsg("exception", "Calinfos rehydrate ", id + "," + e.Message);
-						var calinfo = new Calinfo(id);
-						calinfos.Add(id, calinfo);
-						try
-						{
-							var bs = BlobStorage.MakeDefaultBlobStorage();
-							bs.SerializeObjectToAzureBlob(calinfo, id, id + ".calinfo.obj");
-						}
-						catch (Exception e2)
-						{
-							GenUtils.PriorityLogMsg("exception", "Calinfos dehydrate ", id + "," + e2.Message);
-						}
-					}
-
-				} //);
-				return calinfos;
-			}
 		}
 	}
 
@@ -728,20 +688,15 @@ namespace CalendarAggregator
 		public string yahoo_api_key = Configurator.yahoo_api_key;
 		public string eventbrite_api_key = Configurator.eventbrite_api_key;
 		public string facebook_api_key = Configurator.facebook_api_key;
+		public string bing_maps_key = Configurator.bing_maps_key;
 	}
 
-	[Serializable] // because included in the pickled event store
+	[Serializable] 
 	public class Calinfo
 	{
-		// todo: use an enumeration instead of string values "what" and "where"
 		public HubType hub_enum
 		{ get { return _hub_enum; } }
 		private HubType _hub_enum;
-
-		// an alias for id, remove after id is deployed to all cached objects
-		public string delicious_account
-		{ get { return _delicious_account; } }
-		private string _delicious_account;
 
 		public string id
 		{ get { return _id; } }
@@ -809,10 +764,18 @@ namespace CalendarAggregator
 		{ get { return _use_rdfa; } }
 		private bool _use_rdfa;
 
-		// values documented at: http://blog.jonudell.net/elmcity-project-faq/#tzvalues
+		// values enumerated in admin/editable_metadata.html
 		public string tzname
 		{ get { return _tzname; } }
 		private string _tzname;
+
+		public int icalendar_horizon_days
+		{ get { return _icalendar_horizon_days; } }
+		private int _icalendar_horizon_days;
+
+		public bool use_x_wr_timezone
+		{ get { return _use_x_wr_timezone; } }
+		private bool _use_x_wr_timezone;
 
 		public System.TimeZoneInfo tzinfo
 		{ get { return _tzinfo; } }
@@ -861,18 +824,20 @@ namespace CalendarAggregator
 		{ get { return _has_descriptions; } }
 		private bool _has_descriptions;
 
+		/*
 		public Dictionary<string, string> metadict
 		{ get { return _metadict; } }
 		private Dictionary<string, string> _metadict;
+		 */
 
 		public Calinfo(string id)
 		{
+			var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
 			try
 			{
-				this._delicious_account = id; // todo: remove later
+				//this._delicious_account = id; // todo: remove later
 				this._id = id;
 
-				this._metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
 				if (metadict.ContainsKey("type") == false)
 				{
 					GenUtils.PriorityLogMsg("exception", "new calinfo: no hub type", id);
@@ -895,6 +860,8 @@ namespace CalendarAggregator
 
 				this._has_img = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "header_image");
 
+				this._icalendar_horizon_days = Configurator.GetIntSetting(metadict, Configurator.usersettings, "icalendar_horizon_days");
+
 				this._img_url = Configurator.GetUriSetting(metadict, Configurator.usersettings, "img");
 
 				this._title = Configurator.GetTitleSetting(metadict, Configurator.usersettings, "title");
@@ -907,6 +874,8 @@ namespace CalendarAggregator
 				this._tzinfo = Utils.TzinfoFromName(this._tzname);
 
 				this._use_rdfa = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "use_rdfa");
+
+				this._use_x_wr_timezone = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "use_x_wr_timezone");
 
 				//if (metadict.ContainsKey("where"))
 				if (metadict["type"] == "where")
@@ -923,6 +892,8 @@ namespace CalendarAggregator
 						this._radius = Configurator.max_radius;
 
 					this._population = Configurator.GetPopSetting(this.id, metadict, Configurator.usersettings, "population");
+					if (this.population != Configurator.default_population)
+						Utils.UpdatePopulationToAzureForId(id, this.population);
 
 					this._eventful = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "eventful");
 					this._upcoming = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "upcoming");
@@ -931,22 +902,24 @@ namespace CalendarAggregator
 
 					// curator gets to override the lat/lon that will otherwise be looked up based on the location
 
-					if (!metadict.ContainsKey("lat") && !metadict.ContainsKey("lon"))
+					// if (!metadict.ContainsKey("lat") && !metadict.ContainsKey("lon"))
+					if ( GenUtils.KeyExistsAndHasValue(metadict, "lat") && GenUtils.KeyExistsAndHasValue(metadict, "lon") )
+					{
+						this._lat = metadict["lat"];
+						this._lon = metadict["lon"];
+					}
+					else
 					{
 						var apikeys = new Apikeys();
-						var lookup_lat = Utils.LookupLatLon(apikeys.yahoo_api_key, this.where)[0];
-						var lookup_lon = Utils.LookupLatLon(apikeys.yahoo_api_key, this.where)[1];
+						var lookup_lat = Utils.LookupLatLon(apikeys.bing_maps_key, this.where)[0];
+						var lookup_lon = Utils.LookupLatLon(apikeys.bing_maps_key, this.where)[1];
 
 						if (!String.IsNullOrEmpty(lookup_lat) && !String.IsNullOrEmpty(lookup_lon))
 						{
 							this._lat = metadict["lat"] = lookup_lat;
 							this._lon = metadict["lon"] = lookup_lon;
+							Utils.UpdateLatLonToAzureForId(id, lookup_lat, lookup_lon);
 						}
-					}
-					else
-					{
-						this._lat = metadict["lat"];
-						this._lon = metadict["lon"];
 					}
 
 					if (String.IsNullOrEmpty(this.lat) && String.IsNullOrEmpty(this.lon))
