@@ -51,6 +51,7 @@ var editable_metadict = {};
 var editable_metadict_index;
 
 var metadata_select_fields = {
+  'descriptions' : null,
   'eventbrite'   : null,
   'eventful'     : null,
   'facebook'     : null,
@@ -60,20 +61,20 @@ var metadata_select_fields = {
 
 var metadata_include_fields = {
   'contact'       : 'Email address for the curator of the hub',
-  'css'           : 'URL for alternate CSS (default: http://elmcity.blob.core.windows.net/admin/elmcity-1.2.css)',
+  'css'           : 'URL for alternate CSS (default: http://elmcity.blob.core.windows.net/admin/elmcity-1.3.css)',
   'descriptions'  : 'Include iCalendar DESCRIPTION in XML and JSON outputs (default: no)',
   'display_width' : 'Width of the default HTML view (default: 470)',
   'eventbrite'    : 'Search EventBrite for events within radius of the hub (default: yes)',
   'eventful'      : 'Search Eventful for events within radius of the hub (default: yes)',
   'facebook'      : 'Search Facebook for events within radius of the hub (default: yes)',
-//  'feed_count'    : 'Number of iCalendar feeds (read only)',
-  'header_image'  : 'URL of a header image for the default HTML view (default: none)',
-  'img'           : 'Display the image specified by header_image (default: no)',
+//  'feed_count'  : 'Number of iCalendar feeds (read only)',
+  'header_image'  : 'Display the image specified by img (default: no)',
+  'img'           : 'URL of a header image for the default HTML view (default: none)',
   'lat'           : 'Latitude of center of hub (default: derived from location name if location hub)',
   'lon'           : 'Longitude of center of hub (default: derived from location name if location hub)',
   'population'    : '(only for location hub) (default: derived from location name)',
   'radius'        : 'Search radius for EventBrite/Eventful/Upcoming (default: 5 miles)',
-  'template'      : 'URL for alternate HTML template (default: http://elmcity.blob.core.windows.net/admin/events-1.2.tmpl)',
+  'template'      : 'URL for alternate HTML template (default: http://elmcity.blob.core.windows.net/admin/events-1.3.tmpl)',
   'title'         : 'Title of hub (Events for Huntington, WV) (default: hub id)',
   'twitter'       : 'Twitter name used to authenticate to, and control, the hub (read only)',
   'upcoming'      : 'Search EventBrite for events within radius of the hub (default: yes)',
@@ -101,8 +102,8 @@ var feeds_include_fields = {
   'feedurl'       : 'The iCalendar (ICS) feed (e.g.: http://westsidesoccer.org/events.ics)',
   'source'        : 'Name for the feed (e.g.: West Side Youth Soccer)',
   'category'      : 'One or more tags for the feed (e.g.: sports,soccer) (comma-delimited if more than one)',
-  'xcal'          : 'Convert from xCal-style RSS to ICS (default: no) (works for, e.g., http://events.pressdemocrat.com',
-  'vcal'          : 'Convert from vCal-style RSS to ICS (default: no) (works for, e.g., http://www.techhui.com)'
+//  'xcal'          : 'Convert from xCal-style RSS to ICS (default: no) (works for, e.g., http://events.pressdemocrat.com',
+//  'vcal'          : 'Convert from vCal-style RSS to ICS (default: no) (works for, e.g., http://www.techhui.com)'
   }
 
 var feeds_defaults = {
@@ -110,8 +111,8 @@ var feeds_defaults = {
   'feedurl'       : '',
   'source'        : '',
   'category'      : '',
-  'xcal'          : 'no',
-  'vcal'          : 'no'
+//  'xcal'          : 'no',
+//  'vcal'          : 'no'
   }
 
 var feeds_readonly_fields = {
@@ -155,6 +156,7 @@ function load_meta()
     include_fields = feeds_include_fields;
     readonly_fields = feeds_readonly_fields;	
     show_metadicts();
+    show_tagcloud();
     }
 
   }
@@ -203,7 +205,8 @@ function show_metadict(index, metadict)
   var record_keys;
 
   if ( flavor == 'feeds' )
-    record_keys = [ 'source', 'feedurl', 'url', 'category', 'xcal', 'vcal' ]; 
+//    record_keys = [ 'source', 'feedurl', 'url', 'category', 'xcal', 'vcal' ]; 
+    record_keys = [ 'source', 'feedurl', 'url', 'category']; 
   else
     record_keys = $.keys(include_fields).sort();
 
@@ -212,8 +215,8 @@ function show_metadict(index, metadict)
     var key = record_keys[i];
     var row_id = index + '_' + key;
     if ( ! metadict.hasOwnProperty(key) )
-      metadict[key] = '...';
-    val = metadict[key] == '' ? '...' : metadict[key];
+      metadict[key] = '';
+    val = metadict[key] == '' ? '' : metadict[key];
 
     if ( flavor == 'feeds' && key == 'feedurl' )
       {
@@ -254,6 +257,35 @@ function show_metadict(index, metadict)
     }
 
   }
+
+function show_tagcloud()
+  {
+  var allcats = {};
+  for (feed in json ) 
+    { 
+    var cats = json[feed]["category"].split(','); 
+    for ( i in cats ) 
+      {
+      var key = cats[i].trim();
+      if ( allcats.hasOwnProperty(key) )
+        allcats[key] += 1;
+      else
+        allcats[key] = 1;
+      }
+    }
+
+    delete allcats[""];
+    delete allcats["..."];
+
+    var tags = $.keys(allcats).sort();
+    
+    for (i in tags)
+      {
+      var tag = tags[i];
+      $('#tagcloud').append('<tr><td style="text-align:right">' + allcats[tag] + '</td><td>' + tag + '</td></tr>');
+      }
+  }
+
 
 
 function make_metadict_editable(index)
@@ -443,9 +475,11 @@ function update_json_blob()
                 ? JSON.stringify(json) 
                 : JSON.stringify(json[0]);
 
+  post_json = post_json.replace(/\&amp;/g,"&");
+
   var success = true;
 
-  var url = host + '/services/__ID__/put_json___FLAVOR__?name=__ID__.__FLAVOR__.json';
+  var url = host + '/services/__ID__/put_json___FLAVOR__';
 
   var completion_result = $.ajax({
   url: url,
@@ -564,6 +598,7 @@ $.extend({
     }
 })
 
+
 </script>
 
 </head>
@@ -571,6 +606,8 @@ $.extend({
 <body onload="load_meta();">
 
 <p><a href="/services/__ID__/metadata">view all hub/feed info</a></p>
+
+<table id="tagcloud" style="float:right;margin-top:0;border-spacing:6px;"></table>
 
 <p id="add_controls">
 <span id="feedcount"></span>
