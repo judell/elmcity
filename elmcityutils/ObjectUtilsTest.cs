@@ -47,7 +47,7 @@ namespace ElmcityUtils
 			var d1b = new Dictionary<string, string>() { { "b", "3" }, { "y", "4" } };
 			var l1 = new List<Dictionary<string, string>>() { d1a, d1b };
 			var l2 = new List<Dictionary<string, string>>() { d1a, d1b };
-			Assert.That(ObjectUtils.ListDictStrEqualsDictStr(l1, l2));
+			Assert.That(ObjectUtils.ListDictStrEqualsListDictStr(l1, l2));
 		}
 
 		[Test]
@@ -57,7 +57,7 @@ namespace ElmcityUtils
 			var d1b = new Dictionary<string, string>() { { "b", "3" }, { "y", "4" } };
 			var l1 = new List<Dictionary<string, string>>() { d1a, d1b };
 			var l2 = new List<Dictionary<string, string>>() { d1b, d1a };
-			Assert.IsFalse(ObjectUtils.ListDictStrEqualsDictStr(l1, l2));
+			Assert.IsFalse(ObjectUtils.ListDictStrEqualsListDictStr(l1, l2));
 		}
 
 		[Test]
@@ -70,7 +70,7 @@ namespace ElmcityUtils
 
 			var l1 = new List<Dictionary<string, string>>() { d1a, d1b };
 			var l2 = new List<Dictionary<string, string>>() { d1b, d2a };
-			Assert.IsFalse(ObjectUtils.ListDictStrEqualsDictStr(l1, l2));
+			Assert.IsFalse(ObjectUtils.ListDictStrEqualsListDictStr(l1, l2));
 		}
 
 		[Test]
@@ -83,7 +83,7 @@ namespace ElmcityUtils
 
 			var l1 = new List<Dictionary<string, string>>() { d1a, d1b };
 			var l2 = new List<Dictionary<string, string>>() { d1b, d2a };
-			Assert.IsFalse(ObjectUtils.ListDictStrEqualsDictStr(l1, l2));
+			Assert.IsFalse(ObjectUtils.ListDictStrEqualsListDictStr(l1, l2));
 		}
 
 	}
