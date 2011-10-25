@@ -71,6 +71,16 @@ namespace ElmcityUtils
 			log_queue.Enqueue(msg);
 		}
 
+		// todo: flesh this out with extra info
+		public void LogHttpRequestEx(System.Web.Mvc.ControllerContext c)
+		{
+			var msg = HttpUtils.MakeHttpLogMsg(c);
+			var r = c.HttpContext.Request;
+			var extra = new Dictionary<string, string>();
+			// msg += JsonConvert(...)
+			log_queue.Enqueue(msg);
+		}
+
 		private void LogThreadMethod()
 		{
 			while (true)
