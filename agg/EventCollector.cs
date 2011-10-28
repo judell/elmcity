@@ -453,13 +453,13 @@ namespace CalendarAggregator
 		}
 
 		// save the intermediate ics file for the source flavor represented in ical
-		private BlobStorageResponse SerializeIcalEventsToIcs(iCalendar ical, string suffix)
+		private BlobStorageResponse SerializeIcalEventsToIcs(iCalendar ical, SourceType type)
 		{
 			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer();
 			var ics_text = serializer.SerializeToString(ical);
 			var ics_bytes = Encoding.UTF8.GetBytes(ics_text);
 			var containername = this.id;
-			return bs.PutBlob(containername, containername + "_" + suffix + ".ics", new Hashtable(), ics_bytes, "text/calendar");
+			return bs.PutBlob(containername, containername + "_" + type.ToString() + ".ics", new Hashtable(), ics_bytes, "text/calendar");
 		}
 
 		// put the event into a) the eventstore, and b) the per-flavor intermediate icalendar object
@@ -1430,16 +1430,15 @@ namespace CalendarAggregator
 			return Utils.DeserializeObjectFromJson<NonIcalStats>(containername, filename);
 		}
 
-		private void SerializeStatsAndIntermediateOutputs(FeedRegistry fr, EventStore es, iCalendar ical, NonIcalStats stats, SourceType flavor)
+		private void SerializeStatsAndIntermediateOutputs(FeedRegistry fr, EventStore es, iCalendar ical, NonIcalStats stats, SourceType type)
 		{
 			BlobStorageResponse bsr;
 			HttpResponse tsr;
-			var flavor_str = flavor.ToString();
 
 			if (BlobStorage.ExistsContainer(this.id) == false)
 				bs.CreateContainer(this.id, is_public: true, headers: new Hashtable());
 
-			if (flavor == SourceType.ical)
+			if (type == SourceType.ical)
 			{
 				bsr = fr.SerializeIcalStatsToJson();
 				GenUtils.LogMsg("info", this.id + ": SerializeIcalStatsToJson: " + stats.blobname, bsr.HttpResponse.status.ToString());
@@ -1451,13 +1450,13 @@ namespace CalendarAggregator
 
 				bsr = Utils.SerializeObjectToJson(stats, this.id, stats.blobname + ".json");
 				GenUtils.LogMsg("info", this.id + ": Collector: SerializeObjectToJson: " + stats.blobname + ".json", bsr.HttpResponse.status.ToString());
-				tsr = this.SaveStatsToAzure(flavor);
+				tsr = this.SaveStatsToAzure(type);
 				GenUtils.LogMsg("info", this.id + ": Collector: SaveStatsToAzure", tsr.status.ToString());
 
 			}
 
-			bsr = this.SerializeIcalEventsToIcs(ical, flavor_str);
-			GenUtils.LogMsg("info", this.id + ": SerializeIcalStatsToIcs: " + id + "_" + flavor_str + ".ics", bsr.HttpResponse.status.ToString());
+			bsr = this.SerializeIcalEventsToIcs(ical, type);
+			GenUtils.LogMsg("info", this.id + ": SerializeIcalStatsToIcs: " + id + "_" + type.ToString() + ".ics", bsr.HttpResponse.status.ToString());
 
 			bsr = es.Serialize();
 			GenUtils.LogMsg("info", this.id + ": EventStore.Serialize: " + es.objfile, bsr.HttpResponse.status.ToString());
