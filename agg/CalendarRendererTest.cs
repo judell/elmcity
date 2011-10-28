@@ -34,7 +34,7 @@ namespace CalendarAggregator
 		static Uri view_uri = new Uri("http://elmcity.cloudapp.net/services/elmcity/xml?view=government");
 		static byte[] view_contents = HttpUtils.FetchUrl(view_uri).bytes;
 		static string view_etag = HttpUtils.GetMd5Hash(view_contents);
-		static Uri cached_base_uri = new Uri(Utils.MakeBaseUrl(Configurator.testid));
+		static Uri cached_base_uri = new Uri(Utils.MakeBaseZonelessUrl(Configurator.testid));
 
 		public CalendarRendererTest()
 		{
@@ -42,7 +42,7 @@ namespace CalendarAggregator
 			this.cr.cache = new MockCache();
 			var est = new EventStoreTest();
 			est.SerializeAndDeserializeZonelessEventStoreYieldsExpectedEvents();
-			this.es = new ZonelessEventStore(calinfo, qualifier: null);
+			this.es = new ZonelessEventStore(calinfo);
 			var uri = BlobStorage.MakeAzureBlobUri(EventStoreTest.test_container, this.es.objfile);
 			this.es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
 		}
