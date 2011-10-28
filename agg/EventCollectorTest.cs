@@ -93,7 +93,7 @@ namespace CalendarAggregator
 
 		private static void DeleteZonedObjects(string id)
 		{
-			foreach (var flavor in Enum.GetValues(typeof(Collector.EventFlavor)))
+			foreach (var flavor in Enum.GetValues(typeof(SourceType)))
 			{
 				var zoned_object = id + "." + flavor.ToString() + ".zoned.obj";
 				bs.DeleteBlob(id, zoned_object);
@@ -256,9 +256,10 @@ namespace CalendarAggregator
 			DeleteZonedObjects(calinfo.id);
 			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics").ToString();
 			fr.AddFeed(feedurl, source);
-			var es = new ZonedEventStore(calinfo, ".ical");
+			var es = new ZonedEventStore(calinfo, SourceType.ical);
 			collector.CollectIcal(fr, es, false, false);
-			var zes = GetZonelessEventStore(calinfo.id);
+			EventStore.CombineZonedEventStoresToZonelessEventStore(calinfo.id, settings);
+			var zes = new ZonelessEventStore(calinfo).Deserialize();
 			return zes;
 		}
 
@@ -343,7 +344,7 @@ namespace CalendarAggregator
 		public void EventfulQueryYieldsNonzeroEvents()
 		{
 			var collector = new Collector(test_calinfo, settings);
-			var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args);
+			var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args, "events/search", "event");
 			Assert.That(events.Count() > 0);
 		}
 
@@ -351,8 +352,8 @@ namespace CalendarAggregator
 		public void EventfulQueryYieldsValidFirstEvent()
 		{
 			var collector = new Collector(test_calinfo, settings);
-			var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args);
-			var es = new ZonedEventStore(test_calinfo, null);
+			var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args, "events/search", "event");
+			var es = new ZonedEventStore(test_calinfo, SourceType.ical);
 			collector.AddEventfulEvent(es, test_venue, events.First());
 			Assert.That(es.events[0].title != "");
 		}
@@ -378,20 +379,11 @@ namespace CalendarAggregator
 		private static ZonelessEventStore ProcessEventfulExample(string example, string source, Calinfo calinfo, Collector collector)
 		{
 			DeleteZonedObjects(calinfo.id);
-			var es = new ZonedEventStore(calinfo, ".eventful");
+			var es = new ZonedEventStore(calinfo, SourceType.eventful);
 			collector.CollectEventful(es, test: true);
-			var zes = GetZonelessEventStore(calinfo.id);
+			var zes = new ZonelessEventStore(calinfo).Deserialize();
 			return zes;
 		}
-
-		private static ZonelessEventStore GetZonelessEventStore(string id)
-		{
-			EventStore.CombineZonedEventStoresToZonelessEventStore(id, settings);
-			var zoneless_uri = BlobStorage.MakeAzureBlobUri(id, id + ".zoneless.obj");
-			var zes = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(zoneless_uri);
-			return zes;
-		}
-
 
 		#endregion
 
@@ -426,7 +418,7 @@ namespace CalendarAggregator
 			var calinfo = new Calinfo("berkeley");
 			var collector = new Collector(calinfo, settings);
 			var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method);
-			var es = new ZonedEventStore(test_calinfo, null);
+			var es = new ZonedEventStore(test_calinfo, SourceType.ical);
 			//Console.WriteLine(events.Count());
 			var evt = events.First();
 			string str_dtstart = evt.Attribute("start_date").Value + " " + evt.Attribute("end_date").Value;
@@ -457,9 +449,9 @@ namespace CalendarAggregator
 		private static ZonelessEventStore ProcessUpcomingExample(string example, string source, Calinfo calinfo, Collector collector)
 		{
 			DeleteZonedObjects(calinfo.id);
-			var es = new ZonedEventStore(calinfo, ".upcoming");
+			var es = new ZonedEventStore(calinfo, SourceType.upcoming);
 			collector.CollectUpcoming(es, test: true);
-			var zes = GetZonelessEventStore(calinfo.id);
+			var zes = new ZonelessEventStore(calinfo).Deserialize();
 			return zes;
 		}
 
@@ -476,7 +468,7 @@ namespace CalendarAggregator
 			var dtend = new DateTimeWithZone(dtstart.LocalTime + TimeSpan.FromHours(1), calinfo_keene.tzinfo);
 
 			
-			var es1 = new ZonedEventStore(calinfo_keene, ".ical");
+			var es1 = new ZonedEventStore(calinfo_keene, SourceType.ical);
 			es1.AddEvent(
 				"event",
 				"http://1",
@@ -490,11 +482,11 @@ namespace CalendarAggregator
 				"first event"
 				);
 
-			es1.Serialize(es1.objfile);
+			es1.Serialize();
 
 			Assert.IsTrue(calinfo_keene.eventful);
 
-			var es2 = new ZonedEventStore(calinfo_keene, ".eventful");
+			var es2 = new ZonedEventStore(calinfo_keene, SourceType.eventful);
 			es2.AddEvent(
 				"event",
 				"http://2",
@@ -508,11 +500,11 @@ namespace CalendarAggregator
 				"second event"
 				);
 
-			es2.Serialize(es2.objfile);
+			es2.Serialize();
 
 			Assert.IsTrue(calinfo_keene.upcoming);
 
-			var es3 = new ZonedEventStore(calinfo_keene, ".upcoming");
+			var es3 = new ZonedEventStore(calinfo_keene, SourceType.upcoming);
 			es3.AddEvent(
 				"event",
 				"http://3",
@@ -539,12 +531,11 @@ namespace CalendarAggregator
 				"fourth event"
 				);
 
-			es3.Serialize(es3.objfile);
+			es3.Serialize();
 
 			EventStore.CombineZonedEventStoresToZonelessEventStore(keene_test_hub, settings);
+			var es = new ZonelessEventStore(calinfo_keene).Deserialize();
 
-			var uri = BlobStorage.MakeAzureBlobUri(keene_test_hub,	keene_test_hub + ".zoneless.obj");
-			var es = (ZonelessEventStore) BlobStorage.DeserializeObjectFromUri(uri);
 			Assert.That(es.events.Count == 2);
 
 			var evt = es.events.Find(e => e.title == "event");
@@ -566,7 +557,7 @@ namespace CalendarAggregator
 			var dtend = new DateTimeWithZone(dtstart.LocalTime + TimeSpan.FromHours(1), calinfo_keene.tzinfo);
 
 
-			var es1 = new ZonedEventStore(calinfo_keene, ".ical");
+			var es1 = new ZonedEventStore(calinfo_keene, SourceType.ical);
 			es1.AddEvent(
 				"event",
 				"http://upcoming.yahoo.com/event/8504144/",
@@ -580,9 +571,9 @@ namespace CalendarAggregator
 				"first event"
 				);
 
-			es1.Serialize(es1.objfile);
+			es1.Serialize();
 
-			var es2 = new ZonedEventStore(calinfo_keene, ".upcoming");
+			var es2 = new ZonedEventStore(calinfo_keene, SourceType.upcoming);
 			es2.AddEvent(
 				"event",
 				"http://upcoming.yahoo.com/event/8504144",
@@ -596,12 +587,11 @@ namespace CalendarAggregator
 				"first event"
 				);
 
-			es2.Serialize(es2.objfile);
+			es2.Serialize();
 	
 			EventStore.CombineZonedEventStoresToZonelessEventStore(keene_test_hub, settings);
 
-			var uri = BlobStorage.MakeAzureBlobUri(keene_test_hub, keene_test_hub + ".zoneless.obj");
-			var es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
+			var es = new ZonelessEventStore(calinfo_keene).Deserialize();
 			Assert.That(es.events.Count == 1);
 
 			var evt = es.events.Find(e => e.title == "event");
@@ -621,7 +611,7 @@ namespace CalendarAggregator
 			var dtend = new DateTimeWithZone(dtstart.LocalTime + TimeSpan.FromHours(1), calinfo_keene.tzinfo);
 
 
-			var es1 = new ZonedEventStore(calinfo_keene, ".ical");
+			var es1 = new ZonedEventStore(calinfo_keene, SourceType.ical);
 			es1.AddEvent(
 				"event",
 				"http://eventful.com/E0-001-039987477-3",
@@ -635,9 +625,9 @@ namespace CalendarAggregator
 				"first event"
 				);
 
-			es1.Serialize(es1.objfile);
+			es1.Serialize();
 
-			var es2 = new ZonedEventStore(calinfo_keene, ".eventful");
+			var es2 = new ZonedEventStore(calinfo_keene, SourceType.eventful);
 			es2.AddEvent(
 				"event",
 				"http://eventful.com/events/E0-001-039987477-3",
@@ -651,12 +641,12 @@ namespace CalendarAggregator
 				"first event"
 				);
 
-			es2.Serialize(es2.objfile);
+			es2.Serialize();
 
 			EventStore.CombineZonedEventStoresToZonelessEventStore(keene_test_hub, settings);
 
-			var uri = BlobStorage.MakeAzureBlobUri(keene_test_hub, keene_test_hub + ".zoneless.obj");
-			var es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
+			var es = new ZonelessEventStore(calinfo_keene).Deserialize();
+
 			Assert.That(es.events.Count == 1);
 
 			var evt = es.events.Find(e => e.title == "event");
