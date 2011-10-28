@@ -97,7 +97,7 @@ namespace WebRole
 				// which is the base object for this id, e.g.:
 				//  http://elmcity.blob.core.windows.net/a2cal/a2cal.zoneless.obj
 				// cache the base object if uncached
-				var base_key = Utils.MakeBaseUrl(this.id);
+				var base_key = Utils.MakeBaseZonelessUrl(this.id);
 				if (this.cr.cache[base_key] == null)
 				{
 					var bytes = HttpUtils.FetchUrl(new Uri(base_key)).bytes;
