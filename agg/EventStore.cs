@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ElmcityUtils;
+using System.Text.RegularExpressions;
 
 namespace CalendarAggregator
 {
@@ -129,6 +130,12 @@ namespace CalendarAggregator
 			// return string.Format("{0}-{1}@{2}", ticks, randnum, ElmcityUtils.Configurator.appdomain);
 			var summary_bytes = System.Text.Encoding.UTF8.GetBytes(evt.Summary.ToString());
 			return string.Format("{0}-{1}@{2}", Convert.ToBase64String(summary_bytes), evt.DTStart.Ticks, ElmcityUtils.Configurator.appdomain);
+		}
+
+		public void NormalizeTitle()
+		{
+			this.title = Regex.Replace(this.title, "[\"\']+", "");
+			this.title = Regex.Replace(this.title, @"[\s]+", " ");
 		}
 	}
 
@@ -322,7 +329,6 @@ namespace CalendarAggregator
 
 		public void AddEvent(string title, string url, string source, DateTimeWithZone dtstart, DateTimeWithZone dtend, string lat, string lon, bool allday, string categories, string description)
 		{
-			//ZonedEvent evt = new ZonedEvent(title, url, source, allday, lat, lon, categories: categories, dtstart: dtstart, dtend: dtend, description:description);
 			ZonedEvent evt = new ZonedEvent(title: title, url: url, source: source, dtstart: dtstart, dtend: dtend, lat: lat, lon: lon, allday: allday, categories: categories, description: description);
 			events.Add(evt);
 		}
@@ -353,8 +359,8 @@ namespace CalendarAggregator
 
 		public void AddEvent(string title, string url, string source, string lat, string lon, DateTime dtstart, DateTime dtend, bool allday, string categories, string description)
 		{
-			//var evt = new ZonelessEvent(title, url, source, allday, lat, lon, categories, dtstart, dtend, description);
 			var evt = new ZonelessEvent(title: title, url: url, source: source, dtstart: dtstart, dtend: dtend, lat: lat, lon: lon, allday: allday, categories: categories, description: description);
+			evt.NormalizeTitle();
 			this.events.Add(evt);
 		}
 
