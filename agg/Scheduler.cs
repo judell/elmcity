@@ -94,6 +94,8 @@ namespace CalendarAggregator
 			var q = string.Format(task_query_template, master_pk, id);
 			var dict_obj = TableStorage.QueryForSingleEntityAsDictObj(ts, tasktable, q);
 			var task = (Task)ObjectUtils.DictObjToObj(dict_obj, new Task().GetType());
+			task.start = task.start.ToUniversalTime();
+			task.stop = task.stop.ToUniversalTime();
 			return task;
 		}
 
@@ -101,7 +103,7 @@ namespace CalendarAggregator
 		{
 			var task = new Dictionary<string, object>();
 			task["id"] = id;
-			task["start"] = DateTime.Now.ToUniversalTime();
+			task["start"] = DateTime.UtcNow;
 			task["running"] = true;
 			var ts_response = TableStorage.UpmergeDictToTableStore(task, tasktable, partkey: master_pk, rowkey: id);
 			var http_response = ts_response.http_response;
@@ -113,7 +115,7 @@ namespace CalendarAggregator
 		{
 			var task = new Dictionary<string, object>();
 			task["id"] = id;
-			task["stop"] = DateTime.Now.ToUniversalTime();
+			task["stop"] = DateTime.UtcNow;
 			task["running"] = false;
 			var ts_response = TableStorage.UpmergeDictToTableStore(task, table: tasktable, partkey: master_pk, rowkey: id);
 			GenUtils.LogMsg("info", "Scheduler.StopTaskForId: " + id, ts_response.http_response.status.ToString());
@@ -149,7 +151,7 @@ namespace CalendarAggregator
 			var entity = new Dictionary<string, object>();
 			entity.Add("PartitionKey", lock_pk);
 			entity.Add("RowKey", id);
-			entity.Add("LockedAt", DateTime.Now.ToUniversalTime());
+			entity.Add("LockedAt", DateTime.UtcNow);
 			var ts_response = ts.InsertEntity(tasktable, entity);
 			return ts_response.http_response;
 		}
@@ -176,8 +178,7 @@ namespace CalendarAggregator
 				return true;
 
 			var start = task.start;
-			start = start.ToUniversalTime();
-			var now = DateTime.Now.ToUniversalTime();
+			var now = DateTime.UtcNow;
 
 			if (now - start <= interval)
 				return false;

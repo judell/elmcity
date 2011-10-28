@@ -23,7 +23,6 @@ namespace CalendarAggregator
 	{
 		private static string testid = "test";
 		private static Calinfo test_calinfo = new Calinfo(testid);
-		private static int delay_milli = 1000;
 		private static TimeSpan interval = new TimeSpan(Configurator.where_aggregate_interval_hours, 0, 0);
 
 		[Test]
@@ -55,7 +54,7 @@ namespace CalendarAggregator
 		{
 			Scheduler.InitTaskForId(testid);
 			Scheduler.StartTaskForId(testid);
-			System.Threading.Thread.Sleep(delay_milli);
+			Utils.Wait(3);
 			Scheduler.StopTaskForId(testid);
 			var task = Scheduler.FetchTaskForId(testid);
 			Assert.Greater(task.stop, task.start);
@@ -79,7 +78,7 @@ namespace CalendarAggregator
 			Scheduler.InitTaskForId(testid);
 			var task = Scheduler.FetchTaskForId(testid);
 			var ts = new System.TimeSpan(0, (Configurator.where_aggregate_interval_hours * 60) + 10, 0);
-			var now = task.stop + ts;
+			var now = task.start + ts;
 			Scheduler.MaybeStartTaskForId(now, test_calinfo);
 			task = Scheduler.FetchTaskForId(testid);
 			Assert.AreEqual(task.running, true);
@@ -90,11 +89,10 @@ namespace CalendarAggregator
 		{
 			Scheduler.InitTaskForId(testid);
 			var task = Scheduler.FetchTaskForId(testid);
-			var ts = new System.TimeSpan(0, (Configurator.where_aggregate_interval_hours * 60) + 10, 0);
-			var now = task.start + ts;
+			var now = DateTime.UtcNow;
 			Scheduler.MaybeStartTaskForId(now, test_calinfo);
 			task = Scheduler.FetchTaskForId(testid);
-			Assert.AreEqual(task.start + ts, now);
+			Assert.That(task.start > now);
 		}
 
 		[Test]
@@ -134,7 +132,7 @@ namespace CalendarAggregator
 			Scheduler.InitTaskForId(testid);
 			var task = Scheduler.FetchTaskForId(testid);
 			var more_than_interval = new System.TimeSpan(0, (Configurator.where_aggregate_interval_hours * 60) + 60, 0);
-			task.start = DateTime.Now.ToUniversalTime() - more_than_interval;  // started more than 8hrs ago
+			task.start = DateTime.UtcNow - more_than_interval;  // started more than 8hrs ago
 			Scheduler.StoreTaskForId(task, testid);
 			Assert.AreEqual(true, Scheduler.IsAbandoned(testid, interval));
 		}
@@ -145,7 +143,7 @@ namespace CalendarAggregator
 			Scheduler.InitTaskForId(testid);
 			var task = Scheduler.FetchTaskForId(testid);
 			var less_than_interval = new System.TimeSpan(0, (Configurator.where_aggregate_interval_hours * 60) - 60, 0);
-			task.start = DateTime.Now.ToUniversalTime() - less_than_interval;
+			task.start = DateTime.UtcNow - less_than_interval;
 			Scheduler.StoreTaskForId(task, testid);
 			Assert.AreEqual(false, Scheduler.IsAbandoned(testid, interval));
 		}
