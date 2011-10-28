@@ -260,6 +260,7 @@ namespace WebRole
 			}
 		}
 
+		[HttpPost, ValidateInput(false)]
 		public ActionResult put_json_feeds(string id, string json)
 		{
 			GenUtils.LogMsg("info", "put_json_feeds", "id: " + id + " json: " + json);
