@@ -15,7 +15,7 @@ namespace CalendarAggregator
 		private string id = "elmcity";  // todo: externalize these
 		private string twitter_sender = "judell";
 		private string twitter_receiver = Configurator.twitter_account;
-		private string row_key = Utils.MakeSafeRowkeyFromUrl(test_fb_url);
+		private string row_key = TableStorage.MakeSafeRowkeyFromUrl(test_fb_url);
 		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 		private string text;
 
