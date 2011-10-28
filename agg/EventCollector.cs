@@ -43,8 +43,7 @@ namespace CalendarAggregator
 
 		private Dictionary<string, string> metadict = new Dictionary<string, string>();
 
-		public enum EventFlavor { ical, eventful, upcoming, eventbrite, facebook };
-		private enum UpcomingSearchStyle { location, latlon };
+		public enum UpcomingSearchStyle { location, latlon };
 
 		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
@@ -223,7 +222,7 @@ namespace CalendarAggregator
 
 				if (nosave == false) // why ever true? see CalendarRenderer.Viewer 
 					
-					SerializeStatsAndIntermediateOutputs(fr, es, ical_ical, new NonIcalStats(), EventFlavor.ical);
+					SerializeStatsAndIntermediateOutputs(fr, es, ical_ical, new NonIcalStats(), SourceType.ical);
 			}
 		}
 
@@ -308,7 +307,7 @@ namespace CalendarAggregator
 
 		private HttpResponse StoreRedirectedUrl(string feedurl, string redirected_url, Dictionary<string, string> feed_metadict)
 		{
-			string rowkey = Utils.MakeSafeRowkeyFromUrl(feedurl);
+			string rowkey = TableStorage.MakeSafeRowkeyFromUrl(feedurl);
 			feed_metadict["redirected_url"] = redirected_url;
 			return TableStorage.UpdateDictToTableStore(ObjectUtils.DictStrToDictObj(feed_metadict), Metadata.ts_table, this.id, rowkey).http_response;
 		}
@@ -810,12 +809,7 @@ namespace CalendarAggregator
 				//string location = string.Format("{0},{1}", this.calinfo.lat, this.calinfo.lon);
 				string location = this.calinfo.where;
 				var page_size = test ? test_pagesize : 100;
-				var now = Utils.MidnightInTz(this.calinfo.tzinfo).LocalTime;
-				string fmt = "{0:yyyyMMdd}00";
-				string min_date = String.Format(fmt, now);
-				string max_date = MakeDateArg(fmt, now);
-				string daterange = min_date + "-" + max_date;
-				string args = string.Format("date={0}&location={1}&within={2}&units=mi&page_size={3}", daterange, location, this.calinfo.radius, page_size);
+				string args = MakeEventfulArgs(location, page_size);
 				string method = "events/search";
 				var xdoc = CallEventfulApi(method, args);
 				var str_page_count = XmlUtils.GetXeltValue(xdoc.Root, ElmcityUtils.Configurator.no_ns, "page_count");
@@ -824,7 +818,7 @@ namespace CalendarAggregator
 				GenUtils.LogMsg("info", msg, null);
 
 				var uniques = new Dictionary<string, XElement>(); // dedupe by title + start
-				foreach (XElement evt in EventfulIterator(page_count, args))
+				foreach (XElement evt in EventfulIterator(page_count, args, "events/search", "event"))
 					//uniques.AddOrUpdateXElement(
 					uniques.AddOrUpdateDictionary<string, XElement>(
 					  XmlUtils.GetXeltValue(evt, ElmcityUtils.Configurator.no_ns, "title") +
@@ -853,9 +847,20 @@ namespace CalendarAggregator
 				estats.venuecount = event_count_by_venue.Keys.Count;
 				estats.whenchecked = DateTime.Now.ToUniversalTime();
 
-				SerializeStatsAndIntermediateOutputs(es, eventful_ical, estats, EventFlavor.eventful);
+				SerializeStatsAndIntermediateOutputs(es, eventful_ical, estats, SourceType.eventful);
 			}
 
+		}
+
+		public string MakeEventfulArgs(string location, int page_size)
+		{
+			var now = Utils.MidnightInTz(this.calinfo.tzinfo).LocalTime;
+			string fmt = "{0:yyyyMMdd}00";
+			string min_date = String.Format(fmt, now);
+			string max_date = MakeDateArg(fmt, now, this.calinfo.population);
+			string daterange = min_date + "-" + max_date;
+			string args = string.Format("date={0}&location={1}&within={2}&units=mi&page_size={3}", daterange, location, this.calinfo.radius, page_size);
+			return args;
 		}
 
 		public void AddEventfulEvent(ZonedEventStore es, string venue_name, XElement evt)
@@ -906,16 +911,15 @@ namespace CalendarAggregator
 			es.AddEvent(title: title, url: event_url, source: source, dtstart: dtstart_with_tz, dtend: min, lat: lat, lon: lon, allday: all_day, categories: categories, description: null);
 		}
 
-		public IEnumerable<XElement> EventfulIterator(int page_count, string args)
+		public IEnumerable<XElement> EventfulIterator(int page_count, string args, string method, string element)
 		{
 			for (int i = 0; i < page_count; i++)
 			{
 				string this_args = string.Format("{0}&page_number={1}", args, i + 1);
-				string method = "events/search";
 				XDocument xdoc = CallEventfulApi(method, this_args);
-				IEnumerable<XElement> query = from events in xdoc.Descendants("event") select events;
-				foreach (XElement evt in query)
-					yield return evt;
+				IEnumerable<XElement> query = from events in xdoc.Descendants(element) select events;
+				foreach (XElement xelt in query)
+					yield return xelt;
 			}
 		}
 
@@ -1005,7 +1009,7 @@ namespace CalendarAggregator
 				ustats.venuecount = event_count_by_venue.Keys.Count;
 				ustats.whenchecked = DateTime.Now.ToUniversalTime();
 
-				SerializeStatsAndIntermediateOutputs(es, upcoming_ical, ustats, EventFlavor.upcoming);
+				SerializeStatsAndIntermediateOutputs(es, upcoming_ical, ustats, SourceType.upcoming);
 			}
 		}
 
@@ -1040,18 +1044,18 @@ namespace CalendarAggregator
 			}
 		}
 
-		private static int GetUpcomingResultCount(XDocument xdoc)
+		public static int GetUpcomingResultCount(XDocument xdoc)
 		{
 			var str_result_count = xdoc.Document.Root.Attribute("resultcount").Value;
 			return Convert.ToInt32(str_result_count);
 		}
 
-		private string MakeUpcomingApiArgs(UpcomingSearchStyle search_style)
+		public string MakeUpcomingApiArgs(UpcomingSearchStyle search_style)
 		{
 			string fmt = "{0:yyyy-MM-dd}";
 			var now = Utils.MidnightInTz(this.calinfo.tzinfo).LocalTime;
 			var min_date = string.Format(fmt, now);
-			var max_date = MakeDateArg(fmt, now);
+			var max_date = MakeDateArg(fmt, now, this.calinfo.population);
 
 			string location_arg;
 			if (search_style == UpcomingSearchStyle.latlon)
@@ -1062,14 +1066,14 @@ namespace CalendarAggregator
 			return string.Format("location={0}&radius={1}&min_date={2}&max_date={3}", location_arg, this.calinfo.radius, min_date, max_date);
 		}
 
-		public string MakeDateArg(string fmt, DateTime now)
+		public string MakeDateArg(string fmt, DateTime now, int population)
 		{
 			string date_arg = "";
-			if (this.calinfo.population > 100000)
+			if (population > 100000)
 				date_arg = String.Format(fmt, now + TimeSpan.FromDays(90));
-			if (this.calinfo.population > 300000)
+			if (population > 300000)
 				date_arg = String.Format(fmt, now + TimeSpan.FromDays(60));
-			if (this.calinfo.population > 500000)
+			if (population > 500000)
 				date_arg = String.Format(fmt, now + TimeSpan.FromDays(30));
 			return date_arg;
 		}
@@ -1163,7 +1167,7 @@ namespace CalendarAggregator
 				var now = Utils.MidnightInTz(this.calinfo.tzinfo).LocalTime;
 				string fmt = "{0:yyyy-MM-dd}";
 				var min_date = string.Format(fmt, now);
-				string max_date = MakeDateArg(fmt, now);
+				string max_date = MakeDateArg(fmt, now, this.calinfo.population);
 				var date = min_date + ' ' + max_date;
 				var args = string.Format("city={0}&region={1}&within={2}&date={3}", city, region, this.calinfo.radius, date);
 				var method = "event_search";
@@ -1204,7 +1208,7 @@ namespace CalendarAggregator
 				}
 				ebstats.whenchecked = DateTime.Now.ToUniversalTime();
 
-				SerializeStatsAndIntermediateOutputs(es, eventbrite_ical, ebstats, EventFlavor.eventbrite);
+				SerializeStatsAndIntermediateOutputs(es, eventbrite_ical, ebstats, SourceType.eventbrite);
 			}
 		}
 
@@ -1295,7 +1299,7 @@ namespace CalendarAggregator
 
 				fbstats.whenchecked = DateTime.Now.ToUniversalTime();
 
-				SerializeStatsAndIntermediateOutputs(es, facebook_ical, fbstats, EventFlavor.facebook);
+				SerializeStatsAndIntermediateOutputs(es, facebook_ical, fbstats, SourceType.facebook);
 			}
 		}
 
@@ -1426,7 +1430,7 @@ namespace CalendarAggregator
 			return Utils.DeserializeObjectFromJson<NonIcalStats>(containername, filename);
 		}
 
-		private void SerializeStatsAndIntermediateOutputs(FeedRegistry fr, EventStore es, iCalendar ical, NonIcalStats stats, EventFlavor flavor)
+		private void SerializeStatsAndIntermediateOutputs(FeedRegistry fr, EventStore es, iCalendar ical, NonIcalStats stats, SourceType flavor)
 		{
 			BlobStorageResponse bsr;
 			HttpResponse tsr;
@@ -1435,7 +1439,7 @@ namespace CalendarAggregator
 			if (BlobStorage.ExistsContainer(this.id) == false)
 				bs.CreateContainer(this.id, is_public: true, headers: new Hashtable());
 
-			if (flavor == EventFlavor.ical)
+			if (flavor == SourceType.ical)
 			{
 				bsr = fr.SerializeIcalStatsToJson();
 				GenUtils.LogMsg("info", this.id + ": SerializeIcalStatsToJson: " + stats.blobname, bsr.HttpResponse.status.ToString());
@@ -1455,31 +1459,31 @@ namespace CalendarAggregator
 			bsr = this.SerializeIcalEventsToIcs(ical, flavor_str);
 			GenUtils.LogMsg("info", this.id + ": SerializeIcalStatsToIcs: " + id + "_" + flavor_str + ".ics", bsr.HttpResponse.status.ToString());
 
-			bsr = es.Serialize(es.objfile);
+			bsr = es.Serialize();
 			GenUtils.LogMsg("info", this.id + ": EventStore.Serialize: " + es.objfile, bsr.HttpResponse.status.ToString());
 		}
 
-		private void SerializeStatsAndIntermediateOutputs(EventStore es, iCalendar ical, NonIcalStats stats, EventFlavor flavor)
+		private void SerializeStatsAndIntermediateOutputs(EventStore es, iCalendar ical, NonIcalStats stats, SourceType flavor)
 		{
 			SerializeStatsAndIntermediateOutputs(new FeedRegistry(this.id), es, ical, stats, flavor);
 		}
 
-		private HttpResponse SaveStatsToAzure(EventFlavor flavor)
+		private HttpResponse SaveStatsToAzure(SourceType flavor)
 		{
 			var entity = new Dictionary<string, object>();
 			entity["PartitionKey"] = entity["RowKey"] = this.id;
 			switch (flavor)
 			{
-				case EventFlavor.facebook:
+				case SourceType.facebook:
 					entity["facebook_events"] = this.fbstats.eventcount;
 					break;
-				case EventFlavor.upcoming:
+				case SourceType.upcoming:
 					entity["upcoming_events"] = this.ustats.eventcount;
 					break;
-				case EventFlavor.eventful:
+				case SourceType.eventful:
 					entity["eventful_events"] = this.estats.eventcount;
 					break;
-				case EventFlavor.eventbrite:
+				case SourceType.eventbrite:
 					entity["eventbrite_events"] = this.ebstats.eventcount;
 					break;
 			}
