@@ -68,43 +68,16 @@ namespace CalendarAggregator
 		[Test]
 		public void AddZonelessEventIncrementsCount()
 		{
-			var zoneless = new ZonelessEventStore(calinfo, null);
+			var zoneless = new ZonelessEventStore(calinfo);
 			Assert.AreEqual(0, zoneless.events.Count);
 			zoneless.AddEvent(in_evt0_zoneless.title, in_evt0_zoneless.url, in_evt0_zoneless.source, test_lat, test_lon, in_evt0_zoneless.dtstart, in_evt0_zoneless.dtend, allday: false, categories: test_category, description: test_description);
 			Assert.AreEqual(1, zoneless.events.Count);
 		}
 
 		[Test]
-		public void SerializeTwoZonelessEvents()
-		{
-			var zoneless = new ZonelessEventStore(calinfo, null);
-			zoneless.AddEvent(in_evt0_zoneless.title, in_evt0_zoneless.url, in_evt0_zoneless.source, test_lat, test_lon, in_evt0_zoneless.dtstart, in_evt0_zoneless.dtend, false, in_evt0_zoneless.categories, test_description);
-			zoneless.AddEvent(in_evt1_zoneless.title, in_evt1_zoneless.url, in_evt1_zoneless.source, test_lat, test_lon, in_evt1_zoneless.dtstart, in_evt1_zoneless.dtend, false, in_evt1_zoneless.categories, test_description);
-			Assert.AreEqual(2, zoneless.events.Count);
-			var response = bs.SerializeObjectToAzureBlob(zoneless, test_container, zoneless.objfile);
-			//Console.WriteLine(response.HttpResponse.DataAsString());
-			Assert.AreEqual(HttpStatusCode.Created, response.HttpResponse.status);
-		}
-
-		[Test]
-		public void DeserializeTwoZonelessEvents()
-		{
-			SerializeTwoZonelessEvents();
-			Utils.Wait(5);
-			var zoneless = new ZonelessEventStore(calinfo, null);
-			var uri = BlobStorage.MakeAzureBlobUri(test_container, zoneless.objfile);
-			var obj = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
-			var out_evts = (List<ZonelessEvent>)obj.events;
-			Assert.AreEqual(2, out_evts.Count);
-			var out_evt = (ZonelessEvent)out_evts[0];
-			Assert.AreEqual(in_evt0_zoneless.dtstart, out_evt.dtstart);
-			Assert.AreEqual(in_evt0_zoneless.title, out_evt.title);
-		}
-
-		[Test]
 		public void SerializeAndDeserializeZonelessEventStoreYieldsExpectedEvents()
 		{
-			var es = new ZonelessEventStore(calinfo, null);
+			var es = new ZonelessEventStore(calinfo);
 
 			es.AddEvent(title:title1, url:"http://foo", source:source1, lat: null, lon: null, dtstart: dt1, dtend: min, allday: false, categories: test_category, description: test_description);
 
@@ -116,10 +89,9 @@ namespace CalendarAggregator
 			var evt2 = es.events.Find(e => e.title == title2);
 			evt2.urls_and_sources = new Dictionary<string, string>() { { "http://bar", source2 } };
 
-			bs.SerializeObjectToAzureBlob(es, test_container, es.objfile);
+			es.Serialize();
 
-			var uri = BlobStorage.MakeAzureBlobUri(test_container, es.objfile);
-			var es2 = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
+			var es2 = new ZonelessEventStore(calinfo).Deserialize(); 
 
 			CalendarRenderer.OrganizeByDate(es2);
 
@@ -147,7 +119,7 @@ namespace CalendarAggregator
 		[Test]
 		public void AddZonedEventIncrementsCount()
 		{
-			var zoned = new ZonedEventStore(calinfo, null);
+			var zoned = new ZonedEventStore(calinfo, SourceType.ical);
 			Assert.AreEqual(0, zoned.events.Count);
 			zoned.AddEvent(in_evt0_zoned.title, in_evt0_zoned.url, in_evt0_zoned.source, in_evt0_zoned.dtstart, in_evt0_zoned.dtend, test_lat, test_lon, false, in_evt0_zoned.categories, test_description);
 			Assert.AreEqual(1, zoned.events.Count);
@@ -156,7 +128,7 @@ namespace CalendarAggregator
 		[Test]
 		public void SerializeTwoZonedEvents()
 		{
-			var zoned = new ZonedEventStore(calinfo, null);
+			var zoned = new ZonedEventStore(calinfo, SourceType.ical);
 			zoned.AddEvent(in_evt0_zoned.title, in_evt0_zoned.url, in_evt0_zoned.source, in_evt0_zoned.dtstart, in_evt0_zoned.dtend, test_lat, test_lon, in_evt0_zoned.allday, test_category, test_description);
 			zoned.AddEvent(in_evt1_zoned.title, in_evt1_zoned.url, in_evt1_zoned.source, in_evt1_zoned.dtstart, in_evt1_zoned.dtend, test_lat, test_lon, in_evt1_zoned.allday, test_category, test_description);
 			Assert.AreEqual(2, zoned.events.Count);
@@ -170,7 +142,7 @@ namespace CalendarAggregator
 		{
 			SerializeTwoZonedEvents();
 			Utils.Wait(5);
-			var zoned = new ZonedEventStore(calinfo, null);
+			var zoned = new ZonedEventStore(calinfo, SourceType.ical);
 			var uri = BlobStorage.MakeAzureBlobUri(test_container, zoned.objfile);
 			var obj = (ZonedEventStore)BlobStorage.DeserializeObjectFromUri(uri);
 			var out_evts = (List<ZonedEvent>)obj.events;
@@ -183,7 +155,7 @@ namespace CalendarAggregator
 		[Test]
 		public void SerializeAndDeserializeZonedEventStoreYieldsExpectedEvents()
 		{
-			var es = new ZonedEventStore(calinfo, null);
+			var es = new ZonedEventStore(calinfo, SourceType.ical);
 			es.AddEvent(title:title1, url:"http://foo", source:source1, dtstart:dt1_with_zone, dtend:min_with_zone, allday:false, lat:test_lat, lon:test_lon, categories:test_category, description:test_description);
 			es.AddEvent(title:title2, url:"http://bar", source:source2, dtstart:dt2_with_zone, dtend:min_with_zone, lat:test_lat, lon:test_lon, allday:false, categories:test_category, description:test_description);
 
