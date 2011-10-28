@@ -88,7 +88,7 @@ namespace CalendarAggregator
 					var added_feed_urls = current_feed_urls.Except(existing_feed_urls);
 					foreach (string added_feed_url in added_feed_urls)
 					{
-						var rowkey = Utils.MakeSafeRowkeyFromUrl(added_feed_url);
+						var rowkey = TableStorage.MakeSafeRowkeyFromUrl(added_feed_url);
 						var entity = (Dictionary<string, string>)list_metadict_str.Find(feed => feed["feedurl"] == added_feed_url);
 						TableStorage.UpdateDictToTableStore(ObjectUtils.DictStrToDictObj(entity), "metadata", id, rowkey);
 					}
@@ -100,7 +100,7 @@ namespace CalendarAggregator
 					var deleted_feed_urls = existing_feed_urls.Except(current_feed_urls);
 					foreach (string deleted_feed_url in deleted_feed_urls)
 					{
-						var rowkey = Utils.MakeSafeRowkeyFromUrl(deleted_feed_url);
+						var rowkey = TableStorage.MakeSafeRowkeyFromUrl(deleted_feed_url);
 						ts.DeleteEntity("metadata", id, rowkey);
 					}
 
@@ -110,7 +110,7 @@ namespace CalendarAggregator
 					var maybe_updated_feed_urls = current_feed_urls.Except(deleted_feed_urls);
 					foreach (string maybe_updated_feed_url in maybe_updated_feed_urls)
 					{
-						var rowkey = Utils.MakeSafeRowkeyFromUrl(maybe_updated_feed_url);
+						var rowkey = TableStorage.MakeSafeRowkeyFromUrl(maybe_updated_feed_url);
 						var query = string.Format("$filter=PartitionKey eq '{0}' and RowKey eq '{1}'", id, rowkey);
 						var table_record = TableStorage.QueryForSingleEntityAsDictStr(ts, "metadata", query);
 						var json_record = (Dictionary<string, string>)list_metadict_str.Find(feed => feed["feedurl"] == maybe_updated_feed_url);
@@ -206,7 +206,7 @@ namespace CalendarAggregator
 
 		public static Dictionary<string, string> LoadFeedMetadataFromAzureTableForFeedurlAndId(string feedurl, string id)
 		{
-			string rowkey = Utils.MakeSafeRowkeyFromUrl(feedurl);
+			string rowkey = TableStorage.MakeSafeRowkeyFromUrl(feedurl);
 			var q = string.Format("$filter=(PartitionKey eq '{0}' and RowKey eq '{1}')", id, rowkey);
 			return TableStorage.QueryForSingleEntityAsDictStr(ts, "metadata", q);
 		}
@@ -241,7 +241,7 @@ namespace CalendarAggregator
 
 		public static HttpResponse StoreFeedAndMetadataToAzure(string id, string feedurl, Dictionary<string, object> metadict)
 		{
-			string rowkey = Utils.MakeSafeRowkeyFromUrl(feedurl);
+			string rowkey = TableStorage.MakeSafeRowkeyFromUrl(feedurl);
 			var r = TableStorage.UpdateDictToTableStore(metadict, ts_table, id, rowkey);
 			if (r.http_response.status != System.Net.HttpStatusCode.Created)
 				GenUtils.PriorityLogMsg("warning", "StoreFeedAndMetadataToAzure", r.http_response.status.ToString());
@@ -258,7 +258,7 @@ namespace CalendarAggregator
 		public static bool IsPrivateFeed(string id, string feedurl)
 		{
 			var is_private = true; // safe default
-			var q = string.Format("$filter=(PartitionKey eq '{0}' and RowKey eq '{1}' )", id, Utils.MakeSafeRowkeyFromUrl(feedurl));
+			var q = string.Format("$filter=(PartitionKey eq '{0}' and RowKey eq '{1}' )", id, TableStorage.MakeSafeRowkeyFromUrl(feedurl));
 			var qdicts = ts.QueryEntities(ts_table, q).list_dict_obj;
 			if (qdicts.Count != 1)
 				GenUtils.PriorityLogMsg("warning", "IsPrivateFeed", "non-singular result for " + q);
