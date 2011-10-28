@@ -182,7 +182,10 @@ namespace ElmcityUtils
 		public static string MakeSafeRowkeyFromUrl(string url)
 		{
 			var b64array = Encoding.UTF8.GetBytes(url);
-			return Uri.EscapeDataString(Convert.ToBase64String(b64array)).Replace('%', '_');
+			var rowkey = Uri.EscapeDataString(Convert.ToBase64String(b64array)).Replace('%', '_');
+			if (rowkey.Length > 1000)
+				rowkey = HttpUtils.GetMd5Hash(Encoding.UTF8.GetBytes(rowkey));
+			return rowkey;
 		}
 
 		// try to insert a dict<str,obj> into table store
@@ -437,6 +440,33 @@ namespace ElmcityUtils
 		{
 			var http_response = DoTableStoreRequest(tablename, query_string: query, method: "GET", headers: new Hashtable(), data: null);
 			return http_response.DataAsString();
+		}
+
+		public string QueryEntitiesAsHtml(string tablename, string query, List<string> attrs)
+		{
+			var ts_response = QueryEntities(tablename, query);
+			var list_dict_obj = ts_response.list_dict_obj;
+			var sb = new StringBuilder();
+			var html = sb.Append("<table>");
+			sb.Append("<tr>");
+			foreach (var attr in attrs)
+				sb.Append("<td>" + attr + "</td>");
+			sb.Append("</tr>");
+			foreach (var dict_obj in list_dict_obj)
+			{
+				sb.Append("<tr>");
+				var dict_str = ObjectUtils.DictObjToDictStr(dict_obj);
+				foreach (var attr in attrs)
+				{
+					string value = "";
+					if (dict_str.ContainsKey(attr))
+						value = "<td>" + dict_str[attr] + "</td>";
+					sb.Append(value);
+				}
+				sb.Append("</tr>");
+			}
+			sb.Append("</table>");
+			return sb.ToString();
 		}
 
 		public TableStorageListDictResponse QueryAllEntitiesAsListDict(string table, string query)
