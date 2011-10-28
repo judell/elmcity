@@ -124,6 +124,12 @@ namespace ElmcityUtils
 			return DoHttpWebRequest(request, UTf8ByteArray);
 		}
 
+		public static HttpResponse SlowFetchUrl(Uri url, int delay_secs)
+		{
+			System.Threading.Thread.Sleep(TimeSpan.FromSeconds(1));
+			return FetchUrl(url);
+		}
+
 		public static HttpResponse FetchUrlNoRedirect(Uri url)
 		{
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
