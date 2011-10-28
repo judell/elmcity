@@ -381,6 +381,7 @@ namespace CalendarAggregator
 			DeleteZonedObjects(calinfo.id);
 			var es = new ZonedEventStore(calinfo, SourceType.eventful);
 			collector.CollectEventful(es, test: true);
+			EventStore.CombineZonedEventStoresToZonelessEventStore(calinfo.id, settings);
 			var zes = new ZonelessEventStore(calinfo).Deserialize();
 			return zes;
 		}
@@ -401,34 +402,6 @@ namespace CalendarAggregator
 		}
 
 		[Test]
-		public void UpcomingQueryYieldsNonzeroEvents()
-		{
-			string method = "event.search";
-			var calinfo = new Calinfo("sfcals");
-			var collector = new Collector(calinfo, settings);
-			var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method);
-			//Console.WriteLine(events.Count());
-			Assert.That(events.Count() > 0);
-		}
-
-		[Test]
-		public void UpcomingQueryYieldsValidFirstEvent()
-		{
-			string method = "event.search";
-			var calinfo = new Calinfo("berkeley");
-			var collector = new Collector(calinfo, settings);
-			var events = (IEnumerable<XElement>)collector.UpcomingIterator(1, method);
-			var es = new ZonedEventStore(test_calinfo, SourceType.ical);
-			//Console.WriteLine(events.Count());
-			var evt = events.First();
-			string str_dtstart = evt.Attribute("start_date").Value + " " + evt.Attribute("end_date").Value;
-			var dtstart = Utils.LocalDateTimeFromLocalDateStr(str_dtstart);
-			var dtstart_with_zone = new DateTimeWithZone(dtstart, test_calinfo.tzinfo);
-			collector.AddUpcomingEvent(es, test_venue, evt);
-			Assert.That(es.events[0].title != "");
-		}
-
-		[Test]
 		public void PhilharmoniaAt8PMLocal()
 		{
 			var example = "philharmonia";
@@ -436,7 +409,7 @@ namespace CalendarAggregator
 
 			collector_berkeley.test_upcoming_api = true;
 			var zes = ProcessUpcomingExample(example, source, calinfo_berkeley, collector_berkeley);
-			collector_keene.test_upcoming_api = true;
+			collector_keene.test_upcoming_api = false;
 
 			Assert.That(zes.events.Count == 1);
 			var evt = zes.events[0];
@@ -451,6 +424,7 @@ namespace CalendarAggregator
 			DeleteZonedObjects(calinfo.id);
 			var es = new ZonedEventStore(calinfo, SourceType.upcoming);
 			collector.CollectUpcoming(es, test: true);
+			EventStore.CombineZonedEventStoresToZonelessEventStore(calinfo.id, settings);
 			var zes = new ZonelessEventStore(calinfo).Deserialize();
 			return zes;
 		}
