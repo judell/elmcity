@@ -198,8 +198,7 @@ namespace CalendarAggregator
 
 		public BlobStorageResponse SaveAsJson()
 		{
-			var uri = BlobStorage.MakeAzureBlobUri(this.id, this.id + ".zoneless.obj");
-			var es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
+			var es = new ZonelessEventStore(this.calinfo).Deserialize();
 			var json = JsonConvert.SerializeObject(es.events);
 			return Utils.SerializeObjectToJson(es.events, this.id, this.jsonfile);
 		}
@@ -675,7 +674,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				es = new ZonelessEventStore(this.calinfo, null);
+				es = new ZonelessEventStore(this.calinfo);
 				GenUtils.PriorityLogMsg("exception", "CalendarRenderer.FindTodayEvents", e.Message + e.StackTrace);
 			}
 			return es;
@@ -696,18 +695,16 @@ namespace CalendarAggregator
 		// from the CalendarRender's cache if available, else fetching bytes
 		private ZonelessEventStore GetEventStoreWithCaching(ICache cache)
 		{
-			var blob_url = BlobStorage.MakeAzureBlobUri(container: this.id, name: this.id + ".zoneless.obj");
-			var obj_bytes = (byte[])CacheUtils.RetrieveBlobAndEtagFromServerCacheOrUri(cache, blob_url)["response_body"];
-			ZonelessEventStore es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromBytes(obj_bytes);
-			return es;
+			var es = new ZonelessEventStore(this.calinfo);
+			var obj_bytes = (byte[])CacheUtils.RetrieveBlobAndEtagFromServerCacheOrUri(cache, es.uri)["response_body"];
+			return (ZonelessEventStore)BlobStorage.DeserializeObjectFromBytes(obj_bytes);
 		}
 
 		private ZonelessEventStore GetEventStoreWithoutCaching(ICache cache)
 		{
-			var blob_url = BlobStorage.MakeAzureBlobUri(container: this.id, name: this.id + ".zoneless.obj");
-			var obj_bytes = HttpUtils.FetchUrl(blob_url).bytes;
-			ZonelessEventStore es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromBytes(obj_bytes);
-			return es;
+			var es = new ZonelessEventStore(this.calinfo);
+			var obj_bytes = HttpUtils.FetchUrl(es.uri).bytes;
+			return (ZonelessEventStore)BlobStorage.DeserializeObjectFromBytes(obj_bytes);
 		}
 
 		// used in WebRole for views built from pickled objects that are cached
