@@ -93,9 +93,9 @@ namespace CalendarAggregator
 
 		private static void DeleteZonedObjects(string id)
 		{
-			foreach (var flavor in Enum.GetValues(typeof(SourceType)))
+			foreach (var type in Enum.GetValues(typeof(SourceType)))
 			{
-				var zoned_object = id + "." + flavor.ToString() + ".zoned.obj";
+				var zoned_object = id + "." + type.ToString() + ".zoned.obj";
 				bs.DeleteBlob(id, zoned_object);
 			}
 		}

@@ -53,14 +53,14 @@ namespace CalendarAggregator
 		private NonIcalStats ebstats; // eventbrite
 		private NonIcalStats fbstats; // facebook
 
-		// every source flavor is serialized to an intermediate ics file, e.g.:
+		// every source type is serialized to an intermediate ics file, e.g.:
 		// http://elmcity.blob.core.windows.net/a2cal/a2cal_ical.ics
 		// http://elmcity.blob.core.windows.net/a2cal/a2cal_upcoming.ics
 
 		// why? just for convenience of running/managing the service, it's helpful for each phase of 
 		// processing to yield an inspectable output
 
-		// these flavors are later merged to create, e.g.:
+		// these types are later merged to create, e.g.:
 		// http://elmcity.blob.core.windows.net/a2cal/a2cal.ics
 
 		private iCalendar ical_ical;
@@ -82,7 +82,7 @@ namespace CalendarAggregator
 
 		private Dictionary<string, Dictionary<string, string>> per_feed_metadata_cache;
 
-		// public methods used by worker to collect events from all source flavors
+		// public methods used by worker to collect events from all source types
 		public Collector(Calinfo calinfo, Dictionary<string, string> settings)
 		{
 			this.calinfo = calinfo;
@@ -93,7 +93,7 @@ namespace CalendarAggregator
 			this.id = calinfo.id;
 			this.bs = BlobStorage.MakeDefaultBlobStorage();
 
-			// an instance of a DDay.iCal for each source flavor, used to collect intermediate ICS
+			// an instance of a DDay.iCal for each source type, used to collect intermediate ICS
 			// results which are saved, then combined to produce a merged ICS, e.g.:
 			// http://elmcity.blob.core.windows.net/a2cal/a2cal.ics
 			this.ical_ical = NewCalendarWithTimezone();
@@ -452,7 +452,7 @@ namespace CalendarAggregator
 			return instance;
 		}
 
-		// save the intermediate ics file for the source flavor represented in ical
+		// save the intermediate ics file for the source type represented in ical
 		private BlobStorageResponse SerializeIcalEventsToIcs(iCalendar ical, SourceType type)
 		{
 			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer();
@@ -462,7 +462,7 @@ namespace CalendarAggregator
 			return bs.PutBlob(containername, containername + "_" + type.ToString() + ".ics", new Hashtable(), ics_bytes, "text/calendar");
 		}
 
-		// put the event into a) the eventstore, and b) the per-flavor intermediate icalendar object
+		// put the event into a) the eventstore, and b) the per-type intermediate icalendar object
 		private void AddIcalEvent(DDay.iCal.Event evt, FeedRegistry fr, ZonedEventStore es, string feedurl, string source)
 		{
 			evt = NormalizeIcalEvt(evt, feedurl);
@@ -1462,16 +1462,16 @@ namespace CalendarAggregator
 			GenUtils.LogMsg("info", this.id + ": EventStore.Serialize: " + es.objfile, bsr.HttpResponse.status.ToString());
 		}
 
-		private void SerializeStatsAndIntermediateOutputs(EventStore es, iCalendar ical, NonIcalStats stats, SourceType flavor)
+		private void SerializeStatsAndIntermediateOutputs(EventStore es, iCalendar ical, NonIcalStats stats, SourceType type)
 		{
-			SerializeStatsAndIntermediateOutputs(new FeedRegistry(this.id), es, ical, stats, flavor);
+			SerializeStatsAndIntermediateOutputs(new FeedRegistry(this.id), es, ical, stats, type);
 		}
 
-		private HttpResponse SaveStatsToAzure(SourceType flavor)
+		private HttpResponse SaveStatsToAzure(SourceType type)
 		{
 			var entity = new Dictionary<string, object>();
 			entity["PartitionKey"] = entity["RowKey"] = this.id;
-			switch (flavor)
+			switch (type)
 			{
 				case SourceType.facebook:
 					entity["facebook_events"] = this.fbstats.eventcount;
