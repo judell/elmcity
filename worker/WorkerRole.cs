@@ -294,7 +294,7 @@ namespace WorkerRole
 				// /services/a2cal/rss?view=government
 				// /services/a2cal/xml?view=music&count=10    ... etc.
 
-				CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseUrl(id), Convert.ToInt32(settings["webrole_instance_count"]));
+				CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(id), Convert.ToInt32(settings["webrole_instance_count"]));
 
 				WebRoleData.UpdateRendererForId(id);  // ensure webrole will reload fresh renderer for this hub
 
@@ -430,7 +430,7 @@ namespace WorkerRole
 
 			var id = calinfo.id;
 
-			ZonedEventStore ical = new ZonedEventStore(calinfo, ".ical");
+			ZonedEventStore ical = new ZonedEventStore(calinfo, SourceType.ical);
 			try
 			{
 
@@ -448,7 +448,7 @@ namespace WorkerRole
 		{
 			if (settings["use_eventful"] == "true" && calinfo.eventful)
 			{
-				var eventful = new ZonedEventStore(calinfo, ".eventful");
+				var eventful = new ZonedEventStore(calinfo, SourceType.eventful);
 				Collector coll = new Collector(calinfo, settings);
 				coll.CollectEventful(eventful, testing);
 			}
@@ -458,7 +458,7 @@ namespace WorkerRole
 		{
 			if (settings["use_upcoming"] == "true" && calinfo.upcoming)
 			{
-				var upcoming = new ZonedEventStore(calinfo, ".upcoming");
+				var upcoming = new ZonedEventStore(calinfo, SourceType.upcoming);
 				Collector coll = new Collector(calinfo, settings);
 				coll.CollectUpcoming(upcoming, testing);
 			}
@@ -468,7 +468,7 @@ namespace WorkerRole
 		{
 			if (settings["use_eventbrite"] == "true" && calinfo.eventbrite)
 			{
-				var eventbrite = new ZonedEventStore(calinfo, ".eventbrite");
+				var eventbrite = new ZonedEventStore(calinfo, SourceType.eventbrite);
 				Collector coll = new Collector(calinfo, settings);
 				coll.CollectEventBrite(eventbrite, testing);
 			}
@@ -478,7 +478,7 @@ namespace WorkerRole
 		{
 			if (settings["use_facebook"] == "true" && calinfo.facebook)
 			{
-				var facebook = new ZonedEventStore(calinfo, ".facebook");
+				var facebook = new ZonedEventStore(calinfo, SourceType.facebook);
 				Collector coll = new Collector(calinfo, settings);
 				coll.CollectFacebook(facebook, testing);
 			}
