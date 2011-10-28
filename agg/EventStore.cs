@@ -86,6 +86,10 @@ namespace CalendarAggregator
 
 		private string _categories;
 
+		public string id { get; set; }
+
+		public Uri uri { get; set; }
+
 		public Event(string title, string url, string source, bool allday, string categories)
 		{
 			this.title = title;
@@ -172,8 +176,6 @@ namespace CalendarAggregator
 
 		public string id { get; set; }
 
-		//public Calinfo calinfo { get; set; }
-
 		// the datekey looks like d2010-07-04
 		// used by, e.g., CalendarRenderer.RenderEventsAsHtml when creating fragment identifiers
 		// (e.g. <a name="d2010-07-04"/> ) in the default html rendering
@@ -184,10 +186,9 @@ namespace CalendarAggregator
 
 		private static List<string> _non_ical_types = new List<string>() { "eventful", "upcoming", "eventbrite", "facebook" };
 
-		//private BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
-
-		public string xmlfile { get; set; }
 		public string objfile { get; set; }
+
+		public Uri uri { get; set; }
 
 		public System.TimeZoneInfo tzinfo { get; set; }
 
@@ -197,10 +198,10 @@ namespace CalendarAggregator
 			this.tzinfo = calinfo.tzinfo;
 		}
 
-		public BlobStorageResponse Serialize(string file)
+		public BlobStorageResponse Serialize()
 		{
 			var bs = BlobStorage.MakeDefaultBlobStorage();
-			return bs.SerializeObjectToAzureBlob(this, this.id, file);
+			return bs.SerializeObjectToAzureBlob(this, this.id, this.objfile);
 		}
 
 		private static void DeserializeZoned(Uri uri, List<List<ZonedEvent>> lists_of_zoned_events)
@@ -226,7 +227,7 @@ namespace CalendarAggregator
 
 			var lists_of_zoned_events = new List<List<ZonedEvent>>();
 
-			var ical_uri = BlobStorage.MakeAzureBlobUri(container: id, name: id + ".ical.zoned.obj");
+			var ical_uri = BlobStorage.MakeAzureBlobUri(container: id, name: id + "." + SourceType.ical + ".zoned.obj");
 
 			DeserializeZoned(ical_uri, lists_of_zoned_events);
 
@@ -245,7 +246,7 @@ namespace CalendarAggregator
 				}
 			}
 
-			var es_zoneless = new ZonelessEventStore(calinfo, null);
+			var es_zoneless = new ZonelessEventStore(calinfo);
 
 			// combine the various List<ZonedEvent> objects into our new ZonelessEventStore
 			// always add the local time
@@ -263,7 +264,7 @@ namespace CalendarAggregator
 
 			es_zoneless.SortEventList();     // order by dtstart
 
-			bs.SerializeObjectToAzureBlob(es_zoneless, id, es_zoneless.objfile); // save new object as a blob
+			es_zoneless.Serialize();
 		}
 
 		public static List<ZonelessEvent> UniqueByTitleAndStart(List<ZonelessEvent> events)
@@ -309,16 +310,14 @@ namespace CalendarAggregator
 	{
 		public List<ZonedEvent> events = new List<ZonedEvent>();
 
-		public ZonedEventStore(Calinfo calinfo, string qualifier)
+		public ZonedEventStore(Calinfo calinfo, SourceType type)
 			: base(calinfo)
 		{
 			// qualifier is "ical" or one of the non-ical types, so for example:
 			// http://elmcity.blob.core.windows.net/a2cal/a2cal.ical.zoned.obj
 			// http://elmcity.blob.core.windows.net/a2cal/a2cal.eventful.zoned.obj
-			// todo: enumerate these instead of relying on strings
-			qualifier = qualifier ?? "";
-			this.xmlfile = this.id + qualifier + ".zoned.xml";
-			this.objfile = this.id + qualifier + ".zoned.obj";
+			this.objfile = this.id + "." + type.ToString() + ".zoned.obj";
+			this.uri = BlobStorage.MakeAzureBlobUri(this.id, this.objfile);
 		}
 
 		public void AddEvent(string title, string url, string source, DateTimeWithZone dtstart, DateTimeWithZone dtend, string lat, string lon, bool allday, string categories, string description)
@@ -326,6 +325,12 @@ namespace CalendarAggregator
 			//ZonedEvent evt = new ZonedEvent(title, url, source, allday, lat, lon, categories: categories, dtstart: dtstart, dtend: dtend, description:description);
 			ZonedEvent evt = new ZonedEvent(title: title, url: url, source: source, dtstart: dtstart, dtend: dtend, lat: lat, lon: lon, allday: allday, categories: categories, description: description);
 			events.Add(evt);
+		}
+
+		public ZonedEventStore Deserialize()
+		{
+			var o = BlobStorage.DeserializeObjectFromUri(this.uri);
+			return (ZonedEventStore)o;
 		}
 
 	}
@@ -339,11 +344,11 @@ namespace CalendarAggregator
 		public Dictionary<string, List<ZonelessEvent>> event_dict = new Dictionary<string, List<ZonelessEvent>>();
 		public List<string> datekeys = new List<string>();
 
-		public ZonelessEventStore(Calinfo calinfo, string qualifier)
+		public ZonelessEventStore(Calinfo calinfo)
 			: base(calinfo)
 		{
 			this.objfile = this.id + ".zoneless.obj";
-			this.xmlfile = this.id + ".zoneless.xml";
+			this.uri = BlobStorage.MakeAzureBlobUri(this.id, this.objfile);
 		}
 
 		public void AddEvent(string title, string url, string source, string lat, string lon, DateTime dtstart, DateTime dtend, bool allday, string categories, string description)
@@ -351,6 +356,12 @@ namespace CalendarAggregator
 			//var evt = new ZonelessEvent(title, url, source, allday, lat, lon, categories, dtstart, dtend, description);
 			var evt = new ZonelessEvent(title: title, url: url, source: source, dtstart: dtstart, dtend: dtend, lat: lat, lon: lon, allday: allday, categories: categories, description: description);
 			this.events.Add(evt);
+		}
+
+		public ZonelessEventStore Deserialize()
+		{
+			var o = BlobStorage.DeserializeObjectFromUri(this.uri);
+			return (ZonelessEventStore)o;
 		}
 
 		// recover the UTC datetime that was in the original ZonedEvent,
