@@ -877,7 +877,7 @@ namespace CalendarAggregator
 			foreach (var d in list)
 			{
 				var k = d[key];
-				dict.Add(k, d);
+				dict.AddOrUpdateDictionary(k, d);
 			}
 			var new_json = JsonConvert.SerializeObject(dict);
 			return new_json;
@@ -1196,7 +1196,7 @@ namespace CalendarAggregator
 
 		#region meetup
 
-		public static string FindMeetupGroups(Calinfo calinfo, int delay, Dictionary<string,string> settings)
+		public static List<TaggableSource> FindMeetupGroups(Calinfo calinfo, int delay, Dictionary<string,string> settings)
 		{
 			var meetup_key = settings["meetup_api_key"];
 			var template = "https://api.meetup.com/2/open_events?key={0}&lat={1}&lon={2}&radius={3}";
@@ -1214,7 +1214,7 @@ namespace CalendarAggregator
 					  select Convert.ToString(result["group"]["id"].Value<int>());
 			var uniques = ids.ToList().Unique();
 
-			var group_infos = new List<Dictionary<string, string>>();
+			var taggable_sources = new List<TaggableSource>();
 
 			foreach (var group_id in uniques)
 			{
@@ -1230,39 +1230,24 @@ namespace CalendarAggregator
 					var result = results.First();
 					var name = result["name"].Value<string>();
 					var urlname = result["urlname"].Value<string>();
-					group_infos.Add(
-						new Dictionary<string, string>() 
-					{
-						{ "name", name },
-						{ "urlname", urlname },
-						{ "homepage", "http://www.meetup.com/" + urlname },
-						{ "ical", string.Format("http://www.meetup.com/{0}/events/ical/{1}/", 
-							urlname,
-							Uri.EscapeUriString(name) ) }
-					}
-					);
+					var home_url = "http://www.meetup.com/" + urlname;
+					var ical_url = string.Format("http://www.meetup.com/{0}/events/ical/{1}/",
+						urlname,
+						Uri.EscapeUriString(name));
+					ical_url = ical_url.Replace("%20", "+");  // otherwise meetup weirdly reports a 505 error
+					taggable_sources.Add(
+						new TaggableSource(
+							name,
+							home_url,
+							ical_url )
+						);
 				}
 				catch (Exception e)
 				{
 					GenUtils.PriorityLogMsg("exception", "FindMeetupGroups", e.Message + e.StackTrace);
 				}
 			}
-
-			var html = new StringBuilder();
-
-			foreach (var group_info in group_infos)
-			{
-				var tmpl = @"<p><a href=""{0}"">{1}</a> (<a href=""{0}"">iCal feed</a>)</p>";
-				var chunk = string.Format(tmpl,
-					group_info["homepage"],
-					group_info["name"],
-					group_info["ical"]
-					);
-				html.Append(chunk);
-			}
-
-			return html.ToString();
-
+			return taggable_sources;
 		}
 
 		#endregion
@@ -1368,7 +1353,7 @@ namespace CalendarAggregator
 			System.Threading.Thread.Sleep(seconds * 1000);
 		}
 
-		public static string MakeBaseUrl(string id)
+		public static string MakeBaseZonelessUrl(string id)
 		{
 			return string.Format("{0}/{1}/{2}.zoneless.obj",
 				ElmcityUtils.Configurator.azure_blobhost,
@@ -1383,19 +1368,11 @@ namespace CalendarAggregator
 
 		public static void RemoveBaseCacheEntry(string id)
 		{
-			var cached_base_uri = MakeBaseUrl(id);
+			var cached_base_uri = MakeBaseZonelessUrl(id);
 			var url = string.Format("http://{0}/services/remove_cache_entry?cached_uri={1}",
 				ElmcityUtils.Configurator.appdomain,
 				cached_base_uri);
 			var result = HttpUtils.FetchUrl(new Uri(url));
-		}
-
-		// convert a feed url into a base-64-encoded and uri-escaped string
-		// that can be used as an azure table rowkey
-		public static string MakeSafeRowkeyFromUrl(string feedurl)
-		{
-			var b64array = Encoding.UTF8.GetBytes(feedurl);
-			return Uri.EscapeDataString(Convert.ToBase64String(b64array)).Replace('%', '_');
 		}
 
 		public static string EmbedHtmlSnippetInDefaultPageWrapper(Calinfo calinfo, string snippet, string title)
