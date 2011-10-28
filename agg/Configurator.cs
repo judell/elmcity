@@ -27,6 +27,8 @@ namespace CalendarAggregator
 
 	public enum NonIcalType { eventful, upcoming, eventbrite, facebook };
 
+	public enum SourceType { eventful, upcoming, eventbrite, facebook, ical };
+
 	public enum FeedLoadOption { only_private, only_public, all };
 
 	public static class Configurator
@@ -689,6 +691,21 @@ namespace CalendarAggregator
 		public string eventbrite_api_key = Configurator.eventbrite_api_key;
 		public string facebook_api_key = Configurator.facebook_api_key;
 		public string bing_maps_key = Configurator.bing_maps_key;
+	}
+
+	[Serializable]
+	public class TaggableSource
+	{
+		public string name { get; set; }
+		public string home_url { get; set; }
+		public string ical_url { get; set; }
+
+		public TaggableSource(string name, string home_url, string ical_url)
+		{
+			this.name = name;
+			this.home_url = home_url;
+			this.ical_url = ical_url;
+		}
 	}
 
 	[Serializable] 
