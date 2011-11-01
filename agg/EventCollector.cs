@@ -352,6 +352,9 @@ namespace CalendarAggregator
 			// because DDay.iCal can't parse ATTENDEE
 			feedtext = Utils.RemoveAttendeeComponent(feedtext);
 
+			// because of property-name-folding issue https://github.com/dougrday/icalvalid/issues/10
+			feedtext = Unfold(feedtext);
+
 			// handle non-standard X_WR_TIMEZONE if usersetting asked
 			if ( calinfo.use_x_wr_timezone )
 				feedtext = Utils.Handle_X_WR_TIMEZONE(feedtext);
@@ -363,6 +366,16 @@ namespace CalendarAggregator
 			EnsureProdId(fr, feedurl, feedtext);
 
 			return feedtext;
+		}
+
+		private static string Unfold(string s)
+		{
+			s = s.Replace("\r", "");
+			s = s.Replace("\n", "_NEWLINE_");
+			var re = new Regex(@"_NEWLINE_[\s]+");
+			s = re.Replace(s, "");
+			s = s.Replace("_NEWLINE_", "\n");
+			return s;
 		}
 
 		// a feed without a PRODID property is actually invalid, but some homegrown feeds
