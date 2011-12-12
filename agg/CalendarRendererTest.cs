@@ -28,7 +28,7 @@ namespace CalendarAggregator
 	{
 		private CalendarRenderer cr;
 		private ZonelessEventStore es;
-		private string event_html_header = "<div class=\"eventBlurb\"";
+		private string event_html_header = "<div class=\"bl\"";
 		private Calinfo calinfo = Utils.AcquireCalinfo(Configurator.testid);
 
 		static Uri view_uri = new Uri("http://elmcity.cloudapp.net/services/elmcity/xml?view=government");
@@ -61,7 +61,7 @@ namespace CalendarAggregator
 		public void RenderedHtmlViewMatchesExpectedCount()
 		{
 			var es_count = es.events.Count;
-			var html = cr.RenderHtml(null, EventStoreTest.test_category, 0);
+			var html = cr.RenderHtml(null, EventStoreTest.test_category, 0, from: DateTime.MinValue, to: DateTime.MinValue);
 			var html_count = GenUtils.RegexCountSubstrings(html, event_html_header);
 			Assert.AreEqual(1, html_count);
 		}
