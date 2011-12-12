@@ -167,6 +167,8 @@ namespace CalendarAggregator
 		public DateTime dtstart;
 		public DateTime dtend;
 		public Dictionary<string,string> urls_and_sources { get; set; } 
+		//public List<List<string>> list_of_urls_and_sources { get; set; }
+		public string original_categories;
 
 		public ZonelessEvent(string title, string url, string source, bool allday, string lat, string lon, string categories,
 			DateTime dtstart, DateTime dtend, string description) :
@@ -265,7 +267,7 @@ namespace CalendarAggregator
 					es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.lat, evt.lon, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories, evt.description);
 				}
 
-			es_zoneless.events = EventStore.UniqueByTitleAndStart(es_zoneless.events); // deduplicate
+			es_zoneless.events = EventStore.UniqueByTitleAndStart(id, es_zoneless.events); // deduplicate
 
 			es_zoneless.ExcludePastEvents(); // the EventCollector should already have done this, but in case not...
 
@@ -274,12 +276,14 @@ namespace CalendarAggregator
 			es_zoneless.Serialize();
 		}
 
-		public static List<ZonelessEvent> UniqueByTitleAndStart(List<ZonelessEvent> events)
+		public static List<ZonelessEvent> UniqueByTitleAndStart(string id, List<ZonelessEvent> events)
 		{
-			 var uniques = new Dictionary<string, ZonelessEvent>(); 
+			var tag_sources = new Dictionary<string, Dictionary<string, int>>();
+			
+			var uniques = new Dictionary<string, ZonelessEvent>(); 
 
-			var tags = new Dictionary<string, List<string>>();
-			var dict_of_urls_and_sources = new Dictionary<string, Dictionary<string, string>>() { };
+			var merged_tags = new Dictionary<string, List<string>>();
+			var all_urls_and_sources = new Dictionary<string, Dictionary<string, string>>();
 
 			foreach (var evt in events)              // build keyed structures
 			{
@@ -287,23 +291,41 @@ namespace CalendarAggregator
 
 				evt.url = Utils.NormalizeEventfulUrl(evt.url);        // try url normalizations
 				evt.url = Utils.NormalizeUpcomingUrl(evt.url);
+
+				if (evt.categories != null)
+				{
+					var tags = evt.categories.Split(',').ToList();
+					foreach (var tag in tags)
+					{
+						if (tag_sources.ContainsKey(tag))
+							tag_sources[tag].IncrementOrAdd<string>(evt.source);
+						else
+							tag_sources[tag] = new Dictionary<string, int>() { { evt.source, 1 } };
+					}
+					merged_tags.AddOrUpdateDictOfListStr(key, tags);  // update keyed tag list for this key
+				}
 				
-				if ( evt.categories != null )
-					tags.AddOrUpdateDictOfListStr(key, evt.categories.Split(',').ToList());  // update keyed tag list for this key
-
-				evt.urls_and_sources = new Dictionary<string, string>() { { evt.url, evt.source } }; // create url/source dict for this key
-
-				dict_of_urls_and_sources.AddOrUpdateDictOfDictStr(key, evt.urls_and_sources );  // update keyed url/source dict for this key
+				if (all_urls_and_sources.ContainsKey(key)) // update keyed url/source list for this key
+					all_urls_and_sources[key][evt.url] = evt.source;
+				else
+					all_urls_and_sources[key] = new Dictionary<string, string>() { { evt.url, evt.source } };
 			}
+
+			var bs = BlobStorage.MakeDefaultBlobStorage();
+			bs.SerializeObjectToAzureBlob(tag_sources, id, "tag_sources.obj"); // 
 
 			foreach ( var evt in events )            // use keyed structures
 			{
 				var key = evt.TitleAndTime();
 
-				if (tags.ContainsKey(key))
-					evt.categories = string.Join(",", tags[key]);                 // assign each event its keyed tag union
+				if (merged_tags.ContainsKey(key))
+				{
+					evt.original_categories = evt.categories;                     // remember original categories for reporting
+					evt.categories = string.Join(",", merged_tags[key]);          // assign each event its keyed tag union
+				}
 
-				evt.urls_and_sources = dict_of_urls_and_sources[key];                 // assign each event its keyed url/source dict
+				// evt.list_of_urls_and_sources = all_urls_and_sources[key];		  // assign each event its keyed url/source pairs
+				evt.urls_and_sources = all_urls_and_sources[key];
 
 				uniques.AddOrUpdateDictionary<string, ZonelessEvent>(key, evt);      // deduplicate
 			}
