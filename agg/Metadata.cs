@@ -120,9 +120,9 @@ namespace CalendarAggregator
 							try
 							{
 								if ( table_record.ContainsKey(key) == false )
-									GenUtils.PriorityLogMsg("warning", "UpdateFeedsForId: table record missing key: " + key, null);
+									GenUtils.PriorityLogMsg("warning", id, "UpdateFeedsForId: table record missing key: " + key);
 								if (json_record.ContainsKey(key) == false)
-									GenUtils.PriorityLogMsg("warning", "UpdateFeedsForId: json record missing key: " + key, null);
+									GenUtils.PriorityLogMsg("warning", id, "UpdateFeedsForId: json record missing key: " + key);
 								if (table_record[key] != json_record[key])
 									updated = true;
 							}
@@ -155,7 +155,7 @@ namespace CalendarAggregator
 
 		public static List<string> LoadHubIdsFromAzureTable()
 		{
-			var q = string.Format("$filter=type ne ''");
+			var q = string.Format("$filter=type eq 'what' or type eq 'where'");
 			var ids = QueryIds(q);
 			return ids;
 		}
