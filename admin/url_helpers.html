@@ -1,0 +1,636 @@
+<html>
+<head>
+<title> the elmcity project: iCalendar url helpers </title>
+<style>
+
+body {
+font-family:verdana;
+margin-left:1in;
+margin-right:.5in;
+}
+
+h1 {
+margin-top:.25in;
+text-align:center;
+font-size:18pt;
+}
+
+h2 {
+font-size:16pt;
+margin-top:.25in;
+}
+
+h3 {
+font-size:13pt;
+margin-top:.25in;
+}
+
+a:link, a:visited {
+    color: #000000;
+}
+a:hover {
+    background-color: #F4F2E4;
+    color: #555555;
+}
+
+</style>
+
+<script type="text/javascript" src="http://ajax.Microsoft.com/ajax/jQuery/jquery-1.3.2.min.js"></script>
+
+<script>
+function get_fb_ical_url()
+{
+var fb_page_url = $('#fb_page_url').val();
+fb_page_url = encodeURIComponent(fb_page_url);
+var elmcity_id = $('#fb_elmcity_id').val();
+var ical_url = 'http://elmcity.cloudapp.net/get_fb_ical_url' +
+                '?fb_page_url=' +
+                fb_page_url +
+                '&elmcity_id=' +
+                elmcity_id;
+location.href = ical_url;
+}
+
+
+function get_hs_ical_url()
+{
+var hs_school = $('#hs_school').val();
+var hs_tz = $('#hs_tz').val();
+var ical_url = 'http://elmcity.cloudapp.net/get_high_school_sports_url/' + 
+                hs_school + 
+				'/' + 
+                hs_tz;
+location.href = ical_url;
+}
+
+function get_csv_ical_url()
+{
+var csv_feed_url   = $('#csv_feed_url').val();
+var csv_home_url   = $('#csv_home_url').val();
+var csv_skip_first = $('#csv_skip_first option:selected').text();
+var csv_title_col  = $('#csv_title_col').val();
+var csv_date_col   = $('#csv_date_col').val();
+var csv_time_col   = $('#csv_time_col').val();
+var csv_tz         = $('#csv_tz option:selected').text();
+
+var ical_url = 'http://elmcity.cloudapp.net/get_csv_ical_url' +
+                '?feed_url=' +
+                encodeURIComponent(csv_feed_url) +
+                '&home_url=' +
+                encodeURIComponent(csv_home_url) +
+                '&skip_first_row=' +
+                csv_skip_first +
+                '&title_col=' +
+                csv_title_col +
+                '&date_col=' +
+                csv_date_col +
+                '&time_col=' +
+                csv_time_col +
+                '&tzname=' +
+                csv_tz;
+
+location.href = ical_url;
+}
+
+function get_ics_to_ics_ical_url_1()
+{
+var filter_feed_url   = $('#filter_feed_url').val();
+var include_keyword   = $('#filter_include_keyword').val();
+var elmcity_id        = $('#filter_elmcity_id').val();
+
+var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
+                '?feedurl=' +
+                encodeURIComponent(filter_feed_url) +
+                '&include_keyword=' +
+                include_keyword +
+                '&elmcity_id=' +
+                elmcity_id;
+
+location.href = ical_url;
+}
+
+function get_ics_to_ics_ical_url_2()
+{
+var filter_feed_url   = $('#filter_feed_url').val();
+var filter_after      = $('#filter_after').val();
+var elmcity_id        = $('#filter_elmcity_id').val();
+
+var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
+                '?feedurl=' +
+                encodeURIComponent(filter_feed_url) +
+                '&after=' +
+                filter_after +
+                '&elmcity_id=' +
+                elmcity_id;
+
+location.href = ical_url;
+}
+
+function get_ics_to_ics_ical_url_3()
+{
+var filter_feed_url   = $('#bampfa_feed_url').val();
+var url_keyword       = $('#url_include').val();
+var elmcity_id        = $('#bampfa_elmcity_id').val();
+
+var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
+                '?feedurl=' +
+                encodeURIComponent(filter_feed_url) +
+                '&include_keyword=' +
+                url_keyword +
+                '&url_only=' + 
+                'yes'  +
+                '&elmcity_id=' +
+                elmcity_id;
+
+location.href = ical_url;
+}
+
+
+function get_rss_xcal_ical_url()
+{
+var rss_xcal_feed_url   = $('#rss_xcal_feed_url').val();
+var rss_xcal_tz         = $('#rss_xcal_tz option:selected').text();
+
+var ical_url = 'http://elmcity.cloudapp.net/get_rss_xcal_ical_url'
+                '?feedurl=' +
+                encodeURIComponent(rss_xcal_feed_url) +
+                '&tzname=' +
+                rss_xcal_tz;
+
+location.href = ical_url;
+}
+
+
+</script>
+
+
+</head>
+
+<body>
+
+<h1>the elmcity project: iCalendar url helpers</h1>
+
+<a name="facebook"></a>
+<h2>Facebook Pages</h2>
+
+<p>
+Some Facebook Pages, like <a href="https://www.facebook.com/BerkeleyUndergroundFilmSociety?sk=events">Berkeley Underground Film Society</a>, include calendars.
+</p>
+<p>
+This helper accepts the URL of a Facebook Page and an elmcity ID. It produces a corresponding iCalendar feed URL that you can add to your hub's registry.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">Facebook Page: </td>
+<td><input style="width:4in" id="fb_page_url" value="https://www.facebook.com/BerkeleyUndergroundFilmSociety"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="fb_elmcity_id" value="berkeley"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_fb_ical_url()"></td>
+<td></td>
+</tr>
+
+
+</table>
+
+<a name="csv"></a>
+<h2>CSV (comma-separated values) format</h2>
+
+<p>
+Some sites, like Rice University Athletics, provide calendar data <a href="http://www.riceowls.com/ot/rice-sched-download.html">only as CSV files</a>. This helper accepts these inputs:
+</p>
+<ol>
+<li>The URL of the CSV file</li>
+<li>The URL that events found in that file will link back to</li>
+<li>Whether to skip the first row of the file (because it contains fieldnames not data)</li>
+<li>The zero-based column number of the event title</li>
+<li>The zero-based column number of the date</li>
+<li>The zero-based column number of the time</li>
+<li>The timezone</li>
+</ol>
+
+<p>
+It produces the iCalendar feed URL corresponding to the CSV data.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">CSV URL: </td>
+<td><input style="width:5in" id="csv_feed_url" value="http://grfx.cstv.com/schools/rice/graphics/csv/12-rice-m-bskb.csv"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">Home URL: </td>
+<td><input style="width:5in" id="csv_home_url" value="http://www.riceowls.com/calendar/events/"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">Skip first row: </td>
+<td>
+<select id="csv_skip_first">
+<option selected>yes</option>
+<option>no</option>
+</select>
+</td>
+</tr>
+
+<tr>
+<td style="text-align:right">Title column: </td>
+<td><input style="width:.5in" id="csv_title_col" value="0"></td></td>
+</tr>
+
+<tr>
+<td style="text-align:right">Date column: </td>
+<td><input style="width:.5in" id="csv_date_col" value="1"></td></td>
+</tr>
+
+<tr>
+<td style="text-align:right">Time column: </td>
+<td><input style="width:.5in" id="csv_time_col" value="2"></td></td>
+</tr>
+
+<tr>
+<td style="text-align:right">Timezone: </td>
+<td>
+<select id="csv_tz">
+<option>afghanistan</option>
+<option>alaskan</option>
+<option>arab</option>
+<option>arabian</option>
+<option>arabic</option>
+<option>argentina</option>
+<option>atlantic</option>
+<option>aus+central</option>
+<option>aus+eastern</option>
+<option>azerbaijan</option>
+<option>azores</option>
+<option>canada+central</option>
+<option>cape+verde</option>
+<option>caucasus</option>
+<option>cen.+australia</option>
+<option>central+america</option>
+<option>central+asia</option>
+<option>central+brazilian</option>
+<option>central+europe</option>
+<option>central+european</option>
+<option>central+pacific</option>
+<option>central</option>
+<option>central+(mexico)</option>
+<option>china</option>
+<option>dateline</option>
+<option>e.+africa</option>
+<option>e.+australia</option>
+<option>e.+europe</option>
+<option>e.+south+america</option>
+<option selected>eastern</option>
+<option>egypt</option>
+<option>ekaterinburg</option>
+<option>fiji</option>
+<option>fle</option>
+<option>georgian</option>
+<option>gmt</option>
+<option>greenland</option>
+<option>greenwich</option>
+<option>gtb</option>
+<option>hawaiian</option>
+<option>india</option>
+<option>iran</option>
+<option>israel</option>
+<option>jordan</option>
+<option>korea</option>
+<option>mauritius</option>
+<option>mid-atlantic</option>
+<option>middle+east</option>
+<option>montevideo</option>
+<option>morocco</option>
+<option>mountain</option>
+<option>mountain+(mexico)</option>
+<option>myanmar</option>
+<option>n.+central+asia</option>
+<option>namibia</option>
+<option>nepal</option>
+<option>new+zealand</option>
+<option>newfoundland</option>
+<option>north+asia+east</option>
+<option>north+asia</option>
+<option>pacific+sa</option>
+<option>pacific</option>
+<option>pacific+(mexico)</option>
+<option>pakistan</option>
+<option>romance</option>
+<option>russian</option>
+<option>sa+eastern</option>
+<option>sa+pacific</option>
+<option>sa+western</option>
+<option>samoa</option>
+<option>se+asia</option>
+<option>singapore</option>
+<option>south+africa</option>
+<option>sri+lanka</option>
+<option>taipei</option>
+<option>tasmania</option>
+<option>tokyo</option>
+<option>tonga</option>
+<option>us+eastern</option>
+<option>us+mountain</option>
+<option>venezuela</option>
+<option>vladivostok</option>
+<option>w.+australia</option>
+<option>w.+central+africa</option>
+<option>w.+europe</option>
+<option>west+asia</option>
+<option>west+pacific</option>
+</select>
+</td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_csv_ical_url()"></td>
+<td></td>
+</tr>
+
+</table>
+
+
+<a name="ical_filter"></a>
+<h2>iCalendar filtering</h2>
+
+<p>
+Sometimes you'll want to use just part of an iCalendar feed. Consider Vinology, a restaurant, wine bar, and jazz venue in Ann Arbor. The <a href="http://www.vinowinebars.net/vinology/enrich_inspirations.php">Vinology calendar</a> contains a mix of restaurant events (e.g. Happy Hour) and jazz events (Doug Horn trio). 
+</p>
+
+<p>
+As curator of the Ann Arbor hub, you'd prefer that Vinology offered a separate iCalendar feed for the jazz events, so you could include it in the <a href="http://elmcity.cloudapp.net/a2cal/html?view=music,jazz">music and jazz category</a>. Even though Vinology doesn't offer a categorized feed, you can still create one on its behalf. This helper accepts an iCalendar feed URL and various inputs that control the selection of a subset of the feed. It returns a subset of the iCalendar feed.
+</p>
+
+<h3>Filtering by keyword</h3>
+
+<p>
+One way to produce a jazz feed for Vinology is to restrict the feed to only events containing 'jazz' in the SUMMARY or DESCRIPTION:
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">iCalendar feed URL: </td>
+<td><input style="width:5in" id="filter_feed_url" value="http://www.google.com/calendar/ical/vinology110@gmail.com/public/basic.ics"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">include keyword: </td>
+<td><input style="width:1.5in" id="filter_include_keyword" value="jazz"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="filter_elmcity_id" value="a2cal"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_ics_to_ics_ical_url_1()"></td>
+<td></td>
+</tr>
+
+</table>
+
+<h3>Filtering by time</h3>
+
+<p>
+Another way produce a jazz feed for Vinology is to restrict the feed to only events after 8PM.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">iCalendar feed URL: </td>
+<td><input style="width:5in" value="http://www.google.com/calendar/ical/vinology110@gmail.com/public/basic.ics"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">after: </td>
+<td><input style="width:.5in" id="filter_after" value="20:00"> <span style="font-size:smaller">(use 24hr notation)</span></td>
+</tr>
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" value="a2cal"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_ics_to_ics_ical_url_2()"></td>
+<td></td>
+</tr>
+
+</table>
+
+<h3>Filtering by URL</h3>
+
+<p>
+Sometimes a keyword you'd like to filter will on only appear in the URL field of an iCalendar event. Consider the <a href="http://www.bampfa.berkeley.edu/calendar/">Berkeley Art Museum / Pacific Film Archive (BAM/PFA)</a> calendar. It's a mixture of art exhibitions and film showings. The exhibitions can be found using the keyword 'exhibition' but the keyword 'film' does not appear consistently in the SUMMARY or DESCRIPTION fields of the film events. It does, however, appear consistently in the URL field (e.g. http://www.bampfa.berkeley.edu/film/FN19019).
+</p>
+
+<p>
+Here's how the Berkeley hub uses iCalendar filtering to construct the BAM/PFA film feed that appears in Berkeley's <a href="http://elmcity.cloudapp.net/berkeley/html?view=film">film category</a>:
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">iCalendar feed URL: </td>
+<td><input id="bampfa_feed_url" style="width:4in" value="http://press.bampfa.berkeley.edu/calendar/BAM-PFA.ics"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">include keyword: </td>
+<td><input style="width:1.5in" id="url_include" value="film"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">URL only: </td>
+<td><input style="width:1.5in" value="yes"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="bampfa_elmcity_id" value="berkeley"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_ics_to_ics_ical_url_3()"></td>
+<td></td>
+</tr>
+
+</table>
+
+<a name="highschoolsports"></a>
+<h2>HighSchoolSports.Net</h2>
+
+<p>
+Many schools (e.g. <a href="http://www.highschoolsports.net/school/Keene-High-School-Keene-NH">Keene High School</a>) use HighSchoolSports.Net to help manage sports programs. The HighSchoolSports.Net Sync button produces iCalendar feed URLs for individual sports schedules, or for sets of up to 5 schedules (e.g. all basketball teams, including JV and varsity, boys and girls).
+</p>
+
+<p>
+This helper accepts the name of a high school and a timezone. It produces an iCalendar feed URL that includes <i>all</i> the sports schedules for the named school.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">School: </td>
+<td><input style="width:4in" id="hs_school" value="Keene-High-School-Keene-NH"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">Timezone: </td>
+<td>
+<select id="hs_tz">
+<option value="ET" selected>ET (Eastern)</option>
+<option value="CT">CT (Central)</option>
+<option value="MT">MT (Mountain)</option>
+<option value="PT">PT (Pacific)</option>
+<option value="AT">AT (Alaska)</option>
+<option value="HT">HT (Hawaii)</option>
+</select>
+</td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_hs_ical_url()"></td>
+<td></td>
+</tr>
+
+
+</table>
+
+
+<a name="rss_xcal"></a>
+<h2>RSS with xCal (e.g. Zvents)</h2>
+
+<p>
+Although many sites provide RSS feeds for their calendars, most of these feeds don't format the calendar information in a way that enables automated data exchange. One notable exception is Zvents, a service used by a number of newspapers including <a href="http://www.seattlepi.com/">SeattlePI</a>.
+</p>
+
+<p>
+The <a href="http://events.seattlepi.com/search?cat=1&st=event">Arts & Crafts category at SeattlePI.com</a> is an example of such a feed. Here's how the elmcity project's Seattle hub transforms that RSS feed into an iCalendar feed:
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">RSS feed: </td>
+<td><input style="width:6in" id="rss_xcal_feed" value="http://events.seattlepi.com/search?cat=1&new=n&rss=1&srad=10&st=event&svt=text"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">Timezone: </td>
+<td>
+<select id="rss_xcal_tz">
+<option>afghanistan</option>
+<option>alaskan</option>
+<option>arab</option>
+<option>arabian</option>
+<option>arabic</option>
+<option>argentina</option>
+<option>atlantic</option>
+<option>aus+central</option>
+<option>aus+eastern</option>
+<option>azerbaijan</option>
+<option>azores</option>
+<option>canada+central</option>
+<option>cape+verde</option>
+<option>caucasus</option>
+<option>cen.+australia</option>
+<option>central+america</option>
+<option>central+asia</option>
+<option>central+brazilian</option>
+<option>central+europe</option>
+<option>central+european</option>
+<option>central+pacific</option>
+<option>central</option>
+<option>central+(mexico)</option>
+<option>china</option>
+<option>dateline</option>
+<option>e.+africa</option>
+<option>e.+australia</option>
+<option>e.+europe</option>
+<option>e.+south+america</option>
+<option>eastern</option>
+<option>egypt</option>
+<option>ekaterinburg</option>
+<option>fiji</option>
+<option>fle</option>
+<option>georgian</option>
+<option>gmt</option>
+<option>greenland</option>
+<option>greenwich</option>
+<option>gtb</option>
+<option>hawaiian</option>
+<option>india</option>
+<option>iran</option>
+<option>israel</option>
+<option>jordan</option>
+<option>korea</option>
+<option>mauritius</option>
+<option>mid-atlantic</option>
+<option>middle+east</option>
+<option>montevideo</option>
+<option>morocco</option>
+<option>mountain</option>
+<option>mountain+(mexico)</option>
+<option>myanmar</option>
+<option>n.+central+asia</option>
+<option>namibia</option>
+<option>nepal</option>
+<option>new+zealand</option>
+<option>newfoundland</option>
+<option>north+asia+east</option>
+<option>north+asia</option>
+<option>pacific+sa</option>
+<option selected>pacific</option>
+<option>pacific+(mexico)</option>
+<option>pakistan</option>
+<option>romance</option>
+<option>russian</option>
+<option>sa+eastern</option>
+<option>sa+pacific</option>
+<option>sa+western</option>
+<option>samoa</option>
+<option>se+asia</option>
+<option>singapore</option>
+<option>south+africa</option>
+<option>sri+lanka</option>
+<option>taipei</option>
+<option>tasmania</option>
+<option>tokyo</option>
+<option>tonga</option>
+<option>us+eastern</option>
+<option>us+mountain</option>
+<option>venezuela</option>
+<option>vladivostok</option>
+<option>w.+australia</option>
+<option>w.+central+africa</option>
+<option>w.+europe</option>
+<option>west+asia</option>
+<option>west+pacific</option>
+</select>
+</td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_rss_xcal_ical_url()"></td>
+<td></td>
+</tr>
+
+</table>
+
+
+</body>
+</html>
