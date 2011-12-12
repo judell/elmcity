@@ -85,8 +85,8 @@ namespace ElmcityUtils
 		{
 			while (true)
 			{
-				if (this.log_queue.Count > this.max_messages)
-					GenUtils.PriorityLogMsg("warning", "Logger", String.Format("{0} messages", this.log_queue.Count));
+				//if (this.log_queue.Count > this.max_messages)
+				//	GenUtils.PriorityLogMsg("warning", "Logger", String.Format("{0} messages", this.log_queue.Count));
 
 				if (this.log_queue.Count > 0)
 				{
