@@ -1,29 +1,23 @@
 import sys, datetime, time, traceback
 
-try:
-  IPY = True
-  sys.path.append("c:\\users\\jon\\aptc") # for local testing
-  import clr
+IPY = True
 
-  clr.AddReference("System")
-  clr.AddReference("mscorlib")
-  import System
+sys.path.append("c:\\users\\jon\\aptc") # for local testing
+import clr
 
-  clr.AddReference("CalendarAggregator")
-  import CalendarAggregator
+clr.AddReference("System")
+clr.AddReference("mscorlib")
+import System
 
-  clr.AddReference("ElmcityUtils")
-  import ElmcityUtils
+clr.AddReference("CalendarAggregator")
+import CalendarAggregator
 
-  clr.AddReference("DDay.iCal")
-  import DDay.iCal
-  import DDay.iCal.Components
-  import DDay.iCal.DataTypes 
-  import DDay.iCal.Serialization 
-  print "IPY"
+clr.AddReference("ElmcityUtils")
+import ElmcityUtils
 
-except:
-  IPY = False
+clr.AddReference("DDay.iCal")
+import DDay.iCal
+import DDay.iCal.Serialization 
 
 class Event:
 
@@ -72,21 +66,22 @@ class EventParser:
         cal = DDay.iCal.iCalendar()
         if ( self.tz_source is not None ):
           tzinfo = CalendarAggregator.Utils.TzinfoFromName(self.tz_source)
-          tz = DDay.iCal.Components.iCalTimeZone.FromSystemTimeZone(tzinfo)
-          cal.AddChild(tz)
+          CalendarAggregator.Collector.AddTimezoneToDDayICal(cal,tzinfo)
         for event in self.events:
-          ical_evt = DDay.iCal.Components.Event(cal)
+          ical_evt = DDay.iCal.Event()
           ical_evt.Summary = event.title
           dt = event.start
           if ( event.start_is_utc ):
             utc_dtstart = System.DateTime(dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second, System.DateTimeKind.Utc)
-            ical_evt.Start = DDay.iCal.DataTypes.iCalDateTime(utc_dtstart);
+            ical_evt.Start = DDay.iCal.iCalDateTime(utc_dtstart);
           else:        
-            ical_evt.Start = DDay.iCal.DataTypes.iCalDateTime(dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second)
+            ical_evt.Start = DDay.iCal.iCalDateTime(dt.year,dt.month,dt.day,dt.hour,dt.minute,dt.second)
+          ical_evt.Start.TZID = tzinfo.Id 
           ical_evt.UID = CalendarAggregator.Event.MakeEventUid(ical_evt)
-        serializer = DDay.iCal.Serialization.iCalendarSerializer(cal)
+          cal.Events.Add(ical_evt)
+        serializer = DDay.iCal.Serialization.iCalendar.iCalendarSerializer()
         self.LogMsg("info", "BuildICS: serializing %s filtered events" % len(self.events), None )
-        self.ics = serializer.SerializeToString()
+        self.ics = serializer.SerializeToString(cal)
       except:
         self.LogMsg('exception', 'BuildICS', traceback.format_exc())
 
@@ -122,3 +117,6 @@ class EventParser:
       return self.events
     
     self.events = [x for x in self.events if x.title and x.title.lower().find(self.filter.lower()) > -1]
+
+
+
