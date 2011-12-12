@@ -83,12 +83,15 @@ namespace CalendarAggregator
 
 			var evt1 = es.events.Find(e => e.title == title1);
 			evt1.urls_and_sources = new Dictionary<string, string>() { { "http://foo", source1 } };
+			//var item1 = new List<string>() { "http://foo", source1 };
+			//evt1.list_of_urls_and_sources = new List<List<string>>() { item1 };
 
 			es.AddEvent(title:title2, url:"http://bar", source:source2, lat: null, lon: null, dtstart: dt2, dtend: min, allday: false, categories:null, description: test_description);
 
 			var evt2 = es.events.Find(e => e.title == title2);
 			evt2.urls_and_sources = new Dictionary<string, string>() { { "http://bar", source2 } };
-
+			//var item2 = new List<string>() { "http://foo", source2 };
+			//evt2.list_of_urls_and_sources = new List<List<string>>() { item2 };
 			es.Serialize();
 
 			var es2 = new ZonelessEventStore(calinfo).Deserialize(); 
