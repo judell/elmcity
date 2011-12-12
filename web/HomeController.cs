@@ -44,14 +44,14 @@ namespace WebRole
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
-			var template_uri = BlobStorage.MakeAzureBlobUri("admin", "home.tmpl");
+			var template_uri = BlobStorage.MakeAzureBlobUri("admin", "home2.tmpl");
 			var page = HttpUtils.FetchUrl(template_uri).DataAsString();
 
-			var css_uri = BlobStorage.MakeAzureBlobUri("admin", "elmcity-1.3.css").ToString();
-			page = page.Replace("__CSS__", css_uri);
-
 			var auth_uri = BlobStorage.MakeAzureBlobUri("admin", "home_auth.tmpl");
-			var signin = HttpUtils.FetchUrl(auth_uri).DataAsString();
+			var noauth_uri = BlobStorage.MakeAzureBlobUri("admin", "home_noauth.tmpl");
+			var featured_uri = BlobStorage.MakeAzureBlobUri("admin", "featured.html");
+
+			var signin = HttpUtils.FetchUrlNoCache (auth_uri).DataAsString();
 
 			var authenticated = false;
 
@@ -68,18 +68,18 @@ namespace WebRole
 
 			if ( authenticated == false )
 			{
-				var noauth_uri = BlobStorage.MakeAzureBlobUri("admin", "home_noauth.tmpl");
 				var noauth = HttpUtils.FetchUrl(noauth_uri).DataAsString();
 				signin = noauth;
 			}
 
-			page = page.Replace("__TITLE__", ElmcityApp.pagetitle);
+			var featured = HttpUtils.FetchUrlNoCache(featured_uri).DataAsString();
+			page = page.Replace("__FEATURED__", featured);
+
 			page = page.Replace("__AUTHENTICATE__", signin);
-			page = page.Replace("__WHERE_HUBS__", Utils.GetWhereSummary());
-			page = page.Replace("__WHAT_HUBS__", Utils.GetWhatSummary());
+
 			page = page.Replace("__VERSION__", ElmcityApp.version);
-			ViewData["page"] = page;
-			return View();
+
+			return Content(page, "text/html");
 		}
 
 		private string MakeSigninWidget(string signin, string mode, string foreign_id, List<string> elmcity_ids)
@@ -99,23 +99,62 @@ namespace WebRole
 			}
 		}
 
+		public ActionResult get_high_school_sports_url(string school, string tz)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var result = Utils.get_high_school_sports_ical_url(school, tz);
+			return Content(result);
+		}
+
+		public ActionResult get_fb_ical_url(string fb_page_url, string elmcity_id)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var result = Utils.get_fb_ical_url(fb_page_url, elmcity_id);
+			return Content(result);
+		}
+
+		public ActionResult get_csv_ical_url(string feed_url, string home_url, string skip_first_row, string title_col, string date_col, string time_col, string tzname)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var result = Utils.get_csv_ical_url(feed_url, home_url, skip_first_row, title_col, date_col, time_col, tzname);
+			return Content(result);
+		}
+
+		public ActionResult get_ics_to_ics_ical_url(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string url_only)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var result = Utils.get_ics_to_ics_ical_url(feedurl, elmcity_id, source, after, before, include_keyword, exclude_keyword, summary_only, url_only);
+			return Content(result);
+		}
+
+		public ActionResult get_rss_xcal_ical_url(string feedurl, string tzname)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var result = Utils.get_rss_xcal_ical_url(feedurl, tzname);
+			return Content(result);
+		}
+
+		public ActionResult DiscardMisfoldedDescriptionsAndBogusCategoriesThenAddEasternVTIMEZONE(string url)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var result = Utils.DiscardMisfoldedDescriptionsAndBogusCategoriesThenAddEasternVTIMEZONE(new Uri(url));
+			return Content(result);
+		}
+		
 //		[OutputCache(Duration = CalendarAggregator.Configurator.homepage_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult hubfiles(string id)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-			ViewData["title"] = ElmcityApp.pagetitle;
-			ViewData["id"] = id;
-			return View();
+
+			string template = HttpUtils.FetchUrl(new Uri("http://elmcity.blob.core.windows.net/admin/hubfiles.tmpl")).DataAsString();
+			var page = template.Replace("__ID__", id);
+			return Content(page, "text/html");
 		}
 
 		public ActionResult snapshot()
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-
-			ViewData["title"] = String.Format("{0}: diagnostic snapshot", ElmcityApp.pagetitle);
-			ViewData["snapshot"] = ElmcityUtils.Counters.DisplaySnapshotAsText();
-
-			return View();
+			return Content(ElmcityUtils.Counters.DisplaySnapshotAsText(), "text/plain");
 		}
 
 		public ActionResult table_query(string table, string query, string attrs)
@@ -124,61 +163,170 @@ namespace WebRole
 
 			var list_of_attr = attrs.Split(',').ToList();
 			var ts = TableStorage.MakeDefaultTableStorage();
-			ViewData["page"] = ts.QueryEntitiesAsHtml(table, query, list_of_attr);
-			return View();
+			var page = ts.QueryEntitiesAsHtml(table, query, list_of_attr);
+			return Content(page, "text/html");
+		}
+
+		public enum UrlHelper { get_fb_ical_url, get_high_school_sports_url, get_csv_ical_url };
+
+		public ActionResult url_helpers()
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+
+			var uri = BlobStorage.MakeAzureBlobUri("admin", "url_helpers.html");
+			var page = HttpUtils.FetchUrlNoCache(uri).DataAsString();
+			var content_type = "text/html";
+
+			return Content(page, content_type);
 		}
 
 		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult ics_from_fb_page(string fb_id, string elmcity_id)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string ics = "";
 			try
 			{
-				var ics = Utils.IcsFromFbPage(fb_id, elmcity_id, ElmcityController.settings);
-				ViewData["ics"] = ics;
+				ics = Utils.IcsFromFbPage(fb_id, elmcity_id, ElmcityController.settings);
 			}
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "ics_from_fb_page: " + fb_id + ", " + elmcity_id, e.Message + e.StackTrace);
 			}
-			return View();
+			return Content(ics, "text/calendar");
 		}
 
-		//[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult ics_from_xcal(string url, string source, string tzname)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			var tzinfo = Utils.TzinfoFromName(tzname);
-			var ics = Utils.IcsFromRssPlusXcal(url, source, tzinfo);
-			ViewData["ics"] = ics;
-			return View();
+			string ics = "";
+			try
+			{
+				ics = Utils.IcsFromRssPlusXcal(url, source, tzinfo);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "IcsFromRssPlusXcal", e.Message + e.StackTrace);
+			}
+			return Content(ics, "text/calendar");
 		}
 
-		//[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult ics_from_vcal(string url, string source, string tzname)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-			var tzinfo = Utils.TzinfoFromName(tzname);
-			var ics = Utils.IcsFromAtomPlusVCalAsContent(url, source, tzinfo);
-			ViewData["ics"] = ics;
-			return View();
+			string ics = "";
+			try
+			{
+				var tzinfo = Utils.TzinfoFromName(tzname);
+				ics = Utils.IcsFromAtomPlusVCalAsContent(url, source, tzinfo);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "IcsFromVcal", e.Message + e.StackTrace);
+			}
+			return Content(ics, "text/calendar");
+		}
+
+		public ActionResult soon(string id, string type, string view, string count, string hours, string days)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			int nearest_minute = 15;
+			if ( view == null ) view = "";
+			if (count == null) count = "0";
+			int d = 0;
+			int h = 0;
+			var msg = "please use a digit for hours and/or days";
+			if (hours == null && days == null)
+				return Content(msg, "text/plain");
+			try
+			{
+				h = Convert.ToInt32(hours);
+				d = Convert.ToInt32(days);
+			}
+			catch 
+			{
+				return Content(msg, "text/plain");
+			}
+			var timespan = TimeSpan.FromDays(d) + TimeSpan.FromHours(h);
+			var calinfo = Utils.AcquireCalinfo(id);
+			var now_in_tz = Utils.DateTimeSecsToZero(Utils.NowInTz(calinfo.tzinfo).LocalTime);
+			now_in_tz = now_in_tz - TimeSpan.FromHours(1); // catch events that started less than an hour ago
+			now_in_tz = Utils.RoundDateTimeUpToNearest(now_in_tz, nearest_minute);
+			var then_in_tz = Utils.DateTimeSecsToZero(now_in_tz + TimeSpan.FromDays(d) + TimeSpan.FromHours(h));
+			then_in_tz = Utils.RoundDateTimeUpToNearest(then_in_tz, nearest_minute);
+			var fmt = "{0:yyyy-MM-ddTHH:mm}";
+			var str_now = string.Format(fmt, now_in_tz);
+			var str_then = string.Format(fmt, then_in_tz);
+			var url  = string.Format("/{0}/{1}?view={2}&count={3}&from={4}&to={5}", 
+				id,
+				type,
+				view,
+				count,
+				str_now,
+				str_then);
+
+			return new RedirectResult(url);
+		}
+
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult ics_from_csv(string feed_url, string home_url, string source, string skip_first_row, string title_col, string date_col, string time_col, string tzname)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string ics = "";	
+			try
+			{
+
+				bool skip_first = skip_first_row.ToLower() == "yes";
+				int title = Convert.ToInt32(title_col);
+				int date = Convert.ToInt32(date_col);
+				int time = Convert.ToInt32(time_col);
+				ics = Utils.IcsFromCsv(feed_url, home_url, source, skip_first, title, date, time, tzname);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "IcsFromCsv", e.Message + e.StackTrace);
+			}
+			return Content(ics, "text/calendar");
+		}
+
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult ics_from_ics(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string url_only)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string ics = "";
+			bool t_summary_only = summary_only != null && summary_only == "yes" ? true : false;
+			bool t_url_only = url_only != null & url_only == "yes" ? true : false;
+			try
+			{
+
+				var calinfo = Utils.AcquireCalinfo(elmcity_id);
+				ics = Utils.IcsFromIcs(feedurl, calinfo, source, after, before, include_keyword, exclude_keyword, t_summary_only, t_url_only);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "IcsFromIcs", e.Message + e.StackTrace);
+			}
+			return Content(ics, "text/calendar");
 		}
 
 		public ActionResult py(string arg1, string arg2, string arg3)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string result = "";
 			if (this.AuthenticateAsSelf())
 			{
 				var script_url = "http://elmcity.blob.core.windows.net/admin/_generic.py";
 				var args = new List<string>() { arg1, arg2, arg3 };
-				ViewData["result"] = PythonUtils.RunIronPython(WebRole.local_storage_path, script_url, args);
-				return View();
+				result = PythonUtils.RunIronPython(WebRole.local_storage_path, script_url, args);
 			}
 			else
 			{
-				ViewData["result"] = "not authenticated";
-				return View();
+				result = "not authenticated";
 			}
+			return Content(result, "text/plain");
 		}
 
 		public ActionResult maybe_purge_cache()
@@ -189,7 +337,7 @@ namespace WebRole
 				var cache = new ElmcityUtils.AspNetCache(this.ControllerContext.HttpContext.Cache);
 				ElmcityUtils.CacheUtils.MaybePurgeCache(cache);
 			}
-			return View();
+			return Content("OK", "text/plain");
 		}
 
 		public ActionResult reload()
@@ -210,7 +358,7 @@ namespace WebRole
 			{
 				GenUtils.PriorityLogMsg("exception", "HomeController reload", ex.Message + ex.StackTrace);
 			}
-			return View();
+			return Content("OK", "text/plain");
 		}
 
 		#region hub/feed editor
@@ -218,8 +366,8 @@ namespace WebRole
 		public ActionResult meta_history(string a_name, string b_name, string id, string flavor)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-			ViewData["result"] = CalendarAggregator.Utils.GetMetaHistory(a_name, b_name, id, flavor);
-			return View();
+			var page = CalendarAggregator.Utils.GetMetaHistory(a_name, b_name, id, flavor);
+			return Content(page, "text/html");
 		}
 
 		public ActionResult put_json_metadata(string id, string json)
@@ -228,19 +376,20 @@ namespace WebRole
 			GenUtils.LogMsg("info", "put_json_metadata", "id: " + id + " json: " + json);
 
 			var auth_mode = this.Authenticated(id);
+			string result = "";
 
 			if ( auth_mode != null  )
 			{
-				ViewData["result"] = json;
+				result = json;
 				var args = new Dictionary<string,string>() { {"id",id}, {"json",json} };
 				ThreadPool.QueueUserWorkItem(new WaitCallback(put_json_metadata_handler), args);
 			}
 			else
 			{
-				ViewData["result"] = AuthFailMessage(id);
+				result = AuthFailMessage(id);
 			}
 
-			return View();
+			return Content(result, "text/plain");
 		}
 
 		private void put_json_metadata_handler(Object args)
@@ -267,19 +416,20 @@ namespace WebRole
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
 			var auth_mode = this.Authenticated(id);
+			string result = "";
 
 			if (auth_mode != null)
 			{
-				ViewData["result"] = json;
+				result = json;
 				var args = new Dictionary<string, string>() { { "id", id }, { "json", json } };
 				ThreadPool.QueueUserWorkItem(new WaitCallback(put_json_feeds_handler), args);
 			}
 			else
 			{
-				ViewData["result"] = AuthFailMessage(id);
+				result = AuthFailMessage(id);
 			}
 
-			return View();
+			return Content(result, "text/plain");
 		}
 
 		private void put_json_feeds_handler(Object args)
@@ -304,8 +454,7 @@ namespace WebRole
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			var name = string.Format("{0}.{1}.json", id, flavor);
 			var uri = BlobStorage.MakeAzureBlobUri(id, name );
-			ViewData["result"] = HttpUtils.FetchUrl(uri).DataAsString();
-			return View();
+			return Content(HttpUtils.FetchUrl(uri).DataAsString(), "text/json");
 		}
 
 		public ActionResult get_editable_metadata(string id, string flavor)
@@ -313,6 +462,7 @@ namespace WebRole
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
 			var auth_mode = this.Authenticated(id);
+			string result = "";
 
 			if ( auth_mode != null )
 			{
@@ -320,13 +470,13 @@ namespace WebRole
 				var page = HttpUtils.FetchUrl(uri).DataAsString();
 				page = page.Replace("__ID__", id);
 				page = page.Replace("__FLAVOR__", flavor);
-				ViewData["result"] = page;
+				result = page;
 			}
 			else
 			{
-				ViewData["result"] = AuthFailMessage(id);
+				result = AuthFailMessage(id);
 			}
-			return View();
+			return Content(result, "text/html");
 		}
 
 		private string AuthFailMessage(string id)
