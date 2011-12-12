@@ -345,7 +345,7 @@ namespace ElmcityUtils
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "DeserializeObjectFromUri: " + uri.ToString(), e.Message);
-				throw;
+				 throw;
 			}
 		}
 
@@ -364,6 +364,12 @@ namespace ElmcityUtils
 				LegalizeContainerName(container), // http://msdn.microsoft.com/en-us/library/dd135715.aspx
 				name);
 			return new Uri(url);
+		}
+
+		public static string GetAzureBlobAsString(string container, string name)
+		{
+			var uri = BlobStorage.MakeAzureBlobUri(container, name);
+			return HttpUtils.FetchUrl(uri).DataAsString();
 		}
 
 	}
