@@ -530,20 +530,22 @@ namespace CalendarAggregator
 
 		 public static int GetPopSetting(string id, Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
 		 {
-			 int pop = GetIntSetting(metadict, usersettings, key);
-			 int final;
-			 if (pop == Configurator.default_population && metadict["type"] == "where")
+			 int pop = Configurator.default_population;
+			 if ( metadict.ContainsKey("population") )
 			 {
-				 string[] response = Utils.FindCityOrTownAndStateAbbrev(metadict["where"]);
-				 var city_or_town = response[0];
-				 var state_abbrev = response[1];
-				 final = Utils.FindPop(id, city_or_town, state_abbrev);
+				 var str_pop = metadict["population"];
+				 if (str_pop != "0" && str_pop != "")
+				 {
+					 pop = Convert.ToInt32(str_pop);
+					 return pop;
+				 }
 			 }
-			 else
-				 final = pop;
 
-			 metadict[key] = final.ToString();
-			 return final;
+			 string[] response = Utils.FindCityOrTownAndStateAbbrev(metadict["where"]);
+			 var city_or_town = response[0];
+			 var state_abbrev = response[1];
+			 pop = Utils.FindPop(id, city_or_town, state_abbrev);
+			 return pop;
 		 }
 
 		 public static string GetFeedCountSetting(string id, Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
@@ -706,6 +708,25 @@ namespace CalendarAggregator
 			this.home_url = home_url;
 			this.ical_url = ical_url;
 		}
+
+		public TaggableSource()  // need paramaterless constructor in order to use Activator.CreateInstance
+		{
+		}
+
+		public override int GetHashCode()
+		{
+			return (this.name + this.ical_url).GetHashCode();
+		}
+
+
+		public override bool Equals(object other)
+		{
+			var taggable = (TaggableSource)other;
+			if (taggable == null)
+				return false;
+			return this.name == taggable.name && this.ical_url == taggable.ical_url;
+		}
+
 	}
 
 	[Serializable] 
@@ -857,7 +878,7 @@ namespace CalendarAggregator
 
 				if (metadict.ContainsKey("type") == false)
 				{
-					GenUtils.PriorityLogMsg("exception", "new calinfo: no hub type", id);
+					GenUtils.PriorityLogMsg("exception", "new calinfo: no hub type for id (" + id + ")", null);
 					return;
 				}
 
