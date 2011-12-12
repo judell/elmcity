@@ -246,7 +246,8 @@ namespace ElmcityUtils
 			entity.Add("cached_uri", cached_uri);
 			entity.Add("count", instance_count);
 			var rowkey = TableStorage.MakeSafeRowkeyFromUrl(cached_uri);
-			ts.UpdateEntity(cache_control_tablename, cache_control_partkey, rowkey, entity);
+			//ts.UpdateEntity(cache_control_tablename, cache_control_partkey, rowkey, entity);
+			TableStorage.DictObjToTableStore(TableStorage.Operation.update, entity, cache_control_tablename, cache_control_partkey, rowkey);
 		}
 
 		// scan the cacheurls table, compare uris with counts > 0 to uris in cache, if match then evict uri and decrement count
