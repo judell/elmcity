@@ -1,7 +1,7 @@
 function on_load()
   {
 
-  var id = /\/services\/([^/]+)\//.exec(window.location.href)[1];
+  var id = /\/([^/]+)\/html/.exec(window.location.href)[1];
 
   $.ajax({
     url: 'http://elmcity.cloudapp.net/services/' + id + '/tags_json',
@@ -297,7 +297,7 @@ function tags(tags_json)
       var selected = '';
       if ( gup('view') == key )
          selected = ' selected';
-      $('#tag_select').append('<option ' + selected + ' " value="' + key + '">' + key + count + '</option>');
+      $('#tag_select').append('<option ' + selected + ' value="' + key + '">' + key + count + '</option>');
       }
 
     $('#tags').append('</select>');
@@ -316,10 +316,10 @@ function show_view()
   {
   var selected = $('#tag_select option:selected').text();
   selected = selected.replace(/\s*\((\d+)\)/,'');
-  var id = /\/services\/([^/]+)\//.exec(window.location.href)[1];
+  var id = /\/([^/]+)\/html/.exec(window.location.href)[1];
   if ( selected == 'all' )
-    location.href = '/services/' + id + '/html';
+    location.href = '/' + id + '/html';
   else
-    location.href = '/services/' + id + '/html?view=' + selected;
+    location.href = '/' + id + '/html?view=' + selected;
   }
 
