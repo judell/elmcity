@@ -428,6 +428,7 @@ namespace ElmcityUtils
 				list.Add(e.ToString());
 			return list;
 		}
+
 		#endregion
 
 		#region other
@@ -436,6 +437,13 @@ namespace ElmcityUtils
 		{
 			HashSet<T> setA = new HashSet<T>(A);
 			return setA.SetEquals(B);
+		}
+
+		public static IEnumerable<int> EveryNth(int start, int step, int stop)
+		{
+			int i = start;
+			for (; i <= stop; i += step)
+				yield return i;
 		}
 
 		#endregion
@@ -515,15 +523,6 @@ namespace ElmcityUtils
 			{
 				dict[key] = values;
 			}
-		}
-
-		public static void AddOrUpdateDictOfDictStr(this IDictionary<string, Dictionary<string,string>> dict, string key, Dictionary<string,string> subdict)
-		{
-			if ( dict.ContainsKey(key) )
-				foreach (var subkey in subdict.Keys)
-					dict[key][subkey] = subdict[subkey];
-			else
-				dict[key] = subdict;
 		}
 
 		public static bool KeySetEqual<TKey, TValue>(this IDictionary<TKey, TValue> dict, List<TKey> keys)
