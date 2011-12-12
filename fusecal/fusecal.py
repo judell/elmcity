@@ -11,6 +11,8 @@ import System
 
 logger = ElmcityUtils.Logger()
 
+global result
+
 def Dispatch(url=None,filter=None,tz_source=None,tz_dest=None):
  
   if ( filter is "" ):
