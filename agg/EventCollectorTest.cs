@@ -520,6 +520,10 @@ namespace CalendarAggregator
 			Assert.That(evt.urls_and_sources["http://1"] == "source1");
 			Assert.That(evt.urls_and_sources["http://2"] == "source2");
 			Assert.That(evt.urls_and_sources["http://3"] == "source3");
+
+			//Assert.That(evt.list_of_urls_and_sources[0][0] == "http://1" && evt.list_of_urls_and_sources[0][1] == "source1");
+			//Assert.That(evt.list_of_urls_and_sources[1][0] == "http://2" && evt.list_of_urls_and_sources[1][1] == "source2");
+			//Assert.That(evt.list_of_urls_and_sources[2][0] == "http://3" && evt.list_of_urls_and_sources[2][1] == "source3");
 		}
 
 		[Test]
