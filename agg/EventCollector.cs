@@ -155,12 +155,10 @@ namespace CalendarAggregator
 					fr.stats[feedurl].whenchecked = DateTime.Now.ToUniversalTime();
 					iCalendar ical;
 					var feed_metadict = Metadata.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, this.calinfo.id);
-					var _feedurl = MaybeRedirect(feedurl, feed_metadict);
-					MaybeValidate(fr, feedurl, _feedurl);
 					var feedtext = "";
 					try
 					{
-						feedtext = GetFeedTextFromFeedUrl(fr, source, feedurl, _feedurl);
+						feedtext = GetFeedTextFromFeedUrl(fr, this.calinfo, source, feedurl, this.wait_secs, this.max_retries, this.timeout_secs);
 					}
 					catch (Exception e)  // exception while loading feed
 					{
@@ -215,6 +213,7 @@ namespace CalendarAggregator
 					{
 						GenUtils.PriorityLogMsg("exception", "CollectIcal: " + id, e.Message);
 						fr.stats[feedurl].dday_error = e.Message;
+						return;
 					}
 				}
 
@@ -288,52 +287,11 @@ namespace CalendarAggregator
 			return copy_of_events_to_include;
 		}
 
-		private static void MaybeValidate(FeedRegistry fr, string feedurl, string _feedurl)
+		public static string GetFeedTextFromFeedUrl(FeedRegistry fr, Calinfo calinfo, string source, string feedurl, int wait_secs, int max_retries, TimeSpan timeout_secs)
 		{
-			if (Configurator.do_ical_validation)
-			{
-				try
-				{
-					var score = Utils.DDay_Validate(_feedurl);
-					var rounded_score = fr.stats[feedurl].score = Double.Parse(score).ToString("00");
-					GenUtils.LogMsg("info", "DDay_Validate: " + score, null);
-				}
-				catch (Exception e)
-				{
-					GenUtils.PriorityLogMsg("exception", "DDay_Validate: " + e.Message, _feedurl);
-				}
-			}
-		}
+			var request = (HttpWebRequest)WebRequest.Create(new Uri(feedurl));
 
-		private HttpResponse StoreRedirectedUrl(string feedurl, string redirected_url, Dictionary<string, string> feed_metadict)
-		{
-			string rowkey = TableStorage.MakeSafeRowkeyFromUrl(feedurl);
-			feed_metadict["redirected_url"] = redirected_url;
-			return TableStorage.UpdateDictToTableStore(ObjectUtils.DictStrToDictObj(feed_metadict), Metadata.ts_table, this.id, rowkey).http_response;
-		}
-
-		public string MaybeRedirect(string feedurl, Dictionary<string, string> feed_metadict)
-		{
-
-			// allow the "fusecal" service to hook in if it can
-			var _feedurl = MaybeRedirectFeedUrl(feedurl, feed_metadict);
-
-			// allow ics_from_xcal to hook in if it can
-			_feedurl = MaybeXcalToIcsFeedUrl(_feedurl, feed_metadict);
-
-			// allow ics_from_vcal to hook in if it can
-			_feedurl = MaybeVcalToIcsFeedUrl(_feedurl, feed_metadict);
-
-			if (_feedurl != feedurl)
-				StoreRedirectedUrl(feedurl, _feedurl, feed_metadict);
-
-			return _feedurl;
-		}
-
-		public string GetFeedTextFromFeedUrl(FeedRegistry fr, string source, string feedurl, string _feedurl)
-		{
-			var request = (HttpWebRequest)WebRequest.Create(new Uri(_feedurl));
-			var response = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, data: null, wait_secs: this.wait_secs, max_tries: this.max_retries, timeout_secs: this.timeout_secs);
+			var response = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, data: null, wait_secs: wait_secs, max_tries: max_retries, timeout_secs: timeout_secs);
 
 			string feedtext = "";
 
@@ -359,11 +317,15 @@ namespace CalendarAggregator
 			if ( calinfo.use_x_wr_timezone )
 				feedtext = Utils.Handle_X_WR_TIMEZONE(feedtext);
 
-			// special favor for matt gillooly :-)
-			if (this.id == "localist")
-				feedtext = feedtext.Replace("\\;", ";");
+			if (feedurl.Contains("berkeley.edu"))  // todo: remove when this reported bug is fixed
+			{
+				feedtext = Utils.RemoveLine(feedtext, " *No event on these dates");
+				feedtext = Utils.WrapMiswrappedUID(feedtext);
+				feedtext = Utils.TrimLine(feedtext, "*No event on these dates");
+			}
 
-			EnsureProdId(fr, feedurl, feedtext);
+			if ( fr != null )
+				EnsureProdId(fr, feedurl, feedtext);
 
 			return feedtext;
 		}
@@ -670,109 +632,6 @@ namespace CalendarAggregator
 			return !String.IsNullOrEmpty(location) && location.StartsWith("http://");
 		}
 
-		// alter feed url if it should be handled by the internal "fusecal" service, or the vcal or xcal converters
-		// todo: make this table-driven 
-		public string MaybeRedirectFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
-		{
-			List<string> groups;
-
-			string str_final_url = null;
-
-			var filter = GetFusecalFilter(feed_metadict);
-
-			var tz_source = this.calinfo.tzname;
-			var tz_dest = tz_source;
-
-			//obscure, leave out for now 
-			//if (feed_metadict.ContainsKey("tz"))
-			//    tz_dest = tz_source = feed_metadict["tz"];
-
-			groups = GenUtils.RegexFindGroups(str_url, "(libraryinsight.com)(.+)");
-			if (groups.Count == 3)
-			{
-				str_final_url = String.Format(Configurator.fusecal_service, Uri.EscapeDataString(str_url), filter, tz_source, tz_dest);
-			}
-
-			groups = GenUtils.RegexFindGroups(str_url, "(librarything.com/local/place/)(.+)");
-			if (groups.Count == 3)
-			{
-				var place = groups[2];
-				var radius = this.calinfo.radius;
-				var lt_url = Uri.EscapeDataString(string.Format("http://www.librarything.com/rss/events/location/{0}/distance={1}",
-					place, radius));
-				str_final_url = String.Format(Configurator.fusecal_service, lt_url, filter, tz_source, tz_dest);
-			}
-
-			groups = GenUtils.RegexFindGroups(str_url, "(myspace.com/)(.+)");
-			if (groups.Count == 3)
-			{
-				var musician = groups[2];
-				var ms_url = Uri.EscapeDataString(string.Format("http://www.myspace.com/{0}", musician));
-				str_final_url = String.Format(Configurator.fusecal_service, ms_url, filter, tz_source, tz_dest);
-			}
-
-			if (str_final_url == null)
-				return str_url;
-			else
-			{
-				GenUtils.LogMsg("info", "MaybeRedirectFeedUrl: " + id, str_url + " -> " + str_final_url);
-				return str_final_url;
-			}
-
-		}
-
-		// alter feed url if it should be transformed from rss+xcal to ics
-		public string MaybeXcalToIcsFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
-		{
-			string str_final_url = str_url;
-			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_xcal_service, feed_metadict, trigger_key: "xcal", str_final_url: str_final_url);
-			return str_final_url;
-		}
-
-		// alter feed url if it should be transformed from atom+vcal to ics
-		public string MaybeVcalToIcsFeedUrl(string str_url, Dictionary<string, string> feed_metadict)
-		{
-			string str_final_url = str_url;
-			str_final_url = RedirectFeedUrl(str_url, Configurator.ics_from_vcal_service, feed_metadict, trigger_key: "vcal", str_final_url: str_final_url);
-			return str_final_url;
-		}
-
-		private string RedirectFeedUrl(string str_url, string service_url, Dictionary<string, string> feed_metadict, string trigger_key, string str_final_url)
-		{
-			try
-			{
-				var tzname = this.calinfo.tzname;
-				var source = feed_metadict["source"];
-				if (feed_metadict.ContainsKey(trigger_key) && feed_metadict[trigger_key] == "yes")
-				{
-					str_final_url = String.Format(service_url,  // e.g. ics_from_xcal?url={0}&tzname={1}&source={2}";
-							Uri.EscapeDataString(str_url),
-							tzname,
-							source);
-				}
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "RedirectFeedUrl", e.Message + e.StackTrace);
-			}
-			return str_final_url;
-		}
-
-		// get the filter= property from metadata
-		// todo: generalize for getting any property from metadata
-		private static string GetFusecalFilter(Dictionary<string, string> feed_metadict)
-		{
-			string filter;
-			if (feed_metadict.ContainsKey("filter"))
-			{
-				var unescaped = feed_metadict["filter"];
-				filter = Uri.EscapeDataString(unescaped);
-			}
-			else
-				filter = "";
-			return filter;
-		}
-
 		// add VTIMEZONE to intermediate or final ics outputs
 		public static void AddTimezoneToDDayICal(DDay.iCal.iCalendar ical, TimeZoneInfo tzinfo)
 		{
@@ -913,6 +772,8 @@ namespace CalendarAggregator
 
 			string event_url = "http://eventful.com/events/" + event_id;
 			string source = venue_name;
+			if (source == "")
+				source = "Unnamed Eventful Venue";
 
 			estats.eventcount++;
 
