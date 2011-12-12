@@ -44,7 +44,7 @@ namespace WebRole
 		#region events
 
 		//[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
-		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count)
+		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
@@ -55,7 +55,7 @@ namespace WebRole
 			try
 			{
 				var cr = ElmcityApp.wrd.renderers[id];
-				r = new EventsResult(this.ControllerContext, cr, id, type, view, jsonp, count);
+				r = new EventsResult(this.ControllerContext, cr, id, type, view, jsonp, count, from, to);
 			}
 			catch (Exception e)
 			{
@@ -73,12 +73,14 @@ namespace WebRole
 			string view;
 			string jsonp;
 			int count { get; set; }
+			DateTime from;
+			DateTime to;
 
 			CalendarRenderer.ViewRenderer renderer = null;
 			string response_body = null;
 			byte[] response_bytes = new byte[0];
 
-			public EventsResult(ControllerContext context, CalendarRenderer cr, string id, string type, string view, string jsonp, string count)
+			public EventsResult(ControllerContext context, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to)
 			{
 				this.context = context;
 				this.cr = cr;
@@ -88,6 +90,8 @@ namespace WebRole
 				this.view = view;
 				this.jsonp = jsonp;
 				this.count = (count == null) ? 0 : Convert.ToInt16(count);
+				this.from = from == null ? DateTime.MinValue : Utils.DateTimeFromISO8601DateStr(from, DateTimeKind.Local);
+				this.to = from == null ? DateTime.MinValue : Utils.DateTimeFromISO8601DateStr(to, DateTimeKind.Local);
 			}
 
 			public override void ExecuteResult(ControllerContext context)
@@ -124,14 +128,17 @@ namespace WebRole
 					InsertIntoCache(bytes, dependency: dependency, key: blob_key);
 				}
 
-				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString());
+				var fmt = "{0:yyyyMMddTHHmm}";
+				var from_str = string.Format(fmt, this.from);
+				var to_str = string.Format(fmt, this.to); 
+				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str);
 
 				switch (this.type)
 				{
 					case "html":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtml);
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
-						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count);
+						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to);
 						new ContentResult
 						{
 							ContentType = "text/html",
@@ -143,7 +150,7 @@ namespace WebRole
 					case "xml":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderXml);
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
-						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count);
+						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to);
 						new ContentResult
 						{
 							ContentType = "text/xml",
@@ -156,7 +163,7 @@ namespace WebRole
 						if (count == 0) count = CalendarAggregator.Configurator.rss_default_items;
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderRss);
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
-						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count);
+						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to);
 
 						new ContentResult
 						{
@@ -169,7 +176,7 @@ namespace WebRole
 					case "json":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderJson);
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
-						string jcontent = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count);
+						string jcontent = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to);
 						if (this.jsonp != null)
 							jcontent = this.jsonp + "(" + jcontent + ")";
 						new ContentResult
@@ -217,7 +224,7 @@ namespace WebRole
 					case "ics":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderIcs);
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
-						string ics_text = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count);
+						string ics_text = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to);
 						new ContentResult
 						{
 							ContentType = "text/calendar",
@@ -274,7 +281,7 @@ namespace WebRole
 			{
 				if (this.cr.cache[view_key] == null)
 				{
-					var view_str = this.cr.RenderDynamicViewWithoutCaching(this.context, view_renderer, this.view, this.count);
+					var view_str = this.cr.RenderDynamicViewWithoutCaching(this.context, view_renderer, this.view, this.count, this.from, this.to);
 					byte[] view_bytes = Encoding.UTF8.GetBytes(view_str);
 					InsertIntoCache(view_bytes, dependency, view_key);
 				}
