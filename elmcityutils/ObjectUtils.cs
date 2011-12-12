@@ -21,6 +21,11 @@ namespace ElmcityUtils
 {
 	public static class ObjectUtils
 	{
+		public static T GetTypedObj<T>(string id, string name)
+		{
+			var uri = BlobStorage.MakeAzureBlobUri(id, name);
+			return (T)BlobStorage.DeserializeObjectFromUri(uri);
+		}
 
 		public static Dictionary<string, object> ObjToDictObj(Object o)
 		{
