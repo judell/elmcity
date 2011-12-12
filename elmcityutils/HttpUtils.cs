@@ -339,8 +339,14 @@ namespace ElmcityUtils
 						}
 						catch (Exception e)
 						{
-							var msg = "RetryHttpRequest " + e.ToString() + ": " + request.RequestUri;
-							GenUtils.LogMsg("warning", msg, null);
+							string msg;
+							if (e.GetType() != typeof(NullReferenceException))
+							{
+								msg = "RetryHttpRequest " + e.ToString() + ": " + request.RequestUri;
+								GenUtils.LogMsg("warning", msg, null);
+							}
+							else
+								msg = request.RequestUri.ToString();
 							return new HttpResponse(HttpStatusCode.NotFound, msg, null, null);
 						}
 					},
