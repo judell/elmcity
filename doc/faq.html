@@ -37,10 +37,10 @@
 <ul>
 	<li>Collects online calendar events for geographic or topical communities</li>
 	<li>Merges information from many sources: <a href="http://eventful.com">Eventful</a>, <a href="http://upcoming.org">Upcoming</a>,  <a href="http://eventbrite.com">Eventbrite</a>, <a href="http://facebook.com">Facebook</a>,  and iCalendar feeds published by <a href="http://delicious.com/judell/icalpub+howto">popular calendar programs</a></li>
-	<li>Creates network effects using iCalendar (<a href="http://en.wikipedia.org/wiki/Icalendar">ICS</a>) feeds, in the same way that blogging and microblogging systems create network effects using RSS, Atom, and Twitter feeds.</li>
-	<li>Does not store events in a centralized database, but rather operates as a hub that merges streams of events and republishes the merged result in a variety of formats.</li>
-	<li>Is managed by one or more curators in a community, on behalf of everyone in the community.</li>
-	<li>Runs on, and demonstrates the capabilities of, Microsoft's Azure platform.</li>
+	<li>Creates network effects using iCalendar (<a href="http://en.wikipedia.org/wiki/Icalendar">ICS</a>) feeds, in the same way that blogging and microblogging systems create network effects using RSS, Atom, and Twitter feeds</li>
+	<li>Does not store events in a centralized database, but rather operates as a hub that merges streams of events and republishes the merged result in a variety of formats</li>
+	<li>Is managed by one or more curators in a community, on behalf of everyone in the community</li>
+	<li>Runs on, and demonstrates the capabilities of, Microsoft's Azure platform</li>
 <li>Is released under the Apache 2.0 license at <a href="http://github.com/judell/elmcity">github.com/judell/elmcity</a>
 </li>
 </ul>
@@ -98,8 +98,13 @@ Publish your own iCalendar feed, and give its URL to the hub's curator. You can 
 </li>
 
 <li>
-<p><a href="http://eventbrite.com">Facebook</a>: Post a public event and include the name of your location (e.g.: "Keene, NH" or "Bloomington IN") in the event's "What are you planning?" field.</p>
+<p><a href="http://facebook.com">Facebook</a>: Post an public event to the Events app on a Facebook Page.</p>
 </li>
+
+<li>
+<p><a href="http://meetup.com">Meetup</a>: Make your Meetup group's calendar public.</p>
+</li>
+
 
 </ol>
 
@@ -114,7 +119,7 @@ Notify the <a href="mailto:jonu@microsoft.com">elmcity administrator</a> that yo
 </p>
 <ol>
 	<li><p>An identifier for the hub, e.g. BrattleboroCals or WashingtonStateWineries</p></li>
-	<li><p>A Twitter, Facebook, or Windows Live account for authenticating to (and controlling) the hub</p></li>
+	<li><p>A Twitter, Facebook,Windows Live, or Google account for authenticating to (and controlling) the hub</p></li>
 	<li><p>A location, if the hub is location-specific (e.g. Brattleboro, VT or Sunbury-on-Thames, UK</p></li>
 </ol>
 
@@ -140,26 +145,22 @@ The central goal of this project is to light up iCalendar feeds that could easil
 
 Here are some strategies:
 <ol>
-	<li><strong>Create some feeds yourself.</strong>
+	<li><strong>Create your own feeds.</strong>
 Maybe you coach a youth soccer team, or run a local restaurant that features musical performances, or participate in a birdwatching club whose hikes are open to the public. You can, and should, and maybe already do publish a web page about these events. But you probably don't publish an iCalendar feed.
 
-Here's the strategy: Maintain the calendar information in a program like Outlook, Google Calendar, or Apple iCal. That way, you can publish your calendar to the web in HTML format for people to read, and simultaneously publish in ICS format for syndication. Here's how to do that for <a href="http://blog.jonudell.net/2008/05/23/free-online-calendar-publishing-part-1-outlook/">Outlook 2007</a>, <a href="http://blog.jonudell.net/2008/05/27/free-online-calendar-publishing-part-2-google-calendar/">Google Calendar</a>, and <a href="http://blog.jonudell.net/2008/05/28/free-online-calendar-publishing-part-3-apple-ical/">Apple iCal</a>.</li>
-	<li><strong>Turn existing web pages into feeds.</strong>
-Curators are having good success with a service called <a href="http://fusecal.com">FuseCal</a>, which can translate many (but not all) calendar-like web pages into iCalendar feeds. For example, the curator for Huntington, WV found <a href="http://appyfilmfest.com/pages/events-schedule.htm">this web page</a> which publishes the schedule for the Appalachian Film Festival. FuseCal was able to read the page, figure out the implicit structure -- dates, times, event titles -- and produce an iCalendar feed that's included in the <a href="http://elmcity.cloudapp.net/stats/whyhuntington">set of feeds</a> for Huntington.
+Here's the strategy: Maintain the calendar information in a program like Outlook, Google Calendar, or Apple iCal. That way, you can publish your calendar to the web in HTML format for people to read, and simultaneously publish in ICS format for syndication. Here's how to do that for <a href="http://blog.jonudell.net/2008/05/23/free-online-calendar-publishing-part-1-outlook/">Outlook 2007</a>, <a href="http://blog.jonudell.net/2008/05/27/free-online-calendar-publishing-part-2-google-calendar/">Google Calendar</a>, and <a href="http://blog.jonudell.net/2008/05/28/free-online-calendar-publishing-part-3-apple-ical/">Apple iCal</a>.
+</li>
 
-<strong>Update</strong>: The FuseCal service, sadly, shut down in July 2009.</li>
-	<li><strong>Light up existing feeds.</strong>
+<li><strong>Light up existing feeds.</strong>
 In a number of cases, people are publishing web calendars without even realizing that they are also publishing iCalendar feeds. This happens most often with Google Calendar. Consider <a href="http://get2knowyourneighbor.com/">WV Get To Know Your Neighbor</a>. The site uses Google Calendar to publish an <a href="http://get2knowyourneighbor.com/3.html">events page</a>. Unbeknownst to the site owner, there is an ICS link that corresponds to that calendar. The link is:
 
 http://www.google.com/calendar/ical/<strong>get2knowyourneighbor@gmail.com</strong>/public/basic.ics
 
 Given the email address associated with any Google Calendar, you can produce an iCalendar link of this form. The Huntington WV curator did so, and as a result the Get To Know Your Neighbor calendar is now included in the <a href="http://elmcity.cloudapp.net/stats/whyhuntington">set of Huntington feeds</a>. If you don't know and can't easily find the email address associated with the calendar, just ask the site owner.
 
-Another source of existing feeds is Drupal, an open source content management system. In Keene, NH, for example, the Hannah Grimes coop runs its website on Drupal, and publishes a <a href="http://www.hannahgrimes.com/calendar">calendar</a>. Unknown to the site operator, there was a corresponding iCalendar feed: http://www.hannahgrimes.com/ical.</li>
-	<li><strong>Invite individuals, groups, and organizations to publish feeds.</strong>
-As a calendar curator for your community, you can explain how to do this, and why it matters. Sometimes a small intervention can produce a large effect. The Keene, NH school district, for example, did not realize that calendar syndication was possible. When I met with the school board, I learned that it's in the process of selecting a new content management system that will, among other things, manage calendar information for all the schools. I pointed out that the ability to export iCalendar feeds should be a requirement, and the board agreed. It'll take six months or a year to deploy the new system, but when that happens, a rich source of iCalendar feeds will come online.
+Other sources of existing feeds: Eventful or Upcoming venues, Facebook Pages, Meetup groups. 
+</li>
 
-In general, you'll want to look for the systems in your community that are currently managing calendar information, and investigate whether they are capable of exporting iCalendar feeds -- either natively, or by means of an add-on. A Virginia school district, for example, is migrating to Microsoft SharePoint, and will be managing its calendars there. That system doesn't export iCalendar feeds out of the box. But the <a href="http://www.codeplex.com/CKS">Community Kit for SharePoint</a> offers a module that adds the capability.</li>
 </ol>
 
 <hr />
@@ -182,7 +183,7 @@ When you publish an iCalendar feed, it can syndicate to one or more services lik
 <strong>Q:</strong> OK, I've found or created some iCalendar feeds. How do I get the collector to collect and process them?
 </p>
 
-<strong>A:</strong> You sign into <a href="http://elmcity.cloudapp.net/">elmcity</a>, using the Twitter, Facebook, or Windows Live account you provided when you started your hub, and use the feed editor to add feeds.
+<strong>A:</strong> You sign into <a href="http://elmcity.cloudapp.net/">elmcity</a>, using the Twitter, Facebook, Windows Live, or Google account you provided when you started your hub, and use the feed editor to add feeds.
 
 <hr />
 <p><a name="howtocustomize"></a>&nbsp;</p>
@@ -190,7 +191,7 @@ When you publish an iCalendar feed, it can syndicate to one or more services lik
 <strong>Q:</strong> How can I customize the collector for my location?
 </p>
 
-<strong>A:</strong> You sign into <a href="http://elmcity.cloudapp.net/">elmcity</a>, using the Twitter, Facebook, or Windows Live account you provided when you started your hub, and use the hub editor to adjust the default settings as needed.
+<strong>A:</strong> You sign into <a href="http://elmcity.cloudapp.net/">elmcity</a>, using the Twitter, Facebook, Windows Live, or Google account you provided when you started your hub, and use the hub editor to adjust the default settings as needed.
 
 <hr />
 <p><a name="categorizing"></a>&nbsp;</p>
