@@ -21,6 +21,7 @@ using System.Text;
 using ElmcityUtils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 
 
 namespace CalendarAggregator
@@ -189,7 +190,7 @@ namespace CalendarAggregator
 					try
 					{
 						q = string.Format(@" ""{0}"" near:100 ""{1} {2}"" ", where, qualifier, day);
-						var results = BingSearch(q, stats_dict);
+						var results = BingSearch(q, 500, stats_dict);
 						DictifyResults(results, final_results_dict, stats_dict);
 					}
 					catch (Exception ex2)
@@ -200,14 +201,16 @@ namespace CalendarAggregator
 			}
 		}
 
-		public static List<SearchResult> BingSearch(string search_expression, Dictionary<string, object> stats_dict)
+		public static List<SearchResult> BingSearch(string search_expression, int max, Dictionary<string, object> stats_dict)
 		{
 			var url_template = "http://api.search.live.net/json.aspx?AppId=" + Configurator.bing_api_key + "&Market=en-US&Sources=Web&Adult=Strict&Query={0}&Web.Count=50";
 			var offset_template = "&Web.Offset={1}";
 			var results_list = new List<SearchResult>();
 			Uri search_url;
-			int[] offsets = { 0, 50, 100, 150 };
-			foreach (var offset in offsets)
+			List<int> offsets = GenUtils.EveryNth(start: 0, step: 50, stop: max).ToList();
+
+			Parallel.ForEach(source: offsets, body: (offset) =>
+			// foreach (var offset in offsets)
 			{
 				if (offset == 0)
 					search_url = new Uri(string.Format(url_template, search_expression));
@@ -216,8 +219,8 @@ namespace CalendarAggregator
 
 				var page = CallSearchApi(search_url);
 				if (page == null)
-					continue;
-
+					//continue;
+					return;
 				try
 				{
 					JObject o = (JObject)JsonConvert.DeserializeObject(page);
@@ -240,6 +243,8 @@ namespace CalendarAggregator
 					GenUtils.PriorityLogMsg("exception", "BingSearch", search_url.ToString());
 				}
 			}
+			
+			);
 
 			return results_list;
 		}
