@@ -68,7 +68,7 @@ namespace CalendarAggregator
 		private delegate string EventRenderer(ZonelessEvent evt, Calinfo calinfo);
 
 		// points to a method for rendering views of events in various formats
-		public delegate string ViewRenderer(ZonelessEventStore eventstore, string view, int count);
+		public delegate string ViewRenderer(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to);
 
 		// points to a method for retrieving a pickled event store
 		// normally used with caching: es_getter = new EventStoreGetter(GetEventStoreWithCaching);
@@ -131,23 +131,23 @@ namespace CalendarAggregator
 
 		public string RenderXml()
 		{
-			return RenderXml(eventstore: null, view: null, count: 0);
+			return RenderXml(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
 		public string RenderXml(string view)
 		{
-			return RenderXml(eventstore: null, view: view, count: 0);
+			return RenderXml(eventstore: null, view: view, count: 0, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
 		public string RenderXml(int count)
 		{
-			return RenderXml(eventstore: null, view: null, count: count);
+			return RenderXml(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
 		// render an eventstore as xml, optionally limited by view and/or count
-		public string RenderXml(ZonelessEventStore eventstore, string view, int count)
+		public string RenderXml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to)
 		{
-			eventstore = GetEventStore(eventstore, view, count);
+			eventstore = GetEventStore(eventstore, view, count, from, to);
 
 			var xml = new StringBuilder();
 			xml.Append("<events>\n");
@@ -205,22 +205,22 @@ namespace CalendarAggregator
 
 		public string RenderJson()
 		{
-			return RenderJson(eventstore: null, view: null, count: 0);
+			return RenderJson(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
 		public string RenderJson(string view)
 		{
-			return RenderJson(eventstore: null, view: view, count: 0);
+			return RenderJson(eventstore: null, view: view, count: 0, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
 		public string RenderJson(int count)
 		{
-			return RenderJson(eventstore: null, view: null, count: count);
+			return RenderJson(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
-		public string RenderJson(ZonelessEventStore eventstore, string view, int count)
+		public string RenderJson(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to)
 		{
-			eventstore = GetEventStore(eventstore, view, count);
+			eventstore = GetEventStore(eventstore, view, count, from, to);
 			for (var i = 0; i < eventstore.events.Count; i++)
 			{
 				var evt = eventstore.events[i];
@@ -253,17 +253,17 @@ namespace CalendarAggregator
 
 		public string RenderHtml()
 		{
-			return RenderHtml(eventstore: null, view: null, count: 0);
+			return RenderHtml(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
 		public string RenderHtml(ZonelessEventStore es)
 		{
-			return RenderHtml(eventstore: es, view: null, count: 0);
+			return RenderHtml(eventstore: es, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
-		public string RenderHtml(ZonelessEventStore eventstore, string view, int count)
+		public string RenderHtml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to)
 		{
-			eventstore = GetEventStore(eventstore, view, count);
+			eventstore = GetEventStore(eventstore, view, count, from, to);
 
 			var builder = new StringBuilder();
 
@@ -366,6 +366,9 @@ namespace CalendarAggregator
 			if (evt.urls_and_sources == null)                                                             
 				evt.urls_and_sources = new Dictionary<string, string>() { { evt.url, evt.source } };
 
+			//if (evt.list_of_urls_and_sources == null)
+			//	evt.list_of_urls_and_sources = new List<List<string>>();
+
 			string dtstart;
 			 if (evt.allday)
 				dtstart = "  ";
@@ -382,26 +385,27 @@ namespace CalendarAggregator
 				List<string> catlist = evt.categories.Split(',').ToList();
 				foreach (var cat in catlist.Unique())
 				{
-					var category_url = string.Format("/services/{0}/html?view={1}", this.id, cat);
+					var category_url = string.Format("/{0}/html?view={1}", this.id, cat);
 					catlist_links.Add(string.Format(@"<a href=""{0}"">{1}</a>", category_url, cat));
 				}
-				categories = string.Format(@" <span class=""eventCats"">{0}</span>", string.Join(", ", catlist_links.ToArray()));
+				categories = string.Format(@" <span class=""cat"">{0}</span>", string.Join(", ", catlist_links.ToArray()));
 			}
 
 			return string.Format(
 @"
-<div class=""eventBlurb"" xmlns:v=""http://rdf.data-vocabulary.org/#"" typeof=""v:Event"" >
-<span class=""eventStart"" property=""v:startDate"" content=""{0}"">{1}</span> 
+<div class=""bl"" xmlns:v=""http://rdf.data-vocabulary.org/#"" typeof=""v:Event"" >
+<span class=""st"" property=""v:startDate"" content=""{0}"">{1}</span> 
 <span href=""{2}"" rel=""v:url""></span>
-<span class=""eventTitle"">{3}</span> 
-<span class=""eventSource"" property=""v:description"">{4}</span> {5} 
+<span class=""ttl"">{3}</span> 
+<span class=""src"" property=""v:description"">{4}</span> {5} 
 {6}
 </div>",
 			String.Format("{0:yyyy-MM-ddTHH:mm}", evt.dtstart),
 			dtstart,
 			evt.url,
 			MakeTitleForRDFa(evt),
-			evt.urls_and_sources.Count == 1 ? evt.source : "",
+			//evt.list_of_urls_and_sources.Count == 1 ? evt.source : "", // suppress source if multiple
+			evt.urls_and_sources.Keys.Count == 1 ? evt.source : "", // suppress source if multiple
 			categories,
 			MakeGeoForRDFa(evt)
 			);
@@ -409,22 +413,20 @@ namespace CalendarAggregator
 
 		public static string MakeTitleForRDFa(ZonelessEvent evt)
 		{
-			if (evt.urls_and_sources.Count == 1)
+			if (evt.urls_and_sources.Keys.Count == 1)
 			{
-				var url = evt.urls_and_sources.Keys.First();
-				var source = evt.urls_and_sources[url];
 				return string.Format("<a target=\"{0}\" property=\"v:summary\" title=\"{1}\" href=\"{2}\">{3}</a>",
 					Configurator.default_html_window_name, 
-					source,
-					url, 
+					evt.source,
+					evt.url, 
 					evt.title);
 			}
 
-			if (evt.urls_and_sources.Count > 1)
+			if (evt.urls_and_sources.Keys.Count > 1)
 			{
 				var evt_title = @"<span property=""v:summary"">" + evt.title + "</span> [";
 				int count = 0;
-				foreach (var url in evt.urls_and_sources.Keys)
+				foreach (var url in evt.urls_and_sources.Keys )
 				{
 					var source = evt.urls_and_sources[url];
 					count++;
@@ -476,22 +478,22 @@ namespace CalendarAggregator
 
 		public string RenderIcs()
 		{
-			return RenderIcs(eventstore: null, view: null, count: 0);
+			return RenderIcs(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
 		public string RenderIcs(string view)
 		{
-			return RenderIcs(eventstore: null, view: view, count: 0);
+			return RenderIcs(eventstore: null, view: view, count: 0, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
 		public string RenderIcs(int count)
 		{
-			return RenderIcs(eventstore: null, view: null, count: count);
+			return RenderIcs(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
-		public string RenderIcs(ZonelessEventStore eventstore, string view, int count)
+		public string RenderIcs(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to)
 		{
-			eventstore = GetEventStore(eventstore, view, count);
+			eventstore = GetEventStore(eventstore, view, count, from, to);
 			var ical = new DDay.iCal.iCalendar();
 			Collector.AddTimezoneToDDayICal(ical, this.calinfo.tzinfo);
 			var tzid = this.calinfo.tzinfo.Id;
@@ -516,8 +518,7 @@ namespace CalendarAggregator
 				ical.Children.Add(ical_evt);
 			}
 
-			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer();
-			var ics_text = serializer.SerializeToString(ical);
+			var ics_text = Utils.SerializeIcalToIcs(ical);
 
 			return ics_text;
 		}
@@ -528,24 +529,24 @@ namespace CalendarAggregator
 
 		public string RenderRss()
 		{
-			return RenderRss(eventstore: null, view: null, count: Configurator.rss_default_items);
+			return RenderRss(eventstore: null, view: null, count: Configurator.rss_default_items, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
 		public string RenderRss(int count)
 		{
-			return RenderRss(eventstore: null, view: null, count: count);
+			return RenderRss(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
 		public string RenderRss(string view)
 		{
-			return RenderRss(eventstore: null, view: view, count: Configurator.rss_default_items);
+			return RenderRss(eventstore: null, view: view, count: Configurator.rss_default_items, from: DateTime.MinValue, to: DateTime.MinValue);
 		}
 
-		public string RenderRss(ZonelessEventStore eventstore, string view, int count)
+		public string RenderRss(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to)
 		{
 			try
 			{
-				eventstore = GetEventStore(eventstore, view, count);
+				eventstore = GetEventStore(eventstore, view, count, from, to);
 				var query = string.Format("view={0}&count={1}", view, count);
 				return Utils.RssFeedFromEventStore(this.id, query, eventstore);
 			}
@@ -618,7 +619,7 @@ namespace CalendarAggregator
 			}
 		}
 
-		private ZonelessEventStore GetEventStore(ZonelessEventStore es, string view, int count)
+		private ZonelessEventStore GetEventStore(ZonelessEventStore es, string view, int count, DateTime from, DateTime to)
 		{
 			// see RenderDynamicViewWithCaching:
 			// view_data = Encoding.UTF8.GetBytes(view_renderer(eventstore:null, view:view, view:count));
@@ -627,7 +628,7 @@ namespace CalendarAggregator
 				es = this.es_getter(this.cache); // get the eventstore. if the getter is GetEventStoreWithCaching
 			// then it will use HttpUtils.RetrieveBlobFromServerCacheOrUri
 			// which gets from cache if it can, else fetches uri and loads cache
-			es.events = MaybeFilterByViewOrCount(view, count, es); // then filter by view or count if requested
+			es.events = Filter(view, count, from, to, es); // then filter if requested
 			return es;
 		}
 
@@ -681,12 +682,23 @@ namespace CalendarAggregator
 		}
 
 		// possibly filter an event list by view or count
-		public static List<ZonelessEvent> MaybeFilterByViewOrCount(string view, int count, ZonelessEventStore es)
+		public List<ZonelessEvent> Filter(string view, int count, DateTime from, DateTime to, ZonelessEventStore es)
 		{
 			var events = es.events;
-			if (view != null) // reduce the list of events to those with matching categories
-				events = events.FindAll(evt => evt.categories != null && evt.categories.ToLower().Contains(view));
-			if (count != 0)   // reduce the list to the first count events
+
+			if ( from != DateTime.MinValue )
+				events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart <= to);  // reduce to time window
+
+			if (view != null) // reduce to matching categories
+			{
+				var view_list = view.Split(',').ToList();
+				foreach (var view_item in view_list)
+				{
+					var item = view_item.Trim(' ');
+					events = events.FindAll(evt => evt.categories != null && evt.categories.ToLower().Contains(item));
+				}
+			}
+			if (count != 0)   // reduce to first count events
 				events = events.Take(count).ToList();
 			return events;
 		}
@@ -708,7 +720,7 @@ namespace CalendarAggregator
 		}
 
 		// used in WebRole for views built from pickled objects that are cached
-		public string RenderDynamicViewWithCaching(ControllerContext context, string view_key, ViewRenderer view_renderer, string view, int count)
+		public string RenderDynamicViewWithCaching(ControllerContext context, string view_key, ViewRenderer view_renderer, string view, int count, DateTime from, DateTime to)
 		{
 			try
 			{
@@ -718,7 +730,7 @@ namespace CalendarAggregator
 				if (view_is_cached)
 					view_data = (byte[])cache[view_key];
 				else
-					view_data = Encoding.UTF8.GetBytes(view_renderer(eventstore: null, view: view, count: count));
+					view_data = Encoding.UTF8.GetBytes(view_renderer(eventstore: null, view: view, count: count, from: from, to: to));
 
 				response_body = CacheUtils.MaybeSuppressResponseBodyForView(cache, context, view_data);
 				return Encoding.UTF8.GetString(response_body);
@@ -726,14 +738,14 @@ namespace CalendarAggregator
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "RenderDynamicViewWithCaching: " + view_key, e.Message + e.StackTrace);
-				return RenderDynamicViewWithoutCaching(context, view_renderer, view, count);
+				return RenderDynamicViewWithoutCaching(context, view_renderer, view, count, from, to);
 			}
 		}
 
-		public string RenderDynamicViewWithoutCaching(ControllerContext context, ViewRenderer view_renderer, String view, int count)
+		public string RenderDynamicViewWithoutCaching(ControllerContext context, ViewRenderer view_renderer, String view, int count, DateTime from, DateTime to)
 		{
-			ZonelessEventStore es = GetEventStoreWithoutCaching(this.cache);
-			return view_renderer(es, view, count);
+			ZonelessEventStore es = GetEventStoreWithCaching(this.cache);
+			return view_renderer(es, view, count, from, to);
 		}
 
 	}
