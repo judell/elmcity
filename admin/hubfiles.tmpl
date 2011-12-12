@@ -1,26 +1,69 @@
-<h1>Resources for __ID__</h1>
+<h1>__ID__</h1>
 
-<h2>1. Renderings of your data</h2>
+<h2>For everyone</h2>
 
-<p>(Note that all renderings can be <a href="http://blog.jonudell.net/elmcity-project-faq/#viewingcategories">viewed by category</a> if your feeds are <a href="http://blog.jonudell.net/elmcity-project-faq/#categorizing">categorized</a> on a per-feed and/or per-event basis.)</p>
+<h3>iCalendar (ICS) feeds</h3>
 
+<p>
+When an elmcity hub has been tagged well, you can use tags to create iCalendar views that you can subscribe to in any calendar program. Sample URLs that you can subscribe to Google Calendar or Outlook or Apple iCal or Hotmail Calendar or another calendar client:
+</p>
+
+<p>
+<a href="http://elmcity.cloudapp.net/services/vbcal/ics?view=library">library in Virginia Beach</a> (http://elmcity.cloudapp.net/services/vbcal/ics?view=library)
+</p>
+
+<p>
+<a href="http://elmcity.cloudapp.net/services/seattleopencalendar/ics?view=music">music in Seattle</a> (http://elmcity.cloudapp.net/services/seattleopencalendar/ics?view=music)
+</p>
+
+<p>
+<a href="http://elmcity.cloudapp.net/services/a2cal/ics?view=frisbee">frisbee in Ann Arbor</a> (http://elmcity.cloudapp.net/services/a2cal/ics?view=frisbee)
+</p>
+
+<p>
+<a href="http://elmcity.cloudapp.net/services/berkeley/ics?view=environment">environment in Berkeley</a> (http://elmcity.cloudapp.net/services/berkeley/ics?view=environment)
+</p>
+
+<p>
+<a href="http://elmcity.cloudapp.net/services/fallschurchcals/ics?view=books">books in Falls Church</a> (http://elmcity.cloudapp.net/services/fallschurchcals/ics?view=books)
+</p>
+
+<h2>For curators</h2>
+
+<h3>View hub settings and feeds</h3>
+
+<p>URL: <a href="/services/__ID__/metadata">/services/__ID__/metadata</a></p>
+
+<h3>Edit hub settings and feeds</h3>
+
+<p>
+To use these links, first visit the home page and authenticate using the Twitter or Facebook or Gmail or Windows Live account linked to your elmcity hub.
+</p>
+
+<p>Hub URL: <a href="/services/__ID__/get_editable_metadata?flavor=metadata">/services/__ID__/get_editable_metadata?flavor=metadata</a></p>
+
+<p>Feeds URL: <a href="/services/__ID__/get_editable_metadata?flavor=feeds">/services/__ID__/get_editable_metadata?flavor=feeds</a></p>
+
+<h3>View hub stats</h3>
+
+<p>URL: <a href="/services/__ID__/stats">/services/__ID__/stats</a></p>
+
+<p>
+A report showing how many events were loaded from your various sources on the last run of the aggregator.
+</p>
+
+
+
+<h2>For webmasters</h2>
 
 <h3>HTML</h3>
 
-<p>URL: <a href="/services/__ID__/html">/services/__ID__/html</a></p>
+<p>URL for events in HTML: <a href="/services/__ID__/html">/services/__ID__/html</a></p>
 
 <p>
-This is the default HTML rendering for your hub. If you want to use it as is, you can link to it from one of your pages, or include it in one of your pages via an IFRAME like so:
+This is the default HTML rendering for your hub. If you want to use it as is, you can include it in one of your pages via an IFRAME like so:
 </p>
 
-
-<p>
-The code:
-</p>
-
-<p>
-&lt;iframe src="http://elmcity.cloudapp.net/services/__ID__/html" style="border-width:thin;border-style:solid;width:500px;height:400px">&lt;/iframe>
-</p>
 
 <p>
 <iframe name="html" src="/services/__ID__/html" style="border-width:thin;border-style:solid;width:520px;height:800px"></iframe>
@@ -28,81 +71,57 @@ The code:
 
 
 <p>
-The default rendering is controlled by a default template and CSS file:
+Code:
 </p>
 
 <p>
-1. template: <a href="http://elmcity.blob.core.windows.net/admin/events.tmpl">http://elmcity.blob.core.windows.net/admin/events.tmpl</a>
+&lt;iframe src="http://elmcity.cloudapp.net/services/__ID__/html" style="border-width:thin;border-style:solid;width:500px;height:400px">&lt;/iframe>
 </p>
 
 <p>
-2. CSS: <a href="http://elmcity.blob.core.windows.net/admin/elmcity.css">http://elmcity.blob.core.windows.net/admin/elmcity.css</a>
+The default rendering is controlled by a default <a href="http://elmcity.blob.core.windows.net/admin/events.tmpl">template</a> and <a href="http://elmcity.blob.core.windows.net/admin/elmcity.css">CSS file</a>. If you want to change the default rendering, you can swap in your own versions of these.
+</p>
+
+<h4>Today only in HTML (IFRAME)</h4>
+
+<p>URL for today's events in HTML: <a href="/services/__ID__/today_as_html">/services/__ID__/today_as_html</a></p>
+
+<p>
+Code: &lt;iframe width="70%" height="300" src="/services/__ID__/today_as_html">&lt;/iframe>
 </p>
 
 <p>
-If you want to change the default rendering, you can use your own template and/or CSS file and/or banner image. To do that, create the resources and point to them from these metadata variables:
+Behavior:
+</p>
+<p>
+<iframe width="70%" height="300" src="/services/__ID__/today_as_html"></iframe>
+</p>
+
+<h4>Today only in HTML (JavaScript)</h4>
+
+<p>Today only in HTML (JavaScript): <a href="/services/__ID__/jswidget">/services/__ID__/jswidget</a></p>
+
+<p>
+Code:
 </p>
 
 <p>
-1. template=http://...
+&lt;script  src="/services/__ID__/jswidget">&lt;/script>
 </p>
 
 <p>
-2. css=http://...
+Behavior:
 </p>
 
-<h3>XML</h3>
-
-<p>URL: <a href="/services/__ID__/xml">/services/__ID__/xml</a></p>
-
-<p>
-Your events in XML. 
-</p>
-
-
-<h3>ICS</h3>
-
-<p>URL: <a href="/services/__ID__/ics">/services/__ID__/ics</a></p>
-
-<p>
-Your events in ICS (iCalendar).
-</p>
-
-<p>
-Here's an example of how to embed your iCalendar feed using Google Calendar, as seen on the <a href="http://inmenlo.com/events-calendar/">InMenlo</a> site.
-</p>
-
-<p>
-The code:
-</p>
-
-<p>
-&lt;iframe name="ics" scrolling="no" height="300" frameborder="0" width="500" style="border-width: 0pt;" src="http://www.google.com/calendar/hosted/inmenlo.com/embed?showTitle=0&amp;showCalendars=0&amp;mode=AGENDA&amp;height=300&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=vj2cb6p3fq5jidup23rfu8vnor7472d2%40import.calendar.google.com&amp;color=%23AB8B00&amp;ctz=America%2FLos_Angeles">&lt;/iframe>
-</p>
-
-<p>
-The behavior:
-</p>
-
-<p>
-<iframe scrolling="no" height="300" frameborder="0" width="560" style="border-width: 0pt;" src="http://www.google.com/calendar/hosted/inmenlo.com/embed?showTitle=0&amp;showCalendars=0&amp;mode=AGENDA&amp;height=300&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=vj2cb6p3fq5jidup23rfu8vnor7472d2%40import.calendar.google.com&amp;color=%23AB8B00&amp;ctz=America%2FLos_Angeles"></iframe>
-</p>
-
-<p>
-Advantages: Easy to customize, various views available, can display in user's timezone if that is not the same as the location's timezone. Disadvantages: Tells less at a glance about each event, doesn't make event URLs into links. 
-</p>
-
-<p>
-To make this happen, import http://elmcity.cloudapp.net/services/__ID__/ics into Google Calendar, do Settings -> Calendar Settings -> Calendars -> Embed -> Customize. Pick your options, then capture the generated IFRAME code and stick it into your page.
-</p>
+<script src="/services/__ID__/jswidget"></script>
 
 
 <h3>JSON</h3>
 
-<p>URL: <a href="/services/__ID__/json">/services/__ID__/json</a></p>
+<p>URL for events in JSON: <a href="/services/__ID__/json">/services/__ID__/json</a></p>
 
 <p>
-Your events in JSON. Here are some widgets made, using the JSONP mechanism, from these URLs:
+You can use the JSONP mechanism, as shown in the following examples from Keene, NH:
 </p>
 
 <p>
@@ -116,6 +135,11 @@ http://elmcity.cloudapp.net/services/elmcity/json?jsonp=government&count=5&view=
 <p>
 http://elmcity.cloudapp.net/services/elmcity/json?jsonp=recreation&count=5&view=recreation
 </p>
+
+<p>
+View the source of this page for JavaScript code that produces the following behavior:
+</p>
+
 
 <script>
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -221,84 +245,44 @@ function eventlist(obj,id)
 
 <h3>RSS</h3>
 
-<p>URL: <a href="/services/__ID__/rss">/services/__ID__/rss</a></p>
+<p>URL for events in RSS: <a href="/services/__ID__/rss">/services/__ID__/rss</a></p>
 
 <p>
-Your events in RSS. Among other uses, this enables sites like WordPress.com, which don't allow the JavaScript tricks needed to include other formats, but can show RSS feeds, to display events.
+Among other uses, this format enables sites like WordPress.com, which don't allow the JavaScript tricks needed to include other formats, but can show RSS feeds, to display events. See for example <a href="http://blog.jonudell.net/">blog.jonudell.net</a>, where a WordPress RSS widget is displaying upcoming music events in Keene, NH (at bottom right of blog homepage). The URL used by the widget is http://elmcity.cloudapp.net/services/elmcity/rss?view=music&count=10.
 </p>
 
-<h3>Today's events</h3>
+<h3>ICS</h3>
 
-<p>URL: <a href="/services/__ID__/today_as_html">/services/__ID__/today_as_html</a></p>
+<p>URL for events in ICS (iCalendar): <a href="/services/__ID__/ics">/services/__ID__/ics</a></p>
 
-<p>
-A default HTML rendering of just today's events. Can be sourced into an iframe, like so:
-</p>
 
 <p>
-&lt;iframe width="70%" height="300" src="/services/__ID__/today_as_html">&lt;/iframe>
+Here's an example of how to publish using Google Calendar, as seen on the <a href="http://inmenlo.com/events-calendar/">InMenlo</a> site.
 </p>
 
 <p>
-<iframe width="70%" height="300" src="/services/__ID__/today_as_html"></iframe>
-</p>
-
-<p>URL: <a href="/services/__ID__/jswidget">/services/__ID__/jswidget</a></p>
-
-<p>
-A default HTML rendering of just today's events. Can be sourced like so:
+Code:
 </p>
 
 <p>
-&lt;script  src="/services/__ID__/jswidget">&lt;/script>
+&lt;iframe name="ics" scrolling="no" height="300" frameborder="0" width="500" style="border-width: 0pt;" src="http://www.google.com/calendar/hosted/inmenlo.com/embed?showTitle=0&amp;showCalendars=0&amp;mode=AGENDA&amp;height=300&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=vj2cb6p3fq5jidup23rfu8vnor7472d2%40import.calendar.google.com&amp;color=%23AB8B00&amp;ctz=America%2FLos_Angeles">&lt;/iframe>
 </p>
-
-<h2>2. View hub configuration and feed registry</h2>
-
-<p>URL: <a href="/services/__ID__/metadata">/services/__ID__/metadata</a></p>
-
-<h2>3. Edit hub configuration and feed registry</h2>
 
 <p>
-To use these links, first visit the home page and authenticate using the Twitter account linked to your elmcity hub.
+Behavior:
 </p>
-
-<p>Hub URL: <a href="/services/__ID__/get_editable_metadata?flavor=metadata">/services/__ID__/get_editable_metadata?flavor=metadata</a></p>
-
-<p>Feeds URL: <a href="/services/__ID__/get_editable_metadata?flavor=feeds">/services/__ID__/get_editable_metadata?flavor=feeds</a></p>
-
-<h2>4. Stats</h2>
-
-<p>URL: <a href="/services/__ID__/stats">/services/__ID__/stats</a></p>
 
 <p>
-A report showing how many events were loaded from your various sources on the last run of the aggregator.
+<iframe scrolling="no" height="300" frameborder="0" width="560" style="border-width: 0pt;" src="http://www.google.com/calendar/hosted/inmenlo.com/embed?showTitle=0&amp;showCalendars=0&amp;mode=AGENDA&amp;height=300&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=vj2cb6p3fq5jidup23rfu8vnor7472d2%40import.calendar.google.com&amp;color=%23AB8B00&amp;ctz=America%2FLos_Angeles"></iframe>
 </p>
 
-<h2>5. Tags</h2>
 
-<h3>Tags as HTML</h3>
+<h3>XML</h3>
 
-<p>URL: <a href="/services/__ID__/tags_html">/services/__ID__/tags_html</a></p>
+<p>URL: <a href="/services/__ID__/xml">/services/__ID__/xml</a></p>
 
 <p>
-A report showing which categories you're using, and how many events are in each category.
+Your events in XML. 
 </p>
 
-
-<h3>Tags as JSON</h3>
-
-<p>URL: <a href="/services/__ID__/tags_json">/services/__ID__/tags_json</a></p>
-
-<p>
-Same report as JSON.
-</p>
-
-<h2>6. Search (applies only to where hubs)</h2>
-
-<p>URL: <a href="/services/__ID__/search">/services/__ID__/search</a></p>
-
-<p>
-Output from an experimental search robot that tries to find web pages for your location that contain event information that <i>isn't</i> available in iCalendar format. It's intended to help curators find source that could be publishing iCalendar but aren't. See <a href="http://blog.jonudell.net/2009/03/13/searching-for-calendar-information/">Searching for calendar information</a> for more on this.
-</p>
 
