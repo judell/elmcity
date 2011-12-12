@@ -25,6 +25,7 @@ using DDay.iCal;
 using DDay.iCal.Serialization;
 using ElmcityUtils;
 using Microsoft.WindowsAzure.ServiceRuntime;
+using System.Threading.Tasks;
 
 namespace WorkerRole
 {
@@ -508,10 +509,14 @@ namespace WorkerRole
 			futurecount += ustats.eventcount;
 			futurecount += ebstats.eventcount;
 
-			foreach (var feedurl in fr.feeds.Keys)
-			{
+			var options = new ParallelOptions();
+
+			Parallel.ForEach(source: fr.feeds.Keys, parallelOptions: options, body: (feedurl, loop_state) =>
+			//		foreach (var feedurl in fr.feeds.Keys)
+				{
 				StatsRow(id, istats, ref report, ref futurecount, feedurl);
-			}
+				}
+			);
 
 			report += "</table>\n";
 
@@ -798,6 +803,8 @@ All events {8}, population {9}, events/person {10:f}
 
 			Utils.MakeWhereSummary();
 			Utils.MakeWhatSummary();
+			
+			//Utils.MakeFeaturedHubs();
 
 			try // refresh fb api access 
 			{
