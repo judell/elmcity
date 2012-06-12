@@ -79,42 +79,42 @@ namespace CalendarAggregator
 		[Test]
 		public void TwoAmIsWeeHour()
 		{
-			var two_am = new DateTime(Configurator.DT_COMP_YEAR, Configurator.DT_COMP_MONTH, Configurator.DT_COMP_DAY, 2, 0, 0);
+			var two_am = new DateTime(TimesOfDay.DT_COMP_YEAR, TimesOfDay.DT_COMP_MONTH, TimesOfDay.DT_COMP_DAY, 2, 0, 0);
 			Assert.That(Utils.ClassifyTime(two_am) == TimeOfDay.WeeHours);
 		}
 
 		[Test]
 		public void NineThirtyPmIsNight()
 		{
-			var nine_thirty_pm = new DateTime(Configurator.DT_COMP_YEAR, Configurator.DT_COMP_MONTH, Configurator.DT_COMP_DAY, 21, 30, 0);
+			var nine_thirty_pm = new DateTime(TimesOfDay.DT_COMP_YEAR, TimesOfDay.DT_COMP_MONTH, TimesOfDay.DT_COMP_DAY, 21, 30, 0);
 			Assert.That(Utils.ClassifyTime(nine_thirty_pm) == TimeOfDay.Night);
 		}
 
 		[Test]
 		public void FiveAmIsMorning()
 		{
-			var five_am = new DateTime(Configurator.DT_COMP_YEAR, Configurator.DT_COMP_MONTH, Configurator.DT_COMP_DAY, 5, 0, 0);
+			var five_am = new DateTime(TimesOfDay.DT_COMP_YEAR, TimesOfDay.DT_COMP_MONTH, TimesOfDay.DT_COMP_DAY, 5, 0, 0);
 			Assert.That(Utils.ClassifyTime(five_am) == TimeOfDay.Morning);
 		}
 
 		[Test]
 		public void NoonIsLunch()
 		{
-			var noon = new DateTime(Configurator.DT_COMP_YEAR, Configurator.DT_COMP_MONTH, Configurator.DT_COMP_DAY, 12, 0, 0);
+			var noon = new DateTime(TimesOfDay.DT_COMP_YEAR, TimesOfDay.DT_COMP_MONTH, TimesOfDay.DT_COMP_DAY, 12, 0, 0);
 			Assert.That(Utils.ClassifyTime(noon) == TimeOfDay.Lunch);
 		}
 
 		[Test]
 		public void SixThirtyPmIsEvening()
 		{
-			var six_thirty_pm = new DateTime(Configurator.DT_COMP_YEAR, Configurator.DT_COMP_MONTH, Configurator.DT_COMP_DAY, 18, 30, 0);
+			var six_thirty_pm = new DateTime(TimesOfDay.DT_COMP_YEAR, TimesOfDay.DT_COMP_MONTH, TimesOfDay.DT_COMP_DAY, 18, 30, 0);
 			Assert.That(Utils.ClassifyTime(six_thirty_pm) == TimeOfDay.Evening);
 		}
 
 		[Test]
 		public void MidnightIsUndefined()
 		{
-			var midnight = new DateTime(Configurator.DT_COMP_YEAR, Configurator.DT_COMP_MONTH, Configurator.DT_COMP_DAY, 0, 0, 0);
+			var midnight = new DateTime(TimesOfDay.DT_COMP_YEAR, TimesOfDay.DT_COMP_MONTH, TimesOfDay.DT_COMP_DAY, 0, 0, 0);
 			Assert.That(Utils.ClassifyTime(midnight) == TimeOfDay.AllDay);
 		}
 
@@ -215,7 +215,7 @@ import System
 		[Test]
 		public void IcsFromFbPageSucceeds()
 		{
-			var url = "http://elmcity.cloudapp.net/ics_from_fb_page?fb_id=146837308680597&elmcity_id=socialhartford";
+			var url = "http://elmcity.cloudapp.net/ics_from_fb_page?fb_id=227760757240194&elmcity_id=socialhartford";
 			var ical = DDay.iCal.iCalendar.LoadFromUri(new Uri(url));
 			Assert.That(ical.First().GetType() == typeof(DDay.iCal.iCalendar));
 		}
@@ -242,14 +242,14 @@ import System
 		[Test]
 		public void WrdCanDeserialize()
 		{
-			var wrd = Utils.GetWrd();
-			Assert.That(wrd.what_ids.Count + wrd.where_ids.Count == wrd.ready_ids.Count );
+			var wrd = WebRoleData.GetWrd();
+			Assert.That(wrd.what_ids.Count + wrd.where_ids.Count + wrd.region_ids.Count == wrd.ready_ids.Count );
 		}
 
 		[Test]
 		public void WrdAllHubsHaveWhatOrWhere()
 		{
-			var wrd = Utils.GetWrd();
+			var wrd = WebRoleData.GetWrd();
 			foreach ( var id in wrd.ready_ids )
 			{
 				var calinfo = Utils.AcquireCalinfo(id);
@@ -266,7 +266,7 @@ import System
 		}
 
 		[Test]
-		public void AllHubRecordsHaveProperType()
+		public void AllWhereHubRecordsHaveProperType()
 		{
 			var query = "$filter=where ne '' or what ne ''";
 			var tsr = ts.QueryAllEntitiesAsListDict("metadata", query);
@@ -276,7 +276,7 @@ import System
 				var dict_str = ObjectUtils.DictObjToDictStr(dict_obj);
 				Assert.That(dict_str.ContainsKey("type"));
 				if ( dict_str.ContainsKey("where") && dict_str["where"] != "" )
-					Assert.That(dict_str["type"] == "where");
+					Assert.That(dict_str["type"] == "where" || dict_str["type"] == "inactive");
 			}
 		}
 
@@ -304,6 +304,34 @@ import System
 			}
 		}
 		 */
+
+		#endregion
+
+		#region metadata
+
+		[Test]
+		public void GetMetadataFromDescriptionFailsForBogusUrl()
+		{
+			var d = Utils.GetMetadataFromDescription(Configurator.ical_description_metakeys, "url=http//foo");
+			Assert.IsFalse(d.ContainsKey("url"));
+		}
+
+		[Test]
+		public void GetMetadataFromDescriptionFailsForCategoryBadChars()
+		{
+			var d = Utils.GetMetadataFromDescription(Configurator.ical_description_metakeys, "category=ThisCategoryIs<i>Bogus</i>!" );
+			Assert.IsFalse(d.ContainsKey("category"));
+		}
+
+		[Test]
+		public void GetMetadataFromDescriptionSucceeds()
+		{
+			var url = "http://music.com";
+			var category = "music,classical-music";
+			var d = Utils.GetMetadataFromDescription(Configurator.ical_description_metakeys, "url=http://music.com category=music,classical-music");
+			Assert.That(d.ContainsKey("url") && d["url"] == url);
+			Assert.That(d.ContainsKey("category") && d["category"] == category);
+		}
 
 		#endregion
 

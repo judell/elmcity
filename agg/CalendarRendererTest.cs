@@ -28,7 +28,7 @@ namespace CalendarAggregator
 	{
 		private CalendarRenderer cr;
 		private ZonelessEventStore es;
-		private string event_html_header = "<div class=\"bl\"";
+		private string event_html_header = "class=\"bl\"";
 		private Calinfo calinfo = Utils.AcquireCalinfo(Configurator.testid);
 
 		static Uri view_uri = new Uri("http://elmcity.cloudapp.net/services/elmcity/xml?view=government");
@@ -43,7 +43,7 @@ namespace CalendarAggregator
 			var est = new EventStoreTest();
 			est.SerializeAndDeserializeZonelessEventStoreYieldsExpectedEvents();
 			this.es = new ZonelessEventStore(calinfo);
-			var uri = BlobStorage.MakeAzureBlobUri(EventStoreTest.test_container, this.es.objfile);
+			var uri = BlobStorage.MakeAzureBlobUri(EventStoreTest.test_container, this.es.objfile,false);
 			this.es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
 		}
 

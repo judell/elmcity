@@ -9,7 +9,9 @@ namespace CalendarAggregator
 {
 	public class ActionsTest
 	{
-		private static string test_fb_id = Configurator.test_fb_id;
+		/* Idle for now. Supports http://blog.jonudell.net/2011/06/02/syndicating-facebook-events but mechanism available for other use
+
+        private static string test_fb_id = Configurator.test_fb_id;
 		private static string test_fb_key = Configurator.test_fb_key;
 		private static string test_fb_url = String.Format("http://www.facebook.com/ical/u.php?uid={0}&key={1}", test_fb_id, test_fb_key);
 		private string id = "elmcity";  // todo: externalize these
@@ -78,6 +80,7 @@ namespace CalendarAggregator
 			var action = new AddFacebookFeed();
 			Assert.IsFalse(action.Perform(tc, this.id));
 		}
+		 */
 
 	}
 }

@@ -101,7 +101,7 @@ namespace ElmcityUtils
 
 				try
 				{
-					var common_script_url = BlobStorage.MakeAzureBlobUri("admin", "common.py");
+					var common_script_url = BlobStorage.MakeAzureBlobUri("admin", "common.py", false);
 					var common_script = HttpUtils.FetchUrl(common_script_url).DataAsString();
 					s = s.Replace("#include common.py", common_script);
 				}

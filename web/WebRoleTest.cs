@@ -80,14 +80,14 @@ namespace WebRole
 		public void AuthenticatedElmcityIdsIncludesExpectedTwitterName()
 		{
 			var elmcity_ids = twitter_auth.AuthenticatedElmcityIds("judell");
-			Assert.That(elmcity_ids.Exists(x => x == "elmcity"));
+			Assert.That(elmcity_ids.HasItem("elmcity"));
 		}
 
 		[Test]
 		public void AuthenticatedElmcityIdsDoesNotIncludeUnxpectedTwitterName()
 		{
 			var elmcity_ids = twitter_auth.AuthenticatedElmcityIds("judell");
-			Assert.IsFalse(elmcity_ids.Exists(x => x == "a2cal"));
+			Assert.IsFalse(elmcity_ids.HasItem("a2cal"));
 		}
 
 		[Test]
@@ -168,14 +168,14 @@ namespace WebRole
 		public void AuthenticatedElmcityIdsIncludesExpectedFacebookId()
 		{
 			var elmcity_ids = facebook_auth.AuthenticatedElmcityIds("Jon.R.Udell");
-			Assert.That(elmcity_ids.Exists(x => x == "elmcity"));
+			Assert.That(elmcity_ids.HasItem("elmcity"));
 		}
 
 		[Test]
 		public void AuthenticatedElmcityIdsDoesNotIncludeUnxpectedFacebookId()
 		{
 			var elmcity_ids = facebook_auth.AuthenticatedElmcityIds("Jon.R.Udell");
-			Assert.IsFalse(elmcity_ids.Exists(x => x == "a2cal"));
+			Assert.IsFalse(elmcity_ids.HasItem("a2cal"));
 		}
 
 		[Test]

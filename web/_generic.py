@@ -1,4 +1,4 @@
-import sys, clr
+import sys, clr, re
 
 clr.AddReference("System")
 clr.AddReference("mscorlib")
@@ -33,6 +33,7 @@ usage = """
 Usage:
 
 /test
+/get_fb_ical_url
 /schedule/ID
 /reset/ID
 /feeds/ID
@@ -76,11 +77,6 @@ def get_task_for_calinfo(calinfo):
   task = Scheduler.FetchTaskForId(calinfo.id)
   return get_task(task,calinfo)
 
-def delete_dict(dict):
-  pk = dict['PartitionKey']
-  rk = dict['RowKey']
-  tsr = ts.DeleteEntity(metatable,pk,rk)
-
 
 # main
 
@@ -103,7 +99,7 @@ if (arg0 == 'test'):
     result += 'cwd: ' + os.getcwd() + '\n\n'
     result += 'contents of cwd: ' + ', '.join(glob.glob('./*')) + '\n\n'
 
-    result += "webrole_reload_interval_hours: %s\n\n" % CalendarAggregator.Configurator.webrole_reload_interval_hours
+    result += "facebook_mystery_offset_hours: %s\n\n" % CalendarAggregator.Configurator.facebook_mystery_offset_hours
 
   except:
     result += traceback.format_exc()
@@ -148,7 +144,7 @@ if ( arg0 == 'dashboard' ):
   except:
     tb = format_trace_back()
     result += tb
-    GenUtils.PriorityLogMsg('info', '_run.py', tb)
+    GenUtils.PriorityLogMsg('info', 'dashboard', tb)
 
 if ( arg0 == 'pylib' ):
   result = os.path.realpath('.')
@@ -156,9 +152,4 @@ if ( arg0 == 'pylib' ):
 if ( arg0 == 'repickle' ):
   id = arg1    
   CalendarAggregator.Utils.RecreatePickledCalinfoAndRenderer(id); 
-  
- 
-
-
-
 

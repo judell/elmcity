@@ -1,8 +1,15 @@
-<h1>__ID__</h1>
+<html>
+<head>
+<title>resources for the __ID__ hub</title>
+<link type="text/css" rel="stylesheet" href="http://elmcity.blob.core.windows.net/admin/elmcity-1.4.css"/>
+</head>
+<body class="hubdoc">
 
-<h2>For everyone</h2>
+<h1 class="hubdoc">resources for the __ID__ hub</h1>
 
-<h3>iCalendar (ICS) feeds</h3>
+<h2 class="hubdoc">For everyone</h2>
+
+<h3 class="hubdoc">iCalendar (ICS) feeds</h3>
 
 <p>
 When an elmcity hub has been tagged well, you can use tags to create iCalendar views that you can subscribe to in any calendar program. Sample URLs that you can subscribe to Google Calendar or Outlook or Apple iCal or Hotmail Calendar or another calendar client:
@@ -28,13 +35,13 @@ When an elmcity hub has been tagged well, you can use tags to create iCalendar v
 <a href="http://elmcity.cloudapp.net/services/fallschurchcals/ics?view=books">books in Falls Church</a> (http://elmcity.cloudapp.net/services/fallschurchcals/ics?view=books)
 </p>
 
-<h2>For curators</h2>
+<h2 class="hubdoc">For curators</h2>
 
-<h3>View hub settings and feeds</h3>
+<h3 class="hubdoc">View hub settings and feeds</h3>
 
 <p>URL: <a href="/services/__ID__/metadata">/services/__ID__/metadata</a></p>
 
-<h3>Edit hub settings and feeds</h3>
+<h3 class="hubdoc">Edit hub settings and feeds</h3>
 
 <p>
 To use these links, first visit the home page and authenticate using the Twitter or Facebook or Gmail or Windows Live account linked to your elmcity hub.
@@ -44,7 +51,7 @@ To use these links, first visit the home page and authenticate using the Twitter
 
 <p>Feeds URL: <a href="/services/__ID__/get_editable_metadata?flavor=feeds">/services/__ID__/get_editable_metadata?flavor=feeds</a></p>
 
-<h3>View hub stats</h3>
+<h3 class="hubdoc">View hub stats</h3>
 
 <p>URL: <a href="/services/__ID__/stats">/services/__ID__/stats</a></p>
 
@@ -52,11 +59,18 @@ To use these links, first visit the home page and authenticate using the Twitter
 A report showing how many events were loaded from your various sources on the last run of the aggregator.
 </p>
 
+<h3 class="hubdoc">View feed processing results</h3>
+
+<p>URL: <a href="http://elmcity.blob.core.windows.net/__LOWERID__/feed_processing_results.json">results</a></p>
+
+<p>
+A report showing details about successful or unsuccessful processing of feeds.
+</p>
 
 
-<h2>For webmasters</h2>
+<h2 class="hubdoc">For webmasters</h2>
 
-<h3>HTML</h3>
+<h3 class="hubdoc">HTML</h3>
 
 <p>URL for events in HTML: <a href="/services/__ID__/html">/services/__ID__/html</a></p>
 
@@ -113,10 +127,14 @@ Code:
 Behavior:
 </p>
 
+<div style="border-width:thin;border-style:solid;width:80%;padding:15px;">
+
 <script src="/services/__ID__/jswidget"></script>
 
+</div>
 
-<h3>JSON</h3>
+
+<h3 class="hubdoc">JSON</h3>
 
 <p>URL for events in JSON: <a href="/services/__ID__/json">/services/__ID__/json</a></p>
 
@@ -206,15 +224,15 @@ function eventlist(obj,id)
   var s = '';
   for ( var datekey in events_by_date )
   {
-    s += '<div class="Date">' + datekey + '</div>';
+    s += '<p>' + datekey + '</p>';
     var list = events_by_date[datekey];
     for ( i = 0; i < list.length; i++ )
       {
       var evt = list[i];
-      s += '<div class="Event">';
-      s += '<span class="Time">' + evt['evt_time'] + '</span> ';
-      s += '<span class="Title"><a href="' + evt["url"] + '" title="source: ' + evt["source"] + '">' + evt["title"] + '</a>';
-      s += '<span class="Source"> (' + evt['source'] + ')</span>';
+      s += '<div class="bl">';
+      s += '<span class="st">' + evt['evt_time'] + '</span> ';
+      s += '<span class="ttl"><a href="' + evt["url"] + '" title="source: ' + evt["source"] + '">' + evt["title"] + '</a>';
+      s += '<span class="src"> (' + evt['source'] + ')</span>';
       s += '</div>';
       }
     }
@@ -224,26 +242,26 @@ function eventlist(obj,id)
 
 <table>
 <tr>
-<td>
-<div class="EventList" id="music" />
-<div class="EventListTitle">keene: music</div>
+<td valign="top" width="30%">
+<div class="hubdoc-widget" id="music" />
+<p> keene: music</p>
 <script src="http://elmcity.cloudapp.net/services/elmcity/json?jsonp=music&count=5&view=music"></script>
 </td>
-<td>
-<div class="EventList" id="government" />
-<div class="EventListTitle">keene: government</div>
+<td valign="top" width="30%">
+<div class="hubdoc-widget" id="government" />
+<p>keene: government</p>
 <script src="http://elmcity.cloudapp.net/services/elmcity/json?jsonp=government&count=5&view=government"></script>
 </td>
-<td>
-<div class="EventList" id="recreation"/>
-<div class="EventListTitle">keene: recreation</div>
+<td valign="top" width="30%">
+<div class="hubdoc-widget" id="recreation"/>
+<p>keene: recreation</p>
 <script src="http://elmcity.cloudapp.net/services/elmcity/json?jsonp=recreation&count=5&view=recreation"></script>
 </td>
 </tr>
 </table>
 
 
-<h3>RSS</h3>
+<h3 class="hubdoc">RSS</h3>
 
 <p>URL for events in RSS: <a href="/services/__ID__/rss">/services/__ID__/rss</a></p>
 
@@ -251,7 +269,7 @@ function eventlist(obj,id)
 Among other uses, this format enables sites like WordPress.com, which don't allow the JavaScript tricks needed to include other formats, but can show RSS feeds, to display events. See for example <a href="http://blog.jonudell.net/">blog.jonudell.net</a>, where a WordPress RSS widget is displaying upcoming music events in Keene, NH (at bottom right of blog homepage). The URL used by the widget is http://elmcity.cloudapp.net/services/elmcity/rss?view=music&count=10.
 </p>
 
-<h3>ICS</h3>
+<h3 class="hubdoc">ICS</h3>
 
 <p>URL for events in ICS (iCalendar): <a href="/services/__ID__/ics">/services/__ID__/ics</a></p>
 
@@ -277,7 +295,7 @@ Behavior:
 </p>
 
 
-<h3>XML</h3>
+<h3 class="hubdoc">XML</h3>
 
 <p>URL: <a href="/services/__ID__/xml">/services/__ID__/xml</a></p>
 
@@ -286,3 +304,5 @@ Your events in XML.
 </p>
 
 
+</body>
+</html>

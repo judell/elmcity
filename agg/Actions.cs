@@ -36,17 +36,17 @@ namespace CalendarAggregator
 
 	public class TwitterAction : IAction<TwitterCommand>
 	{
-		public virtual bool Validate(TwitterCommand command)
+		public virtual bool Validate(TwitterCommand twitter_command)
 		{
-			if (command.command == null)
+			if (twitter_command.command == TwitterCommandName.none)
 			{
-				this.Complain(command, "message didn't start with a command verb");
+				this.Complain(twitter_command, "message didn't start with a command verb");
 				return false;
 			}
-			var args_include_required = command.required_args.IsSubsetOf<string>(command.args_dict.Keys.ToList());
+			var args_include_required = twitter_command.required_args.IsSubsetOf<string>(twitter_command.args_dict.Keys.ToList());
 			if (args_include_required == false)
 			{
-				this.Complain(command, "all required args not included");
+				this.Complain(twitter_command, "all required args not included");
 				return false;
 			}
 
@@ -114,6 +114,8 @@ namespace CalendarAggregator
 		}
 	}
 
+	// Supports http://blog.jonudell.net/2011/06/02/syndicating-facebook-events/
+	// Idle for now, but mechanism available for other use
 	public class AddFacebookFeed : TwitterAction
 	{
 		public override bool Validate(TwitterCommand command)

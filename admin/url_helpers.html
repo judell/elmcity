@@ -51,6 +51,33 @@ var ical_url = 'http://elmcity.cloudapp.net/get_fb_ical_url' +
 location.href = ical_url;
 }
 
+function get_eb_eid_ical_url()
+{
+var eb_page_url = $('#eb_eid_page_url').val();
+eb_page_url = encodeURIComponent(eb_page_url);
+var tzname = $('#eb_tzname').val();
+var ical_url = 'http://elmcity.cloudapp.net/get_ical_url_from_eid_of_eventbrite_event_page' +
+                '?url=' +
+                eb_page_url +
+                '&tzname=' +
+                tzname;
+location.href = ical_url;
+}
+
+
+function get_eb_ical_url()
+{
+var eb_page_url = $('#eb_page_url').val();
+eb_page_url = encodeURIComponent(eb_page_url);
+var elmcity_id = $('#eb_elmcity_id').val();
+var ical_url = 'http://elmcity.cloudapp.net/get_ical_url_from_eventbrite_event_page' +
+                '?url=' +
+                eb_page_url +
+                '&elmcity_id=' +
+                elmcity_id;
+location.href = ical_url;
+}
+
 
 function get_hs_ical_url()
 {
@@ -145,13 +172,54 @@ var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
 location.href = ical_url;
 }
 
+function get_ics_to_ics_ical_url_4()
+{
+var filter_feed_url   = $('#trinity_feed_url_away').val();
+var include_keyword       = $('#location_include_away').val();
+var elmcity_id        = $('#hartford_elmcity_id_away').val();
+
+var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
+                '?feedurl=' +
+                encodeURIComponent(filter_feed_url) +
+                '&include_keyword=' +
+                include_keyword +
+                '&location_only=' + 
+                'yes'  +
+                '&elmcity_id=' +
+                elmcity_id;
+
+
+location.href = ical_url;
+}
+
+function get_ics_to_ics_ical_url_5()
+{
+var filter_feed_url   = $('#trinity_feed_url_home').val();
+var exclude_keyword       = $('#location_exclude_away').val();
+var elmcity_id        = $('#hartford_elmcity_id_home').val();
+
+var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
+                '?feedurl=' +
+                encodeURIComponent(filter_feed_url) +
+                '&exclude_keyword=' +
+                exclude_keyword +
+                '&location_only=' + 
+                'yes'  +
+                '&elmcity_id=' +
+                elmcity_id;
+
+
+location.href = ical_url;
+}
+
+
 
 function get_rss_xcal_ical_url()
 {
 var rss_xcal_feed_url   = $('#rss_xcal_feed_url').val();
 var rss_xcal_tz         = $('#rss_xcal_tz option:selected').text();
 
-var ical_url = 'http://elmcity.cloudapp.net/get_rss_xcal_ical_url'
+var ical_url = 'http://elmcity.cloudapp.net/get_rss_xcal_ical_url' +
                 '?feedurl=' +
                 encodeURIComponent(rss_xcal_feed_url) +
                 '&tzname=' +
@@ -199,6 +267,153 @@ This helper accepts the URL of a Facebook Page and an elmcity ID. It produces a 
 
 
 </table>
+
+<a name="eventbrite_page"></a>
+<h2>EventBrite Page</h2>
+
+<p>
+This helper accepts the URL of an EventBrite event page and a timezone. It finds the EventBrite ID for the event, synthesizes an iCalendar feed for that event, and produces an iCalendar feed URL that you can add to your hub's registry.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">EventBrite Page: </td>
+<td><input style="width:4in" id="eb_eid_page_url" value="http://citycampral.eventbrite.com/"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">Timezone: </td>
+<td>
+<select id="eb_tzname">
+<option>afghanistan</option>
+<option>alaskan</option>
+<option>arab</option>
+<option>arabian</option>
+<option>arabic</option>
+<option>argentina</option>
+<option>atlantic</option>
+<option>aus+central</option>
+<option>aus+eastern</option>
+<option>azerbaijan</option>
+<option>azores</option>
+<option>canada+central</option>
+<option>cape+verde</option>
+<option>caucasus</option>
+<option>cen.+australia</option>
+<option>central+america</option>
+<option>central+asia</option>
+<option>central+brazilian</option>
+<option>central+europe</option>
+<option>central+european</option>
+<option>central+pacific</option>
+<option>central</option>
+<option>central+(mexico)</option>
+<option>china</option>
+<option>dateline</option>
+<option>e.+africa</option>
+<option>e.+australia</option>
+<option>e.+europe</option>
+<option>e.+south+america</option>
+<option selected>eastern</option>
+<option>egypt</option>
+<option>ekaterinburg</option>
+<option>fiji</option>
+<option>fle</option>
+<option>georgian</option>
+<option>gmt</option>
+<option>greenland</option>
+<option>greenwich</option>
+<option>gtb</option>
+<option>hawaiian</option>
+<option>india</option>
+<option>iran</option>
+<option>israel</option>
+<option>jordan</option>
+<option>korea</option>
+<option>mauritius</option>
+<option>mid-atlantic</option>
+<option>middle+east</option>
+<option>montevideo</option>
+<option>morocco</option>
+<option>mountain</option>
+<option>mountain+(mexico)</option>
+<option>myanmar</option>
+<option>n.+central+asia</option>
+<option>namibia</option>
+<option>nepal</option>
+<option>new+zealand</option>
+<option>newfoundland</option>
+<option>north+asia+east</option>
+<option>north+asia</option>
+<option>pacific+sa</option>
+<option>pacific</option>
+<option>pacific+(mexico)</option>
+<option>pakistan</option>
+<option>romance</option>
+<option>russian</option>
+<option>sa+eastern</option>
+<option>sa+pacific</option>
+<option>sa+western</option>
+<option>samoa</option>
+<option>se+asia</option>
+<option>singapore</option>
+<option>south+africa</option>
+<option>sri+lanka</option>
+<option>taipei</option>
+<option>tasmania</option>
+<option>tokyo</option>
+<option>tonga</option>
+<option>us+eastern</option>
+<option>us+mountain</option>
+<option>venezuela</option>
+<option>vladivostok</option>
+<option>w.+australia</option>
+<option>w.+central+africa</option>
+<option>w.+europe</option>
+<option>west+asia</option>
+<option>west+pacific</option>
+</select>
+</td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_eb_eid_ical_url()"></td>
+<td></td>
+</tr>
+
+
+</table>
+
+<a name="eventbrite"></a>
+
+<h2>EventBrite Organizer</h2>
+
+<p>
+This helper accepts the URL of an EventBrite event page and an elmcity ID. It finds the organizer for the event, synthesizes an iCalendar feed for that organizer's events, and produces a iCalendar feed URL that you can add to your hub's registry.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">EventBrite Page: </td>
+<td><input style="width:4in" id="eb_page_url" value="http://webinno33.eventbrite.com/"></td>
+</tr>
+
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="eb_elmcity_id" value="BostonMA"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_eb_ical_url()"></td>
+<td></td>
+</tr>
+
+
+</table>
+
 
 <a name="csv"></a>
 <h2>CSV (comma-separated values) format</h2>
@@ -470,6 +685,83 @@ Here's how the Berkeley hub uses iCalendar filtering to construct the BAM/PFA fi
 
 </table>
 
+<h3>Filtering by Location</h3>
+
+<p>
+The keyword you'd like to filter might also appear in the LOCATION field of an iCalendar event. Consider <a href="http://b28.cc.trincoll.edu/PublicMasterCalendar/Subscribe.aspx">Trinity College</a>. Its sports schedule lists home and away games, and you can distinguish between them because away games use the word Away in the LOCATION field, like so:
+</p>
+
+<pre>
+LOCATION:Away Brandeis Univ Rieger Tennis Courts
+</pre>
+
+<p>
+Here's how the socialhartford hub uses iCalendar filtering to construct feeds for away games:
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">iCalendar feed URL: </td>
+<td><input id="trinity_feed_url_away" style="width:4in" value="http://b28.cc.trincoll.edu/PublicMasterCalendar/iCalFeed.aspx?data=f1bM4GJyEC4jIO0bLr4Urg%3d%3d"></td>
+</tr>
+
+<tr>
+<td style="text-align:right"><i>include keyword</i>: </td>
+<td><input style="width:1.5in" id="location_include_away" value="away"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">LOCATION only: </td>
+<td><input style="width:1.5in" value="yes"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="hartford_elmcity_id_away" value="socialhartford"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_ics_to_ics_ical_url_4()"></td>
+<td></td>
+</tr>
+
+</table>
+
+<p>
+And for home games:
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">iCalendar feed URL: </td>
+<td><input id="trinity_feed_url_home" style="width:4in" value="http://b28.cc.trincoll.edu/PublicMasterCalendar/iCalFeed.aspx?data=f1bM4GJyEC4jIO0bLr4Urg%3d%3d"></td>
+</tr>
+
+<tr>
+<td style="text-align:right"><i>exclude keyword</i>: </td>
+<td><input style="width:1.5in" id="location_exclude_away" value="away"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">LOCATION only: </td>
+<td><input style="width:1.5in" value="yes"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="hartford_elmcity_id_home" value="socialhartford"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_ics_to_ics_ical_url_5()"></td>
+<td></td>
+</tr>
+
+</table>
+
+
 <a name="highschoolsports"></a>
 <h2>HighSchoolSports.Net</h2>
 
@@ -526,7 +818,7 @@ The <a href="http://events.seattlepi.com/search?cat=1&st=event">Arts & Crafts ca
 
 <tr>
 <td style="text-align:right">RSS feed: </td>
-<td><input style="width:6in" id="rss_xcal_feed" value="http://events.seattlepi.com/search?cat=1&new=n&rss=1&srad=10&st=event&svt=text"></td>
+<td><input style="width:6in" id="rss_xcal_feed_url" value="http://events.seattlepi.com/search?cat=1&new=n&rss=1&srad=10&st=event&svt=text"></td>
 </tr>
 
 <tr>

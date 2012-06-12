@@ -14,6 +14,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using ElmcityUtils;
 using Newtonsoft.Json;
 
@@ -116,11 +117,12 @@ namespace CalendarAggregator
 
 		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 		private string id;
-		public Dictionary<string, IcalStats> stats
+		public ConcurrentDictionary<string, IcalStats> stats
 		{
 			get { return _stats; }
 		}
-		private Dictionary<string, IcalStats> _stats = new Dictionary<string, IcalStats>();
+
+		private ConcurrentDictionary<string, IcalStats> _stats = new ConcurrentDictionary<string, IcalStats>();
 
 		public Dictionary<string, string> feeds
 		{
@@ -157,7 +159,7 @@ namespace CalendarAggregator
 			fs.recurringinstancecount = 0;
 			fs.dday_error = "";
 			fs.prodid = null;
-			stats.Add(feedurl, fs);
+			stats.TryAdd(feedurl, fs);
 		}
 
 		// populate feed registry from azure table (includes what is public on delicious, and also private out-of-band)
@@ -182,7 +184,7 @@ namespace CalendarAggregator
 		{
 			containername = containername.ToLower();
 			// var url = new Uri(string.Format("{0}/{1}/{2}", blobhost, containername, filename));
-			var url = BlobStorage.MakeAzureBlobUri(containername, filename);
+			var url = BlobStorage.MakeAzureBlobUri(containername, filename, false);
 			string json = HttpUtils.FetchUrl(url).DataAsString();
 			return JsonConvert.DeserializeObject<Dictionary<string, IcalStats>>(json);
 		}

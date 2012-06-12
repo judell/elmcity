@@ -110,7 +110,7 @@ namespace ElmcityUtils
 
 		public CacheUtilsTest()
 		{
-			this.blob_uri = BlobStorage.MakeAzureBlobUri(this.containername, this.blobname);
+			this.blob_uri = BlobStorage.MakeAzureBlobUri(this.containername, this.blobname, false);
 			this.view_uri = new Uri(this.blob_uri.ToString() + "?view=government&count=10");
 			var bs_response = bs.PutBlob(containername, blobname, new Hashtable(), view_contents, null);
 			Assert.That(bs_response.HttpResponse.status == System.Net.HttpStatusCode.Created);

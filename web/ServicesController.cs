@@ -43,7 +43,7 @@ namespace WebRole
 
 		#region events
 
-		//[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		//[OutputCache(Duration = ... // output cache not used here, iis cache is managed directly
 		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -117,7 +117,7 @@ namespace WebRole
 				// http://elmcity.cloudapp.net/services/a2cal/stats
 				// http://elmcity.cloudapp.net/services/a2cal/search
 
-				var blob_uri = BlobStorage.MakeAzureBlobUri(this.id, this.id + "." + this.type);
+				var blob_uri = BlobStorage.MakeAzureBlobUri(this.id, this.id + "." + this.type, false);
 
 				// cache static content
 				var blob_key = blob_uri.ToString();
@@ -210,7 +210,7 @@ namespace WebRole
 						break;
 
 					case "stats":
-						blob_uri = BlobStorage.MakeAzureBlobUri(this.id, this.id + ".stats.html");
+						blob_uri = BlobStorage.MakeAzureBlobUri(this.id, this.id + ".stats.html",false);
 						//this.response_bytes = (byte[])CacheUtils.RetrieveBlobAndEtagFromServerCacheOrUri(this.cr.cache, blob_uri)["response_body"];
 						this.response_bytes = HttpUtils.FetchUrl(blob_uri).bytes;
 						new ContentResult
@@ -243,7 +243,7 @@ namespace WebRole
 						break;
 
 					case "search":
-						blob_uri = BlobStorage.MakeAzureBlobUri(this.id, this.id + ".search.html");
+						blob_uri = BlobStorage.MakeAzureBlobUri(this.id, this.id + ".search.html",false);
 						this.response_bytes = (byte[])CacheUtils.RetrieveBlobAndEtagFromServerCacheOrUri(this.cr.cache, blob_uri)["response_body"];
 						new ContentResult
 						{
@@ -269,10 +269,6 @@ namespace WebRole
 			{
 				var logger = new CacheItemRemovedCallback(AspNetCache.LogRemovedItemToAzure);
 				var expiration_hours = ElmcityUtils.Configurator.cache_sliding_expiration.Hours;
-				if (ElmcityApp.wrd.where_ids.Exists(id => id == this.id))
-					expiration_hours = Convert.ToInt32(ElmcityController.settings["where_aggregate_interval_hours"]);
-				else
-					expiration_hours = Convert.ToInt32(ElmcityController.settings["what_aggregate_interval_hours"]);
 				var sliding_expiration = new TimeSpan(expiration_hours, 0, 0);
 				this.cr.cache.Insert(key, bytes, dependency, Cache.NoAbsoluteExpiration, sliding_expiration, CacheItemPriority.Normal, logger);
 			}
@@ -585,7 +581,7 @@ namespace WebRole
 
 		#region odata
 
-		//[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration, VaryByParam = "*")]
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult GetODataFeed(string table, string pk, string rk, string constraints, string since_minutes_ago)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);

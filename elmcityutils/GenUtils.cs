@@ -19,6 +19,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using System.Web;
@@ -245,7 +246,7 @@ namespace ElmcityUtils
 			var settings = new Dictionary<string, string>();
 			var query = string.Format("$filter=PartitionKey eq '{0}'", tablename);
 			var ts = TableStorage.MakeSecureTableStorage();
-			var ts_response = ts.QueryEntities(tablename, query);
+			var ts_response = ts.QueryAllEntitiesAsListDict(tablename, query);
 			var dicts = ts_response.list_dict_obj;
 			foreach (var dict in dicts)
 			{
@@ -431,6 +432,19 @@ namespace ElmcityUtils
 
 		#endregion
 
+		#region json
+
+		public static string PrettifyJson(string json)
+		{
+			var pp = new JsonPrettyPrinter();
+			var sb_ugly = new StringBuilder(json);
+			var sb_pretty = new StringBuilder();
+			pp.PrettyPrint(sb_ugly, sb_pretty);
+			return sb_pretty.ToString();
+		}
+
+		#endregion
+
 		#region other
 
 		public static bool AreEqualLists<T>(IList<T> A, IList<T> B)
@@ -454,6 +468,11 @@ namespace ElmcityUtils
 
 	public static class ListExtensions
 	{
+		public static bool HasItem<T>(this List<T> list, T item)
+		{
+			return list.Exists(x => x.Equals(item));
+		}
+
 		public static bool IsSubsetOf<T>(this List<T> list_one, List<T> list_two)
 		{
 			return !list_one.Except(list_two).Any();
@@ -473,7 +492,6 @@ namespace ElmcityUtils
 				yield return element;
 			}
 		}
-
 
 		public static IEnumerable<T> OnlyUnique<T>(this IEnumerable<T> source) // http://stackoverflow.com/questions/724479/any-chance-to-get-unique-records-using-linq-c
 		{
@@ -499,6 +517,15 @@ namespace ElmcityUtils
 				yield return element;
 			}
 		}
+
+		public static List<T> RemoveUnlessFound<T>(this List<T> source_list, T item, List<T> target_list)
+		{
+			if (! target_list.Exists(x => x.Equals(item)))
+			{
+				source_list.Remove(item);
+			}
+			return source_list;
+		}
 	}
 
 	public static class DictionaryExtensions
@@ -511,6 +538,29 @@ namespace ElmcityUtils
 				dict.Add(key, value);
 		}
 
+		public static void AddOrAppendDictOfListT<TKey, TValue>(this IDictionary<TKey, List<TValue>> dict, TKey key, TValue value)
+		{
+			if (dict.ContainsKey(key))
+				dict[key].Add(value);
+			else
+				dict[key] = new List<TValue>() { value };
+		}
+
+		public static void AddOrUpdateDictOfListT<TKey, TValue>(this IDictionary<TKey, List<TValue>> dict, TKey key, List<TValue> values)
+		{
+			if (dict.ContainsKey(key))
+			{
+				var diffs = values.Except(dict[key]);
+				foreach (var value in diffs)
+					dict[key].Add(value);
+			}
+			else
+			{
+				dict[key] = values;
+			}
+		}
+
+		// todo: replace use of this with generic
 		public static void AddOrUpdateDictOfListStr(this IDictionary<string, List<string>> dict, string key, List<string> values)
 		{
 			if (dict.ContainsKey(key))
@@ -538,7 +588,7 @@ namespace ElmcityUtils
 				return default(TValue);
 		}
 
-		public static void IncrementOrAdd<TKey>(this IDictionary<string,int> dict, string key)
+		public static void IncrementOrAdd<T>(this IDictionary<T,int> dict, T key)
 		{
 		if (dict.ContainsKey(key))
 			dict[key] += 1;

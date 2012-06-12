@@ -50,7 +50,7 @@ namespace ElmcityUtils
 		private static List<Dictionary<string, string>> GetPriorityLogTriggers(TableStorage ts)
 		{
 			var query = "$filter=(PartitionKey eq 'prioritylogtriggers')";
-			var ts_response = ts.QueryEntities("prioritylogtriggers", query);
+			var ts_response = ts.QueryAllEntitiesAsListDict("prioritylogtriggers", query);
 			var list_dict_obj = ts_response.list_dict_obj;
 			var list_dict_str = new List<Dictionary<string, string>>();
 			foreach (var dict_obj in list_dict_obj)
@@ -272,7 +272,7 @@ namespace ElmcityUtils
 			var counter_objects = new Dictionary<string, PerformanceCounter>();
 
 			var query = "$filter=(PartitionKey eq 'counters')";
-			var ts_response = ts.QueryEntities("counters", query);
+			var ts_response = ts.QueryAllEntitiesAsListDict("counters", query);
 			var counter_names_and_categories = ts_response.list_dict_obj;
 
 			foreach (var counter_name_and_category in counter_names_and_categories)

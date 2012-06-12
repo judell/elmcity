@@ -138,6 +138,14 @@ namespace ElmcityUtils
 			return DoHttpWebRequest(request, UTf8ByteArray);
 		}
 
+		public static HttpResponse FetchUrlAsUserAgent(Uri url, string user_agent)
+		{
+			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+			request.UserAgent = user_agent;
+			byte[] UTf8ByteArray = new byte[0];
+			return DoHttpWebRequest(request, UTf8ByteArray);
+		}
+
 		public static HttpResponse FetchUrlNoCache(Uri url)
 		{
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);

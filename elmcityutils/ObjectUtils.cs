@@ -16,14 +16,27 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 
 namespace ElmcityUtils
 {
 	public static class ObjectUtils
 	{
+		public static byte[] SerializeObject(object o)
+		{
+			IFormatter serializer = new BinaryFormatter();
+			var ms = new MemoryStream();
+			serializer.Serialize(ms, o);
+			var buffer = new byte[ms.Length];
+			ms.Seek(0, SeekOrigin.Begin);
+			ms.Read(buffer, 0, (int)ms.Length);
+			return buffer;
+		}
 		public static T GetTypedObj<T>(string id, string name)
 		{
-			var uri = BlobStorage.MakeAzureBlobUri(id, name);
+			var uri = BlobStorage.MakeAzureBlobUri(id, name, false);
 			return (T)BlobStorage.DeserializeObjectFromUri(uri);
 		}
 
@@ -98,14 +111,16 @@ namespace ElmcityUtils
 		public static string DictStrToJson(Dictionary<string, string> dict_str)
 		{
 			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-			return serializer.Serialize(dict_str);
+			var json = serializer.Serialize(dict_str);
+			return GenUtils.PrettifyJson(json);
 		}
 
 
 		public static string ListDictStrToJson(List<Dictionary<string, string>> list_dict_str)
 		{
 			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-			return serializer.Serialize(list_dict_str);
+			var json = serializer.Serialize(list_dict_str);
+			return GenUtils.PrettifyJson(json);
 		}
 
 		public static Dictionary<string, string> GetDictStrFromJsonUri(Uri uri)
@@ -167,14 +182,14 @@ namespace ElmcityUtils
 			try
 			{
 				var json_blob_name = id + "." + name + ".json";
-				var existing_obj_uri = BlobStorage.MakeAzureBlobUri(id, json_blob_name);
+				var existing_obj_uri = BlobStorage.MakeAzureBlobUri(id, json_blob_name, false);
 				var exists = BlobStorage.ExistsBlob(existing_obj_uri);
 				JsonCompareResult comparison = NewJsonMatchesExistingJson(type, new_obj, existing_obj_uri);
 				if (!exists || comparison == JsonCompareResult.different)
 				{
 					var bs = BlobStorage.MakeDefaultBlobStorage();
 					var timestamped_json_blob_name = string.Format(id + "." + string.Format("{0:yyyy.MM.dd.HH.mm}" + "." + name + ".json", DateTime.UtcNow));
-					var timestamped_dict_uri = BlobStorage.MakeAzureBlobUri(id, timestamped_json_blob_name);
+					var timestamped_dict_uri = BlobStorage.MakeAzureBlobUri(id, timestamped_json_blob_name, false);
 					string new_obj_as_json;
 					if (type == JsonSnapshotType.DictStr)
 						new_obj_as_json = ObjectUtils.DictStrToJson((Dictionary<string, string>)new_obj);

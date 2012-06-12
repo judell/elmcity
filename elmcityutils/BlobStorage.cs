@@ -20,6 +20,7 @@ using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml;
+using System.Text;
 
 namespace ElmcityUtils
 {
@@ -187,7 +188,7 @@ namespace ElmcityUtils
 		public static bool ExistsContainer(string containername)
 		{
 			//var url = MakeAzureBlobUri(containername.ToLower(), "");
-			var url = MakeAzureBlobUri(LegalizeContainerName(containername), "");
+			var url = MakeAzureBlobUri(LegalizeContainerName(containername), "", false);
 			var response = HttpUtils.FetchUrl(url);
 			return (response.status == HttpStatusCode.OK);
 		}
@@ -214,7 +215,7 @@ namespace ElmcityUtils
 
 		public static bool ExistsBlob(string containername, string blobname)
 		{
-			var uri = MakeAzureBlobUri(containername, blobname);
+			var uri = MakeAzureBlobUri(containername, blobname, false);
 			return ExistsBlob(uri);
 		}
 
@@ -262,6 +263,19 @@ namespace ElmcityUtils
 		{
 			HttpResponse http_response = DoBlobStoreRequest(containername, blobname, method: "GET", headers: new Hashtable(), data: null, content_type: null, query_string: null);
 			return new BlobStorageResponse(http_response);
+		}
+
+		public HttpResponse RetryAcquireLease(string containername, string blobname)
+		{
+			var completed_delegate = new GenUtils.Actions.CompletedDelegate<HttpResponse, Object>(HttpUtils.CompletedIfStatusEqualsExpected);
+			return GenUtils.Actions.Retry<HttpResponse>(delegate() { return AcquireLease(containername, blobname); }, completed_delegate, completed_delegate_object:HttpStatusCode.Created, wait_secs: 10, max_tries: 12, timeout_secs: TimeSpan.FromSeconds(120));
+		}
+
+		public HttpResponse AcquireLease(string containername, string blobname)
+		{
+			containername = LegalizeContainerName(containername);
+			var headers = new Hashtable() { { "x-ms-lease-action", "acquire" } };
+			return DoBlobStoreRequest(containername, blobname, method: "PUT", headers: headers, data: null, content_type: null, query_string: "?comp=lease");
 		}
 
 		// see http://msdn.microsoft.com/en-us/library/dd179428.aspx for authentication details
@@ -325,14 +339,27 @@ namespace ElmcityUtils
 
 		public BlobStorageResponse SerializeObjectToAzureBlob(object o, string container, string blobname)
 		{
+			var headers = new Hashtable();
+
+			try
+			{
+				if (BlobStorage.ExistsBlob(container, blobname))
+				{
+					var r = this.RetryAcquireLease(container, blobname);
+					if (r.status == HttpStatusCode.Created)
+						headers.Add("x-ms-lease-id", r.headers["x-ms-lease-id"]);
+					else
+						GenUtils.PriorityLogMsg("warning", "SerializeObjectToAzureBlob: Did not acquire lease for: ", container + ", " + blobname);
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "SerializeObjectToAzureBlob", e.Message + e.StackTrace);
+			}
+			
 			container = LegalizeContainerName(container);
-			IFormatter serializer = new BinaryFormatter();
-			var ms = new MemoryStream();
-			serializer.Serialize(ms, o);
-			var buffer = new byte[ms.Length];
-			ms.Seek(0, SeekOrigin.Begin);
-			ms.Read(buffer, 0, (int)ms.Length);
-			return this.PutBlob(container, blobname, new Hashtable(), buffer, "");
+			var bytes = ObjectUtils.SerializeObject(o);
+			return this.PutBlob(container, blobname, headers, bytes, "");
 		}
 
 		public static object DeserializeObjectFromUri(Uri uri)
@@ -357,19 +384,28 @@ namespace ElmcityUtils
 			return o;
 		}
 
-		public static Uri MakeAzureBlobUri(string container, string name)
+		public static Uri MakeAzureBlobUri(string container, string name, bool use_cdn)
 		{
 			string url = string.Format("{0}/{1}/{2}",
-				Configurator.azure_blobhost,
+				use_cdn ? Configurator.azure_cdn_blobhost : Configurator.azure_blobhost,
 				LegalizeContainerName(container), // http://msdn.microsoft.com/en-us/library/dd135715.aspx
 				name);
 			return new Uri(url);
 		}
 
-		public static string GetAzureBlobAsString(string container, string name)
+		public static string GetAzureBlobAsString(string container, string name, bool use_cdn)
 		{
-			var uri = BlobStorage.MakeAzureBlobUri(container, name);
+			var uri = BlobStorage.MakeAzureBlobUri(container, name, use_cdn);
 			return HttpUtils.FetchUrl(uri).DataAsString();
+		}
+
+		public static string MakeSafeBlobnameFromUrl(string url)
+		{
+			var name = TableStorage.MakeSafeRowkey(url);
+			if (name.Length > 250)
+				return HttpUtils.GetMd5Hash(Encoding.UTF8.GetBytes(name));
+			else
+				return name;
 		}
 
 	}

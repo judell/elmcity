@@ -60,6 +60,11 @@ p.sources {
 text-align: center;
 }
 
+p.sources {
+text-align: center;
+}
+
+
 ul.sources {
 list-style: none;
 }
@@ -92,8 +97,8 @@ display:none;
 width:100px;
 }
 
-
-#sources {
+/* todo: remove when new style is fully deployed */
+#sources {                  
 font-size:smaller;
 left:330px;
 position:fixed;
@@ -101,7 +106,20 @@ top:280px;
 width:150px;
 }
 
+#sidebar {
+font-size:smaller;
+left:330px;
+position:fixed;
+top:280px;
+width:150px;
+}
+
+
 hr {
 width:50%;
 margin-left:0px;
+}
+
+.atc {
+display:none;
 }

@@ -52,6 +52,7 @@ var editable_metadict_index;
 
 var metadata_select_fields = {
   'descriptions' : null,
+  'locations'    : null,
   'eventbrite'   : null,
   'eventful'     : null,
   'facebook'     : null,
@@ -63,24 +64,25 @@ var metadata_include_fields = {
   'contact'       : 'Email address for the curator of the hub',
   'css'           : 'URL for alternate CSS (default: http://elmcity.blob.core.windows.net/admin/elmcity-1.3.css)',
   'descriptions'  : 'Include iCalendar DESCRIPTION in XML and JSON outputs (default: no)',
+  'locations'     : 'Include iCalendar LOCATION in XML and JSON outputs (default: no)',
   'display_width' : 'Width of the default HTML view (default: 470)',
   'eventbrite'    : 'Search EventBrite for events within radius of the hub (default: yes)',
   'eventful'      : 'Search Eventful for events within radius of the hub (default: yes)',
   'facebook'      : 'Search Facebook for events within radius of the hub (default: yes)',
 //  'feed_count'  : 'Number of iCalendar feeds (read only)',
-  'header_image'  : 'Display the image specified by img (default: no)',
-  'img'           : 'URL of a header image for the default HTML view (default: none)',
+//  'header_image'  : 'Display the image specified by img (default: no)',
+//  'img'           : 'URL of a header image for the default HTML view (default: none)',
   'lat'           : 'Latitude of center of hub (default: derived from location name if location hub)',
   'lon'           : 'Longitude of center of hub (default: derived from location name if location hub)',
   'population'    : '(only for location hub) (default: derived from location name)',
   'radius'        : 'Search radius for EventBrite/Eventful/Upcoming (default: 5 miles)',
   'template'      : 'URL for alternate HTML template (default: http://elmcity.blob.core.windows.net/admin/events-1.3.tmpl)',
   'title'         : 'Title of hub (Events for Huntington, WV) (default: hub id)',
-  'twitter'       : 'Twitter name used to authenticate to, and control, the hub (read only)',
+//  'twitter'       : 'Twitter name used to authenticate to, and control, the hub (read only)',
   'upcoming'      : 'Search EventBrite for events within radius of the hub (default: yes)',
   'tz'            : 'Time zone for hub (default: Eastern) (required only for location hub)',
   'type'          : 'Type of hub. (where for location hub, otherwise what) (read only)',
-  'use_rdfa'      : 'Include RDFa metadata in default HTML view (default: yes)',
+//  'use_rdfa'      : 'Include RDFa metadata in default HTML view (default: yes)',
   'where'         : 'Location name if hub is a location hub (Ithaca, NY) (read only)'
   }
 
@@ -157,6 +159,7 @@ function load_meta()
     readonly_fields = feeds_readonly_fields;	
     show_metadicts();
     show_tagcloud();
+    $('#edit_all_feeds').css('display','inline');
     }
 
   }
@@ -598,6 +601,39 @@ $.extend({
     }
 })
 
+function set_visibility_of_edit_controls(visibility)
+{
+$('#tagcloud').css('display', visibility)
+$('#metadata').css('display', visibility)
+$('#add_controls').css('display',visibility)
+}
+
+function show_textarea()
+{
+set_visibility_of_edit_controls('none');
+
+$('#upload_textarea').val(JSON.stringify(json,null,' '));
+
+$('#upload').css('display','block');  
+}
+
+function upload()
+{
+flavor = 'feeds';
+
+json = eval($('#upload_textarea').val());
+update_json_blob();
+
+$('#upload').css('display','none');  
+
+set_visibility_of_edit_controls('block');
+}
+
+function cancel_upload()
+{
+$('#upload').css('display','none');  
+set_visibility_of_edit_controls('block');
+}
 
 </script>
 
@@ -605,7 +641,34 @@ $.extend({
 
 <body onload="load_meta();">
 
-<p><a href="/services/__ID__/metadata">view all hub/feed info</a></p>
+[<a href="/services/__ID__/metadata">view all hub/feed info</a>] 
+
+<span id="edit_all_feeds" style="display:none">
+
+-
+
+[<a href="javascript:show_textarea()">edit all feeds</a>] 
+</span>
+
+
+
+<div id="upload" style="display:none">
+
+<textarea id="upload_textarea" style="width:800px;height:500px;margin-top:.5in">
+</textarea>
+
+<br>
+
+<input type="submit" value="upload all feeds" onclick="upload()"> 
+<input type="submit" value="cancel" onclick="cancel_upload()"> 
+
+<p>
+Note: If you've made changes, please use <a href="http://jsonlint.com/">jsonlint</a> to check validity before uploading.
+</p>
+
+</div>
+
+</p>
 
 <table id="tagcloud" style="float:right;margin-top:0;border-spacing:6px;"></table>
 

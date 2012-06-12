@@ -16,20 +16,60 @@ using System;
 using System.Collections.Generic;
 using System.Xml.Linq;
 using ElmcityUtils;
+using System.Text.RegularExpressions;
 using Microsoft.WindowsAzure.ServiceRuntime;
 
 namespace CalendarAggregator
 {
-	// used in default html rendering to carve up the day into chunks
-	public enum TimeOfDay { Initialized, AllDay, Morning, Lunch, Afternoon, Evening, Night, WeeHours };
-
-	public enum HubType { where, what };
+	public enum HubType { where, what, region };
 
 	public enum NonIcalType { eventful, upcoming, eventbrite, facebook };
 
 	public enum SourceType { eventful, upcoming, eventbrite, facebook, ical };
 
 	public enum FeedLoadOption { only_private, only_public, all };
+
+	// used in default html rendering to carve up the day into chunks
+	public enum TimeOfDay { Initialized, AllDay, Morning, Lunch, Afternoon, Evening, Night, WeeHours };
+
+	public static class TimesOfDay
+	{
+		public const string ALL_DAY = "All Day";
+
+		// baseline year/month/day for time-of-day chunks
+		public const int DT_COMP_YEAR = 2000;
+		public const int DT_COMP_MONTH = 1;
+		public const int DT_COMP_DAY = 1;
+
+		private static DateTime MakeCompDT(int day, int hour, int minute)
+		{
+			return new DateTime(DT_COMP_YEAR, DT_COMP_MONTH, day, hour, minute, 0);
+		}
+
+		public static DateTime MIDNIGHT_LAST { get { return _MIDNIGHT_LAST; } }
+		private static DateTime _MIDNIGHT_LAST = MakeCompDT(day: DT_COMP_DAY, hour: 0, minute: 0);
+
+		public static DateTime MIDNIGHT_NEXT { get { return _MIDNIGHT_NEXT; } }
+		private static DateTime _MIDNIGHT_NEXT = MakeCompDT(day: DT_COMP_DAY + 1, hour: 0, minute: 0);
+
+		public static DateTime MORNING_BEGIN { get { return _MORNING_BEGIN; } }
+		private static DateTime _MORNING_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 5, minute: 0);
+
+		public static DateTime LUNCH_BEGIN { get { return _LUNCH_BEGIN; } }
+		private static DateTime _LUNCH_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 11, minute: 30);
+
+		public static DateTime AFTERNOON_BEGIN { get { return _AFTERNOON_BEGIN; } }
+		private static DateTime _AFTERNOON_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 13, minute: 30);
+
+		public static DateTime EVENING_BEGIN { get { return _EVENING_BEGIN; } }
+		private static DateTime _EVENING_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 17, minute: 30);
+
+		public static DateTime NIGHT_BEGIN { get { return _NIGHT_BEGIN; } }
+		private static DateTime _NIGHT_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 21, minute: 0);
+
+		public static DateTime WEE_HOURS_BEGIN { get { return _WEE_HOURS_BEGIN; } }
+		private static DateTime _WEE_HOURS_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 0, minute: 1);
+	}
 
 	public static class Configurator
 	{
@@ -85,6 +125,7 @@ namespace CalendarAggregator
 
 		#endregion
 
+		/* Idle for now. Supports http://blog.jonudell.net/2011/06/02/syndicating-facebook-events/
 		#region facebook
 
 		public static string test_fb_key
@@ -100,60 +141,7 @@ namespace CalendarAggregator
 		{ get { return GetSettingValue("test_fb_id"); } }
 
 		#endregion
-
-		/*
-		#region delicious
-
-		public static string delicious_master_account
-		{ get { return _delicious_master_account; } }
-
-		private static string _delicious_master_account
-		{ get { return GetSettingValue("delicious_master_account"); } }
-
-		public static string delicious_master_password
-		{ get { return _delicious_master_password; } }
-
-		private static string _delicious_master_password
-		{ get { return GetSettingValue("delicious_master_password"); } }
-
-		public static string delicious_test_account
-		{ get { return _delicious_test_account; } }
-
-		private static string _delicious_test_account
-		{ get { return GetSettingValue("delicious_test_account"); } }
-
-		public static string delicious_test_password
-		{ get { return _delicious_test_password; } }
-
-		private static string _delicious_test_password
-		{ get { return GetSettingValue("delicious_test_password"); } }
-
-		public static int delicious_delay_seconds
-		{ get { return _delicious_delay_seconds; } }
-
-		private static int _delicious_delay_seconds
-		{ get { return Convert.ToInt32(GetSettingValue("delicious_delay_seconds")); } }
-
-		public static int delicious_admin_interval_hours
-		{ get { return _delicious_admin_interval_hours; } }
-
-		private static int _delicious_admin_interval_hours
-		{ get { return Convert.ToInt32(GetSettingValue("delicious_admin_interval_hours")); } }
-
-		// unencapsulated for now
-
-		public const string delicious_blocked_message = "you have been blocked";
-		public const string delicious_curated_hubs_query = "https://api.del.icio.us/v1/posts/recent?tag=calendarcuration&count=100";
-
-		public const string delicious_curation_tag = "calendarcuration";
-		public const string delicious_trusted_ics_feed = "trusted+ics+feed";
-		public const string delicious_trusted_indirect_feed = "trusted+indirect+feed";
-		public const string delicious_trusted_eventful_contributor = "trusted+eventful+contributor";
-		public const string delicious_rssbase = "http://feeds.delicious.com/v2/rss";
-		public const string delicious_base = "http://delicious.com";
-
-		#endregion
-		 */
+	 */
 
 		#region twitter
 
@@ -229,17 +217,23 @@ namespace CalendarAggregator
 		private static int _scheduler_check_interval_minutes
 		{ get { return Convert.ToInt32(GetSettingValue("scheduler_check_interval_minutes")); } }
 
-		public static int where_aggregate_interval_hours
-		{ get { return _where_aggregate_interval_hours; } }
+		public static int nonical_aggregate_interval_hours
+		{ get { return _nonical_aggregate_interval_hours; } }
 
-		private static int _where_aggregate_interval_hours
-		{ get { return Convert.ToInt32(GetSettingValue("where_aggregate_interval_hours")); } }
+		private static int _nonical_aggregate_interval_hours
+		{ get { return Convert.ToInt32(GetSettingValue("nonical_aggregate_interval_hours")); } }
 
-		public static int what_aggregate_interval_hours
-		{ get { return _what_aggregate_interval_hours; } }
+		public static int ical_aggregate_interval_hours
+		{ get { return _ical_aggregate_interval_hours; } }
 
-		private static int _what_aggregate_interval_hours
-		{ get { return Convert.ToInt32(GetSettingValue("what_aggregate_interval_hours")); } }
+		private static int _ical_aggregate_interval_hours
+		{ get { return Convert.ToInt32(GetSettingValue("ical_aggregate_interval_hours")); } }
+
+		public static int region_aggregate_interval_hours
+		{ get { return _ical_aggregate_interval_hours; } }
+
+		private static int _region_aggregate_interval_hours
+		{ get { return Convert.ToInt32(GetSettingValue("region_aggregate_interval_hours")); } }
 
 		public static int worker_general_admin_interval_hours
 		{ get { return _worker_general_admin_interval_hours; } }
@@ -359,6 +353,11 @@ namespace CalendarAggregator
 		public const int rss_default_items = 50;
 		public const int odata_since_hours_ago = 24;
 
+		// todo: find some way to make these cache settings dynamic
+
+		public const int services_output_cache_duration_seconds = 60 * 10;
+		public const int tag_cloud_cache_duration_seconds = 60 * 5;
+
 		public const string default_html_window_name = "elmcity";
 
 		// these are the keys for key/value pairs parsed from the DESCRIPTION property of any iCalendar event
@@ -412,59 +411,16 @@ namespace CalendarAggregator
 		public static string iron_python_run_script_url = ElmcityUtils.Configurator.azure_blobhost + "/admin/_run.py";
 
 		// used to report populations (and event densities) for where hubs
-		public const string census_city_population_estimates = "http://www.census.gov/popest/cities/files/SUB-EST2008-ALL.csv";
-
-		public const string ALL_DAY = "All Day";
-
-		// baseline year/month/day for time-of-day chunks
-		public const int DT_COMP_YEAR = 2000;
-		public const int DT_COMP_MONTH = 1;
-		public const int DT_COMP_DAY = 1;
-
-		private static DateTime MakeCompDT(int day, int hour, int minute)
-		{
-			return new DateTime(DT_COMP_YEAR, DT_COMP_MONTH, day, hour, minute, 0);
-		}
-
-		public static DateTime MIDNIGHT_LAST { get { return _MIDNIGHT_LAST; } }
-		private static DateTime _MIDNIGHT_LAST = MakeCompDT(day: DT_COMP_DAY, hour: 0, minute: 0);
-
-		public static DateTime MIDNIGHT_NEXT { get { return _MIDNIGHT_NEXT; } }
-		private static DateTime _MIDNIGHT_NEXT = MakeCompDT(day: DT_COMP_DAY + 1, hour: 0, minute: 0);
-
-		public static DateTime MORNING_BEGIN { get { return _MORNING_BEGIN; } }
-		private static DateTime _MORNING_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 5, minute: 0);
-
-		public static DateTime LUNCH_BEGIN { get { return _LUNCH_BEGIN; } }
-		private static DateTime _LUNCH_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 11, minute: 30);
-
-		public static DateTime AFTERNOON_BEGIN { get { return _AFTERNOON_BEGIN; } }
-		private static DateTime _AFTERNOON_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 13, minute: 30);
-
-		public static DateTime EVENING_BEGIN { get { return _EVENING_BEGIN; } }
-		private static DateTime _EVENING_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 17, minute: 30);
-
-		public static DateTime NIGHT_BEGIN { get { return _NIGHT_BEGIN; } }
-		private static DateTime _NIGHT_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 21, minute: 0);
-
-		public static DateTime WEE_HOURS_BEGIN { get { return _WEE_HOURS_BEGIN; } }
-		private static DateTime _WEE_HOURS_BEGIN = MakeCompDT(day: DT_COMP_DAY, hour: 1, minute: 30);
+		public const string census_city_population_estimates = "http://www.census.gov/popest/data/cities/totals/2009/files/SUB-EST2009_ALL.csv";
 
 		public const int max_radius = 15;         // limit for where hubs
 		public const int default_radius = 5;     // default for where hubs
 		public const int default_population = 0;  // in case pop lookup fails
 
 		public const string default_tz = "Eastern";
-		public const string default_contact = "nobody-yet";
 
 		public const string nowhere = "nowhere";
 		public const string nothing = "nothing";
-
-		// defaults for iis output cache
-
-		public const int services_output_cache_duration_seconds = 60 * 5; // 5 min 
-
-		public const int homepage_output_cache_duration_seconds = 60 * 5; 
 
 		// routine admin tasks, run from worker on a scheduled basis, are in this python script
 		public static string iron_python_admin_script_url = ElmcityUtils.Configurator.azure_blobhost + "/admin/_admin.py";
@@ -508,8 +464,8 @@ namespace CalendarAggregator
 		 {
 			 string value = GetMetadictValueOrSettingsValue(metadict, usersettings, key);
 			 string final;
-			 if (!value.StartsWith("http://"))
-				 final = BlobStorage.MakeAzureBlobUri("admin", value).ToString();
+			  if (!value.StartsWith("http://"))
+				 final = BlobStorage.MakeAzureBlobUri("admin", value, false).ToString();
 			 else
 				 final = value;
 			 metadict[key] = final;
@@ -535,26 +491,12 @@ namespace CalendarAggregator
 			 {
 				 var str_pop = metadict["population"];
 				 if (str_pop != "0" && str_pop != "")
-				 {
 					 pop = Convert.ToInt32(str_pop);
-					 return pop;
-				 }
 			 }
-
-			 string[] response = Utils.FindCityOrTownAndStateAbbrev(metadict["where"]);
-			 var city_or_town = response[0];
-			 var state_abbrev = response[1];
-			 pop = Utils.FindPop(id, city_or_town, state_abbrev);
-			 return pop;
+		 return pop;
 		 }
 
-		 public static string GetFeedCountSetting(string id, Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
-		 {
-			 int feedcount = Utils.UpdateFeedCount(id);
-			 return metadict[key] = feedcount.ToString();
-		 }
-
-		 public static string GetMetadictValueOrSettingsValue(Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
+		 public static string  GetMetadictValueOrSettingsValue(Dictionary<string, string> metadict, Dictionary<string, string> usersettings, string key)
 		 {
 			 if ( GenUtils.KeyExistsAndHasValue(metadict, key) )
 				 return metadict[key];
@@ -701,12 +643,21 @@ namespace CalendarAggregator
 		public string name { get; set; }
 		public string home_url { get; set; }
 		public string ical_url { get; set; }
+		public string city { get; set; }
 
 		public TaggableSource(string name, string home_url, string ical_url)
 		{
 			this.name = name;
 			this.home_url = home_url;
 			this.ical_url = ical_url;
+		}
+
+		public TaggableSource(string name, string home_url, string ical_url, string city)
+		{
+			this.name = name;
+			this.home_url = home_url;
+			this.ical_url = ical_url;
+			this.city = city;
 		}
 
 		public TaggableSource()  // need paramaterless constructor in order to use Activator.CreateInstance
@@ -843,10 +794,6 @@ namespace CalendarAggregator
 		{ get { return _template_url; } }
 		private Uri _template_url;
 
-		public Uri contribute_url
-		{ get { return _contribute_url; } }
-		private Uri _contribute_url;
-
 		public string display_width
 		{ get { return _display_width; } }
 		private string _display_width;
@@ -861,6 +808,10 @@ namespace CalendarAggregator
 		public bool has_descriptions
 		{ get { return _has_descriptions; } }
 		private bool _has_descriptions;
+
+		public bool has_locations
+		{ get { return _has_locations; } }
+		private bool _has_locations;
 
 		/*
 		public Dictionary<string, string> metadict
@@ -884,17 +835,19 @@ namespace CalendarAggregator
 
 				this._contact = Configurator.GetStrSetting(metadict, Configurator.usersettings, "contact");
 
-				this._contribute_url = Configurator.GetUriSetting(metadict, Configurator.usersettings, "contribute_url");
-
 				this._css = Configurator.GetUriSetting(metadict, Configurator.usersettings, "css").ToString();
 
 				this._default_image_html = Configurator.GetStrSetting(metadict, Configurator.usersettings, "default_img_html");
 
-				this._has_descriptions = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "descriptions");
+				//this._has_descriptions = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "descriptions");
+				this._has_descriptions = true;
+
+				//this._has_locations = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "locations");
+				this._has_locations = true;
 
 				this._display_width = Configurator.GetStrSetting(metadict, Configurator.usersettings, "display_width");
 
-				this._feed_count = Configurator.GetFeedCountSetting(this.id, metadict, Configurator.usersettings, "feed_count");
+				this._feed_count = Configurator.GetMetadictValueOrSettingsValue(metadict, Configurator.usersettings, "feed_count");
 
 				this._has_img = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "header_image");
 
@@ -904,7 +857,8 @@ namespace CalendarAggregator
 
 				this._title = Configurator.GetTitleSetting(metadict, Configurator.usersettings, "title");
 
-				this._template_url = Configurator.GetUriSetting(metadict, Configurator.usersettings, "template");
+				//this._template_url = Configurator.GetUriSetting(metadict, Configurator.usersettings, "template");
+				this._template_url = new Uri(Configurator.settings["template"]);
 
 				this._twitter_account = Configurator.GetStrSetting(metadict, Configurator.usersettings, "twitter");
 
@@ -930,9 +884,6 @@ namespace CalendarAggregator
 						this._radius = Configurator.max_radius;
 
 					this._population = Configurator.GetPopSetting(this.id, metadict, Configurator.usersettings, "population");
-					if (this.population != Configurator.default_population)
-						Utils.UpdatePopulationToAzureForId(id, this.population);
-
 					this._eventful = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "eventful");
 					this._upcoming = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "upcoming");
 					this._eventbrite = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "eventbrite");
@@ -974,6 +925,13 @@ namespace CalendarAggregator
 					this._what = metadict[this.hub_enum.ToString()];
 					this._where = Configurator.nowhere;
 				}
+
+				if (metadict["type"] == "region")
+				{
+					this._hub_enum = HubType.region;
+					this._what = Configurator.nothing;
+					this._where = Configurator.nowhere;
+				}
 			}
 
 			catch (Exception e)
@@ -983,15 +941,14 @@ namespace CalendarAggregator
 
 		}
 
-		// how long to wait between aggregator runs
-		public TimeSpan Interval
+		public string City
 		{
 			get
 			{
-				if (this.hub_enum == HubType.what)
-					return Scheduler.what_interval;
+				if (this.hub_enum == HubType.where)
+					return Regex.Replace(this.where, ",.+", "").ToLower();
 				else
-					return Scheduler.where_interval;
+					return null;
 			}
 		}
 

@@ -66,7 +66,7 @@ namespace CalendarAggregator
                 "last",
             };
 
-		private static List<string> days = new List<string>() 
+		public static List<string> days = new List<string>() 
             {
                 "monday",
                 "tuesday",
@@ -209,7 +209,8 @@ namespace CalendarAggregator
 			Uri search_url;
 			List<int> offsets = GenUtils.EveryNth(start: 0, step: 50, stop: max).ToList();
 
-			Parallel.ForEach(source: offsets, body: (offset) =>
+			var options = new ParallelOptions();
+			Parallel.ForEach(source: offsets, parallelOptions: options, body: (offset) =>
 			// foreach (var offset in offsets)
 			{
 				if (offset == 0)

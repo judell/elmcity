@@ -181,11 +181,26 @@ namespace ElmcityUtils
 		// that can be used as an azure table rowkey
 		public static string MakeSafeRowkeyFromUrl(string url)
 		{
-			var b64array = Encoding.UTF8.GetBytes(url);
-			var rowkey = Uri.EscapeDataString(Convert.ToBase64String(b64array)).Replace('%', '_');
+			var rowkey = MakeSafeRowkey(url);
 			if (rowkey.Length > 1000)
 				rowkey = HttpUtils.GetMd5Hash(Encoding.UTF8.GetBytes(rowkey));
 			return rowkey;
+		}
+
+		public static string MakeSafeRowkey(string key)
+		{
+			var b64array = Encoding.UTF8.GetBytes(key);
+			var rowkey = Uri.EscapeDataString(Convert.ToBase64String(b64array)).Replace('%', '_');
+			return rowkey;
+		}
+
+		public static string MakeSafeBlobnameFromUrl(string url)
+		{
+			var name = MakeSafeRowkey(url);
+			if (name.Length > 250)
+				return HttpUtils.GetMd5Hash(Encoding.UTF8.GetBytes(name));
+			else
+				return name;
 		}
 
 		// try to insert a dict<str,obj> into table store
@@ -511,32 +526,37 @@ namespace ElmcityUtils
 
 		private IEnumerable<HttpResponse> QueryAll(string table, string query)
 		{
-			string next_pk = "";
-			string next_rk = "";
+			string next_pk = null;
+			string next_rk = null;
+			const string no_continuation = "none";
 			var adjusted_query = "";
 			HttpResponse http_response;
 
 			do
 			{
-				if (next_pk != "")
-					adjusted_query = query + String.Format("&NextPartitionKey={0}&NextRowKey={1}", next_pk, next_rk);
+				if (next_pk != null && next_pk != no_continuation)
+				{
+					adjusted_query = query + "&NextPartitionKey=" + next_pk;
+					if (next_rk != null)
+						adjusted_query += "&NextRowKey=" + next_rk;
+				}
 				else
 					adjusted_query = query;
+
 				http_response = DoTableStoreRequest(table, query_string: adjusted_query, method: "GET", headers: new Hashtable(), data: null);
 				if (http_response.headers.ContainsKey(TableStorage.NextPartitionKeyHeaderName))
 				{
 					next_pk = http_response.headers[TableStorage.NextPartitionKeyHeaderName];
-					next_rk = http_response.headers[TableStorage.NextRowKeyHeaderName];
+					if (http_response.headers.ContainsKey(TableStorage.NextRowKeyHeaderName))
+						next_rk = http_response.headers[TableStorage.NextRowKeyHeaderName];
 				}
 				else
-				{
-					next_pk = next_rk = null;
-				}
+					next_pk = no_continuation;
 
 				yield return http_response;
 			}
 
-			while (next_pk != null && next_rk != null);
+			while (next_pk != no_continuation);
 
 		}
 

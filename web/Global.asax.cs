@@ -42,7 +42,7 @@ namespace WebRole
 		// last-resort exception handler
 		protected override void OnException(ExceptionContext filterContext)
 		{
-			var msg = filterContext.Exception.Message;
+			var msg = String.Format("url: {0}, message: {1}", filterContext.HttpContext.Request.Url.ToString(), filterContext.Exception.Message);
 			GenUtils.PriorityLogMsg("exception", "last chance", msg + filterContext.Exception.StackTrace);
 			if (msg.Length > 140)
 				msg = msg.Substring(0, 140);
@@ -121,7 +121,7 @@ namespace WebRole
 
 	public class ElmcityApp : HttpApplication
 	{
-		public static string version = "1525";
+		public static string version = "1852";
 
 		public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 		public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -157,23 +157,101 @@ namespace WebRole
 			#region HomeController
 
 			routes.MapRoute(
+				"add_to_cal",
+				"add_to_cal",
+				new { controller = "Home", action = "add_to_cal" }
+				);
+
+			routes.MapRoute(
+				"add_fb_event",
+				"add_fb_event",
+				new { controller = "Home", action = "add_fb_event" }
+				);
+
+			routes.MapRoute(
+				"description_from_title_and_dtstart",
+				"{id}/description_from_title_and_dtstart",
+				new { controller = "Home", action = "description_from_title_and_dtstart" },
+				new { id = wrd.str_ready_ids }
+				);
+
+			routes.MapRoute(
+				"DiscardMisfoldedDescriptionsAndBogusCategoriesThenAddEasternVTIMEZONE",
+				"DiscardMisfoldedDescriptionsAndBogusCategoriesThenAddEasternVTIMEZONE",
+				new { controller = "Home", action = "DiscardMisfoldedDescriptionsAndBogusCategoriesThenAddEasternVTIMEZONE" }
+				);
+
+			routes.MapRoute(
 				"facebook_auth",
 				"facebook_auth",
 				new { controller = "Home", action = "facebook_auth" }
 				);
 
+			routes.MapRoute(
+				"feed2json",
+				"{id}/feed2json",
+				new { controller = "Home", action = "feed2json" },
+				new { id = wrd.str_ready_ids }
+				);
+
+			/*
 			// target for facebook oauth redirect, used periodically to refresh fb api access token
+			todo: revisit in light of fb offline_access transition
 			routes.MapRoute(
 				"fb_access",
 				"fb_access",
 				new { controller = "Home", action = "fb_access" }
 				);
+			 */
 
 			routes.MapRoute(
 				"get_editable_metadata",
 				"services/{id}/get_editable_metadata",
 				new { controller = "Home", action = "get_editable_metadata" },
 				new { id = wrd.str_ready_ids }
+			);
+
+			routes.MapRoute(
+				"get_fb_ical_url",
+				"get_fb_ical_url",
+				new { controller = "Home", action = "get_fb_ical_url" }
+			);
+
+			routes.MapRoute(
+				"get_csv_ical_url",
+				"get_csv_ical_url",
+				new { controller = "Home", action = "get_csv_ical_url" }
+			);
+
+			routes.MapRoute(
+				"get_high_school_sports_url",
+				"get_high_school_sports_url/{school}/{tz}",
+				new { controller = "Home", action = "get_high_school_sports_url" },
+				new { tz = "ET|CT|MT|PT|AT|HT" }
+			);
+
+			routes.MapRoute(
+				"get_ics_to_ics_ical_url",
+				"get_ics_to_ics_ical_url",
+				new { controller = "Home", action = "get_ics_to_ics_ical_url" }
+			);
+
+			routes.MapRoute(
+				"get_rss_xcal_ical_url",
+				"get_rss_xcal_ical_url",
+				new { controller = "Home", action = "get_rss_xcal_ical_url" }
+			);
+
+			routes.MapRoute(
+				"get_ical_url_from_eventbrite_event_page",
+				"get_ical_url_from_eventbrite_event_page",
+				new { controller = "Home", action = "get_ical_url_from_eventbrite_event_page" }
+			);
+
+			routes.MapRoute(
+				"get_ical_url_from_eid_of_eventbrite_event_page",
+				"get_ical_url_from_eid_of_eventbrite_event_page",
+				new { controller = "Home", action = "get_ical_url_from_eid_of_eventbrite_event_page" }
 			);
 
 			routes.MapRoute(
@@ -203,6 +281,20 @@ namespace WebRole
 				new { id = wrd.str_ready_ids }
 				);
 
+			// parse csv, return ics
+			routes.MapRoute(
+				"ics_from_csv",
+				"ics_from_csv",
+				 new { controller = "Home", action = "ics_from_csv" }
+				);
+
+			// return ics filtered by after, before, include_keyword, or exclude_keyword
+			routes.MapRoute(
+				"ics_from_ics",
+				"ics_from_ics",
+				 new { controller = "Home", action = "ics_from_ics" }
+				);
+
 			// parse facebook page events, return ics
 			routes.MapRoute(
 				"ics_from_fb_page",
@@ -215,6 +307,27 @@ namespace WebRole
 				"ics_from_vcal",
 				"ics_from_vcal",
 				 new { controller = "Home", action = "ics_from_vcal" }
+				);
+
+			// search eventbrite by name and location, return ics feed
+			routes.MapRoute(
+				"ics_from_eventbrite_organizer",
+				"ics_from_eventbrite_organizer",
+				 new { controller = "Home", action = "ics_from_eventbrite_organizer" }
+				);
+
+			// list eventbrite events by organizer, return ics feed
+			routes.MapRoute(
+				"ics_from_eventbrite_organizer_id",
+				"ics_from_eventbrite_organizer_id",
+				 new { controller = "Home", action = "ics_from_eventbrite_organizer_id" }
+				);
+
+			// get an ical for a single eventbrite id
+			routes.MapRoute(
+				"ics_from_eventbrite_eid",
+				"ics_from_eventbrite_eid",
+				 new { controller = "Home", action = "ics_from_eventbrite_eid" }
 				);
 
 			// parse rss+xcal, return ics
@@ -239,6 +352,14 @@ namespace WebRole
 				"services/{id}/meta_history",
 				new { controller = "Home", action = "meta_history" },
 				new { id = wrd.str_ready_ids }
+				);
+
+			// events happening now + offset
+			routes.MapRoute(
+				"soon",
+				"{id}/{type}/soon",
+				new { controller = "Home", action = "soon" },
+				new { id = wrd.str_ready_ids, type = "html|rss|ics|xml|json" }
 				);
 
 			routes.MapRoute(
@@ -285,6 +406,21 @@ namespace WebRole
 				new { table = ElmcityController.settings["query_safe_tables"] }
 			);
 
+			// get the static json tag cloud
+			routes.MapRoute(
+				"tag_cloud",
+				"{id}/tag_cloud",
+				new { controller = "Home", action = "tag_cloud" },
+				new { id = wrd.str_ready_ids }
+			);
+
+			// url helpers page
+			routes.MapRoute(
+				"url_helpers",
+				"url_helpers",
+				new { controller = "Home", action = "url_helpers" }
+				);
+
 			routes.MapRoute(
 				"twitter_auth",
 				"twitter_auth",
@@ -300,6 +436,15 @@ namespace WebRole
 			routes.MapRoute(
 				"events",
 				"services/{id}/{type}",
+				new { controller = "Services", action = "GetEvents" },
+				new { id = wrd.str_ready_ids, type = "html|xml|json|ics|rss|tags_json|stats|tags_html|jswidget|today_as_html|search" }
+				);
+
+			// this pattern covers most uses. gets events for a given hub id in many formats. allows
+			// only the specified formats, and only hub ids that are "ready"
+			routes.MapRoute(
+				"events2",
+				"{id}/{type}",
 				new { controller = "Services", action = "GetEvents" },
 				new { id = wrd.str_ready_ids, type = "html|xml|json|ics|rss|tags_json|stats|tags_html|jswidget|today_as_html|search" }
 				);
@@ -374,11 +519,9 @@ namespace WebRole
 			GenUtils.PriorityLogMsg("info", msg, null);
 
 			Utils.ScheduleTimer(UpdateWrdAndPurgeCache, CalendarAggregator.Configurator.webrole_cache_purge_interval_minutes, name: "UpdateWrdAndPurgeCache", startnow: false);
-			Utils.ScheduleTimer(ReloadSettingsAndRoutes, minutes: CalendarAggregator.Configurator.webrole_reload_interval_minutes, name: "ReloadSettingsAndRoutes", startnow: false);
+			Utils.ScheduleTimer(ReloadSettingsAndRoutes, minutes: CalendarAggregator.Configurator.webrole_reload_interval_minutes, name: "ReloadSettingsAndRoutes", startnow: true);
 			Utils.ScheduleTimer(MakeTablesAndCharts, minutes: CalendarAggregator.Configurator.web_make_tables_and_charts_interval_minutes, name: "MakeTablesAndCharts", startnow: false);
-
 			ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
-			_ReloadSettingsAndRoutes();
 		}
 
 		// encapsulate _reload with the signature needed by Utils.ScheduleTimer
@@ -403,7 +546,7 @@ namespace WebRole
 
 			try
 			{
-				wrd = Utils.GetWrd();
+				wrd = WebRoleData.GetWrd();
 				GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes: registering routes", null);
 				RouteTable.Routes.Clear();
 				ElmcityApp.RegisterRoutes(RouteTable.Routes, wrd);
@@ -421,7 +564,7 @@ namespace WebRole
 		{
 			try
 			{
-				wrd = Utils.GetWrd();   // if renderer(s) updated, update before cache purge so next recache uses fresh renderer(s)
+				wrd = WebRoleData.GetWrd();   // if renderer(s) updated, update before cache purge so next recache uses fresh renderer(s)
 				var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
 				ElmcityUtils.CacheUtils.MaybePurgeCache(cache);
 			}
@@ -434,18 +577,7 @@ namespace WebRole
 
 			if (wrd == null)
 			{
-				try
-				{
-					var msg = "UpdateWrdAndPurgeCache: recreating webrole data";
-					GenUtils.PriorityLogMsg("warning", msg, null);
-					wrd = new WebRoleData(testing: false, test_id: null);
-					bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
-				}
-				catch (Exception e2)
-				{
-					var msg = "UpdateWrdAndPurgeCache: could not recreate webrole data";
-					GenUtils.PriorityLogMsg("exception", msg, e2.Message + e2.StackTrace);
-				}
+				wrd = WebRoleData.MakeWebRoleData();
 			}
 
 		}

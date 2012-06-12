@@ -83,8 +83,8 @@ namespace CalendarAggregator
 		{
 			state = state ?? "nh";
 			town = town ?? "keene";
-			year = year ?? "10";
-			quarter = quarter ?? "1";
+			year = year ?? "11";
+			quarter = quarter ?? "4";
 
 			var awards = ArraAwardsForYearQuarterStateTown(year, quarter, state, town);
 
@@ -125,8 +125,8 @@ namespace CalendarAggregator
 </tr>";
 
 			var details_row_template = @"<tr>
-<td><a href=""http://elmcity.info/doublesearch/?q=%22{0}%22"">{0}</a></td>
-<td align=""right"">{1:0,0}</td
+<td>{0} (<a href=""http://google.com/search?q=%22{0}%22"">google</a>, <a href=""http://bing.com/search?q=%22{0}%22"">bing</a>)</td>
+<td align=""right"">{1:0,0}</td>
 <td>{2}</td>
 <td>{3}</td>
 <td>{4}</td>
@@ -222,7 +222,7 @@ arra <a href=""http://www.recovery.gov/FAQ/Pages/DownloadCenter.aspx"">recipient
 		{
 			town = town.ToLower();
 			state = state.ToUpper();
-			var url = new Uri(String.Format("http://download.recovery.gov/recipient/Y{0}Q{1}/{2}_Y{3}Q{4}.xml.zip",
+			var url = new Uri(String.Format("http://recovery.download.s3-website-us-east-1.amazonaws.com/Y{0}Q{1}/{2}_Y{3}Q{4}.xml.zip",
 				year, quarter, state, year, quarter));
 			var rsp = HttpUtils.FetchUrl(url);
 			var zs = new MemoryStream(rsp.bytes);
@@ -235,7 +235,7 @@ arra <a href=""http://www.recovery.gov/FAQ/Pages/DownloadCenter.aspx"">recipient
 			Utils.ReadWholeArray(ms, data);
 			var doc = XmlUtils.XdocFromXmlBytes(data);
 
-			var awards = from row in doc.Descendants("row")
+			var awards = from row in doc.Descendants("Table")
 						 where row.Element("pop_city") != null && row.Element("pop_city").Value.ToLower() == town
 						 orderby float.Parse(row.Element("local_amount").Value) descending
 						 select new ArraData(

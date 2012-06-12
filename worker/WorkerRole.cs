@@ -26,9 +26,25 @@ using DDay.iCal.Serialization;
 using ElmcityUtils;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace WorkerRole
 {
+	public class Todo
+	{
+		public List<string> icaltasks, nonicaltasks, regiontasks, twitter_messages, start_requests, meta_refresh_requests;
+
+		public Todo()
+		{
+			icaltasks = new List<string>();
+			nonicaltasks = new List<string>();
+			regiontasks = new List<string>();
+			twitter_messages = new List<string>();
+			start_requests = new List<string>();
+		}
+	};
+
 	public class WorkerRole : RoleEntryPoint
 	{
 #if false // true if testing, false if not testing
@@ -51,7 +67,11 @@ namespace WorkerRole
 		private static Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
 
 		private static string blobhost = ElmcityUtils.Configurator.azure_blobhost;
+
 		public static List<string> ids { get; set; }
+
+		public static List<string> regions { get; set; }
+
 		private static Dictionary<string, int> feedcounts = new Dictionary<string, int>();
 
 		private static string local_storage_path;
@@ -59,6 +79,8 @@ namespace WorkerRole
 		private static List<TwitterDirectMessage> twitter_direct_messages;
 
 		private static ElmcityUtils.Monitor monitor;
+
+		private static Todo todo;
 
 		public override bool OnStart()
 		{
@@ -81,10 +103,6 @@ namespace WorkerRole
 				HttpUtils.SetAllowUnsafeHeaderParsing(); //http://www.cookcomputing.com/blog/archives/000556.html
 
 				Utils.ScheduleTimer(IronPythonAdmin, minutes: CalendarAggregator.Configurator.ironpython_admin_interval_hours * 60, name: "IronPythonAdmin", startnow: false);
-
-				Utils.ScheduleTimer(HighFrequencyScript, minutes: CalendarAggregator.Configurator.high_frequency_script_interval_minutes, name: "HighFrequencyScript", startnow: false);
-
-				//Utils.ScheduleTimer(DeliciousAdmin, minutes: CalendarAggregator.Configurator.delicious_admin_interval_hours * 60, name: "DeliciousAdmin", startnow: false);
 
 				Utils.ScheduleTimer(GeneralAdmin, minutes: CalendarAggregator.Configurator.worker_general_admin_interval_hours * 60, name: "GeneralAdmin", startnow: false);
 
@@ -132,71 +150,71 @@ namespace WorkerRole
 			{
 				var message = "Worker: Run";
 				GenUtils.PriorityLogMsg("info", message, null);
-
+ 
 				while (true)
 				{
 					logger.LogMsg("info", "worker waking", null);
 
 					settings = GenUtils.GetSettingsFromAzureTable();
-
-					// SaveSettings(settings); // not needed
+					logger.LogMsg("info", "worker updated " + settings.Count + " settings", null);
 
 					ids = Metadata.LoadHubIdsFromAzureTable();
+					logger.LogMsg("info", "worker loaded " + ids.Count + " ids", null);
+
+					regions = Utils.GetRegionIds();
+					logger.LogMsg("info", "worker found " + regions.Count + " regions", null);
 
 					twitter_direct_messages = TwitterApi.GetNewTwitterDirectMessages(); // get new control messages
+					logger.LogMsg("info", "worker got " + twitter_direct_messages.Count + " messages", null);
 
-					ids = MaybeAdjustIdsForTesting(ids);
+					//ids = MaybeAdjustIdsForTesting(ids);
 
-					foreach (var id in ids)
-					{
-						var calinfo = new Calinfo(id);
+					todo = new Todo();
 
-						bool got_start_request = false;
-						bool got_meta_refresh_request = false;
+					BuildTodo(todo, ids);
+                    
+					HandleTwitterMessages(todo, ids);
 
-						if ( twitter_direct_messages.Count > 0 && calinfo.twitter_account != null) // any messages for this id?
-							try
-							{
-								var messages = twitter_direct_messages.FindAll(msg => msg.sender_screen_name.ToLower() == calinfo.twitter_account.ToLower());
-								// see http://friendfeed.com/elmcity/53437bec/copied-original-css-file-to-my-own-server for why ToLower()
+					var union = todo.nonicaltasks.Union(todo.icaltasks).Union(todo.regiontasks);
 
-								got_meta_refresh_request = messages.FindAll(msg => msg.text == "meta_refresh").Count > 0;
-
-								if (got_meta_refresh_request)
-								{
-									GenUtils.PriorityLogMsg("info", "Received meta_refresh message from " + id, null);
-									TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your meta_refresh message");
-									Utils.RecreatePickledCalinfoAndRenderer(id);
-									Utils.MakeMetadataPage(id);
-									TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://elmcity.cloudapp.net/services/" + id + "/metadata");
-									calinfo = new Calinfo(id);
-								}
-
-								got_start_request = messages.FindAll(msg => msg.text == "start").Count > 0;
-
-								HandleMessages(messages, id);  // handle all other messages
-							}
-							catch (Exception e)
-							{
-								GenUtils.PriorityLogMsg("exception", "WorkerRole.Run: handling twitter messages", e.Message);
-							}
-
-						if (StartTask(id, calinfo, got_start_request) == false)
-							continue;
-
-						ProcessHub(id, calinfo);
-
-						if (got_start_request)
+					var options = new ParallelOptions();
+					Parallel.ForEach(source: union, parallelOptions: options, body: (id) =>
 						{
-							logger.LogMsg("info", "Processed start message from " + id, null);
-							TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your start message");
+							Utils.RecreatePickledCalinfoAndRenderer(id);
 						}
+					);
 
-						StopTask(id);
+					foreach (var id in todo.nonicaltasks)           // this won't be parallelized because of api rate throttling in nonical service endpoints
+					{
+						Scheduler.UpdateStartTaskForId(id, TaskType.nonicaltasks);  // the todo list has a general start time, now update it to actual start
+						ProcessNonIcal(id);
+						StopTask(id, TaskType.nonicaltasks);
 					}
+
+					foreach (var id in todo.icaltasks)              // this can be parallelized because there are many separate/unique endpoints
+					{
+						Scheduler.UpdateStartTaskForId(id, TaskType.icaltasks);
+						ProcessIcal(id);
+						StopTask(id, TaskType.icaltasks);
+					}
+
+					foreach (var id in todo.regiontasks)            // this can be also be parallelized as needed
+					{
+						Scheduler.UpdateStartTaskForId(id, TaskType.regiontasks);
+						ProcessRegion(id);
+						StopTask(id, TaskType.regiontasks);
+					}
+
+					var nonregions = union.Except(regions);
+					Parallel.ForEach(source: nonregions, parallelOptions: options, body: (id) =>
+					{
+						FinalizeHub(id);
+					}
+					);
 
 					logger.LogMsg("info", "worker sleeping", null);
 					Utils.Wait(CalendarAggregator.Configurator.scheduler_check_interval_minutes * 60);
+
 				}
 			}
 			catch (Exception e)
@@ -205,20 +223,106 @@ namespace WorkerRole
 			}
 		}
 
-		public void HandleMessages(List<TwitterDirectMessage> messages, string id)
+		private void BuildTodo(Todo todo, List<string> ids)
+		{
+			var options = new ParallelOptions();
+			Parallel.ForEach(source: ids, parallelOptions: options, body: (id) =>
+			{
+				var calinfo = Utils.AcquireCalinfo(id);
+
+				var messages_for_hub = TwitterMessagesForHub(twitter_direct_messages, calinfo);
+
+				if (messages_for_hub.Count > 0)
+				{
+					lock (todo.twitter_messages)
+					{
+						todo.twitter_messages.Add(id);
+					}
+				}
+
+				if (messages_for_hub.FindAll(msg => msg.text == "start").Count > 0)  // start needs special handling, generic handler takes care of other messages
+					lock (todo.start_requests)
+					{
+						todo.start_requests.Add(id);
+					}
+
+				if (calinfo.hub_enum == HubType.where)
+				{
+					if (StartTask(id, calinfo, TaskType.nonicaltasks) == TaskType.nonicaltasks) // time to reaggregate a where hub's nonical sources?
+						lock (todo.nonicaltasks)
+						{
+							todo.nonicaltasks.Add(id);
+						}
+				}
+
+				if (calinfo.hub_enum == HubType.where || calinfo.hub_enum == HubType.what)
+				{
+					if (StartTask(id, calinfo, TaskType.icaltasks) == TaskType.icaltasks) // time to reaggregate a hub's ical sources?
+						lock (todo.icaltasks)
+						{
+							todo.icaltasks.Add(id);
+						}
+				}
+
+				if (calinfo.hub_enum == HubType.region)
+				{
+					if (StartTask(id, calinfo, TaskType.regiontasks) == TaskType.regiontasks) // time to rebuild a region?
+						lock (todo.regiontasks)
+						{
+							todo.regiontasks.Add(id);
+						}
+				}
+			}
+			);
+
+		}
+
+		private List<TwitterDirectMessage> TwitterMessagesForHub(List<TwitterDirectMessage> twitter_direct_messages, Calinfo calinfo)
+		{
+		List<TwitterDirectMessage> ret = new List<TwitterDirectMessage>();
+
+		if ( twitter_direct_messages.Count > 0 && calinfo.twitter_account != null) // any messages for this id?
+			ret = twitter_direct_messages.FindAll(msg => msg.sender_screen_name.ToLower() == calinfo.twitter_account.ToLower());
+			// see http://friendfeed.com/elmcity/53437bec/copied-original-css-file-to-my-own-server for why ToLower()
+
+		return ret;
+		}
+
+		private void HandleTwitterMessages(Todo todo, List<string> ids)
+		{
+			foreach (var id in ids)
+			{
+				if (todo.twitter_messages.HasItem(id))
+				{
+					var calinfo = Utils.AcquireCalinfo(id);
+					var messages_for_hub = TwitterMessagesForHub(twitter_direct_messages, calinfo);
+					if (messages_for_hub.Count > 0)
+						HandleTwitterMessagesForHub(messages_for_hub, id);
+				}
+			}
+		}
+
+		public void HandleTwitterMessagesForHub(List<TwitterDirectMessage> messages, string id)
 		{
 			foreach (var message in messages)
 			{
 				try
 				{
 					var twitter_command = new TwitterCommand(message.id, message.sender_screen_name, message.recipient_screen_name, message.text);
-					if (twitter_command.command != null)
+					if (twitter_command.command != TwitterCommandName.none)
 					{
 						switch (twitter_command.command)
 						{
-							case "add_fb_feed":
-								var action = new AddFacebookFeed();
-								action.Perform(twitter_command, id);
+							case TwitterCommandName.meta_refresh:
+								var calinfo = Utils.AcquireCalinfo(id);
+								GenUtils.PriorityLogMsg("info", "Received meta_refresh message from " + id, null);
+								TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your meta_refresh message");
+								Utils.MakeMetadataPage(id);
+								TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://elmcity.cloudapp.net/services/" + id + "/metadata");
+								break;
+							case TwitterCommandName.add_fb_feed:  // disable for now
+								//var action = new AddFacebookFeed();
+								//action.Perform(twitter_command, id);
 								break;
 							default:
 								break;
@@ -232,136 +336,178 @@ namespace WorkerRole
 			}
 		}
 
-		public void ProcessHub(string id, Calinfo calinfo)
+		public void ProcessNonIcal(string id)
 		{
-			logger.LogMsg("info", "worker processing hub: " + id, null);
-
-			var fr = new FeedRegistry(id);
-
+			logger.LogMsg("info", "worker starting on nonical tasks for " + id, null);
+			var calinfo = Utils.AcquireCalinfo(id);
 			try
 			{
+				DoEventful(calinfo);
+			}
+			catch (Exception e1)
+			{
+				GenUtils.PriorityLogMsg("exception", "DoEventful", e1.Message + e1.StackTrace);
+			}
+			try
+			{
+				DoUpcoming(calinfo);
+			}
+			catch (Exception e2)
+			{
+				GenUtils.PriorityLogMsg("exception", "DoUpcoming", e2.Message + e2.StackTrace);
+			}
+			try
+			{
+				DoEventBrite(calinfo);
+			}
+			catch (Exception e3)
+			{
+				GenUtils.PriorityLogMsg("exception", "DoEventBrite", e3.Message + e3.StackTrace);
+			}
+			try
+			{
+				DoFacebook(calinfo);
+			}
+			catch (Exception e4)
+			{
+				GenUtils.PriorityLogMsg("exception", "DoFacebook", e4.Message + e4.StackTrace);
+			}
+		}
 
-				DoIcal(fr, calinfo);
+		public void ProcessIcal(string id)
+		{
+			var calinfo = Utils.AcquireCalinfo(id);
+			logger.LogMsg("info", "worker starting on ical tasks for " + id, null);
+			var fr = new FeedRegistry(id);
+			DoIcal(fr, calinfo);	
+		}
 
-				if (calinfo.hub_enum == CalendarAggregator.HubType.where)
+		public void ProcessRegion(string region)
+		{
+			var calinfo = Utils.AcquireCalinfo(region);
+			logger.LogMsg("info", "worker starting on region tasks for " + region, null);
+			
+			try
+			{
+				var es_region = new ZonelessEventStore(calinfo);
+
+				var ids = Utils.GetIdsForRegion(region);
+				foreach (var id in ids)
 				{
-					try
-					{
-						DoEventful(calinfo);
-					}
-					catch (Exception e1)
-					{
-						GenUtils.PriorityLogMsg("exception", "DoEventful", e1.Message + e1.StackTrace);
-					}
-					try
-					{
-						DoUpcoming(calinfo);
-					}
-					catch (Exception e2)
-					{
-						GenUtils.PriorityLogMsg("exception", "DoUpcoming", e2.Message + e2.StackTrace);
-					}
-					try
-					{
-						DoEventBrite(calinfo);
-					}
-					catch (Exception e3)
-					{
-						GenUtils.PriorityLogMsg("exception", "DoEventBrite", e3.Message + e3.StackTrace);
-					}
-					try
-					{
-						DoFacebook(calinfo);
-					}
-					catch (Exception e4)
-					{
-						GenUtils.PriorityLogMsg("exception", "DoFacebook", e4.Message + e4.StackTrace);
-
-					}
+					var uri = BlobStorage.MakeAzureBlobUri(id, id + ".zoneless.obj", false);
+					var es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
+					foreach (var evt in es.events)
+						es_region.events.Add(evt);
 				}
 
-				EventStore.CombineZonedEventStoresToZonelessEventStore(id, settings);
+				EventStore.UniqueFilterSortSerialize(region, es_region);
 
-				// Create or update an entry in the cacheurls table for the base object. 
-				// key is http://elmcity.blob.core.windows.net/ID/ID.zoneless.obj
-				// value is # of webrole instances that could be holding this in cache
-				// each instance will check this table periodically. if value is nonzero and url in cache, it'll evict the object
-				// and decrement the count
+				CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(region), Convert.ToInt32(settings["webrole_instance_count"]));
 
-				// note when removal occurs it also triggers a purge of dependencies, so if the base entry is
-				// http://elmcity.blob.core.windows.net/a2cal/a2cal.zoneless.obj
-				// then dependencies also ousted from cache include:
-				// /services/a2cal/html?view=&count=0
-				// /services/a2cal/rss?view=government
-				// /services/a2cal/xml?view=music&count=10    ... etc.
+				WebRoleData.UpdateRendererForId(region);  // ensure webrole will reload fresh renderer for this hub
 
-				CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(id), Convert.ToInt32(settings["webrole_instance_count"]));
+				RenderTagsAndHtmlXmlJson(region);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
 
-				WebRoleData.UpdateRendererForId(id);  // ensure webrole will reload fresh renderer for this hub
-
-				RenderHtmlXmlJson(id);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
-
-				if (calinfo.hub_enum == CalendarAggregator.HubType.where)
-					SaveWhereStats(fr, calinfo);
-
-				if (calinfo.hub_enum == CalendarAggregator.HubType.what)
-					SaveWhatStats(fr, calinfo);
-
-				MergeIcs(calinfo);
-
+				SaveRegionStats(region);
 			}
 			catch (Exception e)
 			{
-				var msg = "worker main loop: " + id;
+				var msg = "process region: " + region;
 				var data = e.Message + e.StackTrace;
 				GenUtils.PriorityLogMsg("exception", msg, data);
 			}
-
-			logger.LogMsg("info", "worker done processing: " + id, null);
-
+			logger.LogMsg("info", "worker done processing region " + region, null);
 		}
 
-		private static void StopTask(string id)
+		public void FinalizeHub(string id)
 		{
-			Scheduler.StopTaskForId(id);
-			Scheduler.UnlockId(id);
+			logger.LogMsg("info", "worker finalizing hub: " + id, null);
+
+			Utils.UpdateFeedCountForId(id);
+
+			var calinfo = Utils.AcquireCalinfo(id);
+
+			EventStore.CombineZonedEventStoresToZonelessEventStore(id, settings); // todo: lease the blog
+
+			// Create or update an entry in the cacheurls table for the base object. 
+			// key is http://elmcity.blob.core.windows.net/ID/ID.zoneless.obj
+			// value is # of webrole instances that could be holding this in cache
+			// each instance will check this table periodically. if value is nonzero and url in cache, it'll evict the object
+			// and decrement the count
+
+			// note when removal occurs it also triggers a purge of dependencies, so if the base entry is
+			// http://elmcity.blob.core.windows.net/a2cal/a2cal.zoneless.obj
+			// then dependencies also ousted from cache include:
+			// /services/a2cal/html?view=&count=0
+			// /services/a2cal/rss?view=government
+			// /services/a2cal/xml?view=music&count=10    ... etc.
+
+			CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(id), Convert.ToInt32(settings["webrole_instance_count"]));
+
+			WebRoleData.UpdateRendererForId(id);  // ensure webrole will reload fresh renderer for this hub
+
+			RenderTagsAndHtmlXmlJson(id);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
+
+			var fr = new FeedRegistry(id);
+			fr.LoadFeedsFromAzure(FeedLoadOption.all);
+
+			if (calinfo.hub_enum == CalendarAggregator.HubType.where)
+				SaveWhereStats(fr, calinfo);
+
+			if (calinfo.hub_enum == CalendarAggregator.HubType.what && !Utils.IsRegion(id))
+				SaveWhatStats(fr, calinfo);
+
+			if (!Utils.IsRegion(id))
+				MergeIcs(calinfo);
+			// else  
+			// todo: create MergeRegionIcs
+
+			Utils.VisualizeTagSources(id);
+
+			logger.LogMsg("info", "worker done finalizing hub " + id, null);
 		}
 
-		private static bool StartTask(string id, Calinfo calinfo, bool got_start_request)
+		private static void StopTask(string id, TaskType type)
 		{
-			Scheduler.EnsureTaskRecord(id);
+			Scheduler.StopTaskForId(id, type);
+			Scheduler.UnlockId(id, type);
+		}
 
-			if (Scheduler.IsAbandoned(id, calinfo.Interval))  // abandoned?
-				Scheduler.UnlockId(id);                            // unlock
+		private static TaskType StartTask(string id, Calinfo calinfo, TaskType type)
+		{
+			Scheduler.EnsureTaskRecord(id, type);
 
-			if (Scheduler.IsLockedId(id))          // locked?
-				return false;                       // skip
+			if (Scheduler.IsAbandoned(id, type))           // abandoned?
+				Scheduler.UnlockId(id, type);                 // unlock
 
-			if (AcquireLock(id) == false)            // can't lock?
-				return false;                        // skip
+			if (Scheduler.IsLockedId(id, type))          // locked?
+				return TaskType.none;                       // skip
+
+			if (AcquireLock(id, type) == false)            // can't lock?
+				return TaskType.none;                        // skip
 
 			var now = System.DateTime.Now.ToUniversalTime();
 
-			bool started;
+			TaskType started = TaskType.none;
 
-			if (got_start_request)
+			if ( todo.start_requests.HasItem(id) )
 			{
 				logger.LogMsg("info", "Received start message from " + id, null);
 				TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your start message");
-				started = true;
+				started = type;
 			}
 			else
-				started = Scheduler.MaybeStartTaskForId(now, calinfo);
+				started = Scheduler.MaybeStartTaskForId(now, calinfo, type);
 
-			if (started == false)
-				Scheduler.UnlockId(id);
+			if (started == TaskType.none)
+				Scheduler.UnlockId(id, type);
 
 			return started;
 		}
 
-		private static bool AcquireLock(string id)
+		private static bool AcquireLock(string id, TaskType type)
 		{
-			var lock_response = Scheduler.LockId(id);
+			var lock_response = Scheduler.LockId(id, type);
 
 			if (lock_response.status != HttpStatusCode.Created)
 			{
@@ -388,7 +534,19 @@ namespace WorkerRole
 			return ids;
 		}
 
-		public static void RenderHtmlXmlJson(string id)
+		private static List<string> ExcludeRegions(List<string> ids)
+		{
+			var regions = Utils.GetRegionIds();
+			var final_ids = new List<string>();
+			foreach (var id in ids)
+			{
+				if (!regions.Exists(x => x == id))
+					final_ids.Add(id);
+			}
+			return final_ids;
+		}
+
+		public static void RenderTagsAndHtmlXmlJson(string id)
 		{
 			var cr = new CalendarRenderer(id);
 
@@ -417,6 +575,18 @@ namespace WorkerRole
 			catch (Exception e)
 			{
 				logger.LogMsg("exception", "SaveAsHtml: " + id, e.Message + e.StackTrace);
+			}
+
+			try
+			{
+				var es = ObjectUtils.GetTypedObj<ZonelessEventStore>(id, id + ".zoneless.obj");
+				var tags = cr.MakeTagCloud(es);
+				var tags_json = JsonConvert.SerializeObject(tags);
+				bs.PutBlob(id, "tags.json", tags_json);
+			}
+			catch (Exception e)
+			{
+				logger.LogMsg("exception", "save tags_json: " + id, e.Message + e.StackTrace);
 			}
 
 		}
@@ -471,7 +641,7 @@ namespace WorkerRole
 			{
 				var eventbrite = new ZonedEventStore(calinfo, SourceType.eventbrite);
 				Collector coll = new Collector(calinfo, settings);
-				coll.CollectEventBrite(eventbrite, testing);
+				coll.CollectEventBrite(eventbrite);
 			}
 		}
 
@@ -499,31 +669,30 @@ namespace WorkerRole
 			string[] response = Utils.FindCityOrTownAndStateAbbrev(where);
 			var city_or_town = response[0];
 			var state_abbrev = response[1];
-
 			int pop = Utils.FindPop(id, city_or_town, state_abbrev);
-			string report = "";
-
-			report = MakeTableHeader(report);
 			var futurecount = 0;
 			futurecount += estats.eventcount;
 			futurecount += ustats.eventcount;
 			futurecount += ebstats.eventcount;
 
+			var sb_report = new StringBuilder();	
+			sb_report.Append( MakeTableHeader() );
+
 			var options = new ParallelOptions();
 
-			Parallel.ForEach(source: fr.feeds.Keys, parallelOptions: options, body: (feedurl, loop_state) =>
+			Parallel.ForEach(source: fr.feeds.Keys, parallelOptions: options, body: (feedurl) =>
 			//		foreach (var feedurl in fr.feeds.Keys)
 				{
-				StatsRow(id, istats, ref report, ref futurecount, feedurl);
+				StatsRow(id, istats, sb_report, ref futurecount, feedurl);
 				}
 			);
 
-			report += "</table>\n";
+			sb_report.Append ( "</table>\n" );			
 
 			var events_per_person = Convert.ToInt32(futurecount) / (float)pop;
 			string preamble = MakeWherePreamble(estats, ustats, ebstats, fbstats, pop, futurecount, events_per_person);
-			report = preamble + report;
-			report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(calinfo, report, "stats");
+			var report = preamble + sb_report.ToString();
+			report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(calinfo, sb_report.ToString(), "stats");
 			bs.PutBlob(id, id + ".stats.html", new Hashtable(), Encoding.UTF8.GetBytes(report), null);
 
 			var dict = new Dictionary<string, object>();
@@ -532,7 +701,7 @@ namespace WorkerRole
 			TableStorage.UpmergeDictToTableStore(dict, "metadata", id, id);
 		}
 
-		private static void StatsRow(string id, Dictionary<string, IcalStats> istats, ref string report, ref int futurecount, string feedurl)
+		private static void StatsRow(string id, Dictionary<string, IcalStats> istats, StringBuilder sb_report, ref int futurecount, string feedurl)
 		{
 			var feed_metadict = Metadata.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
 			string homeurl;
@@ -541,7 +710,7 @@ namespace WorkerRole
 			feed_metadict.TryGetValue("redirected_url", out redirected_url);
 			if (String.IsNullOrEmpty(redirected_url))
 				redirected_url = feedurl;
-			DoStatsRow(id, istats, ref report, ref futurecount, feedurl, redirected_url, homeurl);
+			DoStatsRow(id, istats, sb_report, ref futurecount, feedurl, redirected_url, homeurl);
 		}
 
 		public static void SaveWhatStats(FeedRegistry fr, Calinfo calinfo)
@@ -549,27 +718,64 @@ namespace WorkerRole
 			var id = calinfo.id;
 			logger.LogMsg("info", "SaveWhatStats: " + id, null);
 			Dictionary<string, IcalStats> istats = GetIcalStats(id);
-			string report = "";
-			report = MakeTableHeader(report);
+			var sb_report = new StringBuilder();
+			sb_report.Append( MakeTableHeader() );
 			var futurecount = 0;
-			foreach (var feedurl in istats.Keys)
+
+			var options = new ParallelOptions();
+			Parallel.ForEach(source: fr.feeds.Keys, parallelOptions: options, body: (feedurl) =>
+			//		foreach (var feedurl in fr.feeds.Keys)
 			{
-				StatsRow(id, istats, ref report, ref futurecount, feedurl);
+				StatsRow(id, istats, sb_report, ref futurecount, feedurl);
 			}
-			report += "</table>\n";
+			);
+
+			sb_report.Append( "</table>\n" );
 			string preamble = MakeWhatPreamble(futurecount);
-			report = preamble + report;
+			var report = preamble + sb_report.ToString();
 			report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(calinfo, report, "stats");
 			bs.PutBlob(id, id + ".stats.html", new Hashtable(), Encoding.UTF8.GetBytes(report), null);
 		}
 
-		private static string MakeTableHeader(string report)
+		public static void SaveRegionStats(string region)
 		{
-			report += string.Format(@"
+			logger.LogMsg("info", "SaveRegionStats: " + region, null);
+			var ids = Utils.GetIdsForRegion(region);
+			var sb_region_report = new StringBuilder();
+			int futurecount = 0;
+			foreach (var id in ids)
+			{
+				var sb_id_report = new StringBuilder();
+				Dictionary<string, IcalStats> istats = GetIcalStats(id);
+				sb_id_report.Append("<h1>" + id + "</h1>\n");
+
+				sb_id_report.Append(MakeTableHeader());
+
+				var options = new ParallelOptions();
+				Parallel.ForEach(source: istats.Keys, parallelOptions: options, body: (feedurl) =>
+				{
+					StatsRow(region, istats, sb_id_report, ref futurecount, feedurl);
+				}
+				);
+
+				sb_id_report.Append( "</table>\n" );
+
+				sb_region_report.Append(sb_id_report.ToString());
+			}
+
+			var region_calinfo = Utils.AcquireCalinfo(region);
+			var report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(region_calinfo, sb_region_report.ToString(), "stats");
+			bs.PutBlob(region, region + ".stats.html", report);
+		}
+
+		private static string MakeTableHeader()
+		{
+			return string.Format(@"
 <table class=""icalstats"">
 <tr>
 <td>feed</td>
 <td>validation</td>
+<td>error?</td>
 <td>future</td>
 <td>single</td>
 <td>recurring</td>
@@ -578,7 +784,6 @@ namespace WorkerRole
 <td>when</td>
 <td>PRODID</td>
 </tr>");
-			return report;
 		}
 
 		private static string MakeWhatPreamble(int futurecount)
@@ -630,23 +835,30 @@ All events {8}, population {9}, events/person {10:f}
 			return preamble;
 		}
 
-		private static void DoStatsRow(string id, Dictionary<string, IcalStats> istats, ref string report, ref int futurecount, string feedurl, string redirected_url, string homeurl)
+		private static void DoStatsRow(string id, Dictionary<string, IcalStats> istats, StringBuilder sb_report, ref int futurecount, string feedurl, string redirected_url, string homeurl)
 		{
 			try
 			{
 				var ical_stats = istats[feedurl];
-				var is_private = Metadata.IsPrivateFeed(id, feedurl);
 
-				var feed_column = is_private
+				// var is_private = Metadata.IsPrivateFeed(id, feedurl); // Related to http://blog.jonudell.net/2011/06/02/syndicating-facebook-events/
+
+				var is_private = false; // Private FB feeds idle for now
+
+				var feed_column = is_private  // hide the URL if not private
 					? String.Format(@"{0} (<a title=""click to visit calendar's home page"" href=""{1}"">home</a>)", ical_stats.source, homeurl)
 					: String.Format(@"<a title=""click to load calendar"" href=""{0}"">{1}</a> (<a title=""click to visit calendar's home page"" href=""{2}"">home</a>)", feedurl, ical_stats.source, homeurl);
 	
 				var validation_column = is_private
 					? ""
 					: String.Format(@"<a href=""{0}"">validate</a>", Utils.ValidationUrlFromFeedUrl(redirected_url));
-										
-				futurecount += istats[feedurl].futurecount;
-				report += string.Format(@"
+
+				System.Threading.Interlocked.Exchange(ref futurecount, futurecount + istats[feedurl].futurecount); 
+
+				lock (sb_report)
+				{
+					sb_report.Append(
+						string.Format(@"
 <tr>
 <td>{0}</td>
 <td>{1}</td>
@@ -657,19 +869,22 @@ All events {8}, population {9}, events/person {10:f}
 <td>{6}</td>
 <td>{7}</td>
 <td>{8}</td>
+<td>{9}</td>
 </tr>
 ",
-				feed_column,                                             // 0
-				validation_column,                                       // 1
-				ical_stats.futurecount,                                  // 2
-				ical_stats.singlecount,                                  // 3
-				ical_stats.recurringcount,                               // 4
-				ical_stats.recurringinstancecount,                       // 5
-				ical_stats.loaded,                                       // 6
-				ical_stats.whenchecked,                                  // 7
-				//ical_stats.dday_error,                                 // 
-				ical_stats.prodid                                        // 8
-				);
+					feed_column,                                             // 0
+					validation_column,                                       // 1
+					ical_stats.dday_error,                                   // 2
+					ical_stats.futurecount,                                  // 3
+					ical_stats.singlecount,                                  // 4
+					ical_stats.recurringcount,                               // 5
+					ical_stats.recurringinstancecount,                       // 6
+					ical_stats.loaded,                                       // 7
+					ical_stats.whenchecked,                                  // 8
+					ical_stats.prodid                                        // 9
+					)
+					);
+				}
 			}
 			catch (Exception ex)
 			{
@@ -716,21 +931,6 @@ All events {8}, population {9}, events/person {10:f}
 			catch (Exception e)
 			{
 				logger.LogMsg("exception", "MergeIcs: " + id, e.Message + e.StackTrace);
-			}
-		}
-
-		private static void DedupeIcal(iCalendar all_ical, iCalendar deduped)
-		{
-			var dict = new Dictionary<string, DDay.iCal.Event>();
-			foreach (DDay.iCal.Event evt in all_ical.Events)
-			{
-				var key = evt.Summary.ToString() + "_" + evt.DTStart.ToString();
-				var val = evt;
-				dict.Add(key, val);
-			}
-			foreach (var key in dict.Keys)
-			{
-				Collector.AddEventToDDayIcal(deduped, dict[key]);
 			}
 		}
 
@@ -793,30 +993,14 @@ All events {8}, population {9}, events/person {10:f}
 		{
 			GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
 
-			var ids = Metadata.LoadHubIdsFromAzureTable();
-			ids = MaybeAdjustIdsForTesting(ids);
+			WebRoleData.MakeWebRoleData();  // make sure wrd.obj includes updated renderers (if any)
 
-			foreach (var id in ids)
-				Utils.RecreatePickledCalinfoAndRenderer(id);  
+			Utils.MakeWhereSummary();  // refresh http://elmcity.blob.core.windows.net/admin/where_summary.html
 
-			WebRoleData.MakeWebRoleData();  // update wrd.obj to include changed pickles (if any) and new hubs ( if any )
-
-			Utils.MakeWhereSummary();
-			Utils.MakeWhatSummary();
+			Utils.MakeWhatSummary();  // refresh http://elmcity.blob.core.windows.net/admin/what_summary.html
 			
-			//Utils.MakeFeaturedHubs();
-
-			try // refresh fb api access 
-			{
-				var url = String.Format("https://www.facebook.com/dialog/oauth?client_id={0}&redirect_uri={1}&scope=offline_access",
-					settings["facebook_token_getter_id"],
-					settings["facebook_token_getter_redirect_uri"]);
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "GeneralAdmin: refresh fb access", e.Message + e.StackTrace);
-			}
-			
+			//Utils.MakeFeaturedHubs(); // idle for now
+		
 		}
 
 		public static void TestRunnerAdmin(object o, ElapsedEventArgs args)
@@ -850,20 +1034,6 @@ All events {8}, population {9}, events/person {10:f}
 			catch (Exception ex)
 			{
 				logger.LogMsg("exception", "IronPythonAdmin", ex.Message + ex.StackTrace);
-			}
-		}
-
-		public static void HighFrequencyScript(object o, ElapsedEventArgs e)
-		{
-			try
-			{
-				logger.LogMsg("info", "HighFrequencyScript", null);
-				PythonUtils.RunIronPython(local_storage_path, CalendarAggregator.Configurator.iron_python_run_script_url, new List<string>() { "", "", "" });
-
-			}
-			catch (Exception ex)
-			{
-				logger.LogMsg("exception", "HighFrequencyScript", ex.Message + ex.StackTrace);
 			}
 		}
 

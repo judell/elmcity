@@ -44,12 +44,12 @@ namespace WebRole
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
-			var template_uri = BlobStorage.MakeAzureBlobUri("admin", "home2.tmpl");
+			var template_uri = BlobStorage.MakeAzureBlobUri("admin", "home2.tmpl", true);
 			var page = HttpUtils.FetchUrl(template_uri).DataAsString();
 
-			var auth_uri = BlobStorage.MakeAzureBlobUri("admin", "home_auth.tmpl");
-			var noauth_uri = BlobStorage.MakeAzureBlobUri("admin", "home_noauth.tmpl");
-			var featured_uri = BlobStorage.MakeAzureBlobUri("admin", "featured.html");
+			var auth_uri = BlobStorage.MakeAzureBlobUri("admin", "home_auth.tmpl", true);
+			var noauth_uri = BlobStorage.MakeAzureBlobUri("admin", "home_noauth.tmpl", true);
+			var featured_uri = BlobStorage.MakeAzureBlobUri("admin", "featured.html", true);
 
 			var signin = HttpUtils.FetchUrlNoCache (auth_uri).DataAsString();
 
@@ -99,6 +99,99 @@ namespace WebRole
 			}
 		}
 
+		public ActionResult add_to_cal(string elmcity_id, string flavor, string start, string end, string summary, string description, string url, string location)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			end = end ?? "";
+			url = url ?? "";
+			if (!String.IsNullOrEmpty(url))
+			{
+				try		{	var uri = new Uri(url);	}
+				catch 	{	url = "";				}
+			}
+			location = location ?? "";
+			switch (flavor)
+			{
+				case "ical":
+					var result = CalendarRenderer.RenderEventAsIcs(elmcity_id, summary, start, end, description, location, url);
+					return Content(result, "text/calendar");
+				case "google":
+					Utils.PrepForAddToCalRedirect(ref description, location, url, ref start, ref end, elmcity_id, false);
+					var google_redirect = String.Format("https://www.google.com/calendar/render?action=TEMPLATE&text={0}&dates={1}/{2}&details={3}&location=", summary, start, end, description, location);
+					return new RedirectResult(google_redirect);
+				case "hotmail":
+					Utils.PrepForAddToCalRedirect(ref description, location, url, ref start, ref end, elmcity_id, false);
+					var hotmail_redirect = String.Format("https://bay04.calendar.live.com/calendar/calendar.aspx?rru=addevent&summary={0}&dtstart={1}&dtend={2}&description={3}&location={4}", summary, start, end, description,location); 
+					return new RedirectResult(hotmail_redirect);
+				case "facebook":
+					Utils.PrepForAddToCalRedirect(ref description, location, url, ref start, ref end, elmcity_id, true);
+					var facebook_redirect = String.Format("http://elmcity.cloudapp.net/add_fb_event?name={0}&start_time={1}&end_time{2}&description={3}&location={4}", summary, start, end, description,location); 
+					return new RedirectResult(facebook_redirect);
+				default:
+					result = "unexpected type: " + flavor;
+					return Content(result);
+			}
+		}
+
+		private static string MakeAddToCalDateTime(string elmcity_id, string start)
+		{
+			var dt = DateTime.Parse(start);
+			var calinfo = Utils.AcquireCalinfo(elmcity_id);
+			var utc = Utils.DtWithZoneFromDtAndTzinfo(dt, calinfo.tzinfo).UniversalTime;
+			return utc.ToString("yyyyMMddThhmm00Z");
+		}
+
+		private static string MakeAddToCalDescription(string description, string url, string location)
+		{
+			if (!String.IsNullOrEmpty(url))
+				description = "Url: " + url + "\n" + description;
+			if (!String.IsNullOrEmpty(location))
+				description = "Location: " + location + "\n" + description;
+			return description;
+		}
+
+		public ActionResult description_from_title_and_dtstart(string id, string title, string dtstart, string jsonp)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var description = "";
+			try
+			{
+				var cr = ElmcityApp.wrd.renderers[id];
+				description = cr.DescriptionFromTitleAndDtstart(title, dtstart, jsonp);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "description_from_title_and_dtstart", e.Message + e.StackTrace);
+			}
+			return Content(description, "application/json");
+		}
+
+		public ActionResult feed2json(string id, string source, string jsonp)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string result;
+			try
+			{
+				var renderer = Utils.AcquireRenderer(id);
+				result = renderer.RenderFeedAsJson(source);
+				if (jsonp != null)
+					result = jsonp + "(" + result + ")";
+				return Content(result, "application/json");
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "feed2json", e.Message + e.StackTrace);
+				result = string.Format(
+@"sorry, cannot export {0} as json. 
+are you sure it is the name of an active elmcity feed for the {1} hub?
+if unsure please check http://elmcity.cloudapp.net/{1}/stats",
+				source,
+				id
+				);
+				return Content(result, "text/plain");
+			}
+		}
+
 		public ActionResult get_high_school_sports_url(string school, string tz)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -109,7 +202,8 @@ namespace WebRole
 		public ActionResult get_fb_ical_url(string fb_page_url, string elmcity_id)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-			var result = Utils.get_fb_ical_url(fb_page_url, elmcity_id);
+			var regex = settings["fb_page_id_regex"];
+			var result = Utils.get_fb_ical_url(fb_page_url, elmcity_id, regex);
 			return Content(result);
 		}
 
@@ -120,10 +214,24 @@ namespace WebRole
 			return Content(result);
 		}
 
-		public ActionResult get_ics_to_ics_ical_url(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string url_only)
+		public ActionResult get_ics_to_ics_ical_url(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string url_only, string location_only)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-			var result = Utils.get_ics_to_ics_ical_url(feedurl, elmcity_id, source, after, before, include_keyword, exclude_keyword, summary_only, url_only);
+			var result = Utils.get_ics_to_ics_ical_url(feedurl, elmcity_id, source, after, before, include_keyword, exclude_keyword, summary_only, url_only, location_only);
+			return Content(result);
+		}
+
+		public ActionResult get_ical_url_from_eventbrite_event_page(string url, string elmcity_id)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var result = Utils.get_ical_url_from_eventbrite_event_page(url, elmcity_id);
+			return Content(result);
+		}
+
+		public ActionResult get_ical_url_from_eid_of_eventbrite_event_page(string url, string tzname)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var result = Utils.get_ical_url_from_eid_of_eventbrite_event_page(url, tzname);
 			return Content(result);
 		}
 
@@ -148,6 +256,7 @@ namespace WebRole
 
 			string template = HttpUtils.FetchUrl(new Uri("http://elmcity.blob.core.windows.net/admin/hubfiles.tmpl")).DataAsString();
 			var page = template.Replace("__ID__", id);
+			page = page.Replace("__LOWERID__", id.ToLower());
 			return Content(page, "text/html");
 		}
 
@@ -167,13 +276,22 @@ namespace WebRole
 			return Content(page, "text/html");
 		}
 
+		[OutputCache(Duration = CalendarAggregator.Configurator.tag_cloud_cache_duration_seconds, VaryByParam="*")]
+		public ActionResult tag_cloud(string id)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var url = BlobStorage.MakeAzureBlobUri(id, "tags.json",true);
+			var page = HttpUtils.FetchUrl(url).DataAsString();
+			return Content(page, "application/json");
+		}
+
 		public enum UrlHelper { get_fb_ical_url, get_high_school_sports_url, get_csv_ical_url };
 
 		public ActionResult url_helpers()
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
-			var uri = BlobStorage.MakeAzureBlobUri("admin", "url_helpers.html");
+			var uri = BlobStorage.MakeAzureBlobUri("admin", "url_helpers.html",false);
 			var page = HttpUtils.FetchUrlNoCache(uri).DataAsString();
 			var content_type = "text/html";
 
@@ -183,6 +301,7 @@ namespace WebRole
 		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult ics_from_fb_page(string fb_id, string elmcity_id)
 		{
+			this.HttpContext.Server.ScriptTimeout = CalendarAggregator.Configurator.webrole_script_timeout_seconds;
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			string ics = "";
 			try
@@ -197,8 +316,60 @@ namespace WebRole
 		}
 
 		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult ics_from_eventbrite_organizer(string organizer, string elmcity_id)
+		{
+			this.HttpContext.Server.ScriptTimeout = CalendarAggregator.Configurator.webrole_script_timeout_seconds;
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string ics = "";
+			try
+			{
+				ics = Utils.IcsFromEventBriteOrganizerByName(organizer, elmcity_id, ElmcityController.settings);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ics_from_eventbrite_organizer: " + organizer + ", " + elmcity_id, e.Message + e.StackTrace);
+			}
+			return Content(ics, "text/calendar");
+		}
+
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult ics_from_eventbrite_organizer_id(string organizer_id, string elmcity_id)
+		{
+			this.HttpContext.Server.ScriptTimeout = CalendarAggregator.Configurator.webrole_script_timeout_seconds;
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string ics = "";
+			try
+			{
+				ics = Utils.IcsFromEventBriteOrganizerById(organizer_id, elmcity_id, ElmcityController.settings);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ics_from_eventbrite_organizer_id: " + organizer_id + ", " + elmcity_id, e.Message + e.StackTrace);
+			}
+			return Content(ics, "text/calendar");
+		}
+
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult ics_from_eventbrite_eid(string eid, string tzname)
+		{
+			this.HttpContext.Server.ScriptTimeout = CalendarAggregator.Configurator.webrole_script_timeout_seconds;
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string ics = "";
+			try
+			{
+				ics = Utils.IcsFromEventBriteEid(eid, tzname, ElmcityController.settings);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ics_from_eventbrite_eid: " + eid + ", " + tzname, e.Message + e.StackTrace);
+			}
+			return Content(ics, "text/calendar");
+		}
+
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult ics_from_xcal(string url, string source, string tzname)
 		{
+			this.HttpContext.Server.ScriptTimeout = CalendarAggregator.Configurator.webrole_script_timeout_seconds;
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			var tzinfo = Utils.TzinfoFromName(tzname);
 			string ics = "";
@@ -293,17 +464,18 @@ namespace WebRole
 		}
 
 		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
-		public ActionResult ics_from_ics(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string url_only)
+		public ActionResult ics_from_ics(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string url_only, string location_only)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			string ics = "";
-			bool t_summary_only = summary_only != null && summary_only == "yes" ? true : false;
-			bool t_url_only = url_only != null & url_only == "yes" ? true : false;
+			bool t_summary_only = Utils.UrlParameterIsTrue(summary_only);
+			bool t_url_only = Utils.UrlParameterIsTrue(url_only);
+			bool t_location_only = Utils.UrlParameterIsTrue(location_only);
 			try
 			{
 
 				var calinfo = Utils.AcquireCalinfo(elmcity_id);
-				ics = Utils.IcsFromIcs(feedurl, calinfo, source, after, before, include_keyword, exclude_keyword, t_summary_only, t_url_only);
+				ics = Utils.IcsFromIcs(feedurl, calinfo, source, after, before, include_keyword, exclude_keyword, t_summary_only, t_url_only, t_location_only);
 			}
 			catch (Exception e)
 			{
@@ -400,7 +572,7 @@ namespace WebRole
 				var id = dict["id"];
 				var json = dict["json"];
 				Metadata.UpdateMetadataForId(id, json);
-				bs.DeleteBlob(id, "metadata.html");
+				//bs.DeleteBlob(id, "metadata.html");
 			}
 			catch (Exception e)
 			{
@@ -440,7 +612,7 @@ namespace WebRole
 				var id = dict["id"];
 				var json = dict["json"];
 				Metadata.UpdateFeedsForId(id, json);
-				bs.DeleteBlob(id, "metadata.html"); 
+				//bs.DeleteBlob(id, "metadata.html"); 
 			}
 			catch (Exception e)
 			{
@@ -453,7 +625,7 @@ namespace WebRole
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			var name = string.Format("{0}.{1}.json", id, flavor);
-			var uri = BlobStorage.MakeAzureBlobUri(id, name );
+			var uri = BlobStorage.MakeAzureBlobUri(id, name, false);
 			return Content(HttpUtils.FetchUrl(uri).DataAsString(), "text/json");
 		}
 
@@ -466,7 +638,7 @@ namespace WebRole
 
 			if ( auth_mode != null )
 			{
-				var uri = BlobStorage.MakeAzureBlobUri("admin", "editable_metadata.html");
+				var uri = BlobStorage.MakeAzureBlobUri("admin", "editable_metadata.html", false);
 				var page = HttpUtils.FetchUrl(uri).DataAsString();
 				page = page.Replace("__ID__", id);
 				page = page.Replace("__FLAVOR__", flavor);
@@ -580,7 +752,6 @@ namespace WebRole
 			GenUtils.LogMsg("info", "GetFacebookAccessToken", url);
 			var r = HttpUtils.FetchUrl(new Uri(url));
 			GenUtils.LogMsg("info", "GetFacebookAccessToken", r.DataAsString());
-			//access_token=117860144976406|2.AQCNmy6WOTkvR1lL.3600.1314115200.1-652661115|io2kl5gXx2IXhyvgiEKFeD6K9ks&
 			System.Collections.Specialized.NameValueCollection qs = HttpUtility.ParseQueryString(r.DataAsString());
 			var access_token = qs["access_token"];
 			return access_token;
@@ -678,9 +849,18 @@ namespace WebRole
 				);
 			var r = HttpUtils.DoHttpWebRequest(request, Encoding.UTF8.GetBytes(post_data));
 
-			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-			var dict = (Dictionary<string, object>)serializer.DeserializeObject(r.DataAsString());
-			var access_token = (string)dict["access_token"];
+			string access_token = null;
+
+			try
+			{
+				var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+				var dict = (Dictionary<string, object>)serializer.DeserializeObject(r.DataAsString());
+				access_token = (string)dict["access_token"];
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "google_auth", e.Message + ", " + r.DataAsString());
+			}
 
 			var owncalendars = new Uri("https://www.google.com/calendar/feeds/default/owncalendars/full?access_token=" + Uri.EscapeUriString(access_token));
 			r = HttpUtils.FetchUrl(owncalendars);
@@ -700,39 +880,73 @@ namespace WebRole
 
 		}
 
-		public ActionResult fb_access(string code)
+		public ActionResult add_fb_event(string code, string name, string description, string location, string start_time, string state)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-			try
+
+			name = name ?? "";
+			description = description ?? "";
+			location = location ?? "";
+			start_time = start_time ?? "";
+			var settings = GenUtils.GetSettingsFromAzureTable();
+			var app_id = settings["facebook_event_adder_id"];
+			var app_secret = settings["facebook_event_adder_secret"];
+			var redirect_uri = settings["facebook_event_adder_redirect_uri"];
+
+			if (code == null)
 			{
-				var token_attribute = "facebook_access_token";
-				var q = string.Format("$filter=RowKey eq '{0}'", token_attribute);
-				var ts = TableStorage.MakeDefaultTableStorage();
-				var existing_record = TableStorage.QueryForSingleEntityAsDictStr(ts, "settings", q);
-				var existing_token = existing_record[token_attribute];
-
-
-				var facebook_token_getter_id = settings["facebook_token_getter_id"];
-				var facebook_token_getter_secret = settings["facebook_token_getter_secret"];
-				var facebook_token_getter_redirect_uri = settings["facebook_token_getter_redirect_uri"];
-
-				var new_token = GetFacebookAccessToken(code, facebook_token_getter_id, facebook_token_getter_redirect_uri, facebook_token_getter_secret);
-				if (new_token != existing_token)
+				state = string.Format("name={0}&description={1}&location={2}&start_time={3}",
+					name,
+					description,
+					location,
+					start_time
+					);
+				state = Uri.EscapeDataString(state);
+				var redirect = String.Format("https://www.facebook.com/dialog/oauth?client_id={0}&redirect_uri={1}&scope=&state={2}",
+					app_id,
+					redirect_uri,
+					state);
+				return new RedirectResult(redirect);
+			}
+			else
+			{
+				try
 				{
-					var entity = new Dictionary<string, object>();
-					entity.Add(token_attribute, new_token);
-					TableStorage.UpmergeDictToTableStore(entity, "settings", partkey: "settings", rowkey: token_attribute);
-					GenUtils.PriorityLogMsg("info", "fb_access: new token", null);
+					var access_token = GetFacebookAccessToken(code, app_id, redirect_uri, app_secret);
+					System.Collections.Specialized.NameValueCollection st = HttpUtility.ParseQueryString(state);
+					var _name = st["name"] ?? "";
+					var _description = st["description"] ?? "";
+					var _location = st["location"] ?? "";
+					var _start_time = st["start_time"] ?? "";
+					_add_fb_event(access_token, _name, _description, _location, _start_time);
 				}
-				else
-					GenUtils.PriorityLogMsg("info", "fb_access: same token", null);
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "fb_access", e.Message + e.StackTrace);
+				catch (Exception e)
+				{
+					var result = new ContentResult();
+					GenUtils.PriorityLogMsg("exception", "add_fb_event", e.Message + e.StackTrace);
+					result.Content = "Sorry, unable to add event to Facebook. The error was: " + e.Message.ToString();
+					result.ContentType = "text/html";
+				}
 			}
 
-			return new RedirectResult("/");  // could be anything, this is web equivalent of void method
+			return new RedirectResult("https://www.facebook.com/events");
+		}
+
+		private void _add_fb_event(string access_token, string name, string description, string location, string start_time)
+		{
+			string host = "https://graph.facebook.com";
+			var url = string.Format("{0}/me/events?access_token={1}", host, access_token);
+			var data = string.Format("name={0}&description={1}&location={2}&start_time={3}",
+				name,
+				description,
+				location,
+				start_time
+				);
+			GenUtils.LogMsg("info", url, data);
+			var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+			request.Method = "POST";
+			var response = HttpUtils.DoHttpWebRequest(request, Encoding.UTF8.GetBytes(data));
+			GenUtils.LogMsg("info", "_add_fb_event", response.status.ToString() + ", " + response.DataAsString());
 		}
 
 		#endregion

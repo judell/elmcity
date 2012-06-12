@@ -21,6 +21,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ElmcityUtils;
 using Newtonsoft.Json;
+using System.Threading.Tasks;
 
 namespace CalendarAggregator
 {
@@ -28,6 +29,7 @@ namespace CalendarAggregator
 	public static class Metadata
 	{
 		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
+		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 		public static string ts_table = "metadata";
 
 		public static void UpdateMetadataForId(string id, string json)
@@ -45,6 +47,7 @@ namespace CalendarAggregator
 			var snapshot_changed = ObjectUtils.SavedJsonSnapshot(id, ObjectUtils.JsonSnapshotType.DictStr, "metadata", metadict_str);
 			if (snapshot_changed == true)
 			{
+				bs.DeleteBlob(id, "metadata.html");
 				UpmergeChangedMetadict(id, id, metadict_str);
 				Utils.RecreatePickledCalinfoAndRenderer(id);
 			}
@@ -79,7 +82,7 @@ namespace CalendarAggregator
 
 					// query existing feeds
 					var existing_query = string.Format("$filter=PartitionKey eq '{0}' and feedurl ne ''", id);
-					var existing_feeds = TableStorage.QueryEntities("metadata", existing_query, ts).list_dict_obj;
+					var existing_feeds = ts.QueryAllEntitiesAsListDict("metadata", existing_query).list_dict_obj;
 					var existing_feed_urls = existing_feeds.Select(feed => feed["feedurl"]);
 
 					GenUtils.LogMsg("info", "UpdateFeedsForId: find new and add", null);
@@ -133,11 +136,12 @@ namespace CalendarAggregator
 						}
 						if (updated)
 						{
+							bs.DeleteBlob(id, "metadata.html");
 							UpmergeChangedMetadict(id, rowkey, json_record);
+							Utils.RecreatePickledCalinfoAndRenderer(id);
 						}
 					}
 
-					Utils.RecreatePickledCalinfoAndRenderer(id);
 				}
 				catch (Exception e)
 				{
@@ -155,7 +159,7 @@ namespace CalendarAggregator
 
 		public static List<string> LoadHubIdsFromAzureTable()
 		{
-			var q = string.Format("$filter=type eq 'what' or type eq 'where'");
+			var q = string.Format("$filter=type eq 'what' or type eq 'where' or type eq 'region'");
 			var ids = QueryIds(q);
 			return ids;
 		}
@@ -172,7 +176,9 @@ namespace CalendarAggregator
 		{
 			var q = string.Format("$filter=type eq 'where'");
 			var d = new Dictionary<string, string>();
-			var r = TableStorage.QueryEntities("metadata", q, ts);
+
+			var ts = TableStorage.MakeDefaultTableStorage();
+			var r = ts.QueryAllEntitiesAsListDict("metadata", q);
 			try
 			{
 				foreach (var dict in r.list_dict_obj)
@@ -185,13 +191,15 @@ namespace CalendarAggregator
 			{
 				GenUtils.PriorityLogMsg("exception", "QueryIdsAndLocations", e.Message + e.StackTrace);
 			}
+			
 			return d;
+
 		}
 
 		private static List<string> QueryIds(string q)
 		{
 			var ids = new List<string>();
-			var r = TableStorage.QueryEntities("metadata", q, ts);
+			var r = ts.QueryAllEntitiesAsListDict("metadata", q);
 			foreach (var dict in r.list_dict_obj)
 				ids.Add((string)dict["PartitionKey"]);
 			return ids;
@@ -214,7 +222,7 @@ namespace CalendarAggregator
 		public static Dictionary<string, string> LoadFeedsFromAzureTableForId(string id, FeedLoadOption option)
 		{
 			var q = string.Format("$filter=(PartitionKey eq '{0}' and feedurl ne '' )", id);
-			var qdicts = ts.QueryEntities("metadata", q).list_dict_obj;
+			var qdicts = ts.QueryAllEntitiesAsListDict("metadata", q).list_dict_obj;
 			var feed_dict = new Dictionary<string, string>();
 			foreach (var dict in qdicts)
 			{
@@ -255,19 +263,30 @@ namespace CalendarAggregator
 			feed_dict[feedurl] = source;
 		}
 
-		public static bool IsPrivateFeed(string id, string feedurl)
+		public static void AlterHubMetadata(string id, Dictionary<string,string> dict)
 		{
-			var is_private = true; // safe default
-			var q = string.Format("$filter=(PartitionKey eq '{0}' and RowKey eq '{1}' )", id, TableStorage.MakeSafeRowkeyFromUrl(feedurl));
-			var qdicts = ts.QueryEntities(ts_table, q).list_dict_obj;
-			if (qdicts.Count != 1)
-				GenUtils.PriorityLogMsg("warning", "IsPrivateFeed", "non-singular result for " + q);
-			else
+			try
 			{
-				var dict = qdicts.First();
-				is_private = dict.ContainsKey("private") && (bool)dict["private"] == true;
+			var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
+			foreach ( var key in dict.Keys )
+				metadict[key] = dict[key];
+			var json = Newtonsoft.Json.JsonConvert.SerializeObject(metadict);
+			Metadata.UpdateMetadataForId(id, json);
 			}
-			return is_private;
+			catch (Exception e)
+			{
+			GenUtils.PriorityLogMsg("exception", "AlterHubMetadata: " + String.Join(",", dict.Keys.ToList()), e.Message);
+			}
+
+		}
+
+		public static void AlterAllHubMetadata(Dictionary<string,string> dict)
+		{
+			var ids = Metadata.LoadHubIdsFromAzureTable();
+			Parallel.ForEach(source: ids, body: (id) =>
+			{
+				AlterHubMetadata(id, dict);
+			});
 		}
 
 	}

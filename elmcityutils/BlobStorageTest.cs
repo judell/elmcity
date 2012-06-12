@@ -132,5 +132,34 @@ namespace ElmcityUtils
 			Assert.AreEqual(HttpStatusCode.Accepted, response.HttpResponse.status);
 		}
 
+		[Test]
+		public void AcquireLeaseReturnsHttpStatusCreated()
+		{
+			HttpUtils.Wait(100);
+			var r = bs.AcquireLease(containername, blobname);
+			Assert.AreEqual(HttpStatusCode.Created, r.status);
+		}
+
+		[Test]
+		public void AcquireLeaseFailsWithConflict()
+		{
+			HttpUtils.Wait(100);
+			var r = bs.AcquireLease(containername, blobname);
+			Assert.AreEqual(HttpStatusCode.Created, r.status);
+			HttpUtils.Wait(1);
+			r = bs.AcquireLease(containername, blobname);
+			Assert.AreEqual(HttpStatusCode.Conflict, r.status);
+		}
+
+		[Test]
+		public void RetryLeaseReturnsStatusCreated()
+		{
+			HttpUtils.Wait(60);
+			var r = bs.AcquireLease(containername, blobname);
+			Assert.AreEqual(HttpStatusCode.Created, r.status);
+			r = bs.RetryAcquireLease(containername, blobname);
+			Assert.AreEqual(HttpStatusCode.Created, r.status);
+		}
+
 	}
 }

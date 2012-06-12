@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Xml;
 using System.Xml.Linq;
+using System.Collections.Generic;
 
 namespace ElmcityUtils
 {
@@ -56,18 +57,35 @@ namespace ElmcityUtils
 			return xdoc;
 		}
 
-		public static string GetXeltValue(XContainer xelt, XNamespace ns, string name)
+		public static string GetXeltValue(XContainer xelt, XNamespace ns, string elt_name)
 		{
-			var elt = xelt.Descendants(ns + name);
-			var first = elt.FirstOrDefault();
-			var value = first.Value;
-			return value;
+			var descendants = xelt.Descendants(ns + elt_name);
+			if (descendants.Count() > 0)
+			{
+				var first = descendants.FirstOrDefault();
+				var value = first.Value;
+				return value;
+			}
+			else
+			{
+				return null;
+			}
 		}
+
 
 		public static string GetXAttrValue(XContainer xelt, XNamespace ns, string elt_name, string attr_name)
 		{
-			var value = xelt.Descendants(ns + elt_name).FirstOrDefault().Attribute(attr_name).Value;
-			return value.ToString();
+			var descendants = xelt.Descendants(ns + elt_name);
+			if (descendants.Count() > 0)
+			{
+				var first = descendants.FirstOrDefault();
+				var value = first.Attribute(attr_name).Value;
+				return value;
+			}
+			else
+			{
+				return null;
+			}
 		}
 
 		public static string Cdataize(string str)

@@ -49,13 +49,14 @@ namespace CalendarAggregator
 	   }*/
 	}
 
-	public enum TwitterCommandName { start, meta_refresh, add_fb_feed, rem_fb_feed, show_fb_feeds };
+	public enum TwitterCommandName { start, meta_refresh, add_fb_feed, rem_fb_feed, show_fb_feeds, none };
 
 	public class TwitterCommand : TwitterDirectMessage
 	{
-		public string command { get; set; }                  // ? makes it nullable
+		public TwitterCommandName command { get; set; }                
 		public Dictionary<string, string> args_dict { get; set; }
-		public List<string> vocabulary = GenUtils.EnumToList<TwitterCommandName>();
+		public List<TwitterCommandName> vocabulary = Enum.GetValues(typeof(TwitterCommandName)).Cast<TwitterCommandName>().ToList();
+
 		public List<string> required_args = new List<string>() { "id", "key", "who" };
 		public List<string> optional_args = new List<string>() { "url", "category" };
 		public List<string> all_args;
@@ -69,22 +70,22 @@ namespace CalendarAggregator
 			this.text = text;
 			this.all_args = required_args.Concat(optional_args).ToList();
 			this.GetCommand();
-			if ( this.command != null)
+			if ( this.command != TwitterCommandName.none )
 				this.GetArgs();
 		}
 
 		private void GetCommand()
 		{
-			var valid = vocabulary.FindAll(cmd_name => this.text.StartsWith(cmd_name)).Count() == 1;
-			if ( valid )
-				this.command = vocabulary.Find(cmd_name => this.text.StartsWith(cmd_name));
+			var valid = vocabulary.FindAll(cmd_name => this.text.StartsWith(cmd_name.ToString())).Count() == 1;
+			if (valid)
+				this.command = vocabulary.Find(cmd_name => this.text.StartsWith(cmd_name.ToString()));
 			else
-				this.command = null;
+				this.command = TwitterCommandName.none;
 		}
 
 		private void GetArgs()
 		{
-			var name = this.command;
+			var name = this.command.ToString();
 			var args_text = this.text.Replace(name, "");
 			this.args_dict = GenUtils.RegexFindKeysAndValues(this.all_args, args_text);
 		}
@@ -115,7 +116,7 @@ namespace CalendarAggregator
 		{
 			{
 				var q = string.Format("$filter=(PartitionKey eq '{0}')", pk_directs);
-				var qdicts = ts.QueryEntities(ts_table, q).list_dict_obj;
+				var qdicts = ts.QueryAllEntitiesAsListDict("metadata", q).list_dict_obj;
 				var messages = new List<TwitterDirectMessage>();
 				foreach (var qdict in qdicts)
 				{

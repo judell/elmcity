@@ -56,7 +56,7 @@ namespace ElmcityUtils
 		public bool IsTrustedId(string foreign_id)
 		{
 			var q = String.Format("$filter=PartitionKey eq '{0}' and {1} eq '{2}'", this.trusted_table, this.trusted_field, foreign_id);
-			return ts.QueryEntities(this.trusted_table.ToString(), q).list_dict_obj.Count > 0; // foreign id to elmcity id is many to one
+			return ts.QueryAllEntitiesAsListDict(this.trusted_table.ToString(), q).list_dict_obj.Count > 0; // foreign id to elmcity id is many to one
 		}
 
 		public bool ElmcityIdIsAuthorized(string id)
@@ -64,7 +64,7 @@ namespace ElmcityUtils
 			try
 			{
 				var q = String.Format("$filter=RowKey eq '{0}'", id);
-				var list = ts.QueryEntities(this.trusted_table.ToString(), q).list_dict_obj;
+				var list = ts.QueryAllEntitiesAsListDict(this.trusted_table.ToString(), q).list_dict_obj;
 				return list.Count >= 1;
 			}
 			catch (Exception e)
@@ -84,7 +84,7 @@ namespace ElmcityUtils
 				if (cookie == null) return null;
 				session_id = request.Cookies[cookie_name.ToString()].Value;
 				var q = String.Format("$filter=PartitionKey eq 'sessions' and RowKey eq '{0}'", session_id);
-				var results = ts.QueryEntities("sessions", q);
+				var results = ts.QueryAllEntitiesAsListDict("sessions", q);
 				if (results.list_dict_obj.Count > 0)
 					return (string)results.list_dict_obj[0][this.trusted_field.ToString()];
 				else
@@ -126,7 +126,7 @@ namespace ElmcityUtils
 			var q = String.Format("$filter={0} eq '{1}'", this.trusted_field, foreign_id);
 			try
 			{
-				var list = ts.QueryEntities(this.trusted_table.ToString(), q).list_dict_obj;
+				var list = ts.QueryAllEntitiesAsListDict(this.trusted_table.ToString(), q).list_dict_obj;
 				return list.Select(x => (string)x["RowKey"]).ToList();
 			}
 			catch (Exception e)

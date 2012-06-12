@@ -24,17 +24,10 @@ namespace CalendarAggregator
 	{
 
 		[Test]
-		public void CanRetrieveDirectMessagesFromAzure()
-		{
-			var messages = TwitterApi.GetDirectMessagesFromAzure();
-			var msg = messages.First();
-			Assert.That(msg.recipient_screen_name == Configurator.twitter_account);
-		}
-
-		[Test]
 		public void CanRetrieveDirectMessagesFromTwitter()
 		{
 			var xml = TwitterApi.SendTwitterDirectMessage("elmcity_azure", "test: " + System.DateTime.UtcNow.Ticks.ToString());
+			Utils.Wait(3);
 			var xdoc = XmlUtils.XdocFromXmlBytes(Encoding.UTF8.GetBytes(xml));
 			var ids = from message in xdoc.Descendants("direct_message")
 					  select message.Descendants("id").First().Value.ToString();

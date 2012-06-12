@@ -135,6 +135,10 @@ make_html(local_storage, bin, 'iisw3c', in_spec, title, query)
 
 # web queries: charts
 
+title = 'LoadTimesHtmlOnly'
+query = "select qntround_to_digit(time-taken, 2) as millis, count(*) as pageloads into __OUT__ from __IN__ where cs-uri-stem like '%html%' group by millis having count(*) > 0 order by millis"
+make_chart(local_storage, bin, 'iisw3c', 'ColumnClustered', in_spec, title, query)
+
 title = 'LoadTimes'
 query = 'select qntround_to_digit(time-taken, 2) as millis, count(*) as pageloads into __OUT__ from __IN__ group by millis having count(*) > 0 order by millis'
 make_chart(local_storage, bin, 'iisw3c', 'ColumnClustered', in_spec, title, query)

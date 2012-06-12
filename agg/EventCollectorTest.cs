@@ -26,7 +26,6 @@ namespace CalendarAggregator
 	[TestFixture]
 	public class EventCollectorTest
 	{
-		private Uri test_feedurl = new Uri("http://cid-dffec23daaf5ee89.calendar.live.com/calendar/Jon+Udell+(public)/calendar.ics");
 		private string test_venue = "testvenue";
 		private string test_eventful_args = "date=Next+Week&location=03431&within=15&units=mi";
 		private static string min_date = string.Format("{0:yyyy-MM-dd}", DateTime.UtcNow);
@@ -50,6 +49,7 @@ namespace CalendarAggregator
 		private static List<string> ics_examples = new List<string>() { "hillside", "ucb", "berkeleyside", "chorale", "folklore", "graceworship", "cedarhill", "silkcity", "investment"};
 		private static List<string> eventful_examples = new List<string>() { "summitscience" };
 		private static List<string> upcoming_examples = new List<string>() { "philharmonia" };
+		private static List<string> eventbrite_examples = new List<string>() { "eventbrite" };
 
 		private static string keene_test_hub = "testKeene";
 		private static string berkeley_test_hub = "testBerkeley";
@@ -78,11 +78,14 @@ namespace CalendarAggregator
 
 			foreach (var example in upcoming_examples)
 				UpdateYYYY(example, "xml");
+
+			foreach (var example in eventbrite_examples)
+				UpdateYYYY(example, "xml");
 		}
 
 		private static void UpdateYYYY(string example, string ext)
 		{
-			var text = HttpUtils.FetchUrl(BlobStorage.MakeAzureBlobUri("admin", example + ".tmpl")).DataAsString();
+			var text = HttpUtils.FetchUrl(BlobStorage.MakeAzureBlobUri("admin", example + ".tmpl",false)).DataAsString();
 			var then = System.DateTime.UtcNow + TimeSpan.FromDays(365);  // see below
 			text = text.Replace("YYYY", String.Format("{0:yyyy}", then));
 			bs.PutBlob("admin", example + "." + ext, text);
@@ -254,7 +257,7 @@ namespace CalendarAggregator
 		private static ZonelessEventStore ProcessIcalExample(string example, string source, Calinfo calinfo, FeedRegistry fr, Collector collector)
 		{
 			DeleteZonedObjects(calinfo.id);
-			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics").ToString();
+			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false).ToString();
 			fr.AddFeed(feedurl, source);
 			var es = new ZonedEventStore(calinfo, SourceType.ical);
 			collector.CollectIcal(fr, es, false, false);
@@ -266,16 +269,6 @@ namespace CalendarAggregator
 		#endregion
 
 		#region ical basic
-
-		[Test]
-		public void IcalFeedYieldsNonzeroEvents()
-		{
-			var response = HttpUtils.FetchUrl(test_feedurl);
-			string feedtext = response.DataAsString();
-			StringReader sr = new StringReader(feedtext);
-			var ical = iCalendar.LoadFromStream(sr).First().Calendar;
-			Assert.That(ical.Events.Count > 0);
-		}
 
 		[Test]
 		public void iCalSingleEventIsFuture()
@@ -364,9 +357,9 @@ namespace CalendarAggregator
 			var example = "harriscenter";
 			var source = "Summit Science";
 
-			collector_keene.test_eventful_api = true;
+			collector_keene.mock_eventful = true;
 			var zes = ProcessEventfulExample(example, source, calinfo_keene, collector_keene);
-			collector_keene.test_eventful_api = false;
+			collector_keene.mock_eventful = false;
 
 			Assert.That(zes.events.Count == 1);
 			var evt = zes.events[0];
@@ -381,6 +374,35 @@ namespace CalendarAggregator
 			DeleteZonedObjects(calinfo.id);
 			var es = new ZonedEventStore(calinfo, SourceType.eventful);
 			collector.CollectEventful(es, test: true);
+			EventStore.CombineZonedEventStoresToZonelessEventStore(calinfo.id, settings);
+			var zes = new ZonelessEventStore(calinfo).Deserialize();
+			return zes;
+		}
+
+		#endregion
+
+		#region eventbrite
+
+		[Test]
+		public void NewYearsEvePartyAt8PMLocal()
+		{
+			var example = "eventbrite";
+			var source = "EventBrite New Year";
+			collector_keene.mock_eventbrite = true;
+			var zes = ProcessEventBriteExample(example, source, calinfo_keene, collector_keene);
+			Assert.That(zes.events.Count == 1);
+			var evt = zes.events[0];
+			Assert.That(evt.title.StartsWith("Best NYC"));
+			Assert.That(evt.dtstart.Hour == 20);
+			Assert.That(evt.dtstart.Minute == 0);
+			Assert.That(evt.dtstart.Second == 0);
+		}
+
+		private static ZonelessEventStore ProcessEventBriteExample(string example, string source, Calinfo calinfo, Collector collector)
+		{
+			DeleteZonedObjects(calinfo.id);
+			var es = new ZonedEventStore(calinfo, SourceType.eventbrite);
+			collector.CollectEventBrite(es);
 			EventStore.CombineZonedEventStoresToZonelessEventStore(calinfo.id, settings);
 			var zes = new ZonelessEventStore(calinfo).Deserialize();
 			return zes;
@@ -407,9 +429,9 @@ namespace CalendarAggregator
 			var example = "philharmonia";
 			var source = "First Congregational";
 
-			collector_berkeley.test_upcoming_api = true;
+			collector_berkeley.mock_upcoming = true;
 			var zes = ProcessUpcomingExample(example, source, calinfo_berkeley, collector_berkeley);
-			collector_keene.test_upcoming_api = false;
+			collector_keene.mock_upcoming = false;
 
 			Assert.That(zes.events.Count == 1);
 			var evt = zes.events[0];
@@ -453,7 +475,8 @@ namespace CalendarAggregator
 				"1",
 				false,
 				"cat1",
-				"first event"
+				"first event",
+				"first location"
 				);
 
 			es1.Serialize();
@@ -471,7 +494,8 @@ namespace CalendarAggregator
 				"2",
 				false,
 				"cat2,cat2a",
-				"second event"
+				"second event",
+				"second location"
 				);
 
 			es2.Serialize();
@@ -489,7 +513,8 @@ namespace CalendarAggregator
 				"3",
 				false,
 				"cat3,cat3a",
-				"third event"
+				"third event",
+				"third location"
 				);
 
 			es3.AddEvent(
@@ -502,7 +527,8 @@ namespace CalendarAggregator
 				"4",
 				false,
 				"cat4,cat4a",
-				"fourth event"
+				"fourth event",
+				"fourth location"
 				);
 
 			es3.Serialize();
@@ -546,7 +572,8 @@ namespace CalendarAggregator
 				"1",
 				false,
 				"comedy",
-				"first event"
+				"first event",
+				"first location"
 				);
 
 			es1.Serialize();
@@ -562,7 +589,8 @@ namespace CalendarAggregator
 				"1",
 				false,
 				"upcoming",
-				"first event"
+				"first event",
+				"first location"
 				);
 
 			es2.Serialize();
@@ -600,7 +628,8 @@ namespace CalendarAggregator
 				"1",
 				false,
 				"music",
-				"first event"
+				"first event",
+				"first location"
 				);
 
 			es1.Serialize();
@@ -616,7 +645,8 @@ namespace CalendarAggregator
 				"1",
 				false,
 				"eventful",
-				"first event"
+				"first event",
+				"first location"
 				);
 
 			es2.Serialize();
