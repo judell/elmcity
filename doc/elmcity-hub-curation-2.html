@@ -1,0 +1,320 @@
+<html>
+<head>
+<title>Curating an elmcity hub: tasks and skills</title>
+<style>
+body {
+margin-left:.75in;
+margin-right:.5in;
+font-family:verdana;
+}
+h2 {
+font-style:italic;
+}
+li {
+margin-bottom:10pt;
+}
+div.assessment {
+margin-left:.75in;
+margin-right:.5in;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Curating an elmcity hub</h1>
+
+<h2>Tasks and skills</h2>
+
+
+<p>
+The elmcity project aims to democratize public calendaring in the same way that github democratizes programming: by breaking contribution bottlenecks, and by embracing decentralization and syndication.
+</p>
+
+<p>
+For any given city or town, an elmcity calendar hub begins with the raw output of a specialized web robot that scans the web for candidate calendar feeds. To make the hub useful, a human curator performs the set of tasks outlined here. These tasks require, but can also help to develop, a set of webmaking skills. As I describe the tasks, I'll identify the skills and (where possible) ways to assess their development. (If the task outcome is measurable I'll discuss how; if anecdotal -- "Were you able to do that?" "Yes/no" "OK I can see that you did/didn't" -- I won't.)
+</p>
+
+<p>
+The raw output to be processed is a pair of documents like these:
+
+<ul>
+<li><a href="http://elmcity.blob.core.windows.net/toronto/taggable_sources.html">taggable_sources.html</a>: a list of links to candidate feeds
+<li><a href="http://elmcity.blob.core.windows.net/toronto/taggable_sources.json">taggable_sources.json</a>: a json data structure that will, when edited and expanded, drive the hub
+</ul>
+
+</p>
+
+<h3>Task: Refine the raw list of feeds</h3>
+
+<p>
+The list of candidate feeds currently draws on five services: Eventful, Upcoming, EventBrite, Facebook, and Meetup. We begin by excluding inappropriate feeds. Some reasons for excluding a feed:
+
+<ul>
+
+<li>No real-world identity. (For example, an Eventful venue that identifies as "Postal code 03431" is not useful.)
+
+<li>Spam. (For example, many Eventful/Upcoming "venues" exist only for the "Red Cross Blood Drive" event. In the context of this exercise, that's spam.)
+
+<li>Doesn't match target location. (The robot tries to exclude non-matching feeds but some still get through.)
+
+<li>Cannot be well-categorized. (The candidate feeds are called <i>taggable sources</i> because they can potentially make an ongoing contribution to a tagged view of the hub. But that's only true if all, or nearly all, of the events in the feed can fairly be categorized as being about <i>art</i> or <i>film</i> or another of the evolving set of core tags. A feed that mixes <i>art</i> and <i>film</i> events shouldn't be tagged as either or both, so must be excluded in its raw form. However see below for filtering techniques that may enable the raw feed to be split into separate feeds that can be so tagged.)
+
+</ul>
+</p>
+
+<h4>Skill: Evaluating identity</h4>
+
+<p>
+Determining when a feed represents a legitimate identity is the sort of judgement call that web citizens must increasingly be able to make.
+</p>
+
+
+<h4>Skill: Batch-processing URLs</h4>
+
+<p>
+The raw list of URLs in taggable_sources.html can be hundreds long. The most efficient way to process these these URLs is to carve the list into batches and load the batches into sets of tabs. I recommend using the Firefox extension Linky to do that.
+</p>
+
+<h4>Skill: Editing JSON</h4>
+
+<p>
+To exclude bogus feeds -- and to perform many of the other required tasks -- requires editing the taggable_sources.json file. 
+</p>
+
+<h4>Skill: Validating JSON</h4>
+
+<p>
+The transformed taggable_sources.json file must remain valid JSON. I recommend using jsonlint.com to validate the JSON. It provides feedback that aids error correction.
+</p>
+
+
+<div class="assessment">
+<h4>Assessment: Validate the JSON</h4>
+
+<p>
+The output from this task -- and many others -- can be validated programmatically using any JSON parser.
+</p>
+</div>
+
+<h3>Task: Find higher-authority instances of auto-discovered feeds</h3>
+
+<p>
+The elmcity project encourages people and organizations to be the authoritative sources for their own public calendars. We can arrange types of calendar feeds along a continuum of authority like so:
+</p>
+
+<pre>
+      <-----  degree of authority  ----->
+
+|   low authority    |    high authority    |
+
+Upcoming
+
+Eventful
+
+       EventBrite
+                      Meetup
+                             Facebook
+                                      native 
+                                     iCalendar 
+</pre>
+
+
+<p>
+Event sponsors typically don't maintain the iCalendar feeds associated with Eventful and Upcoming venues, and often aren't even aware of them. So these are usually low-authority feeds. (Rarely they may be maintained by the sponsors; in those cases they are high-authority.)
+</p>
+
+<p>
+EventBrite doesn't provide iCalendar feeds. However the elmcity robot uses the EventBrite API to identify organizers who are sponsoring EventBrite events in the hub's city, and produces URLs that use an elmcity service to synthesize iCalendar feeds of those events. These feeds are slightly more authoritative than Eventful and Upcoming venues, because the event organizer is the source of information about the event. But they're still usually considered low-authority because the organizer's identity on EventBrite is sometimes vague and often not tightly bound to a real-world identity and a primary web presence. 
+</p>
+
+<p>
+Meetup feeds are high-authority because the feed's events are tightly bound to the identity of the group, and because the group's existence on Meetup is (usually) its sole and thus most authoritative web presence. 
+</p>
+
+<p>
+Facebook Pages don't provide iCalendar feeds. But when the elmcity robot finds a Facebook Page that has a calendar, and that represents an activity in the hub's city, it emits an URL that uses an elmcity service to synthesize an iCalendar feed by way of the Facebook API. Some people or organizations use Facebook as their sole, or most authoritative, web presence. When such a person or organization maintains a public calendar solely or primarily on Facebook, it is highly authoritative. However, the details of the events on that calendar are not part of the open web. They are visible only to logged-in Facebook users. For that reason, a Facebook calendar is considered less authoritative than an iCalendar feed associated with an independent website.
+</p>
+
+<p>
+Independent iCalendar feeds are considered most authoritative. Whether such feeds leverage cloud-based calendar apps like Google Calendar or Hotmail Calendar, or emanate from cloud-based or on-premise content management systems, they are tightly bound to the real-world identities and primary web presences of their providers.
+</p>
+
+<p>
+The elmcity robot may find more than one of these. But it cannot reliably every instance of an auto-discoverable (i.e. non-iCalendar) type. And it can't automatically find any native iCalendar feeds. So curators try to expand the set of feed types for each discovered source by searching for and evaluating alternate instances.
+</p>
+
+
+<h4>Skill: Basic web detective work</h4>
+
+<p>
+If the source is an Eventful or Upcoming venue, for example, does the source have a Facebook page with a calendar? Does the source exist as a Meetup organizer? Does the source have a website with a calendar? 
+</p>
+
+<p>
+(Note: Multiplying instances per sources is usually helpful. When multiple instances exist for a source, they are often complementary, representing different aspects of the source's public calendar presence. When overlap does occur, the elmcity engine can usually handle it by coalescing duplicate events.)
+</p>
+
+<div class="assessment">
+<h4>Assessment: Measure the number of calendar instances per source</h4>
+
+<p>
+If the robot discovers a source called St. Paul's School (in Concord, NH) on Eventful, there will be only one instance: the Eventful venue. If the curator discovers that St. Paul's school has a Facebook page with a calendar, and also has a school website with an iCalendar-enabled Events page, there will now be three calendar instances for St. Pauls.
+</p>
+</div>
+
+<h4>Skill: Evaluate the quality and appropriateness of additional calendars</h4>
+
+<p>
+This requires editorial discretion and common sense. Some criteria:
+</p>
+
+<ul>
+<li>Spam. (See above.)
+
+<li>Categorizability. (See above.)
+
+<li>Public/private boundary. (A theatrical group may provide two public calendars. One list shows events of interest to the general public. The other lists classes available only to registered students. The latter is public, in the sense that the calendar is published to the open web. But is it truly of public interest? This becomes a judgement call. If the barrier to entry in the classes is relatively low -- i.e., they're free or inexpensive, and/or they require little prior training or special skill, a curator may choose to regard the calendar of classes as belonging on the public citywide hub. But if the classes are expensive, and/or require a lot of prior training and special skill, then perhaps that calendar should be considered private and omitted from the hub.)
+</ul>
+
+
+<h3>Task: Tag the feeds</h3>
+
+<p>
+A successful hub is both comprehensive and well-categorized. Curators have limited control over the amount of machine-readable data available to their hubs, but they fully control the tagging of the feeds they discover and synthesize. 
+</p>
+
+<h4>Skill: Apply the general-and-specific rule</h4>
+
+<p>
+See <a href="http://blog.jonudell.net/2012/02/17/tagging-mechanisms-and-strategies-part-1-general-and-specific/">Tagging mechanisms and strategies part 1: General and specific</a>
+</p>
+
+<div class="assessment">
+<h4>Assessment: Measure the degree to which general tags have hub-specific instantiations</h4>
+
+<p>
+The elmcity tag vocabulary is fluid and evolving. But a common core is emerging, and it includes a number of general tags: <i>university</i>, <i>sports</i>, etc. Ideally these will be accompanied by hub-specific instantations. In Seattle, for example, a University of Washington event would carry both the general tag <i>university</i> and the specific tag <i>uw</i>. Likewise in Boston a Northeastern event would be tagged <i>university</i> and <i>northeastern</i>. (These events should, of course, also be further categorized in other ways, e.g. <i>sports</i> and <i>basketball</i> or <i>science</i> and <i>biology</i>.)
+</p>
+
+<p>
+In a well-tagged hub, feeds will carry sets of well-known general tags augmented by specific tags. The specific tags will, however, be used parsimoniously, to combat inflation of the tag namespace. Even without knowing what the specific tags are for a hub, we can compare it to a set of reference hubs and automatically assess whether the desired pattern exists.
+</p>
+</div>
+
+<h3>Task: Validate discovered iCalendar feeds</h3>
+
+<p>
+The vast majority of native iCalendar feeds found by curatorial detective work will be served by Google Calendar. A few will be served by other iCalendar-aware applications and services. But there's a <a href="http://blog.jonudell.net/2011/09/30/the-long-tail-of-the-icalendar-ecosystem/">long tail of iCalendar producers</a>,  many of which don't produce usable iCalendar feeds. 
+</p>
+
+<p>
+A elmcity companion service, the <a href="http://icalvalid.cloudapp.net/">iCalendar Validator</a>, enables curators to check the validity of discovered iCalendar feeds.
+</p>
+
+<div class="assessment">
+<h4>Assessment: Measure the validity of a hub's discovered iCalendar feeds</h4>
+
+<p>
+The iCalendar Validator works both interactively and programmatically. In the former mode it provides feedback to curators (and to contributors). In the latter mode it can be used to automatically assess whether discovered feeds are valid.
+</p>
+</div>
+
+
+<h3>Task: Synthesize iCalendar feeds using elmcity tools</h3>
+
+<p>
+The elmcity service offers a growing set of tools that synthesize iCalendar feeds from non-iCalendar sources. Examples of such sources include:
+</p>
+
+<ul>
+<li>Sports calendars available only in CSV format
+
+<li>Newspaper calendars available only as RSS feeds with embedded xCalendar islands
+</ul>
+
+<p>
+The elmcity robot can't automatically find these sources, so the curator's task is twofold. First, find these non-iCalendar sources. Second, use the <a href="http://elmcity.cloudapp.net/url_helpers">provided tools</a> to synthesize iCalendar feeds from them.
+</p>
+
+<h3>Task: Filter iCalendar feeds using elmcity filters</h3>
+
+<p>
+The <a href="http://elmcity.cloudapp.net/url_helpers">toolkit</a> includes filters that curators can use to divide feeds that can't be well-categorized into subfeeds that can. Examples include:
+
+<ul>
+<li>Extracting a music feed from a restaurant calendar that mixes musical events (e.g. jazz performances) with non-musical events (e.g. happy hour).
+
+<li>Extracting a Home Game feed from a sports feed that mixes home and away games.
+</ul>
+
+</p>
+
+<h3>Task: Identify iCalendar-unaware content management systems</h3>
+
+<p>
+There are hundreds of content management systems in dozens of vertical markets: schools, churches, chambers of commerce, etc. Most of these include an Events module that's used to publish an Events page. Shockingly few of them, however, enable iCalendar feeds on those Events pages.
+</p>
+
+<p>
+The elmcity project keeps a list of iCalendar-unaware CMSs. Curators who find ones not on the list should add them to it.
+</p>
+
+<div class="assessment">
+<h4>Assessment: Measure contributions to the list</h4>
+
+<p>
+The list is maintained on Delicious. Curators add to it by bookmarking the home pages of iCalendar-unaware CMSs and tagging them with <i>needs_ical</i>. If curators use distinct Delicious accounts, their contributions to the list can be measured.
+</p>
+</div>
+
+<h3>Task: Find/elaborate common types of iCalendar feeds</h3>
+
+<p>
+The elmcity project also keeps a list of common types of sites that typically provide public calendars and ought to provide corresponding iCalendar feeds. The list includes the city government, the chamber of commerce, the public library, the universities, high schools, and grade schools, the YMCA. (See <a href="http://blog.jonudell.net/2012/03/13/a-civic-scorecard-for-public-calendars/">A civic scorecard for public calendars</a>.)
+</p>
+
+<h4>Skill: Basic web detective work</h4>
+
+<p>
+Mapping the list of common types onto a list of specific instances, and locating iCalendar feeds (if any) requires search and navigation skill. 
+</p>
+
+<div class="assessment">
+<h4>Assessment: Checklist</h4>
+
+<p>
+The elmcity project keeps a checklist for each hub. When the hub has been processed, the checklist indicates, for each common type (school, library, etc) whether that hub's instance does or does not offer an iCalendar feed.
+</p>
+</div>
+	
+<h4>Skill: Basic web API work</h4>
+
+<p>
+When these types of sources do offer feeds, they are often served by one of the relatively few CMSs that support iCalendar. These rare CMSs often provide implicit web APIs that deliver categorized slices of calendars. A school, for example, may deliver views for athletics, music, and public meetings. 
+</p>
+
+<p>
+The curator's task here is to discover the URL pattern used to deliver these categorized views, and manipulate it to create a family of URLs that can be added to the hub as tagged feeds.
+</p>
+
+<h3>Task: Communicate with people responsible for invalid or missing feeds and iCal-unaware CMSs</h3>
+
+<p>
+Curators are evangelists for an open web of data based on standard syndication protocols. When they discover invalid iCalendar feeds, or common sites (libraries, schools, governments) that ought to produce feeds but don't, or CMSs that serve up HTML Events pages without corresponding calendar feeds, they should contact the responsible sites, explain the syndication model, and suggest ways for the sites to embrace it.
+</p>
+
+<p>
+The project provides email templates that serve as the basis for this communication.
+</p>
+
+<div class="assessment">
+<h4>Assessment: Measure the email correspondence</h4>
+
+<p>
+If curators cc an email repository, their level of interaction with invited contributors can be measured.
+</p>
+</div>
+
+</body>
+</html>

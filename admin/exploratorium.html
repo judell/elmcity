@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>elmcity widget exploratorium</title>
+<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
+<script>
+
+var css_selector_to_friendly_name_map = {
+  "body" : "itemstyle",
+  ".ed"  : "datestyle",
+  ".ttl" : "titlestyle",
+  ".st"  : "dtstartstyle",
+  ".src" : "sourcestyle"
+  }
+
+var themes = {
+  "default" : {
+    "body"         :  " { 'font-family':'verdana,arial,sans-serif', 'font-size':'10pt' } ",
+    ".hubtitle"    :  " { 'font-size' : '10pt', 'font-weight':'bold' } ",
+    ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
+    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'320px', 'top':'30px' } ",
+    "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'320px', 'top':'280px', 'width':'150px' } ",
+    "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'330px', 'top':'200px', 'width':'150px' } ",
+    ".bl"          :  " { 'margin-right':'40%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
+    ".st"          :  " { 'font-size':'smaller', 'color':'#333333'} ",
+    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
+    ".ed"          :  " { 'font-size':'9pt', 'font-weight':'bold' }",
+    "a"            :  " { 'color' : 'black', 'text-decoration' : 'none' }",
+    "a:hover"      :  " { 'color' : 'gray', 'text-decoration' : 'underline' }",
+    ".ttl"         :  " {  }",
+    ".src"         :  " { 'font-size':'smaller' } ",
+    ".cat"         :  " { 'font-size':'smaller' } ",
+    ".sd"          :  " { } ",
+    ".sd a"        :  " { } ",
+    ".atc"         :  " { } ",
+    ".atc a"       :  " { } ",
+    ".desc"        :  " { } "
+    },
+
+  "a2chron" : {
+    "body"         :  " { 'font-family':'Constantia,LucidaBright', 'font-size':'11pt' } ",
+    "div"          :  " { 'line-height' : '1.2' } ",
+    ".hubtitle"    :  " { 'font-weight':'bold', 'font-size' : '13pt' } ",
+    ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
+    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'320px', 'top':'30px' } ",
+    "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'320px', 'top':'280px', 'width':'150px' } ",
+    "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'330px', 'top':'200px', 'width':'150px' } ",
+    ".bl"          :  " { 'line-height' :'1.5', 'margin-right':'40%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
+    ".st"          :  " { 'border-bottom' : '1px dotted', 'color':'#333'} ",
+    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
+    ".ed"          :  " { 'font-size':'12pt' }",
+    "a"            :  " { 'color' : 'black', 'text-decoration' : 'none' }",
+    "a:hover"      :  " { 'color' : 'gray' }",
+    ".ttl"         :  " {  }",
+    ".src"         :  " { 'font-size':'smaller', 'text-transform': 'uppercase' } ",
+    ".cat"         :  " { 'font-size':'smaller' } ",
+    ".sd"          :  " { } ",
+    ".sd a"        :  " { } ",
+    ".atc"         :  " { } ",
+    ".atc a"       :  " { } ",
+    ".desc"        :  " { } "
+    },
+
+  "roanoke" : {
+    "body"         :  " { 'font-family':'verdana,arial,sans-serif', 'font-size':'10pt' } ",
+    ".hubtitle"    :  " { 'font-size' : '10pt', 'font-weight':'bold' } ",
+    ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
+    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'320px', 'top':'30px' } ",
+    "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'320px', 'top':'280px', 'width':'150px' } ",
+    "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'330px', 'top':'200px', 'width':'150px' } ",
+    ".bl"          :  " { 'margin-right':'40%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
+    ".st"          :  " { 'color':'#666666'} ",
+    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
+    ".ed"          :  " { 'font-size':'larger', 'font-family':'georgia', 'color' : '#666666' }",
+    "a"            :  " { 'color' : '#497399', 'text-decoration' : 'none' }",
+    "a:hover"      :  " { 'color' : '#497399', 'text-decoration' : 'underline' }",
+    ".ttl"         :  " { 'font-weight' : 'bold' }",
+    ".src"         :  " { 'font-size':'smaller', 'font-weight' : 'bold' } ",
+    ".cat"         :  " { 'font-size':'smaller' } ",
+    ".sd"          :  " { 'font-weight' : 'bold' } ",
+    ".sd a"        :  " { } ",
+    ".atc"         :  " { } ",
+    ".atc a"       :  " { } ",
+    ".desc"        :  " { } "
+    },
+
+
+  "test" : {
+    "body"         :  " { 'font-family':'verdana,arial,sans-serif', 'font-size':'10pt' } ",
+    ".hubtitle"    :  " { 'font-size' : '10pt', 'font-weight':'bold' } ",
+    ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
+    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'320px', 'top':'30px' } ",
+    "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'320px', 'top':'280px', 'width':'150px' } ",
+    "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'330px', 'top':'200px', 'width':'150px' } ",
+    ".bl"          :  " { 'margin-right':'40%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
+    ".st"          :  " { 'font-size':'smaller', 'color':'#333333'} ",
+    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
+    ".ed"          :  " { 'font-size':'9pt', 'font-weight':'bold' }",
+    "a"            :  " { 'color' : 'black', 'text-decoration' : 'none' }",
+    "a:hover"      :  " { 'color' : 'gray', 'text-decoration' : 'underline' }",
+    ".ttl"         :  " {  }",
+    ".src"         :  " { 'font-size':'smaller' } ",
+    ".cat"         :  " { 'font-size':'smaller' } ",
+    ".sd"          :  " { } ",
+    ".sd a"        :  " { } ",
+    ".atc"         :  " { } ",
+    ".atc a"       :  " { } ",
+    ".desc"        :  " { } ",
+    ".test"        :  " { } "
+    }
+
+}
+
+
+function gup( name )
+  {  
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");  
+  var regexS = "[\\?&]"+name+"=([^&#]*)";  
+  var regex = new RegExp( regexS );  
+  var results = regex.exec( window.location.href );   
+  if( results == null )    
+    return "";  
+  else    
+    return results[1].replace(/%20/,' ');
+  }
+
+
+function change_view()
+  {
+  var selected = $('#tag_select option:selected').text();
+  var src = $('#iframe')[0].src;
+  src = src.replace(/view=\w+/,'view='+selected)
+  $('#iframe')[0].src = src;
+  selected = selected.replace(/\s*\((\d+)\)/,'');
+  $('.tag')[0].textContent = selected;
+  $('.tag')[1].textContent = selected;
+  $('.tag').css('text-transform','uppercase');
+  set_joinlink();
+  }
+
+function change_theme()
+  {
+  var selected_theme = $('#theme_select option:selected').val();
+  var href = $('#iframe')[0].src;
+  href = remove_href_arg(href,"theme");
+  href = add_href_arg(href, "theme", selected_theme);
+  $('.theme')[0].textContent = selected_theme;
+  $('#iframe')[0].src = href;
+  }
+
+
+function change_width()
+  {
+  var selected = $('#width_select option:selected').text();
+  var inside_width = parseInt(selected);
+  var outside_width = inside_width + 30;
+  var src = $('#iframe')[0].src;
+  src = src.replace(/width=\d+/,'width=' + inside_width);
+  $('#iframe')[0].src = src;
+  $('#iframe')[0].width = outside_width;
+  $('.inside_width')[0].textContent = inside_width;
+  $('.outside_width')[0].textContent = outside_width;
+  }
+
+function set_joinlink()
+  {
+  var id = $('#hub_select option:selected').val();
+  var desc = $('#hub_select option:selected').text();
+  var joinurl = 'http://elmcity.cloudapp.net/welcome?id=' + id + '&hubdesc=' + encodeURIComponent(desc) + '&category=' + $('#tag_select option:selected').text(); 
+  $('.joinlink')[0].href = joinurl;
+  }
+
+
+function change_hub()
+  {
+  var id = $('#hub_select option:selected').val();
+  var desc = $('#hub_select option:selected').text();
+  var src = $('#iframe')[0].src;
+  src = src.replace(/cloudapp.net\/\w+/,'cloudapp.net/' + id);
+  $('#iframe')[0].src = src;
+  $('.hubname')[0].textContent = id;
+  $('.hubdesc')[0].textContent = desc;
+  $('.hubdesc')[1].textContent = desc;
+  $('.hubdesc')[2].textContent = desc;
+  $('.hubdesc')[3].textContent = desc;
+  set_joinlink();
+  }
+
+function add_hub()
+  {  
+  var id = $('#add_hub').val();
+  var href = location.href;
+  href = add_href_arg(href, "hub", id);
+  href = add_href_arg(href, "hubdesc", id);
+  location.href = href;
+  }
+
+function add_tag()
+  {  
+  var tag = $('#add_tag').val();
+  var href = location.href;
+  href = add_href_arg(href, "tag", tag);
+  location.href = href;
+  }
+
+
+function change_style(selector)
+  {
+  var newsrc = $('#iframe')[0].src
+  var selected_theme = $('#theme_select option:selected').val();
+  newsrc = add_href_arg(newsrc, "theme", selected_theme);
+  var friendly_selector = css_selector_to_friendly_name_map[selector];
+  var newstyle = $('#' + friendly_selector).val();
+  var encoded_newstyle = encodeURIComponent(newstyle);
+  newsrc = add_href_arg(newsrc, friendly_selector, encoded_newstyle);
+  $('#' + friendly_selector).val(newstyle);
+  $('.'+ friendly_selector)[0].textContent = encoded_newstyle;
+  $('#iframe')[0].src = newsrc;
+  }
+
+function onload()
+  {
+  if ( gup('hub') != '' && gup('hubdesc') != '') 
+    {
+    var hub = gup('hub');
+    var hubdesc = gup('hubdesc').replace('%20',' ');
+    var found = false;
+
+    for ( i = 0; i < $('#hub_select option').length; i++ )
+      {
+        if ( $('#hub_select option')[i].value == hub )
+          found = true;
+      }
+
+     if ( ! found )
+        $('#hub_select').append('<option value="' + hub + '">' + hubdesc + '</option>');
+
+    $('#hub_select').val(hub);
+    change_hub();
+    }
+
+
+  if ( gup('tag') != '' ) 
+    {
+    var tag = gup('tag');
+    var found = false;
+
+    for ( i = 0; i < $('#tag_select option').length; i++ )
+      {
+        if ( $('#tag_select option')[i].value == tag )
+            found = true;
+       }
+ 
+     if ( ! found )
+        $('#tag_select').append('<option value="' + tag + '">' + tag + '</option>');
+
+     $('#tag_select').val(tag);
+     change_view();
+    }
+
+  if ( gup('theme') != '' ) 
+    {
+    var theme = gup('theme');
+    for ( i = 0; i < $('#theme_select option').length; i++ )
+      {
+        if ( $('#theme_select option')[i].value == theme )
+            {
+            $('#theme_select').val(theme);
+            change_theme();
+            }
+      }
+    }
+
+
+  $('#itemstyle').val(themes['default']['body']);
+  $('#datestyle').val(themes['default']['.ed']);
+  $('#titlestyle').val(themes['default']['.ttl']);
+  $('#linkstyle').val( " { } ");
+  $('#dtstartstyle').val(themes['default']['.st']);
+  $('#sourcestyle').val(themes['default']['.src']);
+  }
+
+String.prototype.contains = function (str){
+    return this.indexOf(str) != -1;
+};
+
+String.prototype.replaceAt=function(index, char) {
+    return this.substr(0, index) + char + this.substr(index+char.length);
+}
+
+
+function remove_href_arg(href, name)
+  {
+  var pat = eval('/[\?&]*' + name + '=[^&]*/'); 
+  href = href.replace(pat,'');
+  if ( (! href.contains('?')) && href.contains('&') )
+    href = href.replaceAt(href.indexOf('&'),'?');
+  return href;
+  }
+
+function add_href_arg(href, name, value)
+  {
+  href = remove_href_arg(href,name);
+  if ( href.contains('?') )
+    href = href + '&' + name + '=' + value;
+  else
+    {
+    href = href + '?' + name + '=' + value;
+    }
+  return href;
+  }
+
+
+</script>
+</head>
+<body style="font-family:verdana,arial,sans-serif" onload="onload()">
+<table style="border-spacing:20px">
+<tr>
+<td valign="top">
+
+<h1 style="font-family:verdana;font-size:12pt" class="headlinestyle">Upcoming in <span class='hubdesc'>the New River Valley</span>: <span class="tag">MUSIC</span></h1>
+
+<iframe width="330" height="600" id="iframe" src="http://elmcity.cloudapp.net/NewRiverValleyVA/?eventsonly=yes&view=music&count=200&width=300&tags=no&itemstyle=&datestyle=&titlestyle=&linkstyle=&dtstartstyle=&sourcestyle=" style="border-width:thin;border-style:solid"></iframe>
+
+<p style="font-size:11pt" class="joinlabelstyle">
+<a class="joinlink" href="http://elmcity.cloudapp.net/welcome?id=NewRiverValleyVA&hubdesc=Virginia%27s%20New%20River%20Valley&category=music">Join the calendar network for <span class='hubdesc'>Virginia's New River Valley</span>!</a>
+</p>
+
+</td>
+<td valign="top" style="font-family:verdana">
+
+<img id="styles-cheatsheet" style="position:absolute;float:right;margin-left:200px;margin-top:-20px;border-style:solid;border-width:thin" src="http://elmcity.blob.core.windows.net/admin/exploratorium-styles.png"/>
+
+<p>change width</p>
+<p>
+<select onchange="change_width()" id="width_select">
+<option value="250">250</option>
+<option selected value="300">300</option>
+<option value="350">350</option>
+<option value="400">400</option>
+<option value="450">450</option>
+<option value="500">500</option>
+<option value="550">550</option>
+</select>
+</p>
+
+<p>change theme</p>
+<p>
+<select onchange="change_theme()" id="theme_select">
+<option selected value="default">default</option>
+<option value="a2chron">Ann Arbor Chronicle</option>
+<option value="roanoke">Roanoke Times</option>
+</select>
+</p>
+
+<p>change itemstyle</p>
+<p>
+<input type="text" onchange="change_style('body')" id="itemstyle" style="width:600px" value=''>
+</p>
+
+<p>change datestyle</p>
+<p>
+<input type="text" onchange="change_style('.ed')" id="datestyle" style="width:600px" value=''>
+</p>
+
+<p>change titlestyle</p>
+<p>
+<input type="text" onchange="change_style('.ttl')" id="titlestyle" style="width:600px" value=''>
+</p>
+
+
+<p>change dtstartstyle</p>
+<p>
+<input type="text" onchange="change_style('.st')" id="dtstartstyle" style="width:600px" value=''>
+</p>
+
+<p>change sourcestyle</p>
+<p>
+<input type="text" onchange="change_style('.src')" id="sourcestyle" style="width:600px" value=''>
+</p>
+
+
+<table>
+
+<tr><td>
+
+<p>change tag</p>
+<p>
+<select onchange="change_view()" id="tag_select">
+<option value="agriculture">agriculture</option>
+<option value="arts">arts</option>
+<option value="dance">dance</option>
+<option value="film">film</option>
+<option value="fitness">fitness</option>
+<option value="library">library</option>
+<option selected value="music">music</option>
+<option value="performing-arts">performing-arts</option>
+<option value="recreation">recreation</option>
+<option value="sports">sports</option>
+</select>
+</p>
+
+</td><td>
+
+<p>add tag</p>
+<p>
+<input onchange="add_tag()" id="add_tag">
+</p>
+
+</td></tr>
+</table>
+
+<table>
+
+<tr><td>
+
+<p>change hub</p>
+<p>
+<select onchange="change_hub()" id="hub_select">
+<option value="a2cal">Ann Arbor</option>
+<option value="berkeley">Berkeley</option>
+<option value="BostonMA">Boston</option>
+<option value="CentralVT">Central Vermont</option>
+<option value="socialhartford">Hartford</option>
+<option value="inhoustonical">Houston</option>
+<option selected value="NewRiverValleyVA">Virginia's New River Valley region</option>
+<option value="MonadnockNH">the Monadnock Region</option>
+<option value="PortlandOR">Portland</option>
+<option value="ProvidenceRI">Providence</option>
+<option value="SeacoastNH">New Hampshire's seacoast region</option>
+<option value="seattleopencalendar">Seattle</option>
+</select>
+</p>
+
+</td><td>
+
+<p>add hub</p>
+<p>
+<input onchange="add_hub()" id="add_hub">
+</p>
+
+</td></tr>
+</table>
+
+
+<p style="width:70%">
+
+<hr/>
+
+<p>
+&lt;h1 style="font-family:verdana;font-size:12pt">Upcoming in <span class='hubdesc'>the New River Valley</span>: <span class="tag">MUSIC</span>&lt;/h1>
+</p>
+
+<p>
+&lt;iframe width="<span class='outside_width'>330</span>" 
+<br> height="800" 
+<br> src="http://elmcity.cloudapp.net/<span class='hubname'>NewRiverValleyVA</span>/html?eventsonly=yes&tags=no&view=<span class='tag'>music</span>&count=200&width=<span class='inside_width'></span>&taglist=no&tags=no&sidebar=no&datepicker=no&timeofday=no&hubtitle=no&datestyle=<span class='datestyle'></span>&itemstyle=<span class='itemstyle'></span>&titlestyle=<span class='titlestyle'></span>&linkstyle=<span class='linkstyle'></span>&dtstartstyle=<span class='dtstartstyle'></span>&sourcestyle=<span class='sourcestyle'></span>&theme=<span class='theme'></span>"
+<br> style="border-width:thin;border-style:solid">
+<br>&lt;/iframe>
+</p>
+
+<p>
+&lt;p class="joinlabelstyle">
+&lt;a class="joinlink" href="http://elmcity.cloudapp.net/welcome?id=<span class='hubname'>NewRiverValleyVA</span>&hubdesc=<span class='hubdesc'>Virginia%27s%20New%20River%20Valley</span>&category=<span class='tag'>music</span>">Join the calendar network for <span class='hubdesc'>Virginia's New River Valley</span>!&lt;/a>
+&lt;/p>
+</p>
+
+</td>
+</tr>
+</table>
+</body>
+</html>

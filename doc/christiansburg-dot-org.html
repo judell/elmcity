@@ -1,0 +1,99 @@
+<html>
+<head><title>christiansburg.org</title></head>
+<body style="font-family:verdana;margin-left:.5in;margin-right:.5in;margin-top:.5in">
+
+<h1>christiansburg.org</h1>
+
+
+<a name="1"/>
+
+<p>
+1. Great news! The town site for Christiansburg, VA, has a <a href="http://www.christiansburg.org/calendar.aspx">calendar</a> that offers iCal feeds! 
+</p>
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/christiansburg-01.png"><img style="width:700px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/christiansburg-01.png"/></a>
+</p>
+
+<a name="2"/>
+
+<p>
+2. And they are nicely categorized.
+</p>
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/christiansburg-02.png"><img style="width:700px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/christiansburg-02.png"/></a>
+</p>
+
+<a name="3"/>
+
+<p>
+3. So we can create these entries in the hub's registry.
+</p>
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/christiansburg-03.png"><img style="width:700px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/christiansburg-03.png"/></a>
+</p>
+
+<a name="4"/>
+
+<p>
+4. It seems, though, that the Parks and Rec calendar for christiansburg.org is missing some events. Here what it knows about.
+</p>
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/christiansburg-04.png"><img style="width:700px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/christiansburg-04.png"/></a>
+</p>
+
+<a name="5"/>
+<p>
+5. Compare that to the Eventful venue <a href="http://eventful.com/christiansburg/venues/christiansburg-parks-and-recreation-center-/V0-001-002340231-2">Christiansburg Parks and Recreation Center</a> which we found at http://elmcity.blob.core.windows.net/christiansburgva/taggable_sources.json.
+</p>
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/christiansburg-05.png"><img style="width:700px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/christiansburg-05.png"/></a>
+</p>
+
+<a name="6"/>
+<p>
+6. Where did Eventful get this informtion? In this case, from a site called Active.com.
+</p>
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/christiansburg-06.png"><img style="width:700px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/christiansburg-06.png"/></a>
+</p>
+
+<a name="7"/>
+<p>
+7. Where did Active.com get the informtion? From the <a href="http://www.vatechniques.com/ClassSchedule.htm">Virginia Techniques Training Center</a>.
+</p>
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/christiansburg-07.png"><img style="width:700px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/christiansburg-07.png"/></a>
+</p>
+
+
+<p>
+But the Galloping Gators class isn't at the Parks and Rec Center on 1600 North Franklin Street, as Eventful reports. Instead it's at 1550 Roanoke Street. So, while Eventful's Parks and Rec venue does include real events, the information isn't reliable enough to warrant inclusion. We'll need to delete this candidate feed from http://elmcity.blob.core.windows.net/christiansburgva/taggable_sources.json.
+</p>
+
+<pre>
+{
+"url"  :  "http://eventful.com/christiansburg/venues/christiansburg-parks-and-recreation-center-/V0-001-002340231-2",        
+"feedurl"  :  "http://eventful.com/ical/christiansburg/venues/christiansburg-parks-and-recreation-center-/V0-001-002340231-2",        
+"source"  :  "Christiansburg Parks and Recreation Center (eventful)",        
+"category"  :  "eventful" 
+}
+</pre>
+
+<a name="8"/>
+<p>
+8. As in the <a href="http://jonudell.net/elmcity/christiansburg-not-caribbean.html">Christiansburg VA is not in the Caribbean</a> example, sources that should be authoritative for their own information -- in this case, Virginia Techniques, aren't, so non-authoritative sources fill the vacuum, and then other non-authoritative sources create error. 
+</p>
+
+<p>
+What should happen? Virginia Techniques should provide a standard calendar feed that could be syndicated to various places, including Eventful.com, Active.com, and perhaps most importantly, to christiansburg.org. The town's site could (arguably should) be the first place where residents look for information about summer activities for kids.
+</p>
+
+</body>
+</html>

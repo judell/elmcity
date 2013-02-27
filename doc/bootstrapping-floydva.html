@@ -1,0 +1,211 @@
+<html>
+<head><title>Bootstrapping FloydVA</title></head>
+<body style="font-family:verdana;margin-left:.5in;margin-right:.5in;margin-top:.5in">
+
+<h1>Bootstrapping FloydVA</h1>
+
+
+<a name="1"/>
+
+<p>1. When a new hub is created for a city or town, the elmcity engine searches Facebook, Eventful, Upcoming, Meetup, or EventBrite, and makes a list of candidate feeds. The list has two representations. One is a web page for the curator to review. Here is that page for the new hub FloydVA.</p>
+
+<p>
+URL: <a href="http://elmcity.blob.core.windows.net/floydva/taggable_sources.html">http://elmcity.blob.core.windows.net/floydva/taggable_sources.html</a>
+</p>
+
+<p>
+(For any hub, the pattern is <i>http://elmcity.blob.core.windows.net/</i> + the lowercase name of the hub + <i>/taggable_sources.html</i>)
+</p>
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/bootstrapping-floydva-01.png"><img style="width:800px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/bootstrapping-floydva-01.png"/></a>
+</p>
+
+<a name="2"/>
+
+<p>2. The second representation is as JSON data in the format that controls the hub.</p>
+
+<p>
+URL: <a href="http://elmcity.blob.core.windows.net/floydva/taggable_sources.json">http://elmcity.blob.core.windows.net/floydva/taggable_sources.html</a> 
+</p>
+
+<p>
+(For any hub, the pattern is <i>http://elmcity.blob.core.windows.net/</i> + the lowercase name of the hub + <i>/taggable_sources.json</i>
+</p>
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/bootstrapping-floydva-02.png"><img style="width:800px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/bootstrapping-floydva-02.png"/></a>
+</p>
+
+
+<p>3. To process these files I load the HTML file into a browser, and the JSON file into a text editor.
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/bootstrapping-floydva-03.png"><img style="width:800px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/bootstrapping-floydva-03.png"/></a>
+</p>
+
+<p>4. Then I open each candidate into a tab in the browser, and focus on the corresponding JSON entry in the text editor. Here's the Calvary Baptist Church as found on Facebook.
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/bootstrapping-floydva-04.png"><img style="width:800px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/bootstrapping-floydva-04.png"/></a>
+</p>
+
+<p>5. Here's the automatically-produced JSON record for the Calvary Baptist Church:
+
+<pre>
+{
+"url" : "http://www.facebook.com/pages/Calvary-Baptist-Church-Floyd-VA/294948989066?sk=events",        
+"feedurl" : "http://elmcity.cloudapp.net/ics_from_fb_page?fb_id=294948989066&elmcity_id=FloydVA",        
+"source" : "Calvary Baptist Church Floyd VA (facebook)",        
+"category" : "facebook" 
+}
+</pre>
+
+<p>
+The <i>url</i> points to the church's Facebook Events page. It's the default link for all events in the feed. In this case, since the source is Facebook and the events in the feed have their own individual URLs, it won't actually be used. But it doesn't hurt to leave it in.
+</p>
+
+<p>
+The <i>feedurl</i> points to an elmcity services that synthesizes an iCal feed for the church's Facebook Events page.
+</p>
+
+<p>
+The <i>source</i> names the Calvaray Baptist Church in Floyd VA. It adds <i>(facebook)</i> to indicate that this feed came from Facebook, and (we hope) to differentiate it from a more authorative feed provided by the church's own site.
+</p>
+
+<p>
+The <i>category</i> likewise indicates that this feed is from Facebook. We can add other tags. In this case, I'll just change it to:
+</p>
+
+<pre>
+"category" : "facebook,church" 
+</pre>
+
+<p>
+Note: The method shown here requires the curator to accumulate changes to the JSON file in a text editor, and then upload all the changes to the hub at once. This method is much more efficient than adding entries one at a time using the hub's feed editor, but provides no hand-holding. It's possible to make an editing mistake that invalidates the JSON file; you might not be comfortable using a JSON validator to find and correct such a mistake. So if you'd rather use a less efficient but safer method, you can always the hub's feed editor to add entries to the hub one at a time.
+</p>
+
+<p>5. Now let's look for a more authoritive version of the feed. We'll start by checking the About page in Facebook.
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/bootstrapping-floydva-05.png"><img style="width:800px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/bootstrapping-floydva-05.png"/></a>
+</p>
+
+<p>6. The Facebook About page leads us to the church's site:
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/bootstrapping-floydva-06.png"><img style="width:800px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/bootstrapping-floydva-06.png"/></a>
+</p>
+
+<p>
+In this case, it's a fairly primitive site. There's no calendar of any kind, never mind one providing an iCal feed. So we're done with the Calvary Baptist Church for now. The Facebook feed will be part of the FloydVA hub, and will show up in the <i>church</i> category. 
+</p>
+
+<p>7. If you're using the one-record-at-a-time method to update the hub's feed registry, you can add the Calvary Church like so:
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/bootstrapping-floydva-07.png"><img style="width:800px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/bootstrapping-floydva-07.png"/></a>
+</p>
+
+<p>8. But let's demonstrate the all-at-once method by continuing with the process. Here's the Floyd Country Store as found on Eventful.
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/bootstrapping-floydva-08.png"><img style="width:800px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/bootstrapping-floydva-08.png"/></a>
+</p>
+
+<p>9. Here is its JSON record.
+
+<pre>
+{
+"url" : "http://eventful.com/floyd/venues/floyd-country-store-/V0-001-000435716-3",        
+"feedurl" : "http://eventful.com/ical/floyd/venues/floyd-country-store-/V0-001-000435716-3",        
+"source" : "Floyd Country Store (eventful)",        
+"category" : "eventful" 
+}
+</pre>
+
+<p>10. It appears that everything at this Eventful is a musical event, so we'll make this change.
+
+<pre>
+"category" : "eventful,music" 
+</pre>
+
+<p>11. Unlike Facebook, Eventful doesn't provide us with the venue's home page. So we search for the Floyd Country Store, find it, and navigate to its calendar page.
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/bootstrapping-floydva-11.png"><img style="width:800px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/bootstrapping-floydva-11.png"/></a>
+</p>
+
+<p>
+Again, as with the Calvary Church, there is no iCal feed here. It's too bad, because the Country Store's calendar page has much more info than the Eventful page. The Eventful page is machine-readable, and better than nothing, so we'll add it to the hub. But we would like the Country Store to know that:
+</p>
+
+<ul style="list-style:alpha">
+<li>We have added them.</li>
+<li>But not in the best possible way.</li>
+<li>The Country Store's calendar page could use a service like Google Calendar, or Hotmail Calendar, to show events in a way that also opens the information to syndication.</li>
+</ul>
+
+<p>
+And we add info@floydcountrystore.com to a list of contacts to whom we'll send notices to that effect.
+</p>
+
+<p>12. Not every auto-discovered feed is worth including. Here's one that might not be.
+
+<p>
+<a title="click to enlarge"  href="http://jonudell.net/elmcity/bootstrapping-floydva-12.png"><img style="width:800px;border-style:solid;border-width:thin" src="http://jonudell.net/elmcity/bootstrapping-floydva-12.png"/></a>
+</p>
+
+<p>
+A venue like <i>Postal code 24091</i> is something only the Eventful robot could love. We could include it, using the tag <i>community</i>, but I prefer to reject things this vague. So I'll delete the JSON record.
+</p>
+
+<p>Before:</p>
+
+<pre>
+{
+"url"  :  "http://eventful.com/floyd/venues/floyd-fest-2012-/V0-001-001335826-1",        
+"feedurl"  :  "http://eventful.com/ical/floyd/venues/floyd-fest-2012-/V0-001-001335826-1",        
+"source"  :  "Floyd Fest 2012 (eventful)",        
+"category"  :  "eventful" 
+},
+
+<span style="color:red;font-weight:bold">{
+"url"  :  "http://eventful.com/floyd/venues/postal-code-24091-united-states-/V0-001-001516644-2",        
+"feedurl"  :  "http://eventful.com/ical/floyd/venues/postal-code-24091-united-states-/V0-001-001516644-2",
+"source"  :  "Postal code 24091, United States (eventful)",        
+"category"  :  "eventful" 
+},</span>
+
+{
+"url"  :  "http://eventful.com/floyd/venues/floydfest-hill-holler-stage-/V0-001-005806486-8",        
+"feedurl"  :  "http://eventful.com/ical/floyd/venues/floydfest-hill-holler-stage-/V0-001-005806486-8",        
+"source"  :  "FLOYDFEST - HILL HOLLER STAGE (eventful)",        
+"category"  :  "eventful" 
+},
+</pre>
+
+<p>After:</p>
+
+<pre>
+{
+"url"  :  "http://eventful.com/floyd/venues/floyd-fest-2012-/V0-001-001335826-1",        
+"feedurl"  :  "http://eventful.com/ical/floyd/venues/floyd-fest-2012-/V0-001-001335826-1",        
+"source"  :  "Floyd Fest 2012 (eventful)",        
+"category"  :  "eventful" 
+},
+
+{
+"url"  :  "http://eventful.com/floyd/venues/floydfest-hill-holler-stage-/V0-001-005806486-8",        
+"feedurl"  :  "http://eventful.com/ical/floyd/venues/floydfest-hill-holler-stage-/V0-001-005806486-8",        
+"source"  :  "FLOYDFEST - HILL HOLLER STAGE (eventful)",        
+"category"  :  "eventful" 
+},
+</pre>
+
+
+
+
+
+</body>
+</html>
