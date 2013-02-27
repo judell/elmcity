@@ -34,9 +34,9 @@ namespace ElmcityUtils
 			ms.Read(buffer, 0, (int)ms.Length);
 			return buffer;
 		}
-		public static T GetTypedObj<T>(string id, string name)
+		public static T GetTypedObj<T>(string container, string name)
 		{
-			var uri = BlobStorage.MakeAzureBlobUri(id, name, false);
+			var uri = BlobStorage.MakeAzureBlobUri(container, name, false);
 			return (T)BlobStorage.DeserializeObjectFromUri(uri);
 		}
 
@@ -45,8 +45,28 @@ namespace ElmcityUtils
 			Dictionary<string, object> dict_obj = new Dictionary<string, object>();
 			var type = o.GetType();
 			foreach (var property in type.GetProperties())
-				dict_obj[property.Name] = property.GetValue(o, index: null);
+			{
+				var propval = property.GetValue(o, index: null);
+				dict_obj[property.Name] = (propval == null) ? null : propval;
+			}
 			return dict_obj;
+		}
+
+		public static Dictionary<string, string> ObjToDictStr(Object o)
+		{
+			Dictionary<string, string> dict_str = new Dictionary<string, string>();
+			var type = o.GetType();
+			foreach (var property in type.GetProperties())
+			{
+				var propval = property.GetValue(o, index: null);
+				dict_str[property.Name] = (propval == null) ? "" : propval.ToString();
+			}
+			foreach (var field in type.GetFields())
+			{
+				var fieldval = field.GetValue(o);
+				dict_str[field.Name] = (fieldval == null) ? "" : fieldval.ToString();
+			}
+			return dict_str;
 		}
 
 		public static Object DictObjToObj(Dictionary<string, object> dict_obj, Type type)
@@ -151,6 +171,22 @@ namespace ElmcityUtils
 			return (Enumerable.SequenceEqual(d1keys, d2keys) && Enumerable.SequenceEqual(d1vals, d2vals));
 		}
 
+		public static bool DictOfDictStrEqualsDictOfDictStr(Dictionary<string,Dictionary<string, string>> d1, Dictionary<string,Dictionary<string, string>> d2)
+		{
+			var d1keys = d1.Keys.ToList(); d1keys.Sort();
+			var d2keys = d2.Keys.ToList(); d2keys.Sort();
+			if ( Enumerable.SequenceEqual(d1keys, d2keys) == false )
+				return false;
+			foreach ( var key in d1keys )
+			{
+				var _d1 = d1[key];
+				var _d2 = d2[key];
+				if ( DictStrEqualsDictStr(_d1, _d2) == false )
+					return false;
+			}
+			return true;
+		}
+
 		public static bool DictStrContainsDictStr(Dictionary<string, string> d1, Dictionary<string, string> d2)
 		{
 			var d1keys = d1.Keys.ToList();
@@ -195,7 +231,7 @@ namespace ElmcityUtils
 						new_obj_as_json = ObjectUtils.DictStrToJson((Dictionary<string, string>)new_obj);
 					else // JsonSnapshotType.ListDictStr
 						new_obj_as_json = ObjectUtils.ListDictStrToJson((List<Dictionary<string, string>>)new_obj);
-					bs.PutBlob(id, json_blob_name, new_obj_as_json, "application/json");
+					//bs.PutBlob(id, json_blob_name, new_obj_as_json, "application/json");
 					bs.PutBlob(id, timestamped_json_blob_name, new_obj_as_json, "application/json");
 				}
 

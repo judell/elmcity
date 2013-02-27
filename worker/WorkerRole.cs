@@ -318,7 +318,7 @@ namespace WorkerRole
 								GenUtils.PriorityLogMsg("info", "Received meta_refresh message from " + id, null);
 								TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your meta_refresh message");
 								Utils.MakeMetadataPage(id);
-								TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://elmcity.cloudapp.net/services/" + id + "/metadata");
+								TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://" + ElmcityUtils.Configurator.appdomain + "/services/" + id + "/metadata");
 								break;
 							case TwitterCommandName.add_fb_feed:  // disable for now
 								//var action = new AddFacebookFeed();
@@ -339,7 +339,7 @@ namespace WorkerRole
 		public void ProcessNonIcal(string id)
 		{
 			logger.LogMsg("info", "worker starting on nonical tasks for " + id, null);
-			var calinfo = Utils.AcquireCalinfo(id);
+			var calinfo = new Calinfo(id);
 			try
 			{
 				DoEventful(calinfo);
@@ -376,7 +376,7 @@ namespace WorkerRole
 
 		public void ProcessIcal(string id)
 		{
-			var calinfo = Utils.AcquireCalinfo(id);
+			var calinfo = new Calinfo(id);
 			logger.LogMsg("info", "worker starting on ical tasks for " + id, null);
 			var fr = new FeedRegistry(id);
 			DoIcal(fr, calinfo);	
@@ -384,7 +384,7 @@ namespace WorkerRole
 
 		public void ProcessRegion(string region)
 		{
-			var calinfo = Utils.AcquireCalinfo(region);
+			var calinfo = new Calinfo(region);
 			logger.LogMsg("info", "worker starting on region tasks for " + region, null);
 			
 			try
@@ -397,14 +397,17 @@ namespace WorkerRole
 					var uri = BlobStorage.MakeAzureBlobUri(id, id + ".zoneless.obj", false);
 					var es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
 					foreach (var evt in es.events)
+					{
+						evt.categories += "," + id.ToLower();  // so tag viewer can slice region by hub name
 						es_region.events.Add(evt);
+					}
 				}
+
+				Utils.UpdateFeedCountForId(region);
 
 				EventStore.UniqueFilterSortSerialize(region, es_region);
 
 				CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(region), Convert.ToInt32(settings["webrole_instance_count"]));
-
-				WebRoleData.UpdateRendererForId(region);  // ensure webrole will reload fresh renderer for this hub
 
 				RenderTagsAndHtmlXmlJson(region);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
 
@@ -425,7 +428,7 @@ namespace WorkerRole
 
 			Utils.UpdateFeedCountForId(id);
 
-			var calinfo = Utils.AcquireCalinfo(id);
+			var calinfo = new Calinfo(id);
 
 			EventStore.CombineZonedEventStoresToZonelessEventStore(id, settings); // todo: lease the blog
 
@@ -444,8 +447,6 @@ namespace WorkerRole
 
 			CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(id), Convert.ToInt32(settings["webrole_instance_count"]));
 
-			WebRoleData.UpdateRendererForId(id);  // ensure webrole will reload fresh renderer for this hub
-
 			RenderTagsAndHtmlXmlJson(id);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
 
 			var fr = new FeedRegistry(id);
@@ -454,8 +455,11 @@ namespace WorkerRole
 			if (calinfo.hub_enum == CalendarAggregator.HubType.where)
 				SaveWhereStats(fr, calinfo);
 
-			if (calinfo.hub_enum == CalendarAggregator.HubType.what && !Utils.IsRegion(id))
+			if (calinfo.hub_enum == CalendarAggregator.HubType.what)
 				SaveWhatStats(fr, calinfo);
+
+			if (calinfo.hub_enum == CalendarAggregator.HubType.region)
+				SaveRegionStats(id);
 
 			if (!Utils.IsRegion(id))
 				MergeIcs(calinfo);
@@ -607,7 +611,7 @@ namespace WorkerRole
 
 				logger.LogMsg("info", "DoIcal: " + id, null);
 				Collector coll = new Collector(calinfo, settings);
-				coll.CollectIcal(fr, ical, test: testing, nosave: false);
+				coll.CollectIcal(fr, ical, test: testing);
 			}
 			catch (Exception e)
 			{
@@ -690,10 +694,8 @@ namespace WorkerRole
 			sb_report.Append ( "</table>\n" );			
 
 			var events_per_person = Convert.ToInt32(futurecount) / (float)pop;
-			string preamble = MakeWherePreamble(estats, ustats, ebstats, fbstats, pop, futurecount, events_per_person);
-			var report = preamble + sb_report.ToString();
-			report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(calinfo, sb_report.ToString(), "stats");
-			bs.PutBlob(id, id + ".stats.html", new Hashtable(), Encoding.UTF8.GetBytes(report), null);
+			var report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(calinfo, sb_report.ToString());
+			bs.PutBlob(id, id + ".stats.html", new Hashtable(), Encoding.UTF8.GetBytes(report), "text/html" );
 
 			var dict = new Dictionary<string, object>();
 			dict.Add("events", futurecount.ToString());
@@ -733,7 +735,7 @@ namespace WorkerRole
 			sb_report.Append( "</table>\n" );
 			string preamble = MakeWhatPreamble(futurecount);
 			var report = preamble + sb_report.ToString();
-			report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(calinfo, report, "stats");
+			report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(calinfo, report);
 			bs.PutBlob(id, id + ".stats.html", new Hashtable(), Encoding.UTF8.GetBytes(report), null);
 		}
 
@@ -764,16 +766,19 @@ namespace WorkerRole
 			}
 
 			var region_calinfo = Utils.AcquireCalinfo(region);
-			var report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(region_calinfo, sb_region_report.ToString(), "stats");
-			bs.PutBlob(region, region + ".stats.html", report);
+			var report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(region_calinfo, sb_region_report.ToString());
+			bs.PutBlob(region, region + ".stats.html", report, "text/html");
 		}
 
 		private static string MakeTableHeader()
 		{
 			return string.Format(@"
-<table class=""icalstats"">
+<table style=""border-spacing:6px"" class=""icalstats"">
 <tr>
-<td>feed</td>
+<td>feed</td> 
+<td>home</td>         
+<td>raw view</td>
+<td>html view</td>
 <td>validation</td>
 <td>error?</td>
 <td>future</td>
@@ -800,41 +805,6 @@ Future events {0}
 			return preamble;
 		}
 
-		private static string MakeWherePreamble(NonIcalStats estats, NonIcalStats ustats, NonIcalStats ebstats, NonIcalStats fbstats, int pop, int futurecount, float events_per_person)
-		{
-			string preamble = string.Format(@"
-<div>
-<p>
-Eventful: {0} venues, {1} events ({2})
-</p>
-<p>
-Upcoming: {3} venues, {4} events ({5})
-</p>
-<p>
-EventBrite: {6} events
-</p>
-<p>
-Facebook: {7} events
-</p>
-<p>
-All events {8}, population {9}, events/person {10:f}
-</p>
-",
-					 estats.venuecount,
-					 estats.eventcount,
-					 estats.whenchecked.ToString(),
-					 ustats.venuecount,
-					 ustats.eventcount,
-					 ustats.whenchecked.ToString(),
-					 ebstats.eventcount,
-					 fbstats.eventcount,
-					 futurecount,
-					 pop,
-					 events_per_person
-					 );
-			return preamble;
-		}
-
 		private static void DoStatsRow(string id, Dictionary<string, IcalStats> istats, StringBuilder sb_report, ref int futurecount, string feedurl, string redirected_url, string homeurl)
 		{
 			try
@@ -843,15 +813,15 @@ All events {8}, population {9}, events/person {10:f}
 
 				// var is_private = Metadata.IsPrivateFeed(id, feedurl); // Related to http://blog.jonudell.net/2011/06/02/syndicating-facebook-events/
 
-				var is_private = false; // Private FB feeds idle for now
+				// var is_private = false; // Private FB feeds idle for now
 
-				var feed_column = is_private  // hide the URL if not private
-					? String.Format(@"{0} (<a title=""click to visit calendar's home page"" href=""{1}"">home</a>)", ical_stats.source, homeurl)
-					: String.Format(@"<a title=""click to load calendar"" href=""{0}"">{1}</a> (<a title=""click to visit calendar's home page"" href=""{2}"">home</a>)", feedurl, ical_stats.source, homeurl);
-	
-				var validation_column = is_private
-					? ""
-					: String.Format(@"<a href=""{0}"">validate</a>", Utils.ValidationUrlFromFeedUrl(redirected_url));
+				var feed_column = String.Format(@"<a title=""click to load calendar ics"" href=""{0}"">{1}</a>", feedurl, ical_stats.source);
+				var home_column = String.Format(@"<a title=""click to visit calendar page"" href=""{0}""><img src=""http://elmcity.blob.core.windows.net/admin/home.png""></a>", homeurl);
+				var raw_view_url = string.Format("/text_from_ics?url={0}", Uri.EscapeDataString(feedurl));
+				var html_view_url = string.Format("/view_calendar?feedurl={0}&id={1}", Uri.EscapeDataString(feedurl), id);
+				var raw_view_column = string.Format(@"<a title=""click to view raw feed"" href=""{0}""><img src=""http://elmcity.blob.core.windows.net/admin/glasses.png""></a>", raw_view_url);
+				var html_view_column = string.Format(@"<a title=""click to view feed as html"" href=""{0}""><img src=""http://elmcity.blob.core.windows.net/admin/glasses2.png""></a>", html_view_url);
+				var validation_column = String.Format(@"<a title=""click to validate feeed"" href=""{0}""><img src=""http://elmcity.blob.core.windows.net/admin/checkbox.png""></a>", Utils.ValidationUrlFromFeedUrl(redirected_url));
 
 				System.Threading.Interlocked.Exchange(ref futurecount, futurecount + istats[feedurl].futurecount); 
 
@@ -870,18 +840,24 @@ All events {8}, population {9}, events/person {10:f}
 <td>{7}</td>
 <td>{8}</td>
 <td>{9}</td>
+<td>{10}</td>
+<td>{11}</td>
+<td>{12}</td>
 </tr>
 ",
 					feed_column,                                             // 0
-					validation_column,                                       // 1
-					ical_stats.dday_error,                                   // 2
-					ical_stats.futurecount,                                  // 3
-					ical_stats.singlecount,                                  // 4
-					ical_stats.recurringcount,                               // 5
-					ical_stats.recurringinstancecount,                       // 6
-					ical_stats.loaded,                                       // 7
-					ical_stats.whenchecked,                                  // 8
-					ical_stats.prodid                                        // 9
+					home_column,											 // 1
+					raw_view_column,										 // 2
+					html_view_column,										 // 3
+					validation_column,                                       // 4
+					ical_stats.dday_error,                                   // 5
+					ical_stats.futurecount,                                  // 6
+					ical_stats.singlecount,                                  // 7
+					ical_stats.recurringcount,                               // 8
+					ical_stats.recurringinstancecount,                       // 9
+					ical_stats.loaded,                                       // 10
+					ical_stats.whenchecked,                                  // 11
+					ical_stats.prodid                                        // 12
 					)
 					);
 				}
@@ -993,7 +969,8 @@ All events {8}, population {9}, events/person {10:f}
 		{
 			GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
 
-			WebRoleData.MakeWebRoleData();  // make sure wrd.obj includes updated renderers (if any)
+			WebRoleData.MakeWebRoleData();  // <!--should not be needed since UpdateRendererForId happens for each hub on each cycle-->
+			                                // restored here because UpdateRendererForId on a per-hub basis was contending for wrd.obj
 
 			Utils.MakeWhereSummary();  // refresh http://elmcity.blob.core.windows.net/admin/where_summary.html
 

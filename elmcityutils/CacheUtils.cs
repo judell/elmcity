@@ -153,7 +153,7 @@ namespace ElmcityUtils
 
 		// used by CalendarRenderer.RenderDynamicViewWithCaching, 
 		// emits not-modified if client already has the rendered view
-		public static byte[] MaybeSuppressResponseBodyForView(ICache cache, ControllerContext context, byte[] view_data)
+		public static byte[] MaybeSuppressResponseBodyForView(ControllerContext context, byte[] view_data)
 		{
 			byte[] response_body = view_data;
 			var request_if_none_match = HttpUtils.MaybeExtractHeaderFromRequestContext("If-None-Match", context);
@@ -264,6 +264,7 @@ namespace ElmcityUtils
 					{
 						GenUtils.LogMsg("info", "MaybePurgeCache", purgeable_cache_url);
 						cache.Remove(purgeable_cache_url);
+						var obj = HttpUtils.FetchUrl(new Uri(purgeable_cache_url)); // rewarm the cache
 						var count = (int)purgeable_entity["count"];
 						count -= 1;
 						if (count < 0)

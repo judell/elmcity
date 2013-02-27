@@ -37,7 +37,7 @@ except:
 
 # charts
 
-bin = "e:\\approot"
+bin = get_approot()
 
 in_spec = '%s#/feed/entry/content' % monitor
 

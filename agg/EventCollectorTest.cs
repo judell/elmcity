@@ -83,6 +83,16 @@ namespace CalendarAggregator
 				UpdateYYYY(example, "xml");
 		}
 
+		private static void AlterIcs(string example, string search, string replace)
+		{
+			var text = HttpUtils.FetchUrl(BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false)).DataAsString();
+			text = text.Replace(search, replace);
+			bs.PutBlob("admin", example + ".ics", text);
+			// to factor daylight savings transitions into tests the month and day must stay the same
+			// but the year advances to ensure that the event will be in the future-oriented collection window
+			// and that means the test hubs must also have icalendar_horizon_days set beyond the default 90 (currently 1000)
+		}
+
 		private static void UpdateYYYY(string example, string ext)
 		{
 			var text = HttpUtils.FetchUrl(BlobStorage.MakeAzureBlobUri("admin", example + ".tmpl",false)).DataAsString();
@@ -192,15 +202,50 @@ namespace CalendarAggregator
 			var example = "hillside";
 			var source = "hillside";
 			var fr = new FeedRegistry(berkeley_test_hub);
-
 			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley);
+			HillsideExampleIsCorrectObj(zes, null, null);
+		}
 
+		private static bool _AfternoonTeaAt3PMLocal()    // this version expects an altered feed
+		{
+			var example = "hillside";
+			var source = "hillside";
+			var fr = new FeedRegistry(berkeley_test_hub);
+			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley);
+			try
+			{
+				HillsideExampleIsCorrectObj(zes, "Afternoon Tea", "Afternoon Coffee");
+				return true;
+			}
+			catch 
+			{
+				return false;
+			}
+		}
+
+
+
+		private static void HillsideExampleIsCorrectObj(ZonelessEventStore zes, string search, string replace)
+		{
+			var title_substr = "Afternoon Tea 3";
+			if (search != null && replace != null)
+				title_substr = title_substr.Replace(search, replace);
 			Assert.That(zes.events.Count > 0);  // it's a recurring event, don't need/want to test for exact count
 			var evt = zes.events[0];
-			Assert.That(evt.title.StartsWith("Afternoon Tea 3"));
+			Assert.That(evt.title.StartsWith(title_substr));
 			Assert.That(evt.dtstart.Hour == 15);
 			Assert.That(evt.dtstart.Minute == 0);
 			Assert.That(evt.dtstart.Second == 0);
+		}
+
+		private static void HillsideExampleIsCorrectIcs(DDay.iCal.iCalendar ical)
+		{
+			Assert.That(ical.Events.Count > 0);  // it's a recurring event, don't need/want to test for exact count
+			var evt = ical.Events[0];
+			Assert.That(evt.Summary.StartsWith("Afternoon Tea 3"));
+			Assert.That(evt.Start.Hour == 15);
+			Assert.That(evt.Start.Minute == 0);
+			Assert.That(evt.Start.Second == 0);
 		}
 
 		[Test]
@@ -260,7 +305,7 @@ namespace CalendarAggregator
 			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false).ToString();
 			fr.AddFeed(feedurl, source);
 			var es = new ZonedEventStore(calinfo, SourceType.ical);
-			collector.CollectIcal(fr, es, false, false);
+			collector.CollectIcal(fr, es, false);
 			EventStore.CombineZonedEventStoresToZonelessEventStore(calinfo.id, settings);
 			var zes = new ZonelessEventStore(calinfo).Deserialize();
 			return zes;
@@ -349,7 +394,7 @@ namespace CalendarAggregator
 			var es = new ZonedEventStore(test_calinfo, SourceType.ical);
 			collector.AddEventfulEvent(es, test_venue, events.First());
 			Assert.That(es.events[0].title != "");
-		}
+		} 
 
 		[Test]
 		public void SummitScienceAt7PMLocal()
@@ -382,6 +427,24 @@ namespace CalendarAggregator
 		#endregion
 
 		#region eventbrite
+
+
+		[Test]
+		public void EventbriteQueryReturnsPageCountOrMinusOne()
+		{
+			var collector = new Collector(test_calinfo, settings);
+
+			string method = "event_search";
+			string args = collector.MakeEventBriteArgs(2, null);
+			int count = collector.GetEventBritePageCount(method, args);
+			Assert.That(count == -1 || count >= 1);
+			if (count >= 1 && settings["eventbrite_quota_reached"] == "True")
+			{
+				GenUtils.PriorityLogMsg("info", "GetEventBritePageCount", "resetting quota marker");
+				var dict = new Dictionary<string, object>() { { "value", false } };
+				TableStorage.UpmergeDictToTableStore(dict, "settings", "settings", "eventbrite_quota_reached");
+			}
+		}
 
 		[Test]
 		public void NewYearsEvePartyAt8PMLocal()
@@ -453,17 +516,149 @@ namespace CalendarAggregator
 
 		#endregion
 
-		#region mixed
+		#region feed cache
+
+		[Test]
+		public void NonexistingFeedCacheYieldsCachedAndValidIcsAndObj()
+		{
+			var example = "hillside";
+			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false).ToString();
+			ClearCachedIcs("feedcache", feedurl);
+			ClearCachedObj(calinfo_berkeley, "feedcache", feedurl);
+			AfternoonTeaAt3PMLocal(); // process the hillside example
+			var ics_cached_uri = GetFeedCacheUri(GetFeedIcsCacheName(feedurl));
+			var cached_ics = Utils.GetCachedFeedText(feedurl);
+			Assert.That(cached_ics != ""); // should exist now
+			var obj_blob_name = Utils.MakeCachedFeedObjName(berkeley_test_hub, feedurl);
+			var es_zoned = Utils.GetFeedObjFromCache(calinfo_berkeley, feedurl);                        // verify obj exists
+			var es_zoneless = EventStore.ZonedToZoneless(berkeley_test_hub, calinfo_berkeley, es_zoned);
+			HillsideExampleIsCorrectObj(es_zoneless, null, null);                                       // verify obj correct
+		}
+
+		[Test]
+		public void UnchangedFeedUsesCachedObj()
+		{
+			var example = "hillside";
+			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false).ToString();
+			ClearCachedIcs("feedcache", feedurl);  // empty cached ics
+			ClearCachedObj(calinfo_berkeley, "feedcache", feedurl);  // empty cached obj
+
+			var stopwatch = new System.Diagnostics.Stopwatch();
+			stopwatch.Start();
+			AfternoonTeaAt3PMLocal(); // process the hillside example once to make sure ics and obj cached
+			stopwatch.Stop();
+			var time1 = stopwatch.Elapsed;
+
+			Assert.That(CachedIcsNonempty(feedurl));                  // should exist now
+			Assert.That(CachedIcsNonempty(feedurl));                  // should exist now
+			var ics_cached_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
+			var ics_cached_uri = BlobStorage.MakeAzureBlobUri("feedcache", ics_cached_name);
+			var cached_text = HttpUtils.FetchUrl(ics_cached_uri).DataAsString();
+			var feed_text = HttpUtils.FetchUrl(new Uri(feedurl)).DataAsString();
+			Assert.That(cached_text == feed_text);                  // cached ics should match feed ics
+
+			stopwatch.Reset();
+			stopwatch.Start();
+			AfternoonTeaAt3PMLocal(); // go again to check for use of cached obj
+			stopwatch.Stop();
+			var time2 = stopwatch.Elapsed;
+
+			var include_text = feedurl + "," + "using cached obj";
+			var log_text = Utils.GetRecentLogEntries("log", null, 5, include_text, null);
+			Assert.That(log_text.Contains(string.Format("{0}: {1}", feedurl, "using cached obj")));
+		}
+
+		[Test]
+		public void ChangedFeedUpdatesCachedObj()
+		{
+			var example = "hillside";
+			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false).ToString();
+			ClearCachedIcs("feedcache", feedurl);
+			var obj_blob_name = ClearCachedObj(calinfo_berkeley, "feedcache", feedurl);
+			AfternoonTeaAt3PMLocal(); // process the hillside example once to make sure ics and obj cached
+			Assert.That(CachedIcsNonempty(feedurl));  // cached ics exists, not empty
+			Assert.That(CachedObjNonempty(feedurl));  // cached obj exists, not empty
+			var blob_props = bs.GetBlobProperties("feedcache", obj_blob_name);
+			var old_last_mod = blob_props.HttpResponse.headers["Last-Modified"];
+			AlterIcs(example, "Afternoon Tea", "Afternoon Coffee");  // now alter the ics
+			Assert.That(_AfternoonTeaAt3PMLocal()); // process again, using the test that expects the change
+			blob_props = bs.GetBlobProperties("feedcache", obj_blob_name);
+			var new_last_mod = blob_props.HttpResponse.headers["Last-Modified"];
+			Assert.That(old_last_mod != new_last_mod);               // cached obj should differ
+			UpdateYYYY(example, "ics");                              // restore the original ics
+		}
+
+		private static string GetFeedIcsCacheName(string feedurl)
+		{
+			return BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
+		}
+
+		private static Uri GetFeedCacheUri(string blob_name)
+		{
+			return BlobStorage.MakeAzureBlobUri("feedcache", blob_name, false);
+		}
+
+		private static bool CachedIcsNonempty(string feedurl)
+		{
+			string blob_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
+			var cached_uri = BlobStorage.MakeAzureBlobUri("feedcache", blob_name);
+			var ics = HttpUtils.FetchUrl(cached_uri).DataAsString();
+			return ics != "";
+		}
+
+		private static bool CachedObjNonempty(string feedurl)
+		{
+			string blob_name = Utils.MakeCachedFeedObjName(berkeley_test_hub, feedurl);
+			var es = (ZonedEventStore) ObjectUtils.GetTypedObj<ZonedEventStore>("feedcache", blob_name);
+			return es.events.Count > 0;
+		}
+
+		private static void ClearCachedIcs(string cache_dir, string feedurl)
+		{
+			ClearIcsFeedInCache(cache_dir, feedurl);
+			HttpUtils.Wait(2);
+			var ics_blob_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
+			var ics_cached_uri = BlobStorage.MakeAzureBlobUri(cache_dir, ics_blob_name, false);
+			var ics = HttpUtils.FetchUrl(ics_cached_uri).DataAsString();
+			Assert.That(ics == ""); // verify empty
+		}
+
+		private static string ClearCachedObj(Calinfo calinfo, string cache_dir, string feedurl)
+		{
+			ClearObjFeedInCache(calinfo, cache_dir, feedurl);
+			var obj_blob_name = Utils.MakeCachedFeedObjName(calinfo.id, feedurl);
+			HttpUtils.Wait(2);
+			var es = (ZonedEventStore)ObjectUtils.GetTypedObj<ZonedEventStore>(cache_dir, obj_blob_name);
+			Assert.That(es.events.Count == 0); // verify empty
+			return obj_blob_name;
+		}
+
+		public static void ClearIcsFeedInCache(string cache_dir, string feedurl)
+		{
+			var blob_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
+			bs.PutBlob(cache_dir, blob_name, "");
+		}
+
+		public static void ClearObjFeedInCache(Calinfo calinfo, string cache_dir, string feedurl)
+		{
+			var blob_name = Utils.MakeCachedFeedObjName(calinfo.id, feedurl);
+			var es = new ZonedEventStore(calinfo, SourceType.ical);
+			bs.SerializeObjectToAzureBlob(es, cache_dir, blob_name);
+		}
+
+		#endregion
+
+		#region other
 
 		[Test]
 		public void TagsAndUrlsAreCoalesced()    // 3 events with same title + start should coalesce tags and urls
-		{                                          
+		{
 			DeleteZonedObjects(keene_test_hub);
 
-			var dtstart = new DateTimeWithZone( DateTime.Now, calinfo_keene.tzinfo);
+			var dtstart = new DateTimeWithZone(DateTime.Now, calinfo_keene.tzinfo);
 			var dtend = new DateTimeWithZone(dtstart.LocalTime + TimeSpan.FromHours(1), calinfo_keene.tzinfo);
 
-			
+
 			var es1 = new ZonedEventStore(calinfo_keene, SourceType.ical);
 			es1.AddEvent(
 				"event",
@@ -553,7 +748,7 @@ namespace CalendarAggregator
 		}
 
 		[Test]
-		public void UpcomingUrlsAreNormalized()   
+		public void UpcomingUrlsAreNormalized()
 		{
 			DeleteZonedObjects(keene_test_hub);
 
@@ -594,7 +789,7 @@ namespace CalendarAggregator
 				);
 
 			es2.Serialize();
-	
+
 			EventStore.CombineZonedEventStoresToZonelessEventStore(keene_test_hub, settings);
 
 			var es = new ZonelessEventStore(calinfo_keene).Deserialize();

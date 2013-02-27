@@ -81,8 +81,8 @@ h1 { font-size:smaller }
     print r.HttpResponse.status.ToString()
   except:
     GenUtils.PriorityLogMsg('exception', 'charts.py: make_html_table', format_traceback() )
-  
-bin = 'e:\\approot\\bin'
+
+bin = get_approot()
 
 GenUtils.LogMsg('info', 'charts.py', repr(get_process_owner()) )
 

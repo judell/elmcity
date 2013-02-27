@@ -142,6 +142,7 @@ namespace CalendarAggregator
 
 		public void AddFeed(string feedurl, string source)
 		{
+			feedurl = Utils.MaybeChangeWebcalToHttp(feedurl);
 			if (feeds.ContainsKey(feedurl))
 			{
 				GenUtils.LogMsg("warning", "FeedRegistry.AddFeed", "duplicate feed: " + feedurl + "(" + source + ")");

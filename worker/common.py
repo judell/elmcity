@@ -1,6 +1,14 @@
 clr.AddReference('System.Management')
 import System.Management 
 
+def get_approot():
+  try:
+    x = open('e:\\approot\\bin\\Scripts\\charts.py','r')
+    bindrive = 'e:'
+  except:
+    bindrive = 'f:'
+  return bindrive + '\\approot\\bin'
+
 def get_resource_dirs():
   return System.IO.Directory.GetDirectories('c:\Resources\Directory')
 

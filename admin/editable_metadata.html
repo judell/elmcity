@@ -65,10 +65,10 @@ var metadata_include_fields = {
   'css'           : 'URL for alternate CSS (default: http://elmcity.blob.core.windows.net/admin/elmcity-1.3.css)',
   'descriptions'  : 'Include iCalendar DESCRIPTION in XML and JSON outputs (default: no)',
   'locations'     : 'Include iCalendar LOCATION in XML and JSON outputs (default: no)',
-  'display_width' : 'Width of the default HTML view (default: 470)',
+//  'display_width' : 'Width of the default HTML view (default: 470)',
   'eventbrite'    : 'Search EventBrite for events within radius of the hub (default: yes)',
   'eventful'      : 'Search Eventful for events within radius of the hub (default: yes)',
-  'facebook'      : 'Search Facebook for events within radius of the hub (default: yes)',
+//  'facebook'      : 'Search Facebook for events within radius of the hub (default: yes)',
 //  'feed_count'  : 'Number of iCalendar feeds (read only)',
 //  'header_image'  : 'Display the image specified by img (default: no)',
 //  'img'           : 'URL of a header image for the default HTML view (default: none)',
@@ -76,7 +76,7 @@ var metadata_include_fields = {
   'lon'           : 'Longitude of center of hub (default: derived from location name if location hub)',
   'population'    : '(only for location hub) (default: derived from location name)',
   'radius'        : 'Search radius for EventBrite/Eventful/Upcoming (default: 5 miles)',
-  'template'      : 'URL for alternate HTML template (default: http://elmcity.blob.core.windows.net/admin/events-1.3.tmpl)',
+'template'      : 'URL for alternate HTML template (default: http://elmcity.blob.core.windows.net/admin/events-1.6.tmpl)',
   'title'         : 'Title of hub (Events for Huntington, WV) (default: hub id)',
 //  'twitter'       : 'Twitter name used to authenticate to, and control, the hub (read only)',
   'upcoming'      : 'Search EventBrite for events within radius of the hub (default: yes)',
@@ -96,16 +96,18 @@ var metadata_readonly_fields = {
 
 var feeds_select_fields = {
   'xcal'   : null,
-  'vcal'   : null
+  'vcal'   : null,
+  'approved'   : null
 }
 
 var feeds_include_fields = {
-  'url'           : 'The home page for the event sponsor (e.g.: http://westsidesoccer.org/)',
-  'feedurl'       : 'The iCalendar (ICS) feed (e.g.: http://westsidesoccer.org/events.ics)',
-  'source'        : 'Name for the feed (e.g.: West Side Youth Soccer)',
-  'category'      : 'One or more tags for the feed (e.g.: sports,soccer) (comma-delimited if more than one)',
-//  'xcal'          : 'Convert from xCal-style RSS to ICS (default: no) (works for, e.g., http://events.pressdemocrat.com',
-//  'vcal'          : 'Convert from vCal-style RSS to ICS (default: no) (works for, e.g., http://www.techhui.com)'
+  'url'           : 'REQUIRED. The web page for the event sponsor\'s calendar (e.g.: http://westsidesoccer.org/calendar.html)',
+  'feedurl'       : 'REQUIRED. The iCalendar (ICS) feed (e.g.: http://westsidesoccer.org/events.ics)',
+  'source'        : 'REQUIRED. Name for the feed (e.g.: West Side Youth Soccer)',
+  'category'      : 'RECOMMENDED. One or more tags for the feed (e.g.: sports,soccer) (comma-delimited if more than one)',
+  'catmap'        : 'Map feed categories to hub categories (rarely used, see http://blog.jonudell.net/elmcityazure-project-status/#2012-08-08 for explanation)',
+  'approved'    : 'Include this feed in the hub (default: yes)',
+  'comments'    : 'Comments about the provenance/status/evolution of this feed'
   }
 
 var feeds_defaults = {
@@ -113,8 +115,14 @@ var feeds_defaults = {
   'feedurl'       : '',
   'source'        : '',
   'category'      : '',
-//  'xcal'          : 'no',
-//  'vcal'          : 'no'
+  'approved'      : 'yes',
+  'comments'      : ''
+  }
+
+var feeds_required = {
+  'url'           : '',
+  'feedurl'       : '',
+  'source'        : ''
   }
 
 var feeds_readonly_fields = {
@@ -126,6 +134,16 @@ var include_fields = {};
 var readonly_fields = {};
 
 var divider = '<hr class="divider" style="width:50%;margin:0 auto 0 0">';
+
+/*
+var menu_links = { 
+               'edit_individual_feeds' : {'active':false, 'text' :'edit individual feeds'},
+               'edit_all_feeds'        : {'active':true, 'text'  :'edit all feeds'},
+               'edit_categories'        : {'active':true, 'text'  :'edit categories'}
+               };
+*/
+
+var category_edits = {};
 
 function gup( name )
   {  
@@ -142,7 +160,6 @@ function gup( name )
 
 function load_meta()
   {
-
   if ( flavor == 'metadata' )
     {
     json = [ json ];
@@ -158,10 +175,9 @@ function load_meta()
     include_fields = feeds_include_fields;
     readonly_fields = feeds_readonly_fields;	
     show_metadicts();
-    show_tagcloud();
-    $('#edit_all_feeds').css('display','inline');
+    if ( gup('test') )
+      $('#edit_categories').css('display','inline');
     }
-
   }
 
 function show_metadicts()
@@ -171,7 +187,7 @@ function show_metadicts()
   for ( i = 0; i < json.length; i++)
     {
     var metadict = json[i];
-    $('#metadata').append('<div id="' + i + '"/>');
+    $('#metadata').append('<div style="width:75%;overflow:hidden" id="' + i + '"/>');
     show_metadict(i, metadict);
     }
 
@@ -207,9 +223,8 @@ function show_metadict(index, metadict)
 
   var record_keys;
 
-  if ( flavor == 'feeds' )
-//    record_keys = [ 'source', 'feedurl', 'url', 'category', 'xcal', 'vcal' ]; 
-    record_keys = [ 'source', 'feedurl', 'url', 'category']; 
+  if ( flavor == 'feeds' ) // control the order to put required fields first
+    record_keys = [ 'source', 'feedurl', 'url', 'category', 'approved', 'comments', 'catmap']; 
   else
     record_keys = $.keys(include_fields).sort();
 
@@ -261,7 +276,7 @@ function show_metadict(index, metadict)
 
   }
 
-function show_tagcloud()
+function get_cat_dict()
   {
   var allcats = {};
   for (feed in json ) 
@@ -277,16 +292,37 @@ function show_tagcloud()
       }
     }
 
-    delete allcats[""];
-    delete allcats["..."];
+  delete allcats[""];
+  delete allcats["..."];
+  return allcats;
+  }
 
-    var tags = $.keys(allcats).sort();
-    
-    for (i in tags)
-      {
-      var tag = tags[i];
-      $('#tagcloud').append('<tr><td style="text-align:right">' + allcats[tag] + '</td><td>' + tag + '</td></tr>');
-      }
+function show_categories()
+  {
+  category_edits = {};
+  $('#category_edits').empty();
+  $('#category_editor').empty();
+  var allcats = get_cat_dict();
+  var tags = $.keys(allcats).sort();
+  for (i in tags)
+    {
+    var tag = tags[i];
+    var editable = '<span class="editable_changeable editable_category" id="tag_' +  tag + '">' + tag + '</span>'; 
+    $('#category_editor').append('<p>' + editable + '</p>');
+    }
+
+  $(".editable_category").editable(handle_submit, { 
+      type   : 'textarea',
+      select : true,
+      submit : 'rename or remove',
+      onsubmit: onsubmit_category,
+      onedit:   onedit,
+      onreset:  onreset,
+      cancel :  'cancel',
+      width  :  '200px',
+      tooltip: 'click to rename or remove'
+    });
+
   }
 
 
@@ -343,6 +379,7 @@ function make_metadict_editable(index)
  table.append('<tr><td style="font-style:italic">hover names<br/> for help</td><td style="font-style:italic">click values<br/> to edit</td></tr>');
 
  activate_editables();
+ window.scrollTo(0,0);
  }
 
 
@@ -438,7 +475,6 @@ function onreset(form)
   {
   }
 
-
 function onsubmit(form)
   {
    var field_id = form.onsubmit.arguments[1].attributes["id"].value;  // fld_11_category
@@ -459,6 +495,60 @@ function onsubmit(form)
       }
   }
 
+function onsubmit_category(form)
+  {
+   var id = form.onsubmit.arguments[1].attributes["id"].value; 
+   var origval = id.replace('tag_','');
+   var newval = form.onsubmit.arguments[1].firstChild.firstChild.value;
+   if ( newval != origval ) 
+     {
+     $('#' + id).editable('disable');
+     $('#' + id).empty();
+     $('#' + id).before('<span style="text-decoration:line-through">' + origval + '</span> ');
+     category_edits[origval] = newval;
+     show_category_edits()
+     }
+  }
+
+function show_category_edits()
+  {
+  $('#category_edits').html('<table></table>');
+  $('#category_edits table').append('<tr><td><b>from</b></td><td><b>to</b></td></th>');
+  for ( var i in $.keys(category_edits) )  
+    {
+    var key = $.keys(category_edits)[i];
+    $('#category_edits table').append('<tr><td>' + key + '</td><td>' + category_edits[key] + '</td></tr>');
+    }
+  $('#category_edits').append('<p><input type="submit" value="save changes" onclick="save_category_edits()"><input type="submit" value="discard changes" onclick="show_categories()"></p>');
+  }
+
+function save_category_edits()
+  {
+  var newjson = json;
+  var keys = $.keys(category_edits);
+  for ( i = 0; i < json.length; i++)
+    {
+    var feed = json[i];
+    var cats = feed["category"].split(',');
+    for (var j = 0; j < cats.length; j++) 
+      {
+      var cat = cats[j].trim().replace('\n','');
+      var newcat = category_edits[cat];  
+      if ( keys.indexOf(cat) != -1 )
+        {
+        if ( newcat == '' )
+          cats.splice(j,1);
+        else
+          cats[j] = newcat;
+        feed["category"] = cats.join(',');
+        json[i] = feed;
+        }
+      }
+    }
+  update_json_blob();
+  }
+
+
 function undo_all()
   {
   json = JSON.parse(original);
@@ -470,6 +560,25 @@ function undo_all()
 
 function update_json_blob()
   {
+
+  if ( flavor == 'feeds' )
+    {
+    for ( i = 0; i < json.length; i++)
+        {
+        var metadict = json[i];
+        var msg = '';
+        for ( j in $.keys(feeds_required) )
+            {
+            var key = $.keys(feeds_required)[j];
+            if ( metadict.hasOwnProperty(key) == false || metadict[key] == '' )
+                {
+                msg = key.toUpperCase() + ' required but not found in ' + JSON.stringify(metadict);
+                alert(msg);
+                return;
+                }
+            }
+        }
+    }
 
   try 
   {
@@ -514,8 +623,8 @@ function update_json_blob()
     undo_all();
     }
 
-
-  show_metadicts();
+  location.href = location.href;
+//  show_metadicts();
   }
 
 
@@ -586,6 +695,28 @@ String.prototype.startsWith = function(str){
     return (this.indexOf(str) === 0);
 }
 
+
+/*
+Array.prototype.find = function(searchStr) {
+  var returnArray = false;
+  for (i=0; i<this.length; i++) {
+    if (typeof(searchStr) == 'function') {
+      if (searchStr.test(this[i])) {
+        if (!returnArray) { returnArray = [] }
+        returnArray.push(i);
+      }
+    } else {
+      if (this[i]===searchStr) {
+        if (!returnArray) { returnArray = [] }
+        returnArray.push(i);
+      }
+    }
+  }
+  return returnArray;
+}
+*/
+
+
 function validate_feedurl(feedurl)
   {
   //var url = 'http://icalvalid.cloudapp.net/?uri=' + encodeURIComponent(feedurl);
@@ -608,14 +739,33 @@ $('#metadata').css('display', visibility)
 $('#add_controls').css('display',visibility)
 }
 
-function show_textarea()
+function edit_individual_feeds()
+{
+set_visibility_of_edit_controls('block');
+$('#category_editor').css('display','none');  
+$('#category_edits').css('display','none');  
+$('#upload').css('display','none');  
+}
+
+function edit_all_feeds()
 {
 set_visibility_of_edit_controls('none');
-
 $('#upload_textarea').val(JSON.stringify(json,null,' '));
-
 $('#upload').css('display','block');  
+$('#category_editor').css('display','none');  
+$('#category_edits').css('display','none');  
 }
+
+function edit_categories()
+{
+set_visibility_of_edit_controls('none');
+$('#upload').css('display','none');  
+$('#category_editor').css('display','block');  
+$('#category_edits').css('display','block');  
+category_edits = {};
+show_categories();
+}
+
 
 function upload()
 {
@@ -641,13 +791,29 @@ set_visibility_of_edit_controls('block');
 
 <body onload="load_meta();">
 
+<!--
 [<a href="/services/__ID__/metadata">view all hub/feed info</a>] 
+-->
 
-<span id="edit_all_feeds" style="display:none">
+
+<span id="edit_individual_feeds">
+
+[<a href="javascript:edit_individual_feeds()">edit individual feeds</a>] 
+
+</span>
+
+<span id="edit_all_feeds">
+
+- 
+
+[<a href="javascript:edit_all_feeds()">edit all feeds</a>] 
+</span>
+
+<span id="edit_categories" style="display:none">
 
 -
 
-[<a href="javascript:show_textarea()">edit all feeds</a>] 
+[<a href="javascript:edit_categories()">edit categories</a>] 
 </span>
 
 
@@ -666,6 +832,13 @@ set_visibility_of_edit_controls('block');
 Note: If you've made changes, please use <a href="http://jsonlint.com/">jsonlint</a> to check validity before uploading.
 </p>
 
+</div>
+
+<div id="category_editor" style="display:none">
+
+</div>
+
+<div id="category_edits" style="position:fixed;left:70%;top:50px;width:300px;dispay:none">
 </div>
 
 </p>

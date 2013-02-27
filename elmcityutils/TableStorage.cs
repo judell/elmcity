@@ -502,17 +502,10 @@ namespace ElmcityUtils
 			return new TableStorageListDictResponse(last_http_response, list_dict_obj);
 		}
 
-		public TableStorageStringResponse QueryAllEntitiesAsStringOfXml(string table, string query)
+		public TableStorageStringResponse QueryAllEntitiesAsODataFeed(string table, string query)
 		{
 			var sb = new StringBuilder();
 			HttpResponse last_http_response = default(HttpResponse);
-
-			sb.Append(String.Format(@"<?xml version=""1.0"" encoding=""utf-8"" standalone=""yes""?>
-<feed xml:base=""http://elmcity.table.core.windows.net/"" xmlns:d=""http://schemas.microsoft.com/ado/2007/08/dataservices"" xmlns:m=""http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"" xmlns=""http://www.w3.org/2005/Atom"">
-  <title type=""text"">{0}</title>
-  <id>http://elmcity.table.core.windows.net/{0}</id>
-  <updated>2010-09-22T20:15:03Z</updated>
-  <link rel=""self"" title=""monitor"" href=""{0}"" />", table));
 
 			foreach (HttpResponse http_response in QueryAll(table, query))
 			{
@@ -520,7 +513,6 @@ namespace ElmcityUtils
 				sb.Append(http_response.DataAsString());
 			}
 
-			sb.Append("</feed>");
 			return new TableStorageStringResponse(last_http_response, sb.ToString());
 		}
 

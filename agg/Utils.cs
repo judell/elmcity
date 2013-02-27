@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using System.ServiceModel.Syndication;
 using System.Text;
@@ -74,6 +75,43 @@ namespace CalendarAggregator
 			return feed_builder.ToString();
 		}
 
+		static public Dictionary<string, List<string>> CategoriesFromEventfulAtomFeed(string atom_url)
+		{
+			var eids_and_categories = new Dictionary<string, List<string>>();
+
+			try
+			{
+				var gd = "http://schemas.google.com/g/2005";
+				var atom = "http://www.w3.org/2005/Atom";
+
+				var rss = HttpUtils.FetchUrl(new Uri(atom_url));
+				var xml = XmlUtils.XmlDocumentFromHttpResponse(rss);
+				var nsmgr = new XmlNamespaceManager(xml.NameTable);
+
+				nsmgr.AddNamespace("gd", gd);
+				nsmgr.AddNamespace("atom", atom);
+
+				var entries = xml.SelectNodes("//atom:feed/atom:entry", nsmgr);
+
+				foreach (XmlNode entry in entries)
+				{
+					var url = entry.SelectSingleNode("atom:link", nsmgr).Attributes["href"].Value;
+					var eid = url.Split('/').Last();
+					var category_nodes = entry.SelectNodes("atom:category", nsmgr);
+					var categories = new List<string>();
+					foreach (XmlNode x in category_nodes)
+						categories.Add(x.Attributes["term"].Value);
+
+					eids_and_categories[eid] = categories;
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "CategoriesFromEventfulAtomFeed", e.Message + e.StackTrace);
+			}
+
+			return eids_and_categories;
+		}
 		#endregion
 
 		#region datetime
@@ -691,41 +729,33 @@ namespace CalendarAggregator
 			return dt;
 		}
 
-		public static string GetRecentLogEntries(string log, string type, int minutes, string targets)
+		public static string GetRecentLogEntries(string log, string conditions, int minutes, string include, string exclude)
 		{
 			var sb = new StringBuilder();
 			var dt = Since(minutes);
-
-			var filters = new List<LogFilter>();
-
-			List<string> target_list = new List<string>();
-			if ( targets != null )
-				target_list = targets.Split(',').ToList();
-
-			if (type != null)
-				filters.Add( new LogFilter( type, null) );
-
-			foreach (var target in target_list)
-				filters.Add(new LogFilter(null, target));
-
-			GetLogEntriesLaterThanTicks(log, dt.Ticks, filters, sb);
+			var postfilter = new LogFilter(include, exclude);
+			GetLogEntriesLaterThanTicks(log, dt.Ticks, conditions, postfilter, sb);
 			return sb.ToString();
 		}
 
-		public static string GetRecentMonitorEntries(int minutes, string conditions)
+		public static void GetTableEntriesBetweenTicks(string tablename, string partition_key, string row_key, string until_ticks, string conditions, List<Dictionary<string, string>> entities)
 		{
-			var sb = new StringBuilder();
-			var dt = Since(minutes);
-			GetMonitorEntriesLaterThanTicks(dt.Ticks, Configurator.process_monitor_table, conditions, sb);
-			return sb.ToString();
+			GetTableEntriesLaterThanTicks(tablename, partition_key, row_key, until_ticks, conditions, entities);
 		}
 
 		public static void GetTableEntriesLaterThanTicks(string tablename, string partition_key, string row_key, string conditions, List<Dictionary<string, string>> entities)
 		{
-			string query = String.Format("$filter=(PartitionKey eq '{0}') and (RowKey gt '{1}')", partition_key, row_key);
-			if (String.IsNullOrEmpty(conditions) == false)
-				query += conditions;
-			//TableStorageResponse r = ts.QueryEntities(tablename, query);
+			GetTableEntriesLaterThanTicks(tablename, partition_key, row_key, null, conditions, entities);
+		}
+
+
+		public static void GetTableEntriesLaterThanTicks(string tablename, string partition_key, string row_key, string until_ticks, string conditions, List<Dictionary<string, string>> entities)
+		{
+			string query = String.Format("$filter=PartitionKey eq '{0}' and RowKey gt '{1}' ", partition_key, row_key);
+			if ( ! String.IsNullOrEmpty(until_ticks))
+				query += String.Format(" and RowKey lt '{0}'", until_ticks);
+			if (! String.IsNullOrEmpty(conditions))
+				query += " and " + conditions;
 			TableStorageListDictResponse r = ts.QueryAllEntitiesAsListDict(tablename, query);
 			var dicts = r.list_dict_obj;
 			if (dicts.Count == 0)
@@ -736,30 +766,27 @@ namespace CalendarAggregator
 				dict_str = ObjectUtils.DictObjToDictStr(dict);
 				entities.Add(dict_str);
 			}
-			var new_ticks = dict_str["RowKey"];
-			GetTableEntriesLaterThanTicks(tablename, partition_key, row_key: new_ticks, conditions: conditions, entities: entities);
 		}
 
-		public static List<Dictionary<string, string>> FilterByAny(List<Dictionary<string, string>> entries, string any_string)
-		{
-			return entries.FindAll(entry => (entry["message"].Contains(any_string)));
-		}
-
-		public static List<Dictionary<string, string>> FilterByType(List<Dictionary<string, string>> entries, string type)
-		{
-			return entries.FindAll(entry => (entry["type"].Contains(type)));
-		}
-
-		public static void GetLogEntriesLaterThanTicks(string log, long ticks, List<CalendarAggregator.LogFilter> filters, StringBuilder sb)
+		public static void GetLogEntriesLaterThanTicks(string log, long ticks, string conditions, CalendarAggregator.LogFilter filter, StringBuilder sb)
 		{
 			var entities = new List<Dictionary<string, string>>();
-			GetTableEntriesLaterThanTicks(tablename: log, partition_key: "log", row_key: ticks.ToString(), conditions: null, entities: entities );
-			foreach (var filter in filters)
-			{
-				filter.SetEntities(entities);
-				entities = filter.Apply();
-			}
+			GetTableEntriesLaterThanTicks(tablename: log, partition_key: "log", row_key: ticks.ToString(), conditions: conditions, entities: entities );
+			filter.SetEntities(entities);
+			entities = filter.Apply();
 			FormatLogEntries(sb, entities);
+		}
+
+		public static string GetLogEntriesBetweenTicks(string log, long ticks_from, long ticks_to, string conditions, string include, string exclude)
+		{
+			var entities = new List<Dictionary<string, string>>();
+			GetTableEntriesBetweenTicks(log, "log", ticks_from.ToString(), ticks_to.ToString(), conditions, entities);
+			var filter = new CalendarAggregator.LogFilter(include, exclude);
+			filter.SetEntities(entities);
+			entities = filter.Apply();
+			var sb = new StringBuilder();
+			FormatLogEntries(sb, entities);
+			return sb.ToString();
 		}
 
 		private static void FormatLogEntries(StringBuilder sb, List<Dictionary<string, string>> filtered_entries)
@@ -768,21 +795,12 @@ namespace CalendarAggregator
 				sb.AppendLine(FormatLogEntry(filtered_entry));
 		}
 
-		public static void GetMonitorEntriesLaterThanTicks(long ticks, string tablename, string conditions, StringBuilder sb)
-		{
-			var entries = new List<Dictionary<string, string>>();
-			GetTableEntriesLaterThanTicks(tablename: tablename, partition_key: tablename, row_key: ticks.ToString(), conditions: conditions, entities: entries);
-			FormatLogEntries(sb, entries);
-		}
-
 		public static string FormatLogEntry(Dictionary<string, string> dict)
 		{
+			var ticks = dict["RowKey"];
 			var str_timestamp = dict["Timestamp"];      //10/23/2009 2:26:51 AM
-			var pattern = @"(\d+/\d+)/2\d\d\d(.+)";
-			var re = new Regex(pattern);
-			str_timestamp = re.Replace(str_timestamp, "$1 $2", 1);
-			var s = String.Format("{0} UTC {1} {2} {3}",
-				   str_timestamp, dict["type"], dict["message"], dict["data"]);
+			var s = String.Format("{0} {1} {2} {3} {4}",
+				   ticks, str_timestamp, dict["type"], dict["message"], dict["data"]);
 			return s;
 		}
 
@@ -792,9 +810,10 @@ namespace CalendarAggregator
 
 		public enum IcsFromIcsOperator { before, after };
 
-		static public string IcsFromIcs(string feedurl, Calinfo calinfo, string source, string after, string before, string include_keyword, string exclude_keyword, bool summary_only, bool url_only, bool location_only)
+		static public string IcsFromIcs(string feedurl, Calinfo calinfo, string source, string after, string before, string include_keyword, string exclude_keyword, bool summary_only, bool description_only, bool url_only, bool location_only, Dictionary<string,string> settings)
 		{
-			var feedtext = Collector.GetFeedTextFromFeedUrl(null, calinfo, source, feedurl, wait_secs:3, max_retries:3, timeout_secs:TimeSpan.FromSeconds(5));
+			bool changed = false;
+			var feedtext = Collector.GetFeedTextFromFeedUrl(null, calinfo, source, feedurl, wait_secs:3, max_retries:3, timeout_secs:TimeSpan.FromSeconds(5), settings: settings, changed: ref changed);
 			var sr = new StringReader(feedtext);
 			iCalendar ical = default(iCalendar);
 			try
@@ -810,26 +829,29 @@ namespace CalendarAggregator
 			foreach (DDay.iCal.Event evt in events)
 			{
 				var tzinfo = calinfo.tzinfo;
-
 				var dtstart = evt.DTStart.IsUniversalTime ? TimeZoneInfo.ConvertTimeFromUtc(evt.Start.UTC, tzinfo) : evt.Start.Local;
 				var evt_abs_minutes = dtstart.Hour * 60 + dtstart.Minute;
-
 				MaybeFilterHourMin(after,  ical, evt, evt_abs_minutes, IcsFromIcsOperator.after);
-
 				MaybeFilterHourMin(before, ical, evt, evt_abs_minutes, IcsFromIcsOperator.before);
+			}
 
-				if ( ! String.IsNullOrEmpty(include_keyword) )
+			if ( ! String.IsNullOrEmpty(include_keyword) )
+			{
+				foreach (DDay.iCal.Event evt in events)
 				{
-					if (ContainsKeyword(evt, include_keyword, summary_only, url_only, location_only) == false)
+					if (ShouldRemoveEvt(ContainsKeywordOperator.include, evt, include_keyword, summary_only, description_only, url_only, location_only))
 					{
 						ical.RemoveChild(evt);
 						continue;
 					}
 				}
+			}
 
-				if ( ! String.IsNullOrEmpty(exclude_keyword) )
+			if (!String.IsNullOrEmpty(exclude_keyword))
+			{
+				foreach (DDay.iCal.Event evt in events)
 				{
-					if (ContainsKeyword(evt, exclude_keyword, summary_only, url_only, location_only) == true)
+					if (ShouldRemoveEvt(ContainsKeywordOperator.exclude, evt, exclude_keyword, summary_only, description_only, url_only, location_only))
 					{
 						ical.RemoveChild(evt);
 						continue;
@@ -838,6 +860,11 @@ namespace CalendarAggregator
 			}
 
 			return Utils.SerializeIcalToIcs(ical);
+		}
+
+		static public string IcsFromIcs(string feedurl, Calinfo calinfo, string source, string after, string before, string include_keyword, string exclude_keyword, bool summary_only, bool url_only, bool location_only, Dictionary<string, string> settings)
+		{
+			return IcsFromIcs(feedurl, calinfo, source, after, before, include_keyword, exclude_keyword, summary_only, false, url_only, location_only, settings);
 		}
 
 		private static void MaybeFilterHourMin(string str_hour_min, iCalendar ical, DDay.iCal.Event evt, int evt_abs_minutes, IcsFromIcsOperator op)
@@ -871,41 +898,115 @@ namespace CalendarAggregator
 			minute = Convert.ToInt32(hour_minute[1]);
 		}
 
-		static public bool ContainsKeyword(DDay.iCal.Event evt, string keyword, bool summary_only, bool url_only, bool location_only)
+		public enum ContainsKeywordOperator { include, exclude };
+
+		static public bool ShouldRemoveEvt(ContainsKeywordOperator op, DDay.iCal.Event evt, string keyword, bool summary_only, bool description_only, bool url_only, bool location_only)
 		{
 			keyword = keyword.ToLower();
+			var keywords = keyword.Split(',');
+			var _keywords = new List<string>();
+			foreach ( var k in keywords )
+			{
+				_keywords.Add(k.ToLower().Trim());
+			}
+
+			if (!summary_only && !description_only && !url_only && !location_only)  // if no property specified, default to summary + description
+			{
+				var summary = evt.Summary ?? "";
+				var description = evt.Description ?? "";
+				var input = summary + " " + description;
+				return ShouldRemoveEvtHelper(op, _keywords, input);
+			}
 
 			if (location_only)
-				return evt.Location.ToLower().Contains(keyword);
+			{
+				if (evt.Location == null)
+					return true;
+				else
+				{
+					var input = evt.Location;
+					return ShouldRemoveEvtHelper(op, _keywords, input);
+				}
+			}
 
 			if (url_only)
 			{
 				if (evt.Url == null)
-					return false;
+					return true;
 				else
-					return evt.Url.ToString().Contains(keyword);
+				{
+					var input = evt.Url.ToString();
+					return ShouldRemoveEvtHelper(op, _keywords, input);
+				}
 			}
 
-			bool is_in_summary = true;
-			bool is_in_description = true; 
-			
-			if (evt.Summary == null)
-				is_in_summary = false;
-			else
-				is_in_summary = evt.Summary.ToLower().Contains(keyword);
-
 			if (summary_only)
-				return is_in_summary;
+			{
+				if (evt.Summary == null)
+					return true;
+				else
+				{
+					var input = evt.Summary.ToString();
+					return ShouldRemoveEvtHelper(op, _keywords, input);
+				}
+			}
 
-			if (evt.Description == null)
-				is_in_description = false;
-			else
-				is_in_description = evt.Description.ToLower().Contains(keyword);
+			if (description_only)
+			{
+				if (evt.Description == null)
+					return true;
+				else
+				{
+					var input = evt.Description.ToString();
+					return ShouldRemoveEvtHelper(op, _keywords, input);
+				}
+			}
 
-			return is_in_summary || is_in_description;
+			return false;
+
 		}
 
-		static public string IcsFromRssPlusXcal(string rss_plus_xcal_url, string source, TimeZoneInfo tzinfo)
+		private static bool ShouldRemoveEvtHelper(ContainsKeywordOperator op, List<string> _keywords, string input)
+		{
+			return op == ContainsKeywordOperator.include ? RemoveUnlessAllIncluded(input, _keywords) : RemoveIfAnyExcluded(input, _keywords);
+		}
+
+		static public bool RemoveUnlessAllIncluded(string input, List<string> keywords)
+		{
+			input = input.ToLower();
+			bool should_remove = false;
+			var dict = new Dictionary<string, bool>();
+			foreach (var keyword in keywords)
+				dict.Add(keyword, input.Contains(keyword));
+			var count_false = 0;
+			foreach (var key in dict.Keys)  
+			{
+				if (dict[key] == false)
+					count_false++;
+			}
+
+			if (count_false == dict.Keys.Count) // if any included keyword is missing from input, we're done, the event should be removed
+				should_remove = true;
+
+			return should_remove;
+		}
+
+		static public bool RemoveIfAnyExcluded(string input, List<string> keywords)
+		{
+			input = input.ToLower();
+			bool should_remove = false;
+			foreach (var keyword in keywords)  // if any excluded keyword is found in input, we're done, the event should be removed
+			{
+				if (input.Contains(keyword) == true)
+				{
+					should_remove = true;
+					break;
+				}
+			}
+			return should_remove;
+		}
+
+		static public string IcsFromRssPlusXcal(string rss_plus_xcal_url, string source, Calinfo calinfo)
 		{
 			XNamespace xcal = "urn:ietf:params:xml:ns:xcal";
 			XNamespace geo = "http://www.w3.org/2003/01/geo/wgs84_pos#";
@@ -914,14 +1015,14 @@ namespace CalendarAggregator
 			var xdoc = XmlUtils.XdocFromXmlBytes(rss.bytes);
 			var itemquery = from items in xdoc.Descendants("item") select items;
 			var ical = new DDay.iCal.iCalendar();
-			Collector.AddTimezoneToDDayICal(ical, tzinfo);
+			Collector.AddTimezoneToDDayICal(ical, calinfo.tzinfo);
 
 			foreach (var item in itemquery)
 			{
 				var title = item.Element("title").Value;
 				var url = item.Element("link").Value;
 				var dtstart = Utils.LocalDateTimeFromLocalDateStr(item.Element(xcal + "dtstart").Value);
-				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
+				var dtstart_with_zone = new DateTimeWithZone(dtstart, calinfo.tzinfo);
 				var location = item.Element(xcal + "location").Value;
 				string lat = null;
 				string lon = null;
@@ -934,7 +1035,7 @@ namespace CalendarAggregator
 				{
 					GenUtils.LogMsg("warning", "IcsFromRssPlusXcal", "unable to parse lat/lon");
 				}
-				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, lat: lat, lon: lon, allday: false);
+				var evt = Collector.MakeTmpEvt(calinfo, dtstart_with_zone, DateTimeWithZone.MinValue(calinfo.tzinfo), title, url: url, location: location, description: source, lat: lat, lon: lon, allday: false);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
 			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer(ical);
@@ -942,7 +1043,7 @@ namespace CalendarAggregator
 			return ics_text;
 		}
 
-		static public string IcsFromAtomPlusVCalAsContent(string atom_plus_vcal_url, string source, TimeZoneInfo tzinfo)
+		static public string IcsFromAtomPlusVCalAsContent(string atom_plus_vcal_url, string source, Calinfo calinfo)
 		{
 			//var uri = new Uri("http://www.techhui.com/events/event/feed");  (should work for all ning sites)
 			var ns = StorageUtils.atom_namespace;
@@ -951,6 +1052,7 @@ namespace CalendarAggregator
 			var xdoc = XmlUtils.XdocFromXmlBytes(atom.bytes);
 			var entryquery = from items in xdoc.Descendants(ns + "entry") select items;
 			var ical = new DDay.iCal.iCalendar();
+			var tzinfo = calinfo.tzinfo;
 			Collector.AddTimezoneToDDayICal(ical, tzinfo);
 
 			foreach (var entry in entryquery)
@@ -961,7 +1063,7 @@ namespace CalendarAggregator
 				var dtstart = Utils.DateTimeFromICalDateStr(dtstart_str, DateTimeKind.Local);
 				var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
 				var location = entry.Descendants(ns + "location").First().Value;
-				var evt = Collector.MakeTmpEvt(null, dtstart_with_zone, DateTimeWithZone.MinValue(tzinfo), tzinfo, tzinfo.Id, title, url: url, location: location, description: source, lat: null, lon: null, allday: false);
+				var evt = Collector.MakeTmpEvt(calinfo, dtstart_with_zone, DateTimeWithZone.MinValue(tzinfo), title, url: url, location: location, description: source, lat: null, lon: null, allday: false);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
 			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer();
@@ -971,8 +1073,13 @@ namespace CalendarAggregator
 
 		public static string IcsFromCsv(string feed_url, string home_url, string source, bool skip_first_row, int title_col, int date_col, int time_col, string tzname)
 		{
+			return IcsFromCsv(feed_url, home_url, source, skip_first_row, title_col, date_col, time_col, location_col: -1, tzname: tzname);
+		}
+
+		public static string IcsFromCsv(string feed_url, string home_url, string source, bool skip_first_row, int title_col, int date_col, int time_col, int location_col, string tzname)
+		{
 			var csv = HttpUtils.FetchUrl(new Uri(feed_url)).DataAsString();
-			var lines = csv.Split('\n').ToList();
+			var lines = Regex.Split(csv, "\r\n").ToList();
 			if (skip_first_row)
 				lines = lines.Skip(1).ToList<string>();
 			var events = new List<ZonedEvent>();
@@ -981,11 +1088,12 @@ namespace CalendarAggregator
 			Collector.AddTimezoneToDDayICal(ical, tzinfo);
 			foreach (var line in lines)
 			{
+				var l = line;
 				try
 				{
-					if (line == "")
+					if (l == "")
 						continue;
-					var fields = line.Split(',');
+					var fields = Regex.Split(l, ",").ToList();
 					var evt = new DDay.iCal.Event();
 					evt.Summary = fields[title_col].Trim('"');
 					DateTime dtstart;
@@ -996,6 +1104,14 @@ namespace CalendarAggregator
 					catch
 					{
 						dtstart = DateTime.Parse(fields[time_col].Trim('"'));
+					}
+					try
+					{
+						if (location_col != -1)
+							evt.Location = fields[location_col];
+					}
+					catch
+					{
 					}
 					evt.Start = new iCalDateTime(dtstart);
 					evt.Start.TZID = tzinfo.Id;
@@ -1049,7 +1165,7 @@ namespace CalendarAggregator
 					location = event_dict["location"].Value<string>();
 				}
 				catch { }
-				var evt = Collector.MakeTmpEvt(collector:null, dtstart:dtstart_with_zone, dtend:DateTimeWithZone.MinValue(tzinfo), tzinfo:tzinfo, tzid:tzinfo.Id, title:name, url:url, location: location, description: location, lat: null, lon: null, allday: false);
+				var evt = Collector.MakeTmpEvt(calinfo, dtstart:dtstart_with_zone, dtend:DateTimeWithZone.MinValue(calinfo.tzinfo), title:name, url:url, location: location, description: location, lat: null, lon: null, allday: false);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
 
@@ -1083,6 +1199,16 @@ namespace CalendarAggregator
 			dt = _dt - TimeSpan.FromHours(Configurator.facebook_mystery_offset_hours);
 		}
 
+		private static string MakeEmptyEventBriteCal()
+		{
+			var ticks = System.DateTime.Now.Ticks.ToString();   // use ticks to defeat cache, otherwise if quota-throttled will never see new data
+			var ics = String.Format(@"BEGIN:VCALENDAR
+X-QUOTA-THROTTLED:{0}
+END:VCALENDAR",
+			  ticks);
+			return ics;
+		}
+
 		static public string IcsFromEventBriteOrganizerByName(string organizer_name, string elmcity_id, Dictionary<string, string> settings)
 		{
 			var calinfo = Utils.AcquireCalinfo(elmcity_id);
@@ -1092,7 +1218,13 @@ namespace CalendarAggregator
 			string method = "event_search";
 			string args = collector.MakeEventBriteArgs(radius_multiplier: 2, organizer: organizer_name); // first enlarge the catchment area
 
+			if (settings["eventbrite_quota_reached"] == "True")            // above quota
+				return MakeEmptyEventBriteCal();
+
 			int page_count = collector.GetEventBritePageCount(method, args);
+
+			if (page_count == -1)            // above quota
+				return MakeEmptyEventBriteCal();
 
 			foreach (XElement evt in collector.EventBriteIterator(page_count, method, args))
 			{
@@ -1140,7 +1272,7 @@ namespace CalendarAggregator
 					GenUtils.PriorityLogMsg("exception", "IcsFromEventBriteOrganizerByLocation: Unpacking evt", e.Message + e.StackTrace);
 					continue;
 				}
-				var dday_event = Collector.MakeTmpEvt(collector: null, dtstart: dtstart_with_zone, dtend: DateTimeWithZone.MinValue(calinfo.tzinfo), tzinfo: calinfo.tzinfo, tzid: calinfo.tzinfo.Id, title: title, url: url, location: location, description: location, lat: calinfo.lat, lon: calinfo.lon, allday: false);
+				var dday_event = Collector.MakeTmpEvt(calinfo, dtstart: dtstart_with_zone, dtend: DateTimeWithZone.MinValue(calinfo.tzinfo), title: title, url: url, location: location, description: location, lat: calinfo.lat, lon: calinfo.lon, allday: false);
 				Collector.AddEventToDDayIcal(ical, dday_event);
 			}
 
@@ -1183,7 +1315,13 @@ namespace CalendarAggregator
 			string method = "organizer_list_events";
 			var args = "id=" + organizer_id;
 
+			if (settings["eventbrite_quota_reached"] == "True")            // above quota
+				return MakeEmptyEventBriteCal();
+
 			int page_count = collector.GetEventBritePageCount(method, args);
+
+			if (page_count == -1)            // above quota
+				return MakeEmptyEventBriteCal();
 
 			foreach (XElement evt in collector.EventBriteIterator(page_count, method, args))
 			{
@@ -1210,7 +1348,7 @@ namespace CalendarAggregator
 
 				if ( Utils.IsCurrentOrFutureDateTime(dtstart_with_zone.LocalTime, calinfo.tzinfo ) )
 				{
-					var dday_event = Collector.MakeTmpEvt(collector: null, dtstart: dtstart_with_zone, dtend: DateTimeWithZone.MinValue(calinfo.tzinfo), tzinfo: calinfo.tzinfo, tzid: calinfo.tzinfo.Id, title: title, url: url, location: location, description: location, lat: calinfo.lat, lon: calinfo.lon, allday: false);
+					var dday_event = Collector.MakeTmpEvt(calinfo, dtstart: dtstart_with_zone, dtend: DateTimeWithZone.MinValue(calinfo.tzinfo), title: title, url: url, location: location, description: location, lat: calinfo.lat, lon: calinfo.lon, allday: false);
 					Collector.AddEventToDDayIcal(ical, dday_event);
 				}
 
@@ -1221,13 +1359,12 @@ namespace CalendarAggregator
 			return ics_text;
 		}
 
-		static public string IcsFromEventBriteEid(string eid, string tzname, Dictionary<string, string> settings)
+		static public string IcsFromEventBriteEid(string eid, Calinfo calinfo, Dictionary<string, string> settings)
 		{
 			string ics_text;
 			try
 			{
-				var tzinfo = Utils.TzinfoFromName(tzname);
-				iCalendar ical = InitializeCalendarForTzinfo(tzinfo);
+				iCalendar ical = InitializeCalendarForTzinfo(calinfo.tzinfo);
 
 				var key = settings["eventbrite_api_key"];
 				string host = "https://www.eventbrite.com/xml";
@@ -1249,9 +1386,9 @@ namespace CalendarAggregator
 				string location;
 				string description;
 
-				UnpackEventBriteEvt(tzinfo, evt, venue_name, venue_address, out dtstart_with_zone, out dtend_with_zone, out url, out title, out location, out description);
+				UnpackEventBriteEvt(calinfo.tzinfo, evt, venue_name, venue_address, out dtstart_with_zone, out dtend_with_zone, out url, out title, out location, out description);
 
-				var dday_event = Collector.MakeTmpEvt(collector: null, dtstart: dtstart_with_zone, dtend: dtend_with_zone, tzinfo: tzinfo, tzid: tzinfo.Id, title: title, url: url, location: location, description: description, lat: null, lon: null, allday: false);
+				var dday_event = Collector.MakeTmpEvt(calinfo, dtstart: dtstart_with_zone, dtend: dtend_with_zone, title: title, url: url, location: location, description: description, lat: null, lon: null, allday: false);
 				Collector.AddEventToDDayIcal(ical, dday_event);
 
 				var ical_serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer(ical);
@@ -1315,6 +1452,56 @@ namespace CalendarAggregator
 				GenUtils.PriorityLogMsg("exception", "GetEventBriteVenue", e.Message + e.StackTrace);
 			}
 			return venue;
+		}
+
+		public static string IcsFromFindLocal(string tzname, string source, string url_template)
+		{
+			var ical = new DDay.iCal.iCalendar();
+			var tzinfo = Utils.TzinfoFromName(tzname);
+			Collector.AddTimezoneToDDayICal(ical, tzinfo);
+			var ns = StorageUtils.atom_namespace;
+			foreach (var entry in Collector.FindLocalIterator(url_template))
+			{
+				try
+				{
+					var title = entry.Element(ns + "title").Value.StripHtmlTags().Replace("&amp;", "&");
+					var url = entry.Element(ns + "link").Attribute("href").Value;
+					var description = entry.Descendants(ns + "description").First().Value.Replace("&lt;", "<")
+						.Replace("&gt;", ">")
+						.Replace("&amp;", "&")
+						.Replace("&nbsp;", "")
+						.Replace("&ndash;", "-")
+						.Replace("&eacute;", "")
+						.Replace("&ldquo;", "\"")
+						.Replace("&rdquo;", "\"")
+						.Replace("&lsquo;", "'")
+						.Replace("&rsquo;", "'")
+						.Replace("&trade;", "")
+						.Replace("&bull;", "")
+						.StripHtmlTags();
+					description = Regex.Replace(description, @"\s+", " ");
+					var dtstart_str = entry.Descendants(ns + "next_occurrence_date").First().Value;
+					var dtstart = Utils.DateTimeFromISO8601DateStr(dtstart_str, DateTimeKind.Local);
+					var dtstart_with_zone = new DateTimeWithZone(dtstart, tzinfo);
+					var location = entry.Descendants(ns + "street_address").First().Value + ", " +
+									entry.Descendants(ns + "city").First().Value;
+					var lat = entry.Descendants(ns + "latitude").First().Value;
+					var lon = entry.Descendants(ns + "longitude").First().Value;
+					var evt = Collector.MakeTmpEvt(tzinfo, dtstart_with_zone, DateTimeWithZone.MinValue(tzinfo), title, url: url, location: location, description: description, lat: lat, lon: lon, allday: false);
+					var categories = entry.Descendants(ns + "category");
+					foreach (var cat in categories)
+					{
+						evt.Categories.Add(cat.Value);
+					}
+					Collector.AddEventToDDayIcal(ical, evt);
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", "IcsFromFindLocal", e.Message);
+				}
+			}
+			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer();
+			return serializer.SerializeToString(ical);
 		}
 		
 		#endregion
@@ -1459,7 +1646,8 @@ namespace CalendarAggregator
 
 		public static string GetMetadataChooserHandler(string id, string flavor)
 		{
-			var script = HttpUtils.FetchUrl(new Uri("http://elmcity.blob.core.windows.net/admin/metadata_chooser_handler.tmpl")).DataAsString();
+			//var script = HttpUtils.FetchUrl(new Uri("http://elmcity.blob.core.windows.net/admin/metadata_chooser_handler.tmpl")).DataAsString();
+			var script = BlobStorage.GetAzureBlobAsString("admin", "metadata_chooser_handler.tmpl", false);
 			script = script.Replace("__FLAVOR__", flavor);
 			script = script.Replace("__ID__", id);
 			return script;
@@ -1589,45 +1777,83 @@ namespace CalendarAggregator
 			var wrd = WebRoleData.GetWrd();
 
 			var summary = new StringBuilder();
+			summary.Append("<html><head><title>Elm City regions and hubs</title><style>body {width:90%;font-family:verdana;margin:.5in} table { border-spacing:10px}</style></head><body>");
+
+			summary.Append("<h1>Regions</h1>");
+
+			var region_ids = Utils.GetRegionIds();
+
 			summary.Append(@"<table style=""width:90%;margin:auto"">");
 			summary.Append(@"
 <tr>
-<td align=""center""><b>id</b></td>
-<td align=""center""><b>location</b></td>
-<td align=""center""><b>population</b></td>
-<td align=""center""><b>events</b></td>
-<td align=""center""><b>density</b></td>
+<td><b>region</b></td>
+<td><b>feeds</b></td>
+<td><b>hubs</b></td>
 </tr>");
+
 			var row_template = @"
 <tr>
 <td>{0}</td>
-<td>{1}</td>
+<td align=""right"">{1}</td>
+<td>{2}</td>
+</tr>";
+
+			foreach (var id in region_ids)
+			{
+				var calinfo = Utils.AcquireCalinfo(id);
+				if (Convert.ToInt32(calinfo.feed_count) == 0)
+					continue;
+				var hubs = Utils.GetIdsForRegion(id);
+				hubs = hubs.Select(x => String.Format(@"<a href=""http://{0}/{1}"">{1}</a>", ElmcityUtils.Configurator.appdomain, x)).ToList();
+				var hub_str = String.Join(", ", hubs.ToArray());
+				var row = string.Format(row_template,
+					String.Format(@"<a title=""view hub"" href=""http://{0}/{1}"">{1}</a>", ElmcityUtils.Configurator.appdomain, id),
+					String.Format(@"<a title=""view sources"" href=""http://{0}/{1}/stats"">{2}</a>", ElmcityUtils.Configurator.appdomain, id, calinfo.feed_count),
+					hub_str
+					);
+				summary.Append(row);
+			}
+
+			summary.Append("</table>");
+
+			summary.Append("<h1>Hubs</h1>");
+
+			summary.Append(@"<table style=""width:90%;margin:auto"">");
+			summary.Append(@"
+<tr>
+<td align=""left""><b>id</b></td>
+<td align=""left""><b>location</b></td>
+<td align=""right""><b>feeds</b></td>
+<td align=""right""><b>events</b></td>
+</tr>");
+			row_template = @"
+<tr>
+<td align=""left"">{0}</td>
+<td align=""left"">{1}</td>
 <td align=""right"">{2}</td>
 <td align=""right"">{3}</td>
-<td align=""center"">{4}</td>
 </tr>";
-			//foreach (var id in WebRoleData.where_ids)
+			//foreach (var id in WebRoleData.where_ids
 			foreach (var id in wrd.where_ids)
 			{
 				//if (IsReady(wrd, id) == false)
 				//	continue;
 				var calinfo = Utils.AcquireCalinfo(id);
-				var population = calinfo.population;
+				if ( Convert.ToInt32(calinfo.feed_count) == 0)
+					continue;
 				var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
 				var events = metadict.ContainsKey("events") ? metadict["events"] : "";
-				var events_per_person = metadict.ContainsKey("events_per_person") ? metadict["events_per_person"] : "";
 				var row = string.Format(row_template,
-					String.Format(@"<a title=""view outputs"" href=""/services/{0}"">{0}</a>", id),
-					metadict["where"],
-					population != 0 ? population.ToString() : "",
-					events,
-					population != 0 ? events_per_person : ""
+					String.Format(@"<a title=""view hub"" href=""http://{0}/{1}"">{1}</a>", ElmcityUtils.Configurator.appdomain, id),
+					calinfo.where.ToLower(),
+					String.Format(@"<a title=""view sources"" href=""http://{0}/{1}/stats"">{2}</a>", ElmcityUtils.Configurator.appdomain, id, calinfo.feed_count),
+					events
 					);
 				summary.Append(row);
 			}
-			summary.Append("</table>");
+			summary.Append("</table></body></html>");
 
-			bs.PutBlob("admin", "where_summary.html", summary.ToString());
+			bs.PutBlob("admin", "where_summary.html", summary.ToString(), "text/html");
 		}
 
 		public static string GetWhatSummary()
@@ -1813,14 +2039,15 @@ namespace CalendarAggregator
 			var csv_ical_url = "";
 			try
 			{
-				csv_ical_url = String.Format("http://elmcity.cloudapp.net/ics_from_csv?feed_url={0}&home_url={1}&skip_first_row={2}&title_col={3}&date_col={4}&time_col={5}&tzname={6}",
-					Uri.EscapeDataString(feed_url), 
-					Uri.EscapeDataString(home_url), 
-					skip_first_row, 
-					title_col, 
-					date_col, 
-					time_col, 
-					tzname
+				csv_ical_url = String.Format("http://{0}/ics_from_csv?feed_url={1}&home_url={2}&skip_first_row={3}&title_col={4}&date_col={5}&time_col={6}&tzname={7}",
+					ElmcityUtils.Configurator.appdomain,  // 0
+					Uri.EscapeDataString(feed_url),       // 1
+					Uri.EscapeDataString(home_url),       // 2
+					skip_first_row,                       // 3
+					title_col,                            // 4
+					date_col,                             // 5
+					time_col,                             // 6
+					tzname                                // 7
 					);
 
 			}
@@ -1831,24 +2058,56 @@ namespace CalendarAggregator
 			return csv_ical_url;
 		}
 
-		public static string get_fb_ical_url(string fb_page_url, string elmcity_id, string regex)
+		public static string get_fb_ical_url(string fb_page_url, string elmcity_id)
 		{
 			var fb_ical_url = "";
 			try
 			{
-				var uri = new Uri(fb_page_url);
-				var page = HttpUtils.FetchUrl(uri).DataAsString();
-				var match = Regex.Match(page, regex);
-				var fb_id = match.Groups[1].Value;
-				fb_ical_url = String.Format("http://elmcity.cloudapp.net/ics_from_fb_page?fb_id={0}&elmcity_id={1}",
-					fb_id,
-					elmcity_id);
+				var fb_id = Utils.id_from_fb_fanpage_or_group(fb_page_url);
+				fb_ical_url = String.Format("http://{0}/ics_from_fb_page?fb_id={1}&elmcity_id={2}",
+					ElmcityUtils.Configurator.appdomain,  // 0
+					fb_id,                                // 1
+					elmcity_id);                          // 2
 			}
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "get_fb_ical_url: " + fb_page_url + "," + elmcity_id, e.Message + e.StackTrace);
 			}
 			return fb_ical_url;
+		}
+
+		public static string id_from_fb_fanpage_or_group(string url)
+		{
+			//r.headers["Location"]
+			//"http://m.facebook.com/groups/3351007946"
+			// or
+			//"http://m.facebook.com/BerkeleyUndergroundFilmSociety?id=179173202101438&refsrc=http%3A%2F%2Fwww.facebook.com%2FBerkeleyUndergroundFilmSociety&_rdr"
+			var id = "unknown";
+			try
+			{
+				url = url.Replace("www.facebook.com", "m.facebook.com");
+				var page = HttpUtils.FetchUrl(new Uri(url)).DataAsString();
+				page = page.Replace("&nbsp", " ");
+				var xdoc = XDocument.Parse(page);
+				XNamespace html = "http://www.w3.org/1999/xhtml";
+				var imgs = xdoc.Descendants(html + "img");
+				var srcs = imgs.Select(x => x.Attribute("src"));
+				var re = new Regex(@"(\d+)_(\d+)_(\d+)");
+				foreach (var src in srcs)
+				{
+					if (re.Match(src.Value).Success)
+					{
+						id = re.Match(src.Value).Groups[2].Value;
+						break;
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "id_from_fb_fanpage_or_group: " + url, e.Message);
+			}
+
+			return id;
 		}
 
 		public enum HighSchoolSportsTZ { ET, CT, MT, PT, AT, HT };
@@ -1893,20 +2152,43 @@ namespace CalendarAggregator
 
 		public static string get_ics_to_ics_ical_url(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string url_only, string location_only)
 		{
+			return get_ics_to_ics_ical_url(feedurl, elmcity_id, source, after, before, include_keyword, exclude_keyword, summary_only, "", url_only, location_only);
+		}
+
+		public static string get_ics_to_ics_ical_url(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string description_only, string url_only, string location_only)
+		{
 			var ics_to_ics_ical_url = "";
 			try
 			{
-				ics_to_ics_ical_url = string.Format("http://elmcity.cloudapp.net/ics_from_ics?feedurl={0}&elmcity_id={1}&source={2}&after={3}&before={4}&include_keyword={5}&exclude_keyword={6}&summary_only={7}&url_only={8}&location_only={9}",
-					Uri.EscapeDataString(feedurl),
-					elmcity_id,
-					source,
-					after,
-					before,
-					include_keyword,
-					exclude_keyword,
-					summary_only,
-					url_only,
-					location_only);
+				ics_to_ics_ical_url = string.Format("http://{0}/ics_from_ics?feedurl={1}&elmcity_id={2}&source={3}", // &after={4}&before={5}&include_keyword={6}&exclude_keyword={7}&summary_only={8}&description_only={9}&url_only={10}&location_only={11}",
+					ElmcityUtils.Configurator.appdomain,	// 0
+					Uri.EscapeDataString(feedurl),			// 1
+					elmcity_id,								// 2
+					source);								// 3
+
+				if (!String.IsNullOrEmpty(after))
+					ics_to_ics_ical_url += "&after=" + after;
+
+				if (!String.IsNullOrEmpty(before))
+					ics_to_ics_ical_url += "&before=" + before;
+
+				if (!String.IsNullOrEmpty(include_keyword))
+					ics_to_ics_ical_url += "&include_keyword=" + include_keyword;
+
+				if (!String.IsNullOrEmpty(exclude_keyword))
+					ics_to_ics_ical_url += "&exclude_keyword=" + exclude_keyword;
+
+				if (!String.IsNullOrEmpty(summary_only))
+					ics_to_ics_ical_url += "&summary_only=" + summary_only;
+
+				if (!String.IsNullOrEmpty(description_only))
+					ics_to_ics_ical_url += "&description_only=" + description_only;
+
+				if (!String.IsNullOrEmpty(url_only))
+					ics_to_ics_ical_url += "&url_only=" + url_only;
+
+				if (!String.IsNullOrEmpty(location_only))
+					ics_to_ics_ical_url += "&location_only=" + location_only;
 			}
 			catch (Exception e)
 			{
@@ -1916,14 +2198,15 @@ namespace CalendarAggregator
 			return ics_to_ics_ical_url;
 		}
 
-		public static string get_rss_xcal_ical_url(string feedurl, string tzname)
+		public static string get_rss_xcal_ical_url(string feedurl, string elmcity_id)
 		{
 			var rss_xcal_ical_url = "";
 			try
 			{
-				rss_xcal_ical_url = string.Format("http://elmcity.cloudapp.net/ics_from_xcal?url={0}&tzname={1}",
-					Uri.EscapeDataString(feedurl),
-					tzname);
+				rss_xcal_ical_url = string.Format("http://{0}/ics_from_xcal?url={1}&elmcity_id={2}",
+					ElmcityUtils.Configurator.appdomain,  // 0
+					Uri.EscapeDataString(feedurl),        // 1
+					elmcity_id);                          // 2
 			}
 			catch (Exception e)
 			{
@@ -1945,9 +2228,10 @@ namespace CalendarAggregator
 				if (String.IsNullOrEmpty(organizer_id))
 					eventbrite_ical_url = "error: unable to form URL based on event id " + eid;
 				else
-					eventbrite_ical_url = string.Format("http://elmcity.cloudapp.net/ics_from_eventbrite_organizer_id?organizer_id={0}&elmcity_id={1}",
-						organizer_id,
-						elmcity_id);
+					eventbrite_ical_url = string.Format("http://{0}/ics_from_eventbrite_organizer_id?organizer_id={1}&elmcity_id={2}",
+						ElmcityUtils.Configurator.appdomain,	// 0
+						organizer_id,							// 1
+						elmcity_id);							// 2
 			}
 			catch (Exception e)
 			{
@@ -1957,7 +2241,7 @@ namespace CalendarAggregator
 			return eventbrite_ical_url;
 		}
 
-		public static string get_ical_url_from_eid_of_eventbrite_event_page(string url, string tzname)
+		public static string get_ical_url_from_eid_of_eventbrite_event_page(string url, string elmcity_id)
 		{
 			var eventbrite_ical_url = "";
 			try
@@ -1965,9 +2249,10 @@ namespace CalendarAggregator
 				var page = HttpUtils.FetchUrl(new Uri(url)).DataAsString();
 				//http://www.eventbrite.com/calendar?eid=3441799515&amp;calendar=ical" />
 				var eid = Regex.Matches(page, @"eventbrite.com/calendar\?eid=(\d+)")[0].Groups[1].Captures[0].Value;
-				eventbrite_ical_url = string.Format("http://elmcity.cloudapp.net/ics_from_eventbrite_eid?eid={0}&tzname={1}",
-						eid,
-						tzname);
+				eventbrite_ical_url = string.Format("http://{0}/ics_from_eventbrite_eid?eid={1}&elmcity_id={2}",
+						ElmcityUtils.Configurator.appdomain,	// 0
+						eid,									// 1
+						elmcity_id);							// 2
 			}
 			catch (Exception e)
 			{
@@ -2111,9 +2396,12 @@ namespace CalendarAggregator
 				id);
 		}
 
-		public static string MakeViewKey(string id, string type, string view, string count, string from, string to)
+		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string style, string theme)
 		{
-			return string.Format("/services/{0}/{1}?view={2}&count={3}&from={4}&to={5}", id, type, view, count, from, to);
+			var viewkey = string.Format("/services/{0}/{1}?view={2}&count={3}&from={4}&to={5}", id, type, view, count, from, to);
+			if (type == "html")
+				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme;
+			return viewkey;
 		}
 
 		public static void RemoveBaseCacheEntry(string id)
@@ -2125,24 +2413,33 @@ namespace CalendarAggregator
 			var result = HttpUtils.FetchUrl(new Uri(url));
 		}
 
-		public static string EmbedHtmlSnippetInDefaultPageWrapper(Calinfo calinfo, string snippet, string title)
-		{
-
-			return string.Format(@"
+		public static string EmbedHtmlSnippetInDefaultPageWrapper(Calinfo calinfo, string snippet)
+		{                                       // note: { and } must be escaped as {{ and }} in the format string
+			try
+			{
+				return string.Format(@"
 <html>
 <head> 
-<title>{0}: {1}</title>
-<link type=""text/css"" rel=""stylesheet"" href=""{2}"">
+<title>{0}</title>
+<link type=""text/css"" rel=""stylesheet"" href=""{1}"">
+<style>
+td {{ text-align: center }}
+</style>
 </head>
 <body>
-{3}
+{2}
 </body>
 </html>
 ",
-		   calinfo.id,
-		   title,
-		   calinfo.css,
-		   snippet);
+			   calinfo.id,
+			   calinfo.css,
+			   snippet);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "EmbedHtmlSnippet", e.Message + e.StackTrace);
+				return snippet;
+			}
 		}
 
 		public static T DeserializeObjectFromJson<T>(string containername, string blobname)
@@ -2209,6 +2506,37 @@ namespace CalendarAggregator
 			}
 			return cr;
 		}
+
+		public static string StripTagsFromUnfoldedComponent(string calendar_text, string target)
+		{
+			var lines = calendar_text.Split('\n');
+			var sb = new StringBuilder();
+			bool in_component = false;
+			foreach (var line in lines)
+			{
+				var re = new Regex( "^([A-Z]+)[:;]" );
+				if ( re.Match(line).Success )
+				{
+					var propname = re.Match(line).Groups[1].ToString();
+					if ( propname == target )
+						in_component = true;
+					else
+						in_component = false;
+				}
+
+				if (in_component)
+				{
+					var tmp = line;
+					tmp = tmp.StripHtmlTags();
+					sb.Append(tmp + "\n");
+				}
+				else
+				{
+					sb.Append(line + "\n");
+				}
+			}
+			return sb.ToString();
+		}
 		
 		public static string RemoveLine(string calendar_text, string target)  
 		{
@@ -2225,6 +2553,7 @@ namespace CalendarAggregator
 			return sb.ToString();
 		}
 
+		/*
 		public static string TrimLine(string calendar_text, string pattern)
 		{
 			var lines = calendar_text.Split('\n');
@@ -2241,6 +2570,29 @@ namespace CalendarAggregator
 				sb.Append(s + "\n");
 			}
 
+			return sb.ToString();
+		} */
+
+		public static string ChangeDateOnlyUntilToDateTime(string calendar_text) // workaround for https://github.com/dougrday/icalvalid/issues/7 and 8
+		{
+			var s = calendar_text;
+			s = Regex.Replace(s, "UNTIL=(\\d{8})(;.+)", "UNTIL=$1T000000$2", RegexOptions.Multiline);
+			s = Regex.Replace(s, "UNTIL=(\\d{8})(\r*\n)", "UNTIL=$1T000000$2", RegexOptions.Multiline);
+			return s;
+		}
+
+		public static string RemoveNegativeCOUNT(string calendar_text)
+		{
+			var lines = calendar_text.Split('\n');
+			var sb = new StringBuilder();
+			var re = new Regex(@"RRULE:.+(COUNT=\-\d+;*).+");
+			foreach (var line in lines)
+			{
+				var s = line;
+				if (re.Match(s).Success)
+					s = s.Replace(re.Match(s).Groups[1].Value, "");
+				sb.Append(s + "\n");
+			}
 			return sb.ToString();
 		}
 
@@ -2271,12 +2623,73 @@ namespace CalendarAggregator
 			return sb.ToString();
 		}
 
+		public static string KeepOnlyVEVENTs(string calendar_uri)
+		{
+			try
+			{
+				var text = HttpUtils.FetchUrl(new Uri(calendar_uri)).DataAsString();
+				var lines = text.Split('\n');
+				var sb = new StringBuilder();
+				bool in_vevent = false;
+				foreach (var line in lines)
+				{
+					if (line.StartsWith("BEGIN:VEVENT"))
+						in_vevent = true;
+
+					if (in_vevent)
+					{
+						sb.Append(line + "\n");
+						if (line.StartsWith("END:VEVENT"))
+							in_vevent = false;
+					}
+
+				}
+
+				return string.Format("BEGIN:VCALENDAR\r\n" + sb.ToString() + "END:VCALENDAR");
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "KeepOnlyVEVENTs", e.Message);
+				return e.Message;
+			}
+		}
+
+		public static string AddColonToBarePropnames(string calendar_text)
+		{
+			var re = new Regex("^(SUMMARY|DESCRIPTION|LOCATION|CATEGORIES|URL|GEO)\r$");
+			var lines = calendar_text.Split('\n');
+			var sb = new StringBuilder();
+			foreach (var line in lines)
+			{
+				var _line = line;
+				if (re.Match(line).Success)
+					_line = line.Replace("\r",":\r");
+				sb.Append(_line + "\n");
+			}
+			return sb.ToString();
+		}
+
+		public static string AdjustCategories(string calendar_text)
+		{
+			var re = new Regex("^CATEGORIES");
+			var lines = calendar_text.Split('\n');
+			var sb = new StringBuilder();
+			foreach (var line in lines)
+			{
+				var _line = line;
+				if (re.Match(line).Success)
+					_line = line.Replace("\\", "");
+				sb.Append(_line + "\n");
+			}
+			return sb.ToString();
+		}
+
 		public static string FixMiswrappedComponent(string calendar_text, string component)
 		{
 			var lines = calendar_text.Split('\n');
 			var sb = new StringBuilder();
 			bool in_component = false;
-			var re = new Regex("^[A-Z]+[:;]");
+			var re = new Regex("^(BEGIN:VEVENT|END:VEVENT|DTSTART|DTEND|SUMMARY|DESCRIPTION|LOCATION|CATEGORIES|URL|GEO)[:;]*");
 			foreach (var line in lines)
 			{
 				string leading_space = "";
@@ -2392,27 +2805,6 @@ END:VTIMEZONE");
 			return s;
 		}
 
-		public static string WrapMiswrappedUID(string ical_text)
-		{
-			{
-				var lines = ical_text.Split('\n');
-				var sb = new StringBuilder();
-				foreach (var line in lines)
-				{
-					if (line.Contains("UID:") && !line.StartsWith("UID:"))
-					{
-						var parts = Regex.Split(line, "UID:");
-						sb.Append(parts[0] + "\n");
-						sb.Append("UID:" + parts[1] + "\n");
-					}
-					else
-						sb.Append(line + "\n");
-				}
-
-				return sb.ToString();
-			}
-		}
-
 		public static string SerializeIcalToIcs(DDay.iCal.iCalendar ical)
 		{
 			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer();
@@ -2429,7 +2821,7 @@ END:VTIMEZONE");
 
 		public static bool IsRegion(string id)
 		{
-			return GetRegionIds().Exists(x => x == id);
+			return GetRegionIds().HasItem(id);
 		}
 
 		public static List<string> GetIdsForRegion(string region)
@@ -2437,7 +2829,27 @@ END:VTIMEZONE");
 			var q = string.Format("$filter=PartitionKey eq '{0}'", region);
 			var dict = TableStorage.QueryForSingleEntityAsDictStr(ts, "regions", q);
 			var ids = dict["ids"].Split(',').ToList();
+			ids.Sort();
 			return ids;
+		}
+
+		public static List<string> RegionsBelongedTo(string id)
+		{
+			var regions = ts.QueryAllEntitiesAsListDict("regions", "$filter=PartitionKey ne ''").list_dict_obj;
+			var list = new List<string>();
+			foreach (var region in regions)
+			{
+				var region_id = region["PartitionKey"].ToString();
+				var test_ids = region["ids"].ToString().Split(',');
+				foreach (var test_id in test_ids)
+					if (id == test_id)
+					{
+						list.Add(region_id);
+						break;
+					}
+			}
+			list.Sort();
+			return list;
 		}
 
 		public static string StartsWithUrl(string text)
@@ -2489,7 +2901,7 @@ END:VTIMEZONE");
 			return ( param != null && param.ToLower() == "yes" ) ? true : false;
 		}
 
-		public static string TryGetCachedFeed(string feedurl)
+		public static string GetCachedFeedText(string feedurl)
 		{
 			var blob_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
 			var blob_uri = BlobStorage.MakeAzureBlobUri("feedcache", blob_name, false);
@@ -2499,10 +2911,40 @@ END:VTIMEZONE");
 				return "";
 		}
 
-		public static void SaveFeedToCache(string feedurl, string feedtext)
+		public static void SaveFeedTextToCache(string feedurl, string feedtext)
 		{
 			var blob_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
 			bs.PutBlob("feedcache", blob_name, feedtext, "text/calendar");
+		}
+
+		public static void SaveFeedObjToCache(string id, string feedurl, ZonedEventStore es)
+		{
+			var bs = BlobStorage.MakeDefaultBlobStorage();
+			var blob_name = Utils.MakeCachedFeedObjName(id, feedurl);
+			bs.SerializeObjectToAzureBlob(es, "feedcache", blob_name);
+		}
+
+		public static bool CachedObjExists(string id, string feedurl)
+		{
+			var cached_obj_name = Utils.MakeCachedFeedObjName(id, feedurl);
+			var cached_obj_uri = BlobStorage.MakeAzureBlobUri("feedcache", cached_obj_name);
+			return BlobStorage.ExistsBlob(cached_obj_uri);
+		}
+
+		public static ZonedEventStore GetFeedObjFromCache(Calinfo calinfo, string feedurl)
+		{
+			var blob_name = Utils.MakeCachedFeedObjName(calinfo.id, feedurl);
+			var uri = BlobStorage.MakeAzureBlobUri("feedcache", blob_name, false);
+			if (BlobStorage.ExistsBlob(uri))
+				return (ZonedEventStore)BlobStorage.DeserializeObjectFromUri(uri);
+			else
+				return new ZonedEventStore(calinfo, SourceType.ical);
+		}
+
+		public static void SaveFeedJsonToCache(string feedurl, ZonelessEventStore es)
+		{
+			var blob_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl) + ".json";
+			Utils.SerializeObjectToJson(es, "feedcache", blob_name);
 		}
 
 		public static List<string> WordsFromEventTitle(string title, int min_word_length)
@@ -2551,6 +2993,251 @@ END:VTIMEZONE");
 					dict.Remove("category");
 			}
 			return dict;
+		}
+
+		public static string RemoveCommentSection(string s, string name)
+		{
+			var pat = string.Format("<!-- {0} -->.+<!-- /{0} -->", name);
+			var re = new Regex(pat, RegexOptions.Singleline);
+			return re.Replace(s, "");
+		}
+
+		public static Dictionary<string,int> GetSmartPhoneScreenDimensions()
+		{
+			var screendata = ts.QueryAllEntitiesAsListDict("mobilescreens", "$filter=Type eq 'Smartphone'").list_dict_obj;
+			var pairs = screendata.Select(pair => new List<string>() { pair["Width"] as string, pair["Height"] as string });
+			var sorted_pairs = new Dictionary<string, int>();
+			foreach (var pair in pairs)
+			{
+				var w = Convert.ToInt32(pair[0]);
+				var h = Convert.ToInt32(pair[1]);
+				var l = new List<int>() { w, h };
+				l.Sort();
+				sorted_pairs.IncrementOrAdd(l[0].ToString() + "x" + l[1].ToString());
+			}
+			return sorted_pairs;
+		}
+
+		public static string MaybeChangeWebcalToHttp(string feedurl)
+		{
+			if (feedurl.StartsWith("webcal:"))
+				feedurl = feedurl.Replace("webcal:", "http:");
+
+			if (feedurl.StartsWith("webcals:"))
+				feedurl = feedurl.Replace("webcals:", "https:");
+			return feedurl;
+		}
+
+		public static string MakeAboutPage(string id, Dictionary<string,string> settings)
+		{
+			var calinfo = Utils.AcquireCalinfo(id);
+
+			List<string> regions_belonged_to = new List<string>();
+			List<string> ids_for_region = new List<string>();
+			bool is_contained = false;
+			bool is_container = false;
+
+			if (calinfo.hub_enum == HubType.where)
+			{
+				regions_belonged_to = Utils.RegionsBelongedTo(id);
+				is_contained = regions_belonged_to.Count > 0;
+			}
+
+			if (calinfo.hub_enum == HubType.region)
+			{
+				ids_for_region = Utils.GetIdsForRegion(id);
+				is_container = ids_for_region.Count > 0;
+			}
+
+			var is_standalone = (!is_contained && !is_container) ||  // where hub that is a member of region or a region with members
+								calinfo.hub_enum == HubType.what;    // what hub
+
+			var url = BlobStorage.MakeAzureBlobUri("admin", "hubfiles.tmpl", false);
+			var page = HttpUtils.FetchUrl(url).DataAsString();
+
+			if (!is_standalone)
+				page = page.Replace("__REGION_DISPLAY_STYLE__", "block");
+			else
+				page = page.Replace("__REGION_DISPLAY_STYLE__", "none");
+
+			string region_msg = "";
+
+			if (is_contained)
+			{
+				region_msg = @"<p>Regions that contain this hub:</p> <ul style=""list-style-type:none"">";
+				foreach (var container in regions_belonged_to)
+					region_msg += string.Format(@"<li><p><a href=""http://{0}/{1}"">{1}</a></p></li>", 
+						ElmcityUtils.Configurator.appdomain,	// 0
+						container);								// 1
+				region_msg += "</ul>";
+			}
+
+			if (is_container)
+			{
+				region_msg = @"<p>This is a regional hub. The hubs that belong to this region are: </p><ul style=""list-style-type:none"">";
+				foreach (var contained in ids_for_region)
+					region_msg += string.Format(@"<li><p><a href=""http://{0}/{1}"">{1}</a></p></li>", 
+						ElmcityUtils.Configurator.appdomain,	// 0
+						contained);								// 1
+				region_msg += "</ul>";
+			}
+
+			page = page.Replace("__REGION__", region_msg);
+
+			page = page.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
+
+			page = page.Replace("__ID__", id);
+
+			page = page.Replace("__LOWERID__", id.ToLower());
+
+			var query = string.Format("$filter=PartitionKey eq '{0}' and RowKey eq '{1}'", id, id);
+			var dict = TableStorage.QueryForSingleEntityAsDictStr(ts, "metadata", query);
+
+			var row_template = @"<tr><td>{0}</td><td style=""text-align:right"">{1}</td></tr>";
+
+			string tbody = "";
+
+			try
+			{
+				tbody += string.Format(row_template, "# of iCalendar feeds", dict["feed_count"]);
+
+				if (is_contained || is_standalone)
+				{
+					var task = Scheduler.FetchTaskForId(id, TaskType.icaltasks);
+					var dtstop = TimeZoneInfo.ConvertTimeFromUtc(task.stop, calinfo.tzinfo);
+					var interval = Convert.ToInt16(settings["ical_aggregate_interval_hours"]);
+					var time_format = "M/d/yyyy h:mm tt";
+					if (dtstop != DateTime.MinValue)
+					{
+						var dtnext = dtstop.AddHours(interval);
+						tbody += string.Format(row_template, "last scan of iCalendar feeds", dtstop.ToString(time_format));
+						tbody += string.Format(row_template, "next scan at", dtnext.ToString(time_format));
+					}
+					else
+					{
+						tbody += string.Format(row_template, "next scan at", "in progress now");
+					}
+					tbody += string.Format(row_template, "# of events from iCalendar feeds", dict["ical_events"]);
+					if (calinfo.hub_enum != HubType.what)
+					{
+						tbody += string.Format(row_template, "# of events from Eventful", dict["eventful_events"]);
+						tbody += string.Format(row_template, "# of events from Upcoming", dict["upcoming_events"]);
+						tbody += string.Format(row_template, "# of events from EventBrite", dict["eventbrite_events"]);
+					}
+				}
+				else if (is_container)
+					tbody += string.Format(row_template, "(see member hubs for details)", "");
+
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "hubfiles", e.Message + e.StackTrace);
+				tbody = "";
+			}
+
+			page = page.Replace("__HUBSTATS__", tbody);
+			return page;
+		}
+
+		public static iCalendar NewCalendarWithTimezone(TimeZoneInfo tzinfo)
+		{
+			var ical = new iCalendar();
+			Collector.AddTimezoneToDDayICal(ical, tzinfo);
+			return ical;
+		}
+
+		public static DDay.iCal.iCalendar GetDDayCalFromZonelessFeedObj(Calinfo calinfo, string feedurl)
+		{
+		var ical = NewCalendarWithTimezone(calinfo.tzinfo);
+		var es_zoned = GetFeedObjFromCache(calinfo, feedurl);
+		var es_zoneless = EventStore.ZonedToZoneless(calinfo.id, calinfo, es_zoned);
+		foreach ( var evt in es_zoneless.events )
+			{
+			var dtstart = new DateTimeWithZone(evt.dtstart, calinfo.tzinfo);
+			var dtend = new DateTimeWithZone(evt.dtend, calinfo.tzinfo);
+			var evt_tmp = Collector.MakeTmpEvt(calinfo, dtstart, dtend, evt.title, evt.url, evt.location, evt.description, evt.lat, evt.lon, evt.allday);
+			Collector.AddEventToDDayIcal(ical, evt_tmp);
+			}
+		return ical;
+		}
+
+		public static DDay.iCal.iCalendar ParseIcs(string ics)
+		{
+			StringReader sr = new StringReader(ics);
+			IICalendarCollection icals = iCalendar.LoadFromStream(sr);
+			return (DDay.iCal.iCalendar)icals.First().iCalendar;
+		}
+
+		public static string MakeCachedFeedObjName(string id, string feedurl)
+		{
+			return id + "_" + BlobStorage.MakeSafeBlobnameFromUrl(feedurl) + ".obj";
+		}
+
+		public static Dictionary<string, Dictionary<string, string>> GetThemesDict()
+		{
+			var themes = new Dictionary<string, Dictionary<string, string>>();
+			try
+			{
+				var themes_json_uri = BlobStorage.MakeAzureBlobUri("admin", "themes.json");
+				var themes_json = HttpUtils.FetchUrl(themes_json_uri).DataAsString();
+				themes = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(themes_json);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "GetThemesDict", e.Message + e.StackTrace);
+				var themes_str = @"{
+  ""default"" : {
+    ""body""         :  "" { 'font-family':'verdana,arial,sans-serif', 'font-size':'10pt' } "",
+    "".hubtitle""    :  "" { 'font-size' : '10pt', 'font-weight':'bold' } "",
+    "".timeofday""   :  "" { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } "",
+    ""#datepicker""  :  "" { 'font-size':'6pt', 'position':'fixed', 'left':'320px', 'top':'30px' } "",
+    ""#sidebar""     :  "" { 'font-size':'smaller', 'position':'fixed', 'left':'320px', 'top':'280px', 'width':'150px' } "",
+    ""#tags""        :  "" { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'330px', 'top':'200px', 'width':'150px' } "",
+    "".bl""          :  "" { 'margin-right':'40%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } "",
+    "".st""          :  "" { 'font-size':'smaller', 'color':'#333333'} "",
+    "".menu li""     :  "" { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } "",
+    "".ed""          :  "" { 'font-size':'9pt', 'font-weight':'bold' }"",
+    ""a""            :  "" { 'color' : 'black', 'text-decoration' : 'none' }"",
+    ""a:hover""      :  "" { 'color' : 'gray', 'text-decoration' : 'underline' }"",
+    "".ttl""         :  "" {  }"",
+    "".src""         :  "" { 'font-size':'smaller' } "",
+    "".cat""         :  "" { 'font-size':'smaller' } "",
+    "".sd""          :  "" { } "",
+    "".sd a""        :  "" { } "",
+    "".atc""         :  "" { } "",
+    "".atc a""       :  "" { } "",
+    "".desc""        :  "" { } ""
+    }
+}";
+				themes = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(themes_str);
+			}
+			return themes;
+		}
+
+		public static string GetCssTheme(Dictionary<string, Dictionary<string, string>> themes, string theme_name)
+		{
+			var theme = new Dictionary<string, string>();
+			try
+			{
+				theme = themes[theme_name];
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "GetCssTheme falling back to default", e.Message);
+				if (themes.ContainsKey("default"))
+					theme = themes["default"];
+			}
+			var css_text = new StringBuilder();
+			foreach (var selector in theme.Keys)
+			{
+				var decl_dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(theme[selector]);
+				css_text.Append(string.Format("{0} {{\n", selector));
+				foreach (var key in decl_dict.Keys)
+					css_text.Append(string.Format(key + ":" + decl_dict[key] + ";\n"));
+				css_text.Append("}\n\n");
+			}
+
+			return css_text.ToString();
 		}
 
 		#endregion
@@ -2606,24 +3293,42 @@ END:VTIMEZONE");
 
 	public class LogFilter
 	{
-		private string type;
-		private string search_text;
+		private List<string> include;
+		private List<string> exclude;
 		private List<Dictionary<string, string>> entities;
 
-		public List<Dictionary<string, string>> FilterByType(string search_text)
+		public enum op { include, exclude };
+
+		public LogFilter(string include, string exclude)
 		{
-		return this.entities.FindAll(entry => (entry["type"].Contains(type)));
+			this.include = String.IsNullOrEmpty(include) ? new List<string>() : include.Split(',').ToList();
+			this.exclude = String.IsNullOrEmpty(exclude) ? new List<string>() : exclude.Split(',').ToList();
 		}
 
-		public List<Dictionary<string, string>> FilterByAny(string search_text)
+		private void IncludeAll(List<string> targets)
 		{
-			return this.entities.FindAll(entry => entry["message"].Contains(search_text) || entry["data"].Contains(search_text) );
+			foreach (var target in targets)
+			{
+				var _target = target.ToLower();
+				this.entities.RemoveAll( e => 
+					! e["type"].ToLower().Contains(_target)    &&
+					! e["message"].ToLower().Contains(_target) && 
+					! e["data"].ToLower().Contains(_target) 
+					);
+			}
 		}
 
-		public LogFilter(string type, string search_text)
+		private void ExcludeAny(List<string> targets)
 		{
-			this.type = type;
-			this.search_text = search_text;
+			foreach (var target in targets)
+			{
+				var _target = target.ToLower();
+				this.entities.RemoveAll( e => 
+					e["type"].ToLower().Contains(_target)    ||
+					e["message"].ToLower().Contains(target)  || 
+					e["data"].ToLower().Contains(target) 
+					);
+			}
 		}
 
 		public void SetEntities(List<Dictionary<string,string>> entities)
@@ -2633,10 +3338,9 @@ END:VTIMEZONE");
 
 		public List<Dictionary<string, string>> Apply()
 		{
-			if (this.type != null)
-				return FilterByType(this.search_text);
-			else
-				return FilterByAny(this.search_text);
+			IncludeAll(this.include);
+			ExcludeAny(this.exclude);
+			return this.entities;
 		}
 	}
 

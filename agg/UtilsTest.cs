@@ -49,6 +49,42 @@ namespace CalendarAggregator
 		static private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 		static private Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
 
+		static private string ics_for_filter_tests = @"BEGIN:VCALENDAR
+METHOD:PUBLISH
+PRODID:-//192.168.100.199//NONSGML iCalcreator 2.4.3//
+VERSION:2.0
+BEGIN:VEVENT
+DESCRIPTION:Fundraising for Dummies
+DTSTART:20120508T150000
+LOCATION:Downtown Library
+SUMMARY:Neil Bernstein\, NLS Research & Development Officer
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:Bay and Bloor
+DTSTART:20120508T150000
+SUMMARY:Chapters Indigo
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20120508T150000
+SUMMARY:Chapters Indigo at Bay and Bloor
+END:VEVENT
+END:VCALENDAR";
+
+		static private DDay.iCal.Event test_filter_event;
+		static private DDay.iCal.Event test_filter_event_2;
+		static private DDay.iCal.Event test_filter_event_3;
+
+
+		public UtilsTest()
+		{
+			StringReader sr = new StringReader(ics_for_filter_tests);
+			var ical = (DDay.iCal.iCalendar)iCalendar.LoadFromStream(sr).FirstOrDefault().iCalendar;
+			Assert.That(ical.Events.Count == 3);
+			test_filter_event = (DDay.iCal.Event)ical.Events[0];
+			test_filter_event_2 = (DDay.iCal.Event)ical.Events[1];
+			test_filter_event_3 = (DDay.iCal.Event)ical.Events[2];
+		}
+
 		#region datetime
 
 		[Test]
@@ -228,8 +264,8 @@ import System
 		public void RssPlusXcalYieldsIcal()
 		{
 			var url = "http://events.pressdemocrat.com/search?city=Santa+Rosa&new=n&rss=1&srad=90&svt=text&swhat=&swhen=&swhere=";
-			var tzinfo = Utils.TzinfoFromName("pacific");
-			var ical_str = Utils.IcsFromRssPlusXcal(url, "test source", tzinfo);
+			var calinfo = new Calinfo("berkeley");
+			var ical_str = Utils.IcsFromRssPlusXcal(url, "test source", calinfo);
 			var sr = new StringReader(ical_str);
 			var ical = iCalendar.LoadFromStream(sr).First().Calendar;
 			Assert.AreNotEqual(0, ical.Events.Count);
@@ -331,6 +367,139 @@ import System
 			var d = Utils.GetMetadataFromDescription(Configurator.ical_description_metakeys, "url=http://music.com category=music,classical-music");
 			Assert.That(d.ContainsKey("url") && d["url"] == url);
 			Assert.That(d.ContainsKey("category") && d["category"] == category);
+		}
+
+		#endregion
+
+		#region feed repair
+
+		[Test]
+		public void FeedOnlyParsesWhenAllProblemsRepaired()
+		{
+			var feedtext = @"BEGIN:VCALENDAR
+METHOD:PUBLISH
+PRODID:-//192.168.100.199//NONSGML iCalcreator 2.4.3//
+VERSION:2.0
+X-WR-CALNAME:AADL Events
+X-WR-CALDESC:Ann Arbor District Library Calendar
+X-WR-TIMEZONE:US/Eastern
+BEGIN:VEVENT
+DESCRIPTION
+DTEND:20120508T160000
+DTSTART:20120508T150000
+LOCATION:Downtown Library: 4th Floor Meeting Room\, 343 South Fifth Avenue\
+ , Ann Arbor\, Michigan 48104
+SUMMARY:Neil Bernstein\, NLS Research & Development Officer
+END:VEVENT
+BEGIN:VEVENT
+UID:20120912T154429CEST-6535UxPp7M@192.168.100.199
+DTSTAMP:20120912T134429Z
+LOCATION:Downtown Library: 4th Floor Meeting Room\, 343 South Fifth Avenue\, 
+Ann Arbor\, Michigan 48104
+SUMMARY:Microsoft Publisher
+END:VEVENT
+END:VCALENDAR";
+
+			StringReader sr;
+			DDay.iCal.iCalendar ical = null;
+
+			Assert.That( ParseFails(feedtext, ical) );
+
+			feedtext = Utils.FixMiswrappedComponent(feedtext, "LOCATION");
+
+			Assert.That( ParseFails(feedtext, ical) );
+
+			feedtext = Utils.AddColonToBarePropnames(feedtext);
+
+			sr = new StringReader(feedtext);
+			ical = (DDay.iCal.iCalendar)iCalendar.LoadFromStream(sr).FirstOrDefault().iCalendar;
+			Assert.That(ical.Events.Count > 0);
+		}
+
+		private static bool ParseFails(string feedtext, DDay.iCal.iCalendar ical)
+		{
+			StringReader sr;
+			try
+			{
+				sr = new StringReader(feedtext);
+				ical = (DDay.iCal.iCalendar)iCalendar.LoadFromStream(sr).FirstOrDefault().iCalendar;
+			}
+			catch
+			{
+				Assert.IsNull(ical);
+				return true;
+			}
+			return false;
+		}
+
+		#endregion feed repair
+
+		#region filter
+
+		[Test]
+		public void IcsFilterIncludeShouldRemoveEvtIfExcludedKeywordNotInSummaryOrDescriptionAndNoPropSpecified()  // exclude removes target when no property specified, target not found in Summary or Description
+		{
+			Assert.IsTrue(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_3, "Borders", false, false, false, false));
+		}
+
+		[Test]
+		public void IcsFilterIncludeShouldRemoveEvtIfExcludedKeywordNotInSummary()  // exclude removes target when not found in Summary
+		{
+			Assert.IsTrue(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_3, "Borders", true, false, false, false));
+		}
+
+		[Test]
+		public void IcsFilterIncludeShouldNotRemoveEvtIfIncludedKeywordInSummaryAndNoPropSpecified()  // include keeps target when no property specified, target found in Summary 
+		{
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_3, "Bloor", false, false, false, false));
+		}
+
+		[Test]                                     
+		public void IcsFilterIncludeShouldNotRemoveEvtIfIncludedKeywordInDescriptionAndNoPropSpecified()  // include keeps target when no property specified, target found in Description
+		{
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_2, "Bloor", false, false, false, false));
+		}
+
+		[Test]
+		public void IcsFilterExcludeShouldRemoveEvtIfExcludedKeywordInLocation()     // exclude removes LOCATION:Downtown Library
+		{
+			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event, "Downtown", false, false, false, true));
+		}
+
+		[Test]
+		public void IcsFilterIncludeShouldRemoveEvtIfIncludedKeywordNotInLocation()   // include removes LOCATION:Downtown Library
+		{
+			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event, "Fifth Street", false, false, false, true));
+		}
+
+		[Test]
+		public void IcsFilterExcludeShouldNotRemoveEvtIfExcludedKeywordNotInLocation()  // exclude keeps LOCATION:Downtown Library
+		{
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event, "Fifth Street", false, false, false, true));
+		}
+
+		[Test]
+		public void IcsFilterIncludeShouldNotRemoveEvtUnlessAllIncludedKeywordsInLocation()  // include keeps LOCATION:Downtown Library
+		{
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event, "Downtown, Fifth Street", false, false, false, true));
+		}
+
+		[Test]
+		public void IcsFilterExcludeShouldRemoveEvtIfAnyExcludedKeywordInLocation()       // exclude removes LOCATION:Downtown Library
+		{
+			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event, "Downtown, Fifth Street", false, false, false, true));
+		}
+
+		[Test]
+		public void IcsFilterIncludeShouldNotRemoveEvtIfAllIncludedKeywordsInLocation()    // include keeps LOCATION:Downtown Library
+		{
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event, "Downtown, Library", false, false, false, true));
+		}
+
+		[Test]
+		public void IcsFilterExcludeShouldRemoveEvtIfAllExcludedKeywordsInLocation()       // exclude removes LOCATION:Downtown Library
+		{
+			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event, "Downtown, Library", false, false, false, true));
 		}
 
 		#endregion

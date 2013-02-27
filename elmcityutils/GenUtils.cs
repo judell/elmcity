@@ -460,6 +460,15 @@ namespace ElmcityUtils
 				yield return i;
 		}
 
+		public static string FindCalProps(string property, string text)
+		{
+			var mc = Regex.Matches(text, property + ":[^\r\n]+", RegexOptions.Singleline);
+			var sb = new StringBuilder();
+			foreach (var m in mc)
+				sb.AppendLine(m.ToString());
+			return sb.ToString();
+		}
+
 		#endregion
 
 	}
@@ -478,7 +487,7 @@ namespace ElmcityUtils
 			return !list_one.Except(list_two).Any();
 		}
 
-		public static IEnumerable<T> Unique<T>(this IEnumerable<T> source) 
+		public static IEnumerable<T> Unique<T>(this IEnumerable<T> source)
 		{
 			var result = new HashSet<T>();
 
@@ -520,12 +529,20 @@ namespace ElmcityUtils
 
 		public static List<T> RemoveUnlessFound<T>(this List<T> source_list, T item, List<T> target_list)
 		{
-			if (! target_list.Exists(x => x.Equals(item)))
+			if (!target_list.Exists(x => x.Equals(item)))
 			{
 				source_list.Remove(item);
 			}
 			return source_list;
 		}
+
+		public static int FindDictInListOfDict<TKey,TVal>(this List<Dictionary<TKey, TVal>> list_dict, TKey keyname, TVal keyval)
+		{
+			return list_dict.FindIndex(delegate(Dictionary<TKey, TVal> dict)
+			{ return dict[keyname].Equals(keyval); }
+			);
+		}
+
 	}
 
 	public static class DictionaryExtensions
@@ -600,6 +617,7 @@ namespace ElmcityUtils
 
 	public static class StringExtensions
 	{
+
 		public static string SingleQuote (this string s)
 		{
 			return "'" + s + "'";
@@ -616,6 +634,28 @@ namespace ElmcityUtils
 		public static bool KeySetEqual<TKey, TValue>(this IDictionary<TKey, TValue> dict, List<TKey> keys)
 		{
 			return GenUtils.AreEqualLists<TKey>(dict.Keys.ToList(), keys);
+		}
+
+		public static string UrlsToLinks(this string text)
+		{
+			try
+			{   // http://rickyrosario.com/blog/converting-a-url-into-a-link-in-csharp-using-regular-expressions/
+				string regex = @"((www\.|(http|https|ftp|news|file)+\:\/\/)[_a-z0-9-]+\.[_a-z0-9\/+:@=.+?,##%&~-]*[^.|\'|\# |!|\(|?|,| |>|<|;|\)])";
+				Regex r = new Regex(regex, RegexOptions.IgnoreCase);
+				return r.Replace(text, "<a href=\"$1\" title=\"Click to open in a new window or tab\" target=\"&#95;blank\">$1</a>").Replace("href=\"www", "href=\"http://www");
+			}
+
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "UrlsToLinks:  " + text, e.Message);
+				return text;
+			}
+		}
+
+		public static string StripHtmlTags(this string text)
+		{
+			var re = new Regex("<.*?>", RegexOptions.Compiled); 
+			return re.Replace(text, " ");
 		}
 
 	}

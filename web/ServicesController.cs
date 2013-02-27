@@ -29,8 +29,6 @@ namespace WebRole
 {
 	public class ServicesController : ElmcityController
 	{
-		private static UTF8Encoding UTF8 = new UTF8Encoding(false);
-
 		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
 		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 
@@ -44,8 +42,11 @@ namespace WebRole
 		#region events
 
 		//[OutputCache(Duration = ... // output cache not used here, iis cache is managed directly
-		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to)
+		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme)
 		{
+			if (id == "a2cal")
+				id = "AnnArborChronicle";
+
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
 			if (view != null)
@@ -55,7 +56,7 @@ namespace WebRole
 			try
 			{
 				var cr = ElmcityApp.wrd.renderers[id];
-				r = new EventsResult(this.ControllerContext, cr, id, type, view, jsonp, count, from, to);
+				r = new EventsResult(this, cr, id, type, view, jsonp, count, from, to, eventsonly, mobile, test, raw, raw_sentinel, style, theme);
 			}
 			catch (Exception e)
 			{
@@ -66,7 +67,7 @@ namespace WebRole
 
 		public class EventsResult : ActionResult
 		{
-			ControllerContext context;
+			ElmcityController controller;
 			CalendarRenderer cr;
 			string id;
 			string type;
@@ -75,23 +76,51 @@ namespace WebRole
 			int count { get; set; }
 			DateTime from;
 			DateTime to;
+			string eventsonly;
+			string mobile;
+			bool test;
+			bool raw;
+			string raw_sentinel;
+			string style;
+			string theme;
 
 			CalendarRenderer.ViewRenderer renderer = null;
 			string response_body = null;
 			byte[] response_bytes = new byte[0];
 
-			public EventsResult(ControllerContext context, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to)
+			public EventsResult(ElmcityController controller, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme)
 			{
-				this.context = context;
+				this.controller = controller;
 				this.cr = cr;
-				this.cr.cache = new ElmcityUtils.AspNetCache(context.HttpContext.Cache);
+				this.cr.cache = new ElmcityUtils.AspNetCache(controller.HttpContext.Cache);
 				this.id = id;
 				this.type = type;
 				this.view = view;
 				this.jsonp = jsonp;
-				this.count = (count == null) ? 0 : Convert.ToInt16(count);
 				this.from = from == null ? DateTime.MinValue : Utils.DateTimeFromISO8601DateStr(from, DateTimeKind.Local);
 				this.to = from == null ? DateTime.MinValue : Utils.DateTimeFromISO8601DateStr(to, DateTimeKind.Local);
+				this.eventsonly = eventsonly;
+				this.mobile = !String.IsNullOrEmpty(mobile) ? mobile.ToLower() : "";
+				this.test = !String.IsNullOrEmpty(test) && test.ToLower().StartsWith("y");
+				this.raw = !String.IsNullOrEmpty(raw) && raw.ToLower().StartsWith("y");
+				this.raw_sentinel = raw_sentinel;
+				this.style = style;
+				this.theme = theme;
+
+				int _count = 0;
+				try
+				{
+					if ((type == "html") && (count != "0"))
+						_count = Convert.ToInt32(settings["max_html_events_default"]);
+					if (this.raw)
+						_count = 0;
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "EventsResult", e.Message);
+				}
+
+				this.count = (count == null) ? _count : Convert.ToInt32(count);
 			}
 
 			public override void ExecuteResult(ControllerContext context)
@@ -106,7 +135,8 @@ namespace WebRole
 				{
 					var bytes = HttpUtils.FetchUrl(new Uri(base_key)).bytes;
 					//InsertIntoCache(bytes, ElmcityUtils.Configurator.cache_sliding_expiration, dependency: null, key: base_key);
-					InsertIntoCache(bytes, dependency: null, key: base_key);
+					var cache = new AspNetCache(this.controller.HttpContext.Cache);
+					this.controller.InsertIntoCache( cache, bytes, dependency: null, key: base_key);
 				}
 
 				// uri for static content, e.g.:
@@ -125,20 +155,67 @@ namespace WebRole
 				{
 					var bytes = HttpUtils.FetchUrl(blob_uri).bytes;
 					var dependency = new ElmcityCacheDependency(base_key);
-					InsertIntoCache(bytes, dependency: dependency, key: blob_key);
+					var cache = new AspNetCache(this.controller.HttpContext.Cache);
+					this.controller.InsertIntoCache(cache, bytes, dependency, base_key);
 				}
 
 				var fmt = "{0:yyyyMMddTHHmm}";
 				var from_str = string.Format(fmt, this.from);
-				var to_str = string.Format(fmt, this.to); 
-				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str);
+				var to_str = string.Format(fmt, this.to);
+
+				var test_arg = this.test ? "yes" : "";
+				var raw_arg = this.raw ? "yes" : "";
+				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, this.eventsonly, this.mobile, test:test_arg, raw:raw_arg, style:this.style, theme:this.theme);
+
+				var render_args = new Dictionary<string, object>();
 
 				switch (this.type)
 				{
 					case "html":
-						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtml);
-						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
-						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to);
+
+						render_args["test"] = this.test;
+						render_args["style"] = this.style;
+						render_args["theme"] = this.theme;
+
+						bool mobile_declared = this.mobile.StartsWith("y");
+	
+						bool is_mobile;
+
+						if (settings["use_mobile_detection"] == "yes")                      // detect or use declaration
+						{
+							bool smartphone_detected = TryDetectSmartPhone(render_args);
+							is_mobile = smartphone_detected || mobile_declared;
+						}
+						else
+							is_mobile = mobile_declared;                                    // use declaration only
+
+						if (this.mobile.StartsWith("n"))                                  // maybe override with refusal
+							is_mobile = false;
+
+						if (is_mobile)
+						{
+							//if ( this.count == 0 )
+							this.count = Convert.ToInt32(settings["mobile_event_count"]);
+							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlForMobile);
+							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "yes", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme);
+						}
+						else if (this.raw)
+						{
+							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlEventsOnlyRaw);
+							render_args["raw_sentinel"] = this.raw_sentinel;
+							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: null, mobile: null, test:test_arg, raw: raw_arg, style:this.style, theme:this.theme);
+						}
+						else if (this.eventsonly == "yes")
+						{
+							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlEventsOnly);
+							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme);
+						}
+						else
+							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtml);
+
+						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), render_args);
+
+						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, render_args);
 						new ContentResult
 						{
 							ContentType = "text/html",
@@ -149,8 +226,8 @@ namespace WebRole
 
 					case "xml":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderXml);
-						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
-						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to);
+						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
+						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, null);
 						new ContentResult
 						{
 							ContentType = "text/xml",
@@ -162,8 +239,8 @@ namespace WebRole
 					case "rss":
 						if (count == 0) count = CalendarAggregator.Configurator.rss_default_items;
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderRss);
-						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
-						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to);
+						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
+						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, null);
 
 						new ContentResult
 						{
@@ -175,8 +252,8 @@ namespace WebRole
 
 					case "json":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderJson);
-						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
-						string jcontent = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to);
+						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
+						string jcontent = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, null);
 						if (this.jsonp != null)
 							jcontent = this.jsonp + "(" + jcontent + ")";
 						new ContentResult
@@ -223,8 +300,8 @@ namespace WebRole
 
 					case "ics":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderIcs);
-						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key));
-						string ics_text = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to);
+						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
+						string ics_text = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, null);
 						new ContentResult
 						{
 							ContentType = "text/calendar",
@@ -265,31 +342,74 @@ namespace WebRole
 
 			}
 
-			private void InsertIntoCache(byte[] bytes, CacheDependency dependency, string key)
+			private bool TryDetectSmartPhone(Dictionary<string, object> render_args)
 			{
-				var logger = new CacheItemRemovedCallback(AspNetCache.LogRemovedItemToAzure);
-				var expiration_hours = ElmcityUtils.Configurator.cache_sliding_expiration.Hours;
-				var sliding_expiration = new TimeSpan(expiration_hours, 0, 0);
-				this.cr.cache.Insert(key, bytes, dependency, Cache.NoAbsoluteExpiration, sliding_expiration, CacheItemPriority.Normal, logger);
+				var ua = this.controller.HttpContext.Request.UserAgent;
+				bool smartphone_detected = false;
+				try
+				{
+					SortedList<string, List<string>> props = new SortedList<string, List<string>>();
+					props = this.controller.HttpContext.Request.Browser.Capabilities["51Degrees.mobi"] as SortedList<string, List<string>>;
+					var key = "unknown";
+					string width = "unknown";
+					string height = "unknown";
+					try
+						{
+						width = props["ScreenPixelsWidth"][0];
+						height = props["ScreenPixelsHeight"][0];
+						if (width.ToLower() != "Unknown" && height.ToLower() != "unknown")
+						{
+							var w = Convert.ToInt32(width);
+							var h = Convert.ToInt32(height);
+							var l = new List<int>() { w, h };
+							l.Sort();
+							key = l[0].ToString() + "x" + l[1].ToString();
+						}
+					}
+					catch (Exception e)
+						{
+							GenUtils.PriorityLogMsg("exception", "TryDetectSmartPhone: unexpected width or height: " + width + "," + height + ": " + ua, e.Message);
+						}
+					if (props["IsMobile"][0] == "True")
+					{
+						render_args["short"] = width;
+						render_args["long"] = height;
+						smartphone_detected = smartphone_screen_dimensions.ContainsKey(key);
+						if (smartphone_detected)
+							ElmcityApp.logger.LogMsg("smartphone", "IsMobile true, smartphone detected: " + key, ua);
+						else
+							ElmcityApp.logger.LogMsg("smartphone", "IsMobile true, smartphone not detected: " + key, ua);
+					}
+					else
+						ElmcityApp.logger.LogMsg("smartphone", "IsMobile false: " + key, ua);
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "mobile detection: " + ua, e.Message + e.StackTrace);
+				}
+				return smartphone_detected;
 			}
 
-			private void MaybeCacheView(string view_key, CalendarRenderer.ViewRenderer view_renderer, CacheDependency dependency)
+			private void MaybeCacheView(string view_key, CalendarRenderer.ViewRenderer view_renderer, ElmcityCacheDependency dependency, Dictionary<string,object> render_args)
 			{
+				if (this.test)
+					return;
+
 				if (this.cr.cache[view_key] == null)
 				{
-					var view_str = this.cr.RenderDynamicViewWithoutCaching(this.context, view_renderer, this.view, this.count, this.from, this.to);
+					var view_str = this.cr.RenderDynamicViewWithoutCaching(this.controller.ControllerContext, view_renderer, this.view, this.count, this.from, this.to, render_args);
 					byte[] view_bytes = Encoding.UTF8.GetBytes(view_str);
-					InsertIntoCache(view_bytes, dependency, view_key);
+					var cache = new AspNetCache(this.controller.HttpContext.Cache);
+					this.controller.InsertIntoCache(cache, view_bytes, dependency, view_key);
 				}
 			}
-
 		}
 
 		#endregion
 
 		#region logentries
 
-		public ActionResult GetLogEntries(string log, string type, string id, string minutes, string targets)
+		public ActionResult GetLogEntries(string log, string type, string minutes, string from, string until, string include, string exclude)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
@@ -297,37 +417,84 @@ namespace WebRole
 
 			try
 			{
-				r = new LogEntriesResult(log, type, id, minutes, targets);
+				r = new LogEntriesResult(log, type, minutes, from, until, include, exclude);
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "GetLogEntries: " + id, e.Message);
+				GenUtils.PriorityLogMsg("exception", "GetLogEntries", e.Message);
 			}
 			return r;
 		}
 
+		public enum LogStyle { recent, from_until };
+
 		public class LogEntriesResult : ActionResult
 		{
 			string log;
-			string type;
-			string id;
+			string conditions;
 			int minutes;
-			string targets;
+			DateTime from;
+			DateTime until;
+			string include;
+			string exclude;
+			LogStyle style;
 
-			public LogEntriesResult(string log, string type, string id, string minutes, string targets)
+			public LogEntriesResult(string log, string conditions, string minutes, string from, string until, string include, string exclude)
 			{
-				this.log = log;
-				this.type = type;
-				this.id = id;
-				this.minutes = Convert.ToInt16(minutes);
-				this.targets = targets;
+				this.log = String.IsNullOrEmpty(log) ? "log" : log;
+				this.conditions = conditions;
+				this.include = include;
+				this.exclude = exclude;
+
+				if ( ! String.IsNullOrEmpty(from) && ! String.IsNullOrEmpty(until) )   // use from/until style
+				{
+					this.style = LogStyle.from_until;
+					try
+					{
+						var max_span = TimeSpan.FromHours(24);
+						this.from = DateTime.Parse(from).ToUniversalTime();
+						this.until = DateTime.Parse(until).ToUniversalTime();
+						if ( this.until > this.from + max_span )
+							this.until = this.from + max_span;
+					}
+					catch (Exception e)
+					{
+						GenUtils.PriorityLogMsg("exception", "LogEntriesResult: From/Until", e.Message + e.StackTrace);
+					}
+				}
+				else           // use recent minutes style
+				{
+					this.style = LogStyle.recent;
+					try
+					{
+						var max = Convert.ToInt32(settings["max_log_minutes"]);
+						var recent = Convert.ToInt32(settings["recent_log_minutes"]);
+						if (minutes != null)
+						{
+							this.minutes = Convert.ToInt32(minutes);
+							if (this.minutes > max)
+								this.minutes = max;
+						}
+						else
+							this.minutes = recent;
+					}
+					catch (Exception e)
+					{
+						GenUtils.PriorityLogMsg("exception", "LogEntriesResult: Recent", e.Message + e.StackTrace);
+					}
+				}
+
 			}
 
 			public override void ExecuteResult(ControllerContext context)
 			{
 				// it can take a while to fetch a large result
 				context.HttpContext.Server.ScriptTimeout = CalendarAggregator.Configurator.webrole_script_timeout_seconds;
-				var content = Utils.GetRecentLogEntries(this.log, this.type, this.minutes, this.targets);
+				string content;
+				if (this.style == LogStyle.recent)
+					content = Utils.GetRecentLogEntries(this.log, this.conditions, this.minutes, this.include, this.exclude);
+				else
+					content = Utils.GetLogEntriesBetweenTicks(this.log, this.from.Ticks, this.until.Ticks, conditions, include, exclude);
 				new ContentResult
 				{
 					ContentType = "text/plain",
@@ -444,7 +611,7 @@ namespace WebRole
 		public ActionResult RemoveCacheEntry(string cached_uri)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-
+			/*
 			if (!this.AuthenticateAsSelf())
 				return new EmptyResult();
 
@@ -459,6 +626,8 @@ namespace WebRole
 				GenUtils.PriorityLogMsg("exception", "RemoveCacheEntry: " + cached_uri, e.Message);
 			}
 			return r;
+			 */
+			return new EmptyResult();
 		}
 
 		public class RemoveCacheEntryResult : ActionResult
@@ -585,6 +754,9 @@ namespace WebRole
 		public ActionResult GetODataFeed(string table, string pk, string rk, string constraints, string since_minutes_ago)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			/*  
+			if (!this.AuthenticateAsSelf())
+				return new EmptyResult();
 
 			ODataFeedResult r = null;
 
@@ -600,6 +772,8 @@ namespace WebRole
 				GenUtils.PriorityLogMsg("exception", "GetODataFeed: " + args, e.Message);
 			}
 			return r;
+			 */
+			return new EmptyResult();
 		}
 
 		public class ODataFeedResult : ActionResult
@@ -638,7 +812,7 @@ namespace WebRole
 
 			public override void ExecuteResult(ControllerContext context)
 			{
-				var tsr = this.ts.QueryAllEntitiesAsStringOfXml(this.table, this.query).str;
+				var tsr = this.ts.QueryAllEntitiesAsODataFeed(this.table, this.query).str;
 				new ContentResult
 				{
 					ContentType = "application/atom+xml",
@@ -656,7 +830,7 @@ namespace WebRole
 		public ActionResult CallTwitterApi(string method, string url, string post_data, string oauth_token)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-
+			/* 
 			if (!this.AuthenticateAsSelf())
 				return new EmptyResult();
 
@@ -693,6 +867,8 @@ namespace WebRole
 			}
 
 			return r;
+			 */
+			return new EmptyResult();
 		}
 
 		public class TwitterApiResult : ActionResult

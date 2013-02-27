@@ -73,6 +73,10 @@ namespace ElmcityUtils
 	{
 		public static string elmcity_user_agent = "elmcity";
 
+		public const int wait_secs = 3;
+		public const int retries = 3;
+		public const int timeout = 10;
+
 		// equivalent of curl --head
 		public static HttpResponse HeadFetchUrl(Uri url)
 		{
@@ -325,7 +329,7 @@ namespace ElmcityUtils
 				url = "url_unavailable";
 			}
 
-			var msg = new LogMsg("info", requestor_ip_addr, url);
+			var msg = new LogMsg("request", requestor_ip_addr, url);
 			return msg;
 		}
 
@@ -372,31 +376,11 @@ namespace ElmcityUtils
 			}
 		}
 
-		/*
-		// unused, for pshb
-		public static HttpResponse NotifyPubSubHub(string hub_uri_str, string topic_uri)
+		public static HttpResponse RetryHttpRequestExpectingStatus(string url, HttpStatusCode expected_status)
 		{
-			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(new Uri(hub_uri_str));
-			request.Method = "POST";
-			request.ContentType = "application/x-www-form-urlencoded";
-			var body = string.Format("hub.mode=publish&hub.url={0}", topic_uri);
-			var body_bytes = Encoding.UTF8.GetBytes(body);
-			request.ContentLength = body_bytes.Length;
-			return DoHttpWebRequest(request, body_bytes);
+			var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+			return HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, null, 1, 3, TimeSpan.FromSeconds(10));
 		}
-
-		// e for pshb
-		public static HttpResponse SubscribePubSubHub(string mode, string verify, string hub_uri_str, string topic_uri_str, string callback_uri_str)
-		{
-			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(new Uri(hub_uri_str));
-			request.Method = "POST";
-			request.ContentType = "application/x-www-form-urlencoded";
-			var body = string.Format("hub.mode={0}&hub.verify={1}&hub.topic={2}&hub.callback={3}", mode, verify, topic_uri_str, callback_uri_str);
-			var body_bytes = Encoding.UTF8.GetBytes(body);
-			request.ContentLength = body_bytes.Length;
-			return DoHttpWebRequest(request, body_bytes);
-		}*/
-
 
 	}
 }

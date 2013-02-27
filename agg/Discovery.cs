@@ -17,11 +17,11 @@ namespace CalendarAggregator
 		static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 		static TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
-		public enum TaggableSourceType { facebook, eventful, upcoming, meetup, eventbrite };
+		public enum TaggableSourceType { facebook, eventful, meetup, eventbrite };
 
 		public static void VisualizeTaggables(string id)
 		{
-			var feeds = GetCuratedFeeds(id);
+			var curated_feeds = GetCuratedFeeds(id);
 
 			var taggable_source_types = GenUtils.EnumToList<TaggableSourceType>();
 
@@ -36,32 +36,45 @@ namespace CalendarAggregator
 			{
 				sb_links.Append("<h1>" + type + "</h1>\n");
 
-				var uniques = new HashSet<TaggableSource>();
+				var taggables = GetTaggables(id, type);
 
-				try
-				{
-					uniques = GetUniqueTaggables(id, type);
-				}
-				catch { };
-
-				var curated = from unique in uniques
-							  where feeds.Exists(feed => feed["feedurl"] == unique.ical_url)
+				var curated = from unique in taggables
+							  where curated_feeds.Exists(feed => feed["feedurl"] == unique.ical_url)
 							  select unique;
 
-				var uncurated = uniques.Except(curated);
+				var uncurated = taggables.Except(curated);
 
-				foreach (var taggable in uniques)
+				var inactive = from unique in uncurated
+								where unique.has_future_events == false
+								select unique;
+
+				//if (type == TaggableSourceType.facebook.ToString())
+				//	uncurated = uncurated.Except(inactive);
+
+				foreach (var taggable in taggables)
 				{
-					var is_curated = feeds.Exists(feed => feed["feedurl"] == taggable.ical_url);
-					if (!is_curated)
-						sb_json.Append(RenderTaggableJson(taggable, feeds, type));
+					var is_curated = curated_feeds.Exists(feed => feed["feedurl"] == taggable.ical_url);
+					if (is_curated == false)
+						sb_json.Append(RenderTaggableJson(taggable, curated_feeds, type));
 				}
 
+				sb_links.Append("<p><b>Curated</b></p>");
+
 				foreach (var taggable in curated)
-					sb_links.Append(RenderTaggableLink(taggable, feeds, type));
+					sb_links.Append(RenderTaggableLink(taggable, curated_feeds, type));
+
+				sb_links.Append("<p><b>Uncurated (calendar has future events)</b></p>");
 
 				foreach (var taggable in uncurated)
-					sb_links.Append(RenderTaggableLink(taggable, feeds, type));
+					sb_links.Append(RenderTaggableLink(taggable, curated_feeds, type));
+
+				if (type == TaggableSourceType.facebook.ToString() && inactive.Count() > 0)
+				{
+					sb_links.Append("<p><b>Uncurated (calendar has only past events)</b></p>");
+					foreach (var taggable in inactive)
+						sb_links.Append(RenderTaggableLink(taggable, curated_feeds, type));
+				}
+
 			}
 
 			html = html.Replace("__BODY__", sb_links.ToString());
@@ -78,6 +91,23 @@ namespace CalendarAggregator
 			var json = HttpUtils.FetchUrl(feeds_json_uri).DataAsString();
 			var feeds = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
 			return feeds;
+		}
+
+		private static List<TaggableSource> GetTaggables(string id, string type)
+		{
+			var dict = new Dictionary<string, TaggableSource>();
+		    var list = (List<TaggableSource>)BlobStorage.DeserializeObjectFromUri(BlobStorage.MakeAzureBlobUri(id, type + ".taggables.obj", false));
+			foreach (var taggable in list)
+			{
+				if (dict.ContainsKey(taggable.home_url))
+				{
+					if (!String.IsNullOrEmpty(taggable.extra_url))
+						dict[taggable.home_url] = taggable;
+				}
+				else
+					dict.Add(taggable.home_url, taggable);
+			}
+			return dict.Values.ToList();
 		}
 
 		private static HashSet<TaggableSource> GetUniqueTaggables(string id, string type)
@@ -106,14 +136,27 @@ namespace CalendarAggregator
 		public static string RenderTaggableLink(TaggableSource taggable, List<Dictionary<string, string>> feeds, string type)
 		{
 			var is_curated = feeds.Exists(feed => feed["feedurl"] == taggable.ical_url);
-			var style = is_curated ? "curated" : "uncurated";
+
 			var name = taggable.name.Replace("<title>", "").Replace("</title>", "");
+
+			if (type == "facebook")
+			{
+				name = name.Replace("&#039;", " ");
+				name = Regex.Replace(name, " = [^|]+ ", "");
+				name = Regex.Replace(name, "| Facebook ", "");
+			}
+
 			if (!String.IsNullOrEmpty(taggable.city))
 				name = name + " (" + taggable.city + ")";
-			var html = string.Format("<div class=\"{0}\"><p><a href=\"{1}\">{2}</a></p></div>\n",
-				style,
+
+			var extra = "";
+			if (!String.IsNullOrEmpty(taggable.extra_url))
+				extra = string.Format(@" [<a href=""{0}"">{0}</a>]", taggable.extra_url);
+
+			var html = string.Format("<div><p><a href=\"{0}\">{1}</a>{2}</p></div>\n",
 				taggable.home_url,
-				name
+				name,
+				extra
 				);
 
 			return html;
@@ -122,22 +165,76 @@ namespace CalendarAggregator
 		public static void StoreTaggables(string id, string location, Dictionary<string, string> settings)
 		{
 			var calinfo = new Calinfo(id);
+			StoreFacebookTaggables(id, location, calinfo);
+			StoreEventfulTaggables(id, settings, calinfo);
+	//		StoreUpcomingTaggables(id, settings, calinfo);
+			StoreEventBriteTaggables(id, settings, calinfo);
+			StoreMeetupTaggables(id, settings, calinfo);
+		}
 
-			var facebook_taggables = GetFacebookPages(calinfo, location);
-			bs.SerializeObjectToAzureBlob(facebook_taggables, id, "facebook.taggables.obj");
+		public static void StoreEventBriteTaggables(string id, Dictionary<string, string> settings, Calinfo calinfo)
+		{
+			try
+			{
+				var eventbrite_taggables = GetEventBriteOrganizers(calinfo, settings);
+				bs.SerializeObjectToAzureBlob(eventbrite_taggables, id, "eventbrite.taggables.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "StoreTaggables: EventBrite", e.Message);
+			}
+		}
 
-			var eventful_taggables = GetEventfulVenues(calinfo, min_per_venue: 1, settings: settings);
-			bs.SerializeObjectToAzureBlob(eventful_taggables, id, "eventful.taggables.obj");
+		public static void StoreMeetupTaggables(string id, Dictionary<string, string> settings, Calinfo calinfo)
+		{
+			try
+			{
+				var meetup_taggables = GetMeetupGroups(calinfo, 1, settings);
+				bs.SerializeObjectToAzureBlob(meetup_taggables, id, "meetup.taggables.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "StoreTaggables: Meetup", e.Message);
+			}
+		}
 
-			var upcoming_taggables = GetUpcomingVenues(calinfo, settings);
-			bs.SerializeObjectToAzureBlob(upcoming_taggables, id, "upcoming.taggables.obj");
+		public static void StoreUpcomingTaggables(string id, Dictionary<string, string> settings, Calinfo calinfo)
+		{
+			try
+			{
+				var upcoming_taggables = GetUpcomingVenues(calinfo, settings);
+				bs.SerializeObjectToAzureBlob(upcoming_taggables, id, "upcoming.taggables.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "StoreTaggables: Upcoming", e.Message);
+			}
+		}
 
-			var meetup_taggables = GetMeetupGroups(calinfo, 1, settings);
-			bs.SerializeObjectToAzureBlob(meetup_taggables, id, "meetup.taggables.obj");
+		public static void StoreEventfulTaggables(string id, Dictionary<string, string> settings, Calinfo calinfo)
+		{
+			try
+			{
+				var eventful_taggables = GetEventfulVenues(calinfo, min_per_venue: 1, settings: settings);
+				bs.SerializeObjectToAzureBlob(eventful_taggables, id, "eventful.taggables.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "StoreTaggables: Eventful", e.Message);
+			}
+		}
 
-			var eventbrite_taggables = GetEventBriteOrganizers(calinfo, settings);
-			bs.SerializeObjectToAzureBlob(eventbrite_taggables, id, "eventbrite.taggables.obj");
-
+		public static void StoreFacebookTaggables(string id, string location, Calinfo calinfo)
+		{
+			try
+			{
+				var facebook_taggables = GetFacebookPages(calinfo, location);
+				bs.SerializeObjectToAzureBlob(facebook_taggables, id, "facebook.taggables.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "StoreTaggables: Facebook", e.Message);
+			}
 		}
 
 		public static List<TaggableSource> GetUpcomingVenues(Calinfo calinfo, Dictionary<string, string> settings)
@@ -163,7 +260,6 @@ namespace CalendarAggregator
 				if (city.Value.ToLower() != calinfo.City)
 					return;
 				var id = xelt.Attribute("venue_id").Value;
-				MaybeAddSource(name_and_pk, calinfo.id, name_and_pk);
 				var state = xelt.Attribute("venue_state_code");
 
 				var name = xelt.Attribute("venue_name");
@@ -175,7 +271,7 @@ namespace CalendarAggregator
 					name.Value.Replace(" ", "-")
 					);
 				var ical_url = "http://upcoming.yahoo.com/calendar/v2/venue/" + id;
-				var taggable = new TaggableSource(name.Value, home_url, ical_url, city.Value);
+				var taggable = new TaggableSource(name.Value, calinfo.id, home_url, ical_url, city.Value);
 				venues.Add(taggable);
 				RememberTaggable(name_and_pk, id, taggable);
 			});
@@ -209,12 +305,11 @@ namespace CalendarAggregator
 			{
 				if (venue.city_name != calinfo.City)
 					return;
-				MaybeAddSource(venue.id, calinfo.id, name_and_pk);
 				if (venue.count < min_per_venue)
 					return;
 				var home_url = Regex.Replace(venue.home_url, "\\?.+", "");
 				var ical_url = home_url.Replace("eventful.com/", "eventful.com/ical/");
-				var taggable = new TaggableSource(venue.name, home_url, ical_url, venue.city_name);
+				var taggable = new TaggableSource(venue.name, calinfo.id, home_url, ical_url, venue.city_name);
 				RememberTaggable(name_and_pk, venue.id, taggable);
 				venues.Add(taggable);
 			});
@@ -249,7 +344,7 @@ namespace CalendarAggregator
 				var home_url = "http://www.eventbrite.com/org/" + organizer_id;
 				var escaped_name = Uri.EscapeDataString(name);
 				var ical_url = string.Format("http://elmcity.cloudapp.net/ics_from_eventbrite_organizer?organizer={0}&elmcity_id={1}", escaped_name, calinfo.id);
-				var taggable = new TaggableSource(name, home_url, ical_url, id_name_city.city);
+				var taggable = new TaggableSource(name, calinfo.id, home_url, ical_url, id_name_city.city);
 				RememberTaggable(name_and_pk, organizer_id, taggable);
 				organizers.Add(taggable);
 			});
@@ -259,71 +354,105 @@ namespace CalendarAggregator
 
 		public static List<TaggableSource> GetFacebookPages(Calinfo calinfo, string location)
 		{
-			var search_string = string.Format("site:www.facebook.com/pages \"{0}\" ", location);
+			var search_template = String.Format( "site:www.facebook.com/__TARGET__ \"{0}\"", location);
+			var search_for_fan_pages = search_template.Replace("__TARGET__", "pages");
+			var search_for_groups = search_template.Replace("__TARGET__", "groups");
 			var stats = new Dictionary<string, object>();
-			var bing_results = Search.BingSearch(search_string, 1000, stats);
-			var taggable_sources = new List<TaggableSource>();
+			var fan_page_results = Search.BingSearch(search_for_fan_pages, 1000, stats);
+			// var group_results = Search.BingSearch(search_for_groups, 1000, stats); // doesn't work, location string won't usually appear
+			var group_results = new List<SearchResult>();                             // placeholder for now
+			var bing_results = fan_page_results.Concat(group_results).ToList();
+
+			var taggable_sources = InitializeTaggables(calinfo, "facebook");
+
 			var seen_ids = new List<string>();
 			string name_and_pk = "facebooksources";
 
 			var settings = GenUtils.GetSettingsFromAzureTable();
 			var options = new ParallelOptions();
 			Parallel.ForEach(source: bing_results, parallelOptions: options, body: (result) =>
+			//foreach (var result in bing_results)
 			{
 				try
 				{
 					var url = Regex.Replace(result.url, @"\?.+", "");  // remove query string if any
+					var name = Regex.Match(result.url, "facebook.com/(pages|groups)/([^/]+)").Groups[2].Value;
+					 name = name.Replace('-', ' ');
 
-					var re = new Regex(@"facebook.com/pages/([^/]+)/(\d{8,})");
-					var m = re.Match(url);
-					if (!m.Success) // not of the form www.facebook.com/â€‹pages/â€‹The-Starving-Artist/â€‹136721478562
-						return;
-
-					var name = m.Groups[1].Value.Replace("-", " ");
-					var fb_id = m.Groups[2].Value;
+					var fb_id = Utils.id_from_fb_fanpage_or_group(url);
 
 					if (seen_ids.Exists(x => x == fb_id))
 						return;
 					else
-					{
-						MaybeAddSource(fb_id, calinfo.id, name_and_pk);
-						/* in this case don't skip because a page that formerly wasn't using the events app may have added it
-						if (IsCaptured(id, name_and_pk))  
-							return;
-						 */
 						seen_ids.Add(fb_id);
-					}
 
 					var facebook_access_token = settings["facebook_access_token"]; // todo: merge with code in collector
 					// https://graph.facebook.com/https://graph.facebook.com/142525312427391/events?access_token=...
 					var graph_uri_template = "https://graph.facebook.com/{0}/events?access_token={1}";
 					var graph_uri = new Uri(string.Format(graph_uri_template, fb_id, facebook_access_token));
 					var json = HttpUtils.FetchUrl(graph_uri).DataAsString();
-					var j_obj = (JObject) JsonConvert.DeserializeObject(json);
+					var j_obj = (JObject)JsonConvert.DeserializeObject(json);
 					var events = Utils.UnpackFacebookEventsFromJson(j_obj);
 
-					if (FacebookPageHasFutureEvents(events, calinfo))
-					{
-						if (FacebookPageMatchesLocation(url, location, settings))
-						{
-							var ical_url = string.Format("http://elmcity.cloudapp.net/ics_from_fb_page?fb_id={0}&elmcity_id={1}",
-								fb_id,
-								calinfo.id);
-							var taggable = new TaggableSource(name, url + "?sk=events", ical_url);
-							taggable_sources.Add(taggable);
-							RememberTaggable(name_and_pk, fb_id, taggable);
-						}
-					}
+					if (events.Count == 0)  // no calendar on this page
+						return;
 
+					string page;
+
+					if (FacebookPageMatchesLocation(url, location, settings, out page) == false)
+						return;
+
+					string origin_url = "";
+					if ( ! String.IsNullOrEmpty(page) )
+						origin_url = GetFacebookPageOrGroupOriginUrl(page);
+
+					var ical_url = string.Format("http://elmcity.cloudapp.net/ics_from_fb_page?fb_id={0}&elmcity_id={1}",
+							fb_id,
+							calinfo.id);
+
+					var has_future_events = FacebookPageHasFutureEvents(events, calinfo);
+
+					var taggable = new TaggableSource(name, calinfo.id, url + "?sk=events", ical_url, has_future_events, origin_url);
+		
+					taggable_sources.Add(taggable);
+
+					RememberTaggable(name_and_pk, fb_id, taggable);
 				}
 				catch (Exception e)
 				{
 					GenUtils.PriorityLogMsg("exception", "GetFacebookPages", e.Message + e.StackTrace);
 					return;
 				}
-			
-			});
-			
+
+				});
+
+			return taggable_sources;
+		}
+
+		private static string GetFacebookPageOrGroupOriginUrl(string page)
+		{
+		var re = new Regex(@"<td class=""vTop pls""><a href=""/l.php\?u=([^&]+)");
+		var result = "";
+		try
+		{
+			result = re.Match(page).Groups[1].Value;
+		}
+		catch { }
+		return Uri.UnescapeDataString(result);
+		}
+
+
+		private static List<TaggableSource> InitializeTaggables(Calinfo calinfo, string flavor)
+		{
+			List<TaggableSource> taggable_sources;
+			try
+			{
+				taggable_sources = (List<TaggableSource>)ObjectUtils.GetTypedObj<List<TaggableSource>>(calinfo.id, flavor + ".taggables.obj");
+			}
+			catch
+			{
+				taggable_sources = new List<TaggableSource>();
+			}
 			return taggable_sources;
 		}
 
@@ -346,14 +475,17 @@ namespace CalendarAggregator
 			return false;
 		}
 
-		private static bool FacebookPageMatchesLocation(string url, string location, Dictionary<string, string> settings)
+		private static bool FacebookPageMatchesLocation(string url, string location, Dictionary<string, string> settings, out string page)
 		{
+			page = "";
 			// expects a wap-formatted page
 			try
 			{
 				var user_agent = settings["facebook_user_agent"];
-				string page = HttpUtils.FetchUrlAsUserAgent(new Uri(url), user_agent).DataAsString();
-				return page.IndexOf(location) > 0;
+				url = url + "?sk=info";
+				page = HttpUtils.FetchUrlAsUserAgent(new Uri(url), user_agent).DataAsString();
+				var _page = page.ToLower();
+				return ( _page.IndexOf(location) > 0 || _page.IndexOf(location.ToLower()) > 0 ) ;
 			}
 			catch (Exception e)
 			{
@@ -376,7 +508,7 @@ namespace CalendarAggregator
 			return null_city;
 		}
 
-		public static List<TaggableSource> GetMeetupGroups(Calinfo calinfo, int delay, Dictionary<string, string> settings)
+		public static List<TaggableSource> GetMeetupGroups2(Calinfo calinfo, int delay, Dictionary<string, string> settings)
 		{
 			var meetup_key = settings["meetup_api_key"];
 			var template = "https://api.meetup.com/2/open_events?key={0}&lat={1}&lon={2}&radius={3}";
@@ -406,7 +538,6 @@ namespace CalendarAggregator
 				if (id_and_city.city != calinfo.City)
 					return;
 				string name_and_pk = "meetupsources";
-				MaybeAddSource(id_and_city.id, calinfo.id, name_and_pk);
 				try
 				{
 					template = "https://api.meetup.com/2/groups?key={0}&group_id={1}";
@@ -426,6 +557,7 @@ namespace CalendarAggregator
 					ical_url = ical_url.Replace("%20", "+");  // otherwise meetup weirdly reports a 505 error
 					var taggable = new TaggableSource(
 							name,
+							calinfo.id,
 							home_url,
 							ical_url,
 							id_and_city.city);
@@ -439,6 +571,52 @@ namespace CalendarAggregator
 			});
 			return taggable_sources;
 		}
+
+		public static List<TaggableSource> GetMeetupGroups(Calinfo calinfo, int delay, Dictionary<string, string> settings)
+		{
+			var meetup_key = settings["meetup_api_key"];
+			var template = "https://api.meetup.com/2/groups?key={0}&lat={1}&lon={2}&radius={3}&page=200";
+			var url = String.Format(template,
+						meetup_key,
+						calinfo.lat,
+						calinfo.lon,
+						calinfo.radius);
+
+			var json = HttpUtils.SlowFetchUrl(new Uri(url), delay).DataAsString();
+			var obj = JsonConvert.DeserializeObject<Dictionary<string,object>>(json);
+
+			var taggable_sources = new List<TaggableSource>();
+			string name_and_pk = "meetupsources";
+			foreach ( var group in ((JArray) obj["results"]).ToList()  )
+			{
+				try
+				{
+				var name = (string) group["name"];
+				var urlname = (string)group["urlname"];
+				var id = group["id"].ToString();
+				var home_url = "http://www.meetup.com/" + urlname;
+				var ical_url = string.Format("http://www.meetup.com/{0}/events/ical/{1}/",
+					urlname,
+					Uri.EscapeDataString(name));
+				ical_url = ical_url.Replace("%20", "+");  // otherwise meetup weirdly reports a 505 error
+				var taggable = new TaggableSource(
+						name,
+						calinfo.id,
+						home_url,
+						ical_url,
+						calinfo.where);
+
+					taggable_sources.Add(taggable);
+					RememberTaggable(name_and_pk, id, taggable);
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "FindMeetupGroups", e.Message + e.StackTrace);
+				}
+			}
+			return taggable_sources;
+		}
+
 
 		private static void RememberTaggable(string name_and_pk, string rowkey, TaggableSource taggable)
 		{
@@ -454,13 +632,6 @@ namespace CalendarAggregator
 			var qresult = ts.QueryAllEntitiesAsListDict(name_and_pk, query);
 			return qresult.list_dict_obj.Count > 0;
 		}
-
-		private static void MaybeAddSource(string rowkey, string elmcity_id, string name_and_pk)
-		{
-			var entity = new Dictionary<string, object>() { { "elmcity_id", elmcity_id } };
-			TableStorage.UpmergeDictToTableStore(entity, name_and_pk, name_and_pk, rowkey);
-		}
-
 
 	}
 }

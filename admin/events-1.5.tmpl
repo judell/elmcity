@@ -3,48 +3,68 @@
 <head>
 <title>__TITLE__</title>
 <link type="text/css" rel="stylesheet" href="__CSSURL__"/>
+
+<!-- JQUERY_UI_CSS -->
 <link type="text/css" href="http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/themes/smoothness/jquery-ui.css" rel="stylesheet" />
+<!-- /JQUERY_UI_CSS -->
 
 <script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
-<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/jquery-ui.min.js'></script>
 
+<!-- JQUERY_UI -->
+<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/jquery-ui.min.js'></script>
+<!-- /JQUERY_UI -->
 
 <script type="text/javascript" src="http://elmcity.blob.core.windows.net/admin/elmcity-1.5.js"></script>
 
+<!-- __CUSTOM_STYLE __ -->
 
 </head>
 
 <body onload="on_load()">
 
-<div id="body" style="width:__WIDTH__px">
+<div id="body">
 
 <div id="elmcity_id" style="display:none">
 __ID__
 </div>
 
-<div id="datepicker" ></div>
-
-<div id="finder">
-<input name="findbox" id="findbox" /> <input id="findsubmit" onclick="find_text()" type="submit" value="find" />
+<div id="mobile" style="display:none">
+__MOBILE__
 </div>
 
-<h1>__TITLE__</h1>
+<div id="mobile_long" style="display:none">
+__MOBILE_LONG__
+</div>
+
+<div id="mobile_short" style="display:none">
+__MOBILE_SHORT__
+</div>
+
+<!-- DATEPICKER -->
+<div id="datepicker" ></div>
+<!-- /DATEPICKER -->
+
+<!-- HUBTITLE -->
+<h1 class="hubtitle">__TITLE__</h1>
+<!-- /HUBTITLE -->
+
+<!-- SIDEBAR -->
 
 <div id="sidebar" style="text-align:center">
 
 <p>sources</p>
 
 <div>
-<img alt="Local Events, Concerts, Tickets" src="http://az26683.vo.msecnd.net/admin/eventful_logo.gif">
+<img alt="Local Events, Concerts, Tickets" src="http://elmcity.blob.core.windows.net/admin/eventful_logo.gif">
 <div><a href="http://eventful.com/">Events</a> by Eventful</div>
 </div>
 
 <p>
-<a href="http://upcoming.yahoo.com"><img style="width:140px" src="http://az26683.vo.msecnd.net/admin/upcoming_logo.gif"></a>
+<a href="http://upcoming.yahoo.com"><img style="width:140px" src="http://elmcity.blob.core.windows.net/admin/upcoming_logo.gif"></a>
 </p>
 
 <p>
-<a href="http://eventbrite.com"><img src="http://az26683.vo.msecnd.net/admin/eventbrite_logo.jpg" style="width:80px"></a>
+<a href="http://eventbrite.com"><img src="http://elmcity.blob.core.windows.net/admin/eventbrite_logo.jpg" style="width:80px"></a>
 </p>
 
 <p style="font-size:larger"><a href="http://facebook.com">facebook</a></p>
@@ -56,21 +76,25 @@ how to <a target="_new" href="http://blog.jonudell.net/elmcity-project-faq/#cont
 </p>
 
 <p style="font-size:larger">
-<a href="mailto:__CONTACT__?subject=elmcity question or comment">contact the curator</a>
+<a href="mailto:__CONTACT__?subject=calendar question or comment">contact the curator</a>
 </p>
 
 <p style="font-size:larger">
-<a href="http://blog.jonudell.net/elmcity-project-faq/#whatis">about</a>
+<a target="elmcity_about" href="/__ID__/about">about this hub</a>
 </p>
 
 <p>
-<a href="http://windowsazure.com"><img style="width:150px;margin-top:10px" src="http://az26683.vo.msecnd.net/admin/pbwa.png"></a>
+<a href="http://windowsazure.com"><img style="width:150px;margin-top:10px" src="http://elmcity.blob.core.windows.net/admin/pbwa.png"></a>
 </p>
 
 </div>
 
-<div id="tags">
-</div>
+<!-- /SIDEBAR -->
+
+<!-- TAGS -->
+<div id="tags"></div>
+<!-- /TAGS -->
+
 
 <!-- begin events -->
 

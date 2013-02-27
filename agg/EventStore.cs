@@ -201,9 +201,8 @@ namespace CalendarAggregator
 	}
 
 	[Serializable]
-	public class EventStore
+	public class EventStore 
 	{
-
 		public string id { get; set; }
 
 		// the datekey looks like d2010-07-04
@@ -283,8 +282,6 @@ namespace CalendarAggregator
 			foreach (var list in lists_of_zoned_events)
 				foreach (var evt in list)
 				{
-				//	if (evt.dtstart.LocalTime.Kind != DateTimeKind.Local)  // might be unspecified, that's ok
-				//		GenUtils.PriorityLogMsg("warning", "CombineZonedEventStores: expecting DateTimeKind.Local, got " + evt.dtstart.LocalTime.Kind.ToString(), null);
 					es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.lat, evt.lon, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories, evt.description, evt.location);
 				}
 
@@ -293,7 +290,7 @@ namespace CalendarAggregator
 
 		public static void UniqueFilterSortSerialize(string id, ZonelessEventStore es_zoneless)
 		{
-			es_zoneless.events = EventStore.UniqueByTitleAndStart(id, es_zoneless.events); // deduplicate
+			es_zoneless.events = EventStore.UniqueByTitleAndStart(id, es_zoneless.events, save_tag_sources:true); // deduplicate
 
 			es_zoneless.ExcludePastEvents(); // the EventCollector should already have done this, but in case not...
 
@@ -359,7 +356,7 @@ namespace CalendarAggregator
 
 		}
 
-		public static List<ZonelessEvent> UniqueByTitleAndStart(string id, List<ZonelessEvent> events)
+		public static List<ZonelessEvent> UniqueByTitleAndStart(string id, List<ZonelessEvent> events, bool save_tag_sources)
 		{
 			var tag_sources = new Dictionary<string, Dictionary<string, int>>();
 			
@@ -408,8 +405,11 @@ namespace CalendarAggregator
 					all_urls_and_sources[key] = new Dictionary<string, string>() { { evt.url, evt.source } };
 			}
 
-			var bs = BlobStorage.MakeDefaultBlobStorage();
-			bs.SerializeObjectToAzureBlob(tag_sources, id, "tag_sources.obj"); // 
+			if (save_tag_sources)
+			{
+				var bs = BlobStorage.MakeDefaultBlobStorage();
+				bs.SerializeObjectToAzureBlob(tag_sources, id, "tag_sources.obj");
+			}
 
 			foreach ( var evt in _events )            // use keyed structures
 			{
@@ -431,6 +431,15 @@ namespace CalendarAggregator
 
 			return (List<ZonelessEvent>) uniques.Values.ToList();
 		}
+
+		public static ZonelessEventStore ZonedToZoneless(string id, Calinfo calinfo, ZonedEventStore es_zoned)
+		{
+			var es_zoneless = new ZonelessEventStore(calinfo);
+			foreach (var evt in es_zoned.events)
+				es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.lat, evt.lon, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories, evt.description, evt.location);
+			EventStore.UniqueFilterSortSerialize(id, es_zoneless);
+			return es_zoneless;
+		}
 	}
 
 	[Serializable]
@@ -450,6 +459,11 @@ namespace CalendarAggregator
 
 		public void AddEvent(string title, string url, string source, DateTimeWithZone dtstart, DateTimeWithZone dtend, string lat, string lon, bool allday, string categories, string description, string location)
 		{
+			title = title.StripHtmlTags();
+			if ( location != null )
+				location = location.StripHtmlTags();
+			if ( description != null )
+				description = description.StripHtmlTags();
 			ZonedEvent evt = new ZonedEvent(title: title, url: url, source: source, dtstart: dtstart, dtend: dtend, lat: lat, lon: lon, allday: allday, categories: categories, description: description, location: location);
 			events.Add(evt);
 		}

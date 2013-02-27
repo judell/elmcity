@@ -390,7 +390,6 @@ namespace CalendarAggregator
 		public static XNamespace icalvalid_ns { get { return _icalvalid_ns; } }
 		private static XNamespace _icalvalid_ns = "http://icalvalid.wikidot.com/validation";
 
-		public const string local_ical_validator = "http://elmcity.cloudapp.net/validate";
 		public const string remote_ical_validator = "http://icalvalid.cloudapp.net/?uri=";
 
 		// used by the (nascent) recreation of the fusecal html->ical service.
@@ -641,23 +640,38 @@ namespace CalendarAggregator
 	public class TaggableSource
 	{
 		public string name { get; set; }
+		public string elmcity_id { get; set; }
 		public string home_url { get; set; }
 		public string ical_url { get; set; }
 		public string city { get; set; }
+		public bool has_future_events { get; set; }
+		public string extra_url { get; set; }
 
-		public TaggableSource(string name, string home_url, string ical_url)
+		public TaggableSource(string name, string elmcity_id, string home_url, string ical_url)
 		{
 			this.name = name;
+			this.elmcity_id = elmcity_id;
 			this.home_url = home_url;
 			this.ical_url = ical_url;
 		}
 
-		public TaggableSource(string name, string home_url, string ical_url, string city)
+		public TaggableSource(string name, string elmcity_id, string home_url, string ical_url, string city)
 		{
 			this.name = name;
+			this.elmcity_id = elmcity_id;
 			this.home_url = home_url;
 			this.ical_url = ical_url;
 			this.city = city;
+		}
+
+		public TaggableSource(string name, string elmcity_id, string home_url, string ical_url, bool has_future_events, string extra_url) 
+		{
+			this.name = name;
+			this.elmcity_id = elmcity_id;
+			this.home_url = home_url;
+			this.ical_url = ical_url;
+			this.has_future_events = has_future_events;
+			this.extra_url = extra_url;
 		}
 
 		public TaggableSource()  // need paramaterless constructor in order to use Activator.CreateInstance
@@ -813,6 +827,8 @@ namespace CalendarAggregator
 		{ get { return _has_locations; } }
 		private bool _has_locations;
 
+		public string version_description = "2012-11-07T09:41 (js/tmpl 1.7)";
+
 		/*
 		public Dictionary<string, string> metadict
 		{ get { return _metadict; } }
@@ -824,7 +840,7 @@ namespace CalendarAggregator
 			var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
 			try
 			{
-				//this._delicious_account = id; // todo: remove later
+
 				this._id = id;
 
 				if (metadict.ContainsKey("type") == false)
@@ -845,7 +861,7 @@ namespace CalendarAggregator
 				//this._has_locations = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "locations");
 				this._has_locations = true;
 
-				this._display_width = Configurator.GetStrSetting(metadict, Configurator.usersettings, "display_width");
+				this._display_width = Configurator.GetStrSetting(metadict, Configurator.usersettings, "display_width"); // todo: obsolete this
 
 				this._feed_count = Configurator.GetMetadictValueOrSettingsValue(metadict, Configurator.usersettings, "feed_count");
 
@@ -857,8 +873,8 @@ namespace CalendarAggregator
 
 				this._title = Configurator.GetTitleSetting(metadict, Configurator.usersettings, "title");
 
-				//this._template_url = Configurator.GetUriSetting(metadict, Configurator.usersettings, "template");
-				this._template_url = new Uri(Configurator.settings["template"]);
+				this._template_url = Configurator.GetUriSetting(metadict, Configurator.usersettings, "template");
+				//this._template_url = new Uri(Configurator.settings["template"]);
 
 				this._twitter_account = Configurator.GetStrSetting(metadict, Configurator.usersettings, "twitter");
 
@@ -939,6 +955,11 @@ namespace CalendarAggregator
 				GenUtils.PriorityLogMsg("exception", "new Calinfo: " + id, e.Message + e.StackTrace);
 			}
 
+		}
+
+		public Calinfo(TimeZoneInfo tzinfo)
+		{
+			this._tzinfo = tzinfo;
 		}
 
 		public string City

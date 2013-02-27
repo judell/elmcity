@@ -237,6 +237,11 @@ namespace ElmcityUtils
 			return PutBlob(containername, blobname, new Hashtable(), data, null);
 		}
 
+		public BlobStorageResponse PutBlob(string containername, string blobname, byte[] data, string content_type)
+		{
+			return PutBlob(containername, blobname, new Hashtable(), data, content_type);
+		}
+
 		public BlobStorageResponse PutBlob(string containername, string blobname, string data)
 		{
 			return PutBlob(containername, blobname, new Hashtable(), System.Text.Encoding.UTF8.GetBytes(data), null);
@@ -372,7 +377,7 @@ namespace ElmcityUtils
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "DeserializeObjectFromUri: " + uri.ToString(), e.Message);
-				 throw;
+				throw;
 			}
 		}
 
@@ -382,6 +387,11 @@ namespace ElmcityUtils
 			var ms = new MemoryStream(buffer);
 			var o = serializer.Deserialize(ms);
 			return o;
+		}
+
+		public static Uri MakeAzureBlobUri(string container, string name)
+		{
+			return MakeAzureBlobUri(container, name, false);
 		}
 
 		public static Uri MakeAzureBlobUri(string container, string name, bool use_cdn)

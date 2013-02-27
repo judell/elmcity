@@ -1,6 +1,6 @@
 <html>
 <head>
-<title> the elmcity project: iCalendar url helpers </title>
+<title> the elmcity project: iCalendar helpers </title>
 <style>
 
 body {
@@ -35,7 +35,7 @@ a:hover {
 
 </style>
 
-<script type="text/javascript" src="http://ajax.Microsoft.com/ajax/jQuery/jquery-1.3.2.min.js"></script>
+<script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js"></script>
 
 <script>
 function get_fb_ical_url()
@@ -55,12 +55,12 @@ function get_eb_eid_ical_url()
 {
 var eb_page_url = $('#eb_eid_page_url').val();
 eb_page_url = encodeURIComponent(eb_page_url);
-var tzname = $('#eb_tzname').val();
+var elmcity_id   = $('#eb_eid_id').val();
 var ical_url = 'http://elmcity.cloudapp.net/get_ical_url_from_eid_of_eventbrite_event_page' +
                 '?url=' +
                 eb_page_url +
-                '&tzname=' +
-                tzname;
+                '&elmcity_id=' +
+                elmcity_id;
 location.href = ical_url;
 }
 
@@ -69,7 +69,7 @@ function get_eb_ical_url()
 {
 var eb_page_url = $('#eb_page_url').val();
 eb_page_url = encodeURIComponent(eb_page_url);
-var elmcity_id = $('#eb_elmcity_id').val();
+var elmcity_id = $('#eb_organizer_id').val();
 var ical_url = 'http://elmcity.cloudapp.net/get_ical_url_from_eventbrite_event_page' +
                 '?url=' +
                 eb_page_url +
@@ -194,7 +194,7 @@ location.href = ical_url;
 
 function get_ics_to_ics_ical_url_5()
 {
-var filter_feed_url   = $('#trinity_feed_url_home').val();
+var filter_feed_url   = $('#trinity_feed_url_away').val();
 var exclude_keyword       = $('#location_exclude_away').val();
 var elmcity_id        = $('#hartford_elmcity_id_home').val();
 
@@ -213,20 +213,87 @@ location.href = ical_url;
 }
 
 
+function get_ics_to_ics_ical_url_6()
+{
+var filter_feed_url   = $('#crazy_wisdom_feed_url').val();
+var include_keyword       = $('#include_crazywisdom').val();
+var elmcity_id        = $('#crazy_wisdom_elmcity_id').val();
+
+var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
+                '?feedurl=' +
+                encodeURIComponent(filter_feed_url) +
+                '&include_keyword=' +
+                include_keyword +
+                '&summary_only=' + 
+                'yes'  +
+                '&elmcity_id=' +
+                elmcity_id;
+
+location.href = ical_url;
+}
+
+
+function get_ics_to_ics_ical_url_7()
+{
+var filter_feed_url   = $('#lets_dance_feed_url').val();
+var exclude_keyword       = $('#exclude_letsdance').val();
+var elmcity_id        = $('#lets_dance_elmcity_id').val();
+
+var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
+                '?feedurl=' +
+                encodeURIComponent(filter_feed_url) +
+                '&exclude_keyword=' +
+                exclude_keyword +
+                '&summary_only=' + 
+                'yes'  +
+                '&elmcity_id=' +
+                elmcity_id;
+
+location.href = ical_url;
+}
+
+
 
 function get_rss_xcal_ical_url()
 {
 var rss_xcal_feed_url   = $('#rss_xcal_feed_url').val();
-var rss_xcal_tz         = $('#rss_xcal_tz option:selected').text();
+var rss_id              = $('#rss_id').val();
 
 var ical_url = 'http://elmcity.cloudapp.net/get_rss_xcal_ical_url' +
                 '?feedurl=' +
                 encodeURIComponent(rss_xcal_feed_url) +
-                '&tzname=' +
-                rss_xcal_tz;
+                '&elmcity_id=' +
+                rss_id;
 
 location.href = ical_url;
 }
+
+function view_feed()
+{
+var feedurl =  $('#feedviewer_url').val();
+var property = $('#feedviewer_property').val();
+var url = 'http://elmcity.cloudapp.net/text_from_ics' +
+                '?url=' +
+                encodeURIComponent(feedurl) +
+                '&property=' +
+                property;
+
+location.href = url;
+}
+
+function view_feed_html()
+{
+var feedurl =  $('#calviewer_url').val();
+var id = $('#calviewer_id').val();
+var url = 'http://elmcity.cloudapp.net/view_calendar' +
+                '?feedurl=' +
+                encodeURIComponent(feedurl) +
+                '&id=' +
+                id;
+
+location.href = url;
+}
+
 
 
 </script>
@@ -236,16 +303,38 @@ location.href = ical_url;
 
 <body>
 
-<h1>the elmcity project: iCalendar url helpers</h1>
+<p style="text-align:center">
+<a href="#bookmarklets">bookmarklets</a> &#149; 
+<a href="#urlbuilders">iCalendar URL builders</a> &#149; 
+<a href="#viewers">feed viewers</a>
+
+</p>
+
+<a name="bookmarklets">
+<h1>bookmarklets</h1>
+
+<a name="gcal"></a>
+<h2>Google Calendar</h2>
+
+<p>
+This bookmarklet extracts the iCalendar URL from a web page on which an instance of Google Calendar has been embedded. An example of such a page: the <a href="http://www.mariposamuseum.org/calendar.html">Mariposa Museum Calendar</a>.
+</p>
+<p>
+Here is the bookmarklet: <a href="javascript:(function(){document.head.appendChild(document.createElement('script')).src='http://elmcity.blob.core.windows.net/admin/get-ical-from-gcal.js';})()">get ical from gcal</a>. To install it, drag the link to your browser's links toolbar. To use it, visit a page like the Mariposa Museum Calendar and click the link. The bookmarklet will figure out the iCalendar URL and report it at the top of the page.
+</p>
+
+
+<a name="urlbuilders">
+<h1>iCalendar URL builders</h1>
 
 <a name="facebook"></a>
 <h2>Facebook Pages</h2>
 
 <p>
-Some Facebook Pages, like <a href="https://www.facebook.com/BerkeleyUndergroundFilmSociety?sk=events">Berkeley Underground Film Society</a>, include calendars.
+Some Facebook pages, like <a href="https://www.facebook.com/BerkeleyUndergroundFilmSociety?sk=events">Berkeley Underground Film Society</a>, include calendars.
 </p>
 <p>
-This helper accepts the URL of a Facebook Page and an elmcity ID. It produces a corresponding iCalendar feed URL that you can add to your hub's registry.
+This helper accepts the URL of a Facebook page and an elmcity ID. It produces a corresponding iCalendar feed URL that you can add to your hub's registry.
 </p>
 
 <table>
@@ -268,11 +357,16 @@ This helper accepts the URL of a Facebook Page and an elmcity ID. It produces a 
 
 </table>
 
+<p style="font-size:smaller">
+Note: This now works both for Facebook fan pages as shown above, and also for group pages with calendars such as https://www.facebook.com/groups/Bytemarks.Meetup.
+</p>
+
+
 <a name="eventbrite_page"></a>
 <h2>EventBrite Page</h2>
 
 <p>
-This helper accepts the URL of an EventBrite event page and a timezone. It finds the EventBrite ID for the event, synthesizes an iCalendar feed for that event, and produces an iCalendar feed URL that you can add to your hub's registry.
+This helper accepts the URL of an EventBrite event page and an elmcity id. It finds the EventBrite ID for the event, synthesizes an iCalendar feed for that event, and produces an iCalendar feed URL that you can add to your hub's registry.
 </p>
 
 <table>
@@ -283,98 +377,8 @@ This helper accepts the URL of an EventBrite event page and a timezone. It finds
 </tr>
 
 <tr>
-<td style="text-align:right">Timezone: </td>
-<td>
-<select id="eb_tzname">
-<option>afghanistan</option>
-<option>alaskan</option>
-<option>arab</option>
-<option>arabian</option>
-<option>arabic</option>
-<option>argentina</option>
-<option>atlantic</option>
-<option>aus+central</option>
-<option>aus+eastern</option>
-<option>azerbaijan</option>
-<option>azores</option>
-<option>canada+central</option>
-<option>cape+verde</option>
-<option>caucasus</option>
-<option>cen.+australia</option>
-<option>central+america</option>
-<option>central+asia</option>
-<option>central+brazilian</option>
-<option>central+europe</option>
-<option>central+european</option>
-<option>central+pacific</option>
-<option>central</option>
-<option>central+(mexico)</option>
-<option>china</option>
-<option>dateline</option>
-<option>e.+africa</option>
-<option>e.+australia</option>
-<option>e.+europe</option>
-<option>e.+south+america</option>
-<option selected>eastern</option>
-<option>egypt</option>
-<option>ekaterinburg</option>
-<option>fiji</option>
-<option>fle</option>
-<option>georgian</option>
-<option>gmt</option>
-<option>greenland</option>
-<option>greenwich</option>
-<option>gtb</option>
-<option>hawaiian</option>
-<option>india</option>
-<option>iran</option>
-<option>israel</option>
-<option>jordan</option>
-<option>korea</option>
-<option>mauritius</option>
-<option>mid-atlantic</option>
-<option>middle+east</option>
-<option>montevideo</option>
-<option>morocco</option>
-<option>mountain</option>
-<option>mountain+(mexico)</option>
-<option>myanmar</option>
-<option>n.+central+asia</option>
-<option>namibia</option>
-<option>nepal</option>
-<option>new+zealand</option>
-<option>newfoundland</option>
-<option>north+asia+east</option>
-<option>north+asia</option>
-<option>pacific+sa</option>
-<option>pacific</option>
-<option>pacific+(mexico)</option>
-<option>pakistan</option>
-<option>romance</option>
-<option>russian</option>
-<option>sa+eastern</option>
-<option>sa+pacific</option>
-<option>sa+western</option>
-<option>samoa</option>
-<option>se+asia</option>
-<option>singapore</option>
-<option>south+africa</option>
-<option>sri+lanka</option>
-<option>taipei</option>
-<option>tasmania</option>
-<option>tokyo</option>
-<option>tonga</option>
-<option>us+eastern</option>
-<option>us+mountain</option>
-<option>venezuela</option>
-<option>vladivostok</option>
-<option>w.+australia</option>
-<option>w.+central+africa</option>
-<option>w.+europe</option>
-<option>west+asia</option>
-<option>west+pacific</option>
-</select>
-</td>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="eb_eid_id" value="BostonMA"></td>
 </tr>
 
 <tr>
@@ -403,7 +407,7 @@ This helper accepts the URL of an EventBrite event page and an elmcity ID. It fi
 
 <tr>
 <td style="text-align:right">elmcity ID: </td>
-<td><input style="width:1.5in" id="eb_elmcity_id" value="BostonMA"></td>
+<td><input style="width:1.5in" id="eb_organizer_id" value="BostonMA"></td>
 </tr>
 
 <tr>
@@ -761,6 +765,108 @@ And for home games:
 
 </table>
 
+<h3>Filtering by multiple included and/or excluded keywords</h3>
+
+<p>
+If you include or exclude a comma-separated list of keywords, they'll OR together. Here's an includer for Crazy Wisdom, in Ann Arbor, that finds events for a Health category. The found events will have health, herbal wisdom, healing, or remedies in the SUMMARY.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">iCalendar feed URL: </td>
+<td><input id="crazy_wisdom_feed_url" style="width:4in" value="http://www.localendar.com/public/crazywisdom?style=X2"></td>
+</tr>
+
+<tr>
+<td style="text-align:right"><i>include keyword</i>: </td>
+<td><input style="width:1.5in" id="include_crazywisdom" value="health,herbal wisdom,healing,remedies"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">SUMMARY only: </td>
+<td><input style="width:1.5in" value="yes"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="crazy_wisdom_elmcity_id" value="a2cal"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_ics_to_ics_ical_url_6()"></td>
+<td></td>
+</tr>
+
+</table>
+
+<p>
+Here's an excluder for Let's Dance Southern Vermont, a feed of dance events with occasional Zumba, Tai Chi, and Yoga events that wouldn't belong in a Dance category.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">iCalendar feed URL: </td>
+<td><input id="lets_dance_feed_url" style="width:4in" value="http://cid-dbad115f7e5abbd4.calendar.live.com/calendar/ray's+calendar/calendar.ics"></td>
+</tr>
+
+<tr>
+<td style="text-align:right"><i>exclude keyword</i>: </td>
+<td><input style="width:1.5in" id="exclude_lets_dance" value="yoga,zumba,tai chi"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">SUMMARY only: </td>
+<td><input style="width:1.5in" value="yes"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="lets_dance_elmcity_id" value="BrattleboroVT"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_ics_to_ics_ical_url_7()"></td>
+<td></td>
+</tr>
+
+</table>
+
+
+
+
+
+
+<a name="rss_xcal"></a>
+<h2>RSS with xCal (e.g. Zvents)</h2>
+
+<p>
+Although many sites provide RSS feeds for their calendars, most of these feeds don't format the calendar information in a way that enables automated data exchange. One notable exception is Zvents, a service used by a number of newspapers including <a href="http://www.seattlepi.com/">SeattlePI</a>.
+</p>
+
+<p>
+The <a href="http://events.seattlepi.com/search?cat=1&st=event">Arts & Crafts category at SeattlePI.com</a> is an example of such a feed. Here's how the elmcity project's Seattle hub transforms that RSS feed into an iCalendar feed:
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">RSS feed: </td>
+<td><input style="width:6in" id="rss_xcal_feed_url" value="http://events.seattlepi.com/search?cat=1&new=n&rss=1&srad=10&st=event&svt=text"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="rss_id" value="seattleopencalendar"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_rss_xcal_ical_url()"></td>
+<td></td>
+</tr>
+
+</table>
 
 <a name="highschoolsports"></a>
 <h2>HighSchoolSports.Net</h2>
@@ -802,126 +908,159 @@ This helper accepts the name of a high school and a timezone. It produces an iCa
 
 </table>
 
+<p>Note: Broken for now. See <a href="http://blog.jonudell.net/2012/09/27/a-great-disturbance-in-the-force/">A great disturbance in the force</a>.</p>
 
-<a name="rss_xcal"></a>
-<h2>RSS with xCal (e.g. Zvents)</h2>
+<a name="viewers">
+<h1>feed viewers</h1>
+
+
+<a name="feedviewer"></a>
+<h2>view feed as raw text</h2>
 
 <p>
-Although many sites provide RSS feeds for their calendars, most of these feeds don't format the calendar information in a way that enables automated data exchange. One notable exception is Zvents, a service used by a number of newspapers including <a href="http://www.seattlepi.com/">SeattlePI</a>.
-</p>
-
-<p>
-The <a href="http://events.seattlepi.com/search?cat=1&st=event">Arts & Crafts category at SeattlePI.com</a> is an example of such a feed. Here's how the elmcity project's Seattle hub transforms that RSS feed into an iCalendar feed:
+This helper accepts a feed URL and shows you the raw contents of the feed. If you specify an iCalendar property (e.g. SUMMARY, DESCRIPTION) it shows you just those properties. Note that if you filter on an optional property that isn't in the feed you'll see nothing. In that case remove the filter and try again.
 </p>
 
 <table>
 
 <tr>
-<td style="text-align:right">RSS feed: </td>
-<td><input style="width:6in" id="rss_xcal_feed_url" value="http://events.seattlepi.com/search?cat=1&new=n&rss=1&srad=10&st=event&svt=text"></td>
+<td style="text-align:right">url: </td>
+<td><input style="width:8in" id="feedviewer_url" value="http://www.christiansburg.org/common/modules/iCalendar/iCalendar.aspx?catID=25&feed=calendar"></td>
 </tr>
 
 <tr>
-<td style="text-align:right">Timezone: </td>
+<td style="text-align:right">property filter: </td>
 <td>
-<select id="rss_xcal_tz">
-<option>afghanistan</option>
-<option>alaskan</option>
-<option>arab</option>
-<option>arabian</option>
-<option>arabic</option>
-<option>argentina</option>
-<option>atlantic</option>
-<option>aus+central</option>
-<option>aus+eastern</option>
-<option>azerbaijan</option>
-<option>azores</option>
-<option>canada+central</option>
-<option>cape+verde</option>
-<option>caucasus</option>
-<option>cen.+australia</option>
-<option>central+america</option>
-<option>central+asia</option>
-<option>central+brazilian</option>
-<option>central+europe</option>
-<option>central+european</option>
-<option>central+pacific</option>
-<option>central</option>
-<option>central+(mexico)</option>
-<option>china</option>
-<option>dateline</option>
-<option>e.+africa</option>
-<option>e.+australia</option>
-<option>e.+europe</option>
-<option>e.+south+america</option>
-<option>eastern</option>
-<option>egypt</option>
-<option>ekaterinburg</option>
-<option>fiji</option>
-<option>fle</option>
-<option>georgian</option>
-<option>gmt</option>
-<option>greenland</option>
-<option>greenwich</option>
-<option>gtb</option>
-<option>hawaiian</option>
-<option>india</option>
-<option>iran</option>
-<option>israel</option>
-<option>jordan</option>
-<option>korea</option>
-<option>mauritius</option>
-<option>mid-atlantic</option>
-<option>middle+east</option>
-<option>montevideo</option>
-<option>morocco</option>
-<option>mountain</option>
-<option>mountain+(mexico)</option>
-<option>myanmar</option>
-<option>n.+central+asia</option>
-<option>namibia</option>
-<option>nepal</option>
-<option>new+zealand</option>
-<option>newfoundland</option>
-<option>north+asia+east</option>
-<option>north+asia</option>
-<option>pacific+sa</option>
-<option selected>pacific</option>
-<option>pacific+(mexico)</option>
-<option>pakistan</option>
-<option>romance</option>
-<option>russian</option>
-<option>sa+eastern</option>
-<option>sa+pacific</option>
-<option>sa+western</option>
-<option>samoa</option>
-<option>se+asia</option>
-<option>singapore</option>
-<option>south+africa</option>
-<option>sri+lanka</option>
-<option>taipei</option>
-<option>tasmania</option>
-<option>tokyo</option>
-<option>tonga</option>
-<option>us+eastern</option>
-<option>us+mountain</option>
-<option>venezuela</option>
-<option>vladivostok</option>
-<option>w.+australia</option>
-<option>w.+central+africa</option>
-<option>w.+europe</option>
-<option>west+asia</option>
-<option>west+pacific</option>
+<select id="feedviewer_property">
+<option value="" selected>none</option>
+<option value="SUMMARY">SUMMARY</option>
+<option value="LOCATION">LOCATION</option>
+<option value="URL">URL</option>
+<option value="CATEGORIES">CATEGORIES</option>
+<option value="DTSTART">DTSTART</option>
+<option value="DTEND">DTEND</option>
 </select>
 </td>
 </tr>
 
 <tr>
-<td><input type="submit" value="get ical url" onclick="get_rss_xcal_ical_url()"></td>
+<td><input type="submit" value="view ical feed" onclick="view_feed()"></td>
 <td></td>
 </tr>
 
 </table>
+
+<a name="calviewer"></a>
+<h2>view feed as html</h2>
+
+<p>
+This helper accepts a feed URL and an elmcity ID. It formats the feed as HTML, so you can check the contents of the feed.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">url: </td>
+<td><input style="width:8in" id="calviewer_url" value="http://cid-dffec23daaf5ee89.calendar.live.com/calendar/Jon%27s+Monadnock+Picks+(Music)/calendar.ics"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">elmcity ID: </td>
+<td><input style="width:1.5in" id="calviewer_id" value="elmcity"></td>
+</tr>
+
+<tr>
+<td><input type="submit" value="view feed as html" onclick="view_feed_html()"></td>
+<td></td>
+</tr>
+
+
+
+</table>
+
+<pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre>
+
+
 
 
 </body>

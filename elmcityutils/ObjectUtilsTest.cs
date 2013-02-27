@@ -86,5 +86,38 @@ namespace ElmcityUtils
 			Assert.IsFalse(ObjectUtils.ListDictStrEqualsListDictStr(l1, l2));
 		}
 
+		[Test]
+		public void ChangedObjectIsDetected()
+		{
+			var o1 = new TestObject(1, "one", true);
+			var o2 = new TestObject(1, "one", true);
+			Assert.That(ObjectUtils.DictStrEqualsDictStr(
+				ObjectUtils.ObjToDictStr(o1),
+				ObjectUtils.ObjToDictStr(o2)
+				)
+			);
+			o2.b = false;
+			Assert.IsFalse(ObjectUtils.DictStrEqualsDictStr(
+				ObjectUtils.ObjToDictStr(o1),
+				ObjectUtils.ObjToDictStr(o2)
+				)
+			);
+		}
+
 	}
+
+	public class TestObject
+	{
+		public int i;
+		public string s;
+		public bool b;
+
+		public TestObject(int i, string s, bool b)
+		{
+			this.i = i;
+			this.s = s;
+			this.b = b;
+		}
+	}
+
 }

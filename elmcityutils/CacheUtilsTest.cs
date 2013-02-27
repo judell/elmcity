@@ -140,20 +140,18 @@ namespace ElmcityUtils
 		[Test]
 		public void ResponseBodySuppressedForViewIfRequestIfNoneMatchEqualsResponseEtag()
 		{
-			var cache = new MockCache();
 			var headers = new System.Net.WebHeaderCollection() { { "If-None-Match", view_etag } };
 			var mock_controller_context = SetupMockControllerHeaders(headers);
-			var response = CacheUtils.MaybeSuppressResponseBodyForView(cache, mock_controller_context, cached_blob_contents);
+			var response = CacheUtils.MaybeSuppressResponseBodyForView(mock_controller_context, cached_blob_contents);
 			Assert.AreEqual(new byte[0], response);
 		}
 
 		[Test]
 		public void ResponseBodyNotSuppressedForViewIfRequestIfNoneMatchNotEqualsResponseEtag()
 		{
-			var cache = new MockCache();
 			var headers = new System.Net.WebHeaderCollection() { { "If-None-Match", "NOT_BLOB_ETAG" } };
 			var mock_controller_context = SetupMockControllerHeaders(headers);
-			var response = CacheUtils.MaybeSuppressResponseBodyForView(cache, mock_controller_context, cached_blob_contents);
+			var response = CacheUtils.MaybeSuppressResponseBodyForView(mock_controller_context, cached_blob_contents);
 			Assert.AreNotEqual(new byte[0], response);
 			Assert.AreEqual(cached_blob_contents, response);
 		}

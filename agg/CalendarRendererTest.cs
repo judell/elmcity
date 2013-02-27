@@ -28,7 +28,7 @@ namespace CalendarAggregator
 	{
 		private CalendarRenderer cr;
 		private ZonelessEventStore es;
-		private string event_html_header = "class=\"bl\"";
+		private string event_html_header = "class=\"bl";
 		private Calinfo calinfo = Utils.AcquireCalinfo(Configurator.testid);
 
 		static Uri view_uri = new Uri("http://elmcity.cloudapp.net/services/elmcity/xml?view=government");
@@ -61,7 +61,7 @@ namespace CalendarAggregator
 		public void RenderedHtmlViewMatchesExpectedCount()
 		{
 			var es_count = es.events.Count;
-			var html = cr.RenderHtml(null, EventStoreTest.test_category, 0, from: DateTime.MinValue, to: DateTime.MinValue);
+			var html = cr.RenderHtml(null, EventStoreTest.test_category, 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
 			var html_count = GenUtils.RegexCountSubstrings(html, event_html_header);
 			Assert.AreEqual(1, html_count);
 		}
@@ -125,9 +125,9 @@ namespace CalendarAggregator
 		{
 			var headers = new System.Net.WebHeaderCollection() { { "If-None-Match", view_etag } };
 			var mock_controller_context = CacheUtilsTest.SetupMockControllerHeaders(headers);
-			MockCache cache = new MockCache();
+			var cache = new MockCache();
 			cache[view_uri.ToString()] = view_contents;
-			var response = CacheUtils.MaybeSuppressResponseBodyForView(cache, mock_controller_context, view_contents);
+			var response = CacheUtils.MaybeSuppressResponseBodyForView(mock_controller_context, view_contents);
 			Assert.AreEqual(new byte[0], response);
 		}
 
@@ -136,8 +136,7 @@ namespace CalendarAggregator
 		{
 			var headers = new System.Net.WebHeaderCollection() { { "If-None-Match", "NOT_VIEW_ETAG" } };
 			var mock_controller_context = CacheUtilsTest.SetupMockControllerHeaders(headers);
-			MockCache cache = new MockCache();
-			var response = CacheUtils.MaybeSuppressResponseBodyForView(cache, mock_controller_context, view_contents);
+			var response = CacheUtils.MaybeSuppressResponseBodyForView(mock_controller_context, view_contents);
 			Assert.AreNotEqual(new byte[0], response);
 			Assert.AreEqual(response, view_contents);
 		}

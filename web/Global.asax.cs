@@ -13,23 +13,27 @@
  * *******************************************************************************/
 
 using System;
+using System.IO;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Timers;
+using System.Text;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
+using System.Web.Caching;
 using CalendarAggregator;
 using ElmcityUtils;
 using System.Net;
+using Newtonsoft.Json;
 
 namespace WebRole
 {
 	public class ElmcityController : Controller
 	{
-
-
+		public static UTF8Encoding UTF8 = new UTF8Encoding(false);
 		public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 		public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
 		public static string domain_name = AppDomain.CurrentDomain.FriendlyName;
@@ -38,6 +42,10 @@ namespace WebRole
 		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
 		public static Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
+
+		public static Dictionary<string, int> smartphone_screen_dimensions = Utils.GetSmartPhoneScreenDimensions();
+
+		public static Dictionary<string, Dictionary<string, string>> themes = new Dictionary<string, Dictionary<string, string>>();
 
 		// last-resort exception handler
 		protected override void OnException(ExceptionContext filterContext)
@@ -49,45 +57,6 @@ namespace WebRole
 			TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.twitter_account, "last chance: " + msg);
 			filterContext.ExceptionHandled = true;
 			this.View("FinalError").ExecuteResult(this.ControllerContext);
-		}
-
-		// allow only trusted ip addresses
-		public bool AuthenticateAsSelf()
-		{
-			var self_ip_addr = DnsUtils.TryGetHostAddr(ElmcityUtils.Configurator.appdomain);
-
-			var trusted_addrs_list = new List<string>();
-
-			// trust requests from self, e.g. http://elmcity.cloudapp.net            
-			trusted_addrs_list.Add(self_ip_addr);
-
-			// only for local testing!
-			//trusted_addrs_list.Add("127.0.0.1");
-
-			// trust requests from hosts named in an azure table
-			var query = "$filter=(PartitionKey eq 'trustedhosts')";
-			var trusted_host_dicts = this.ts.QueryAllEntitiesAsListDict(table: "trustedhosts", query: query).list_dict_obj;
-			foreach (var trusted_host_dict in trusted_host_dicts)
-			{
-				if (trusted_host_dict.ContainsKey("host"))
-				{
-					var trusted_host_name = trusted_host_dict["host"].ToString();
-					var trusted_addr = DnsUtils.TryGetHostAddr(trusted_host_name);
-					trusted_addrs_list.Add(trusted_addr);
-				}
-			}
-
-			var incoming_addr = this.HttpContext.Request.UserHostAddress;
-
-			if (trusted_addrs_list.Exists(addr => addr == incoming_addr))
-				return true;
-			else
-			{
-				var msg = "AuthenticateAsSelf rejected " + incoming_addr;
-				var data = "trusted: " + String.Join(", ", trusted_addrs_list.ToArray());
-				GenUtils.PriorityLogMsg("warning", msg, data);
-				return false;
-			}
 		}
 
 		#region foreign auth
@@ -117,11 +86,57 @@ namespace WebRole
 		public ElmcityController()
 		{
 		}
+
+		public void MaybeCacheDependentObject(string url, string base_key)
+		{
+			if (this.HttpContext.Cache[url] == null)
+			{
+				var bytes = HttpUtils.FetchUrlNoCache(new Uri(url)).bytes;
+				var dependency = new ElmcityCacheDependency(base_key);
+				var cache = new AspNetCache(this.HttpContext.Cache);
+				InsertIntoCache(cache, bytes, dependency, url);
+			}
+		}
+
+		public void InsertIntoCache(AspNetCache cache, byte[] bytes, ElmcityCacheDependency dependency, string key)
+		{
+			var logger = new CacheItemRemovedCallback(AspNetCache.LogRemovedItemToAzure);
+			var expiration_hours = ElmcityUtils.Configurator.cache_sliding_expiration.Hours;
+			var sliding_expiration = new TimeSpan(expiration_hours, 0, 0);
+			cache.Insert(key, bytes, dependency, Cache.NoAbsoluteExpiration, sliding_expiration, CacheItemPriority.Normal, logger);
+		}
+
+		public byte[] GetObjectFromCacheOrWeb(AspNetCache cache, string key, string url)
+		{
+			byte [] data;
+			try
+			{
+				var object_is_cached = cache[key] != null;
+				if (object_is_cached)
+					data = (byte[])cache[key];
+				else
+				{
+					var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
+					var response = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, data: null, wait_secs: 3, max_tries: 3, timeout_secs: TimeSpan.FromSeconds(10));
+					if (response.status != HttpStatusCode.OK)
+						GenUtils.PriorityLogMsg("exception", "GetObjectFromCacheOrWeb: " + url, response.status.ToString() );
+					data = CacheUtils.MaybeSuppressResponseBodyForView(this.ControllerContext, response.bytes);
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "GetObjectFromCacheOrWeb: " + key + ", " + url, e.Message + e.StackTrace);
+				data = Encoding.UTF8.GetBytes(e.Message);
+			}
+			return data;
+		}
+
+		
 	}
 
 	public class ElmcityApp : HttpApplication
 	{
-		public static string version = "1852";
+		public static string version =  "2457";
 
 		public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
 		public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -141,9 +156,9 @@ namespace WebRole
 
 		public static OAuthTwitter oauth_twitter = new OAuthTwitter();
 
-		public static WebRoleData wrd = null;
+		public static WebRoleData wrd = new WebRoleData();
 
-		public static Dictionary<string, CalendarRenderer> renders = new Dictionary<string, CalendarRenderer>();
+		public static string get_events_param_types = "html|xml|json|ics|rss|tags_json|stats|tags_html|jswidget|today_as_html";
 
 		public ElmcityApp()
 		{
@@ -192,6 +207,12 @@ namespace WebRole
 				"{id}/feed2json",
 				new { controller = "Home", action = "feed2json" },
 				new { id = wrd.str_ready_ids }
+				);
+
+			routes.MapRoute(
+				"get_css_theme",
+				"get_css_theme",
+				new { controller = "Home", action = "get_css_theme" }
 				);
 
 			/*
@@ -273,11 +294,17 @@ namespace WebRole
 				new { controller = "Home", action = "index" }
 			);
 
-			// for a bare url like /services/a2cal, emit a page that documents all the available formats
 			routes.MapRoute(
-				"hubfiles",
-				"services/{id}/",
-				new { controller = "Home", action = "hubfiles" },
+				"events3",
+				"{id}",
+				new { controller = "Services", action = "GetEvents", type = "html" },
+				new { id = wrd.str_ready_ids }
+				);
+
+			routes.MapRoute(
+				"about",
+				"{id}/about",
+				new { controller = "Home", action = "about" },
 				new { id = wrd.str_ready_ids }
 				);
 
@@ -338,6 +365,18 @@ namespace WebRole
 				);
 
 			routes.MapRoute(
+				"ics_from_findlocal",
+				"ics_from_findlocal",
+				 new { controller = "Home", action = "ics_from_findlocal" }
+				);
+
+			routes.MapRoute(
+				"keep_only_vevents",
+				"keep_only_vevents",
+				new { controller = "Home", action = "keep_only_vevents" }
+				);
+
+			routes.MapRoute(
 				"live_auth",
 				"live_auth",
 				new { controller = "Home", action = "live_auth" }
@@ -377,20 +416,6 @@ namespace WebRole
 			);
 
 
-			// run the method named arg1 in _generic.py, passing arg2 and arg3
-			routes.MapRoute(
-			   "py",
-			   "py/{arg1}/{arg2}/{arg3}",
-			   new { controller = "Home", action = "py", arg1 = "", arg2 = "", arg3 = "" }
-			   );
-
-			// reload settings and webrole data object
-			routes.MapRoute(
-				"reload",
-				"reload",
-				 new { controller = "Home", action = "reload" }
-				);
-
 			// dump a snapshot of diagnostic data
 			routes.MapRoute(
 				"snapshot",
@@ -414,6 +439,13 @@ namespace WebRole
 				new { id = wrd.str_ready_ids }
 			);
 
+			// fetch plain text of an ical feed, optionally grepped by property
+			routes.MapRoute(
+				"text_from_ics",
+				"text_from_ics",
+				new { controller = "Home", action = "text_from_ics" }
+			);
+
 			// url helpers page
 			routes.MapRoute(
 				"url_helpers",
@@ -421,11 +453,32 @@ namespace WebRole
 				new { controller = "Home", action = "url_helpers" }
 				);
 
+			// alias
+			routes.MapRoute(
+				"helpers",
+				"helpers",
+				new { controller = "Home", action = "helpers" }
+				);
+
 			routes.MapRoute(
 				"twitter_auth",
 				"twitter_auth",
 				new { controller = "Home", action = "twitter_auth" }
 				);
+
+
+			routes.MapRoute(
+				"view_calendar",
+				"view_calendar",
+				new { controller = "Home", action = "view_calendar" }
+				);
+
+			routes.MapRoute(
+				"welcome",
+				"welcome",
+				new { controller = "Home", action = "welcome" }
+				);
+
 
 #endregion 
 
@@ -437,30 +490,36 @@ namespace WebRole
 				"events",
 				"services/{id}/{type}",
 				new { controller = "Services", action = "GetEvents" },
-				new { id = wrd.str_ready_ids, type = "html|xml|json|ics|rss|tags_json|stats|tags_html|jswidget|today_as_html|search" }
+				new { id = wrd.str_ready_ids, type = get_events_param_types }
 				);
 
-			// this pattern covers most uses. gets events for a given hub id in many formats. allows
-			// only the specified formats, and only hub ids that are "ready"
+			// also allow bare id/type 
 			routes.MapRoute(
 				"events2",
 				"{id}/{type}",
 				new { controller = "Services", action = "GetEvents" },
-				new { id = wrd.str_ready_ids, type = "html|xml|json|ics|rss|tags_json|stats|tags_html|jswidget|today_as_html|search" }
+				new { id = wrd.str_ready_ids, type = get_events_param_types }
 				);
 
-			// reach back {minutes} into the log table and spew entries since then
+			 
 			routes.MapRoute(
 				"logs",
-				"logs/{id}/{minutes}",
-				new { controller = "Services", action = "GetLogEntries" },
-				new { id = "all|" + wrd.str_ready_ids, minutes = new LogMinutesConstraint() }
+				"logs",
+				new { controller = "Services", action = "GetLogEntries" }
 			  );
 
 			// dump the hub's metadata, extended with computed values,
 			routes.MapRoute(
 				"metadata",
 				"services/{id}/metadata",
+				new { controller = "Services", action = "GetMetadata" },
+				new { id = wrd.str_ready_ids }
+				);
+
+			// alternate at root
+			routes.MapRoute(
+				"metadata2",
+				"{id}/metadata",
 				new { controller = "Services", action = "GetMetadata" },
 				new { id = wrd.str_ready_ids }
 				);
@@ -518,7 +577,7 @@ namespace WebRole
 			var msg = "WebRole: Application_Start";
 			GenUtils.PriorityLogMsg("info", msg, null);
 
-			Utils.ScheduleTimer(UpdateWrdAndPurgeCache, CalendarAggregator.Configurator.webrole_cache_purge_interval_minutes, name: "UpdateWrdAndPurgeCache", startnow: false);
+			Utils.ScheduleTimer(PurgeCache, CalendarAggregator.Configurator.webrole_cache_purge_interval_minutes, name: "PurgeCache", startnow: false);
 			Utils.ScheduleTimer(ReloadSettingsAndRoutes, minutes: CalendarAggregator.Configurator.webrole_reload_interval_minutes, name: "ReloadSettingsAndRoutes", startnow: true);
 			Utils.ScheduleTimer(MakeTablesAndCharts, minutes: CalendarAggregator.Configurator.web_make_tables_and_charts_interval_minutes, name: "MakeTablesAndCharts", startnow: false);
 			ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
@@ -534,50 +593,135 @@ namespace WebRole
 		{
 			GenUtils.LogMsg("info", "webrole _ReloadRoutes", null);
 
+			bool new_routes = false;
+
 			try
 			{
 				ElmcityController.settings = GenUtils.GetSettingsFromAzureTable();
 			}
 			catch (Exception e0)
 			{
-				var msg = "_ReloadSettingsAndRoutes: cannot get settings from azure!";
+				var msg = "_ReloadSettingsAndRoutes: settings";
 				GenUtils.PriorityLogMsg("exception", msg, e0.Message);
 			}
 
 			try
 			{
-				wrd = WebRoleData.GetWrd();
-				GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes: registering routes", null);
-				RouteTable.Routes.Clear();
-				ElmcityApp.RegisterRoutes(RouteTable.Routes, wrd);
-				//RouteDebug.RouteDebugger.RewriteRoutesForTesting(RouteTable.Routes);
-				GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes: registered routes", null);
-			}
-			catch (Exception e3)
-			{
-				var msg = "_ReloadSettingsAndRoutes: registering routes";
-				GenUtils.PriorityLogMsg("exception", msg, e3.Message);
-			}
-		}
-
-		public static void UpdateWrdAndPurgeCache(Object o, ElapsedEventArgs e)
-		{
-			try
-			{
-				wrd = WebRoleData.GetWrd();   // if renderer(s) updated, update before cache purge so next recache uses fresh renderer(s)
-				var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
-				ElmcityUtils.CacheUtils.MaybePurgeCache(cache);
+				var _wrd = WebRoleData.GetWrd();
+				if (_wrd.ready_ids.Count != ElmcityApp.wrd.ready_ids.Count)  // did # of hubs change?
+				{
+					new_routes = true;                                       // force rebuild of route map
+					GenUtils.LogMsg("info", "Reload: found a new hub", null);
+					lock (ElmcityApp.wrd)
+					{
+						ElmcityApp.wrd = _wrd;                               // update WebRoleData
+					}
+				}
+				foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's CalendarRenderer.Calinfo change?
+				{
+					var cached_calinfo = ElmcityApp.wrd.renderers[id].calinfo;
+					var current_calinfo = Utils.AcquireCalinfo(id);
+					var cached_dict = ObjectUtils.ObjToDictStr(cached_calinfo);
+					var current_dict = ObjectUtils.ObjToDictStr(current_calinfo);
+					if (ObjectUtils.DictStrEqualsDictStr(cached_dict, current_dict) == false)  // calinfo.obj on blob store is different
+					{
+						GenUtils.LogMsg("info", "Reload: new calinfo+renderer for " + id, null);
+						lock (ElmcityApp.wrd)
+						{      
+							var renderer = Utils.AcquireRenderer(id);                         // load new renderer, maybe custom for this hub
+							GenUtils.LogMsg("info", "renderer.calinfo.version_description: " + renderer.calinfo.version_description, null);
+							ElmcityApp.wrd.renderers[id] = renderer;                          // update the renderer (and its calinfo)
+							var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);      
+							var url = Utils.MakeBaseZonelessUrl(id);
+							cache.Remove(url);                                               // flush cached objects for id
+							var obj = HttpUtils.FetchUrl(new Uri(url));						// rewarm cache
+						}
+					}
+				}
 			}
 			catch (Exception e1)
 			{
-				wrd = null;
-				var msg = "UpdateWrdAndPurgeCache: cannot unpickle webrole data";
-				GenUtils.PriorityLogMsg("exception", msg, e1.Message);
+				GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: cannot check/update wrd", e1.Message);
+				try
+				{
+					var __wrd = ElmcityApp.wrd = WebRoleData.MakeWebRoleData();
+					lock (ElmcityApp.wrd)
+					{
+						ElmcityApp.wrd = __wrd;
+					}
+				}
+				catch (Exception e2)
+				{
+					GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: cannot remake wrd", e2.Message);
+				}
 			}
 
-			if (wrd == null)
+
+			try
 			{
-				wrd = WebRoleData.MakeWebRoleData();
+				var themes = Utils.GetThemesDict();
+				if (ObjectUtils.DictOfDictStrEqualsDictOfDictStr(themes, ElmcityController.themes) == false)
+				{
+					lock (ElmcityController.themes)
+					{
+						ElmcityController.themes = themes;
+					}
+				}
+			}
+			catch (Exception e2)
+			{
+				var msg = "_ReloadSettingsAndRoutes: themes";
+				GenUtils.PriorityLogMsg("exception", msg, e2.Message);
+			}
+
+			if (new_routes)
+			{
+				try
+				{
+				lock (RouteTable.Routes)
+					{
+						RouteTable.Routes.Clear();
+						ElmcityApp.RegisterRoutes(RouteTable.Routes, ElmcityApp.wrd);
+						// RouteDebug.RouteDebugger.RewriteRoutesForTesting(RouteTable.Routes);
+					}
+				}
+				catch (Exception e3)
+				{
+					GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: registering routes", e3.Message);
+				}
+			}
+
+		}
+
+		public static void PurgeCache(Object o, ElapsedEventArgs e)
+		{
+			try
+			{
+				var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
+				ElmcityUtils.CacheUtils.MaybePurgeCache(cache);
+			}
+			catch (Exception ex)
+			{
+				GenUtils.PriorityLogMsg("exception", "PurgeCache", ex.Message);
+			}
+
+		}
+
+		public static void EmptyCache()
+		{
+			try
+			{
+				var cache = ElmcityApp.home_controller.HttpContext.Cache;
+				var e = cache.GetEnumerator();
+				while (e.MoveNext())
+				{
+					var item = e.Current.ToString();
+					cache.Remove(item);
+				}
+			}
+			catch (Exception ex)
+			{
+				GenUtils.PriorityLogMsg("exception", "PurgeCache", ex.Message);
 			}
 
 		}

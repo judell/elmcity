@@ -24,22 +24,8 @@ namespace CalendarAggregator
 	[TestFixture]
 	public class MetadataTest
 	{
-		private static string id = ElmcityUtils.Configurator.azure_compute_account;
-
-		private FeedRegistry fr = new FeedRegistry(ElmcityUtils.Configurator.azure_compute_account);
-
-		public MetadataTest()
-		{
-			fr.LoadFeedsFromAzure(FeedLoadOption.all);		
-		}
-
-		[Test]
-		public void LoadFeedIsSuccessful()
-		{
-			var feedurl = fr.feeds.Keys.First();
-			var dict = Metadata.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
-			Assert.That(dict.ContainsKey("feedurl") && dict.ContainsKey("source"));
-		}
+		private static string id = "testKeene";
+		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
 		[Test]
 		public void LoadHubsIsSuccessful()
@@ -52,6 +38,22 @@ namespace CalendarAggregator
 		public void LoadHubMetadataIsSuccessful()
 		{
 			var dict = Metadata.LoadMetadataForIdFromAzureTable(id);
+			Assert.That(dict.ContainsKey("type") && dict.ContainsKey("tz"));
+		}
+
+		[Test]
+		public void FeedUpdateIsSuccessful()
+		{
+		}
+
+		[Test]
+		public void FeedAddIsSuccessful()
+		{
+		}
+
+		[Test]
+		public void FeedDeleteIsSuccessful()
+		{
 		}
 
 	}

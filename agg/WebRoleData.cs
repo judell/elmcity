@@ -39,6 +39,10 @@ namespace CalendarAggregator
 		// the /services/peekskill family of URLs won't become active until the hub joins the list of ready_ids
 		public string str_ready_ids;
 
+		public WebRoleData()
+		{
+		}
+
 		public WebRoleData(bool testing, string test_id)
 		{
 			GenUtils.LogMsg("info", String.Format("WebRoleData: {0}, {1}, {2}, {3}", procname, procid, domain_name, thread_id), null);
@@ -52,9 +56,8 @@ namespace CalendarAggregator
 			{
 				GenUtils.LogMsg("info", "GatherWebRoleData: readying: " + id, null);
 
-				var cr = Utils.AcquireRenderer(id);
+				var cr = new CalendarRenderer(id);
 				this.renderers.Add(id, cr);
-
 				this.ready_ids.Add(id);
 			});
 			//}
@@ -85,29 +88,23 @@ namespace CalendarAggregator
 			this.what_ids.Sort();
 		}
 
-		public static WebRoleData MakeWebRoleData() // todo: lease the blob
+		public static WebRoleData MakeWebRoleData()
 		{
 			WebRoleData wrd = null;
-			var bs = BlobStorage.MakeDefaultBlobStorage();
 			try  // create WebRoleData structure and store as blob, available to webrole on next _reload
 			{
 				var sw = new Stopwatch();
 				sw.Start();
-				var lease_response = bs.RetryAcquireLease("admin", "wrd.obj");
-				if (lease_response.status == HttpStatusCode.Created)
-				{
-					var lease_id = lease_response.headers["x-ms-lease-id"];
-					wrd = new WebRoleData(testing: false, test_id: null);
-					var info = String.Format("new wrd: where_ids: {0}, what_ids: {1}, region_ids {2}", wrd.where_ids.Count, wrd.what_ids.Count, wrd.region_ids.Count);
-					GenUtils.LogMsg("info", info, null);
-					GenUtils.LogMsg("info", "new wrd: " + wrd.str_ready_ids, null);
-					var bytes = ObjectUtils.SerializeObject(wrd);
-					var headers = new Hashtable() { { "x-ms-lease-id", lease_id } };
-					var r = bs.PutBlob("admin", "wrd.obj", headers, bytes, "binary/octet-stream");
-					sw.Stop();
-					GenUtils.LogMsg("info", "new wrd: " + sw.Elapsed.ToString(), null);
-					System.Diagnostics.Debug.Assert(r.HttpResponse.status == HttpStatusCode.Created);
-				}
+				wrd = new WebRoleData(testing: false, test_id: null);
+				sw.Stop();
+				GenUtils.LogMsg("info", "new wrd: " + sw.Elapsed.ToString(), null);
+				var info = String.Format("new wrd: where_ids: {0}, what_ids: {1}, region_ids {2}", wrd.where_ids.Count, wrd.what_ids.Count, wrd.region_ids.Count);
+				GenUtils.LogMsg("info", info, null);
+				GenUtils.LogMsg("info", "new wrd: " + wrd.str_ready_ids, null);
+				sw.Start();
+				SaveWrd(wrd);
+				sw.Stop();
+				GenUtils.LogMsg("info", "save wrd: " + sw.Elapsed.ToString(), null);
 			}
 			catch (Exception e3)
 			{
@@ -116,25 +113,63 @@ namespace CalendarAggregator
 			return wrd;
 		}
 
+		public static void SaveWrd(WebRoleData wrd)
+		{
+			var bs = BlobStorage.MakeDefaultBlobStorage();
+			var lease_response = bs.RetryAcquireLease("admin", "wrd.obj");
+			if (lease_response.status == HttpStatusCode.Created)
+			{
+				var lease_id = lease_response.headers["x-ms-lease-id"];
+				var bytes = ObjectUtils.SerializeObject(wrd);
+				var headers = new Hashtable() { { "x-ms-lease-id", lease_id } };
+				var r = bs.PutBlob("admin", "wrd.obj", headers, bytes, "binary/octet-stream");
+				if (r.HttpResponse.status != HttpStatusCode.Created)
+					GenUtils.PriorityLogMsg("warning", "SaveWrd: cannot save", null);
+			}
+			else
+			{
+				GenUtils.PriorityLogMsg("warning", "SaveWrd: cannot lease", null);
+			}
+		}
+
 		public static WebRoleData GetWrd()
 		{
 			var uri = BlobStorage.MakeAzureBlobUri("admin", "wrd.obj", false);
 			return (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri);
 		}
 
-		public static void UpdateRendererForId(string id) // todo: lease the blob
+		public static void UpdateRendererForId(string id)
 		{
 			var wrd = GetWrd();
 			var bs = BlobStorage.MakeDefaultBlobStorage();
 			try
 			{
-				var cr = Utils.AcquireRenderer(id);
+				var cr = new CalendarRenderer(id);
 				wrd.renderers[id] = cr;
-				bs.SerializeObjectToAzureBlob(wrd, "admin", "wrd.obj");
+				SaveWrd(wrd);
 			}
-			catch (Exception e2)
+			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "UpdateRendererForId", e2.Message);
+				GenUtils.PriorityLogMsg("exception", "UpdateRendererForId: " + id, e.Message);
+			}
+		}
+
+		public void AddNewHubToWrd(string id)
+		{
+			this.MakeWhereAndWhatAndRegionIdLists();
+			var bs = BlobStorage.MakeDefaultBlobStorage();
+			try
+			{
+				if ( this.renderers.ContainsKey(id) == false )
+					this.renderers.Add(id, new CalendarRenderer(id));
+				if ( this.ready_ids.Exists(x => x == id) == false )
+					this.ready_ids.Add(id);
+				this.str_ready_ids = String.Join("|", this.ready_ids.ToArray());
+				SaveWrd(this);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "AddNewHubToWrd", e.Message);
 			}
 		}
 

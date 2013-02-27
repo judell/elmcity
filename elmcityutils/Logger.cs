@@ -91,7 +91,10 @@ namespace ElmcityUtils
 				if (this.log_queue.Count > 0)
 				{
 					var msg = log_queue.Dequeue();
-					 this.ts.WriteLogMessage(msg.type, msg.title, msg.blurb);
+					if (msg == null)
+						this.ts.WriteLogMessage("warning", "LogThreadMethod", "unexpectedly dequeued a null value");
+					else
+						this.ts.WriteLogMessage(msg.type, msg.title, msg.blurb);
 				}
 
 				Thread.Sleep(wait_milliseconds);
