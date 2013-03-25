@@ -923,7 +923,7 @@ namespace CalendarAggregator
 		{
 			try
 			{
-				evt = NormalizeIcalEvt(evt, feedurl);
+				evt = NormalizeIcalEvt(evt, feedurl, source);
 
 				DateTimeWithZone dtstart;
 				DateTimeWithZone dtend;
@@ -1011,7 +1011,7 @@ namespace CalendarAggregator
 		}
 
 		// normalize url, description, location, category properties
-		public DDay.iCal.Event NormalizeIcalEvt(DDay.iCal.Event evt, string feedurl)
+		public DDay.iCal.Event NormalizeIcalEvt(DDay.iCal.Event evt, string feedurl, string source)
 		{
 			try
 			{
@@ -1030,7 +1030,7 @@ namespace CalendarAggregator
 
 				try
 				{
-					SetCategories(evt, feed_metadict, metadata_from_description);
+					SetCategories(evt, feed_metadict, metadata_from_description, id, source);
 				}
 				catch (Exception e)
 				{
@@ -1050,13 +1050,13 @@ namespace CalendarAggregator
 
 		}
 
-		private void SetCategories(DDay.iCal.Event evt, Dictionary<string, string> feed_metadict, Dictionary<string, string> metadata_from_description)
+		private void SetCategories(DDay.iCal.Event evt, Dictionary<string, string> feed_metadict, Dictionary<string, string> metadata_from_description, string id, string source)
 		{
 			var list = evt.Categories.ToList();
 
 			try
 			{
-				list = PrepareCats(list, feed_metadict);  // normalize, and apply catmap if it exists
+				list = PrepareCats(list, feed_metadict, id, source);  // normalize, and apply catmap if it exists
 			}
 			catch (Exception e)
 			{
@@ -1098,11 +1098,11 @@ namespace CalendarAggregator
 				evt.Categories.Add(cat);
 		}
 
-		private List<string> PrepareCats(List<string> ical_cats, Dictionary<string,string> feed_metadict)
+		private List<string> PrepareCats(List<string> ical_cats, Dictionary<string,string> feed_metadict, string id, string source)
 		{
 			if (!feed_metadict.ContainsKey("feedurl"))
 			{
-				GenUtils.PriorityLogMsg("warning", "PrepareCats: feed_metadict lacks feedurl", JsonConvert.SerializeObject(feed_metadict));
+                GenUtils.PriorityLogMsg("warning", "PrepareCats: feed_metadict lacks feedurl", id + " " + source);
 				return ical_cats;
 			}
 
