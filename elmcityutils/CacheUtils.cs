@@ -19,6 +19,7 @@ using System.Linq;
 using System.Text;
 using System.Web.Caching;
 using System.Web.Mvc;
+using System.Web.Http;
 
 namespace ElmcityUtils
 {
@@ -116,7 +117,7 @@ namespace ElmcityUtils
 		}
 	}
 
-	/* unused
+    /* unused
 	public interface ICacheDependency
 	{
 		void Dispose();

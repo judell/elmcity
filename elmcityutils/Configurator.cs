@@ -17,17 +17,31 @@ using System.Xml.Linq;
 
 namespace ElmcityUtils
 {
-    public static class Configurator
-    {
-        //--- service-wide values
-        public const string azure_b64_secret = "YOUR_SECRET";
-        public const string appdomain = "YOUR_NAME.cloudapp.net"; 
-        public const string azure_compute_account = "YOUR_NAME";
-        public const string azure_storage_account = "YOUR_NAME";
-		public const string sql_azure_host = "YOUR_HOST";
-		public const string sql_azure_user = "YOUR_NAME";
-		public const string sql_azure_pass = "YOUR_PASS";
-        //---
+	public static class Configurator
+	{
+		// -- service-wide values
+		public const string azure_b64_secret = "QZ287ANZWFVR86Bmj1D1vpCEQF1VQpE21eZIHdjzPYuzAa3ldrxJvxeKQXajAdtX6E69fejeiclAB5KP989tTw==";
+		public const string appdomain = "elmcity.cloudapp.net";
+		public const string azure_compute_account = "elmcity";
+		public const string azure_storage_account = "elmcity";
+		public const string sql_azure_host = "goyot8lwrc.database.windows.net";
+		public const string sql_azure_user = "judell";
+		public const string sql_azure_pass = "maple0$qvr";
+		public static string azure_cdn_blobhost { get { return _azure_cdn_blobhost; } }
+		private static string _azure_cdn_blobhost = "http://az26683.vo.msecnd.net";
+		// ---
+
+		/* --- service-wide values for testing
+		public const string azure_b64_secret = "XsVP9K4PuBgmgnizs58zEGzSqzG8+KlIDUbqouxWn+273YvfHLvqfRzJG+jhsdlqA6yWQLCaAY3GK9phm5PmIw==";
+		public const string appdomain = "elmcitytest.cloudapp.net";
+		public const string azure_compute_account = "elmcitytest";
+		public const string azure_storage_account = "elmcitytest";
+		public const string sql_azure_host = "";
+		public const string sql_azure_user = "";
+		public const string sql_azure_pass = "";
+		public static string azure_cdn_blobhost { get { return _azure_cdn_blobhost; } }
+		private static string _azure_cdn_blobhost = "http://az373762.vo.msecnd.net";
+		*/
 
 		public const string azure_blob_domain = "blob.core.windows.net";
 		public const string azure_table_domain = "table.core.windows.net";
@@ -35,8 +49,7 @@ namespace ElmcityUtils
 		public static string azure_blobhost { get { return _azure_blobhost; } }
 		private static string _azure_blobhost = string.Format("http://{0}.{1}", azure_storage_account, azure_blob_domain);
 
-		public static string azure_cdn_blobhost { get { return _azure_cdn_blobhost; } }
-		private static string _azure_cdn_blobhost = "http://YOUR_AZURE_CDN";
+
 
 		public const string azure_log_table = "log";
 		public const string azure_priority_log_table = "prioritylog";
@@ -63,8 +76,7 @@ namespace ElmcityUtils
 
 		public static string test_results_tablename = "testresults";
 
-       
-    }
+	}
 
 }
 

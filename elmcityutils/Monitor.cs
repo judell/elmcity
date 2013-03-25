@@ -19,7 +19,6 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Xml.Linq;
-using Microsoft.WindowsAzure.Diagnostics;
 
 namespace ElmcityUtils
 {
@@ -215,6 +214,7 @@ namespace ElmcityUtils
 		}
 
 		// use the counter_paths
+        /*
 		public static void AddCountersToConfig(DiagnosticMonitorConfiguration config, string excluded_specifier_prefix)
 		{
 			var counter_paths = GetCounters().counter_paths;
@@ -238,6 +238,7 @@ namespace ElmcityUtils
 						);
 			}
 		}
+         */
 
 		public static CounterResponse GetCounters()
 		{
