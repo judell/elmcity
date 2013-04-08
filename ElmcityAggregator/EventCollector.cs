@@ -134,8 +134,10 @@ namespace CalendarAggregator
 
 		private void LoadTags()
 		{
-			if (this.tags != null)
-				return;
+            if (this.tags != null)
+                return;
+            else
+                this.tags = new List<string>();
 
 			try
 			{
@@ -146,14 +148,6 @@ namespace CalendarAggregator
 			{
 				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire cat maps", e.Message + e.StackTrace);
 			}
-			try
-			{
-				this.tags = Utils.GetTagsFromJson(this.id);  // taxonomy as extended by curator
-            }
-            catch (Exception e0)
-            {
-				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire extended tags", e0.Message + e0.StackTrace);
-            }
 
             try
             {
@@ -167,8 +161,20 @@ namespace CalendarAggregator
 			}
 			catch (Exception e1)
 			{
-				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire tags", e1.Message + e1.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire core tags", e1.Message + e1.StackTrace);
 			}
+
+			try
+			{
+                foreach (var tag in Utils.GetTagsFromJson(this.id))
+                    this.tags.Add(tag);
+            }
+            catch (Exception e0)
+            {
+				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire extended tags", e0.Message + e0.StackTrace);
+            }
+
+
 		}
 
 		#region ical
