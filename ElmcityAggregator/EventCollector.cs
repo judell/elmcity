@@ -149,7 +149,14 @@ namespace CalendarAggregator
 			try
 			{
 				this.tags = Utils.GetTagsFromJson(this.id);  // taxonomy as extended by curator
+            }
+            catch (Exception e0)
+            {
+				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire extended tags", e0.Message + e0.StackTrace);
+            }
 
+            try
+            {
 				foreach (var key in eventful_cat_map.Keys)  // core taxonomy (and this ensures that we search eventful for at least this list)
 					if (this.tags.HasItem(key) == false)
 						this.tags.Add(key);
@@ -158,9 +165,9 @@ namespace CalendarAggregator
 					if (this.tags.HasItem(val) == false)
 						this.tags.Add(val);
 			}
-			catch (Exception e)
+			catch (Exception e1)
 			{
-				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire tags", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire tags", e1.Message + e1.StackTrace);
 			}
 		}
 
