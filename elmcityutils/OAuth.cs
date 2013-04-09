@@ -398,16 +398,19 @@ namespace ElmcityUtils
 
 		private static Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
 
-		public OAuthTwitter()
+
+		public OAuthTwitter(string consumer_key, string consumer_secret, string token, string token_secret)
 		{
-			this.consumer_key = settings["twitter_consumer_key"];
-			this.consumer_secret = settings["twitter_consumer_secret"];
+			this.consumer_key = consumer_key;
+			this.consumer_secret = consumer_secret;
+			this.token = token;
+			this.token_secret = token_secret;
 		}
 
 		public OAuthTwitter(string consumer_key, string consumer_secret)
 		{
 			this.consumer_key = consumer_key;
-			this.consumer_secret = consumer_secret;
+			this.consumer_secret = consumer_secret; 
 		}
 
 		public string oAuthWebRequest(Method method, string url, string post_data)
