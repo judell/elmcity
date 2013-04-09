@@ -830,9 +830,9 @@ if unsure please check http://{1}/{2}/stats",
         public ActionResult twitter_auth(string method, string url, string post_data, string oauth_token)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-            var oauth_twitter = new OAuthTwitter(consumer_key: settings["twitter_auth_consumer_key"], consumer_secret: settings["twitter_auth_consumer_secret"]);
+			var oauth_twitter = new OAuthTwitter(consumer_key: settings["twitter_auth_consumer_key"], consumer_secret: settings["twitter_auth_consumer_secret"]);
 
-            var auth = Authentications.AuthenticationList.Find(x => x.mode == Authentication.Mode.twitter);
+			var auth = Authentications.AuthenticationList.Find(x => x.mode == Authentication.Mode.twitter);
 
             if (Request.Cookies[auth.cookie_name.ToString()] == null)
             {
