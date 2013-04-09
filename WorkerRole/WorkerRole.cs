@@ -76,7 +76,7 @@ namespace WorkerRole
 
         private static string local_storage_path;
 
-        private static List<TwitterDirectMessage> twitter_direct_messages;
+        // private static List<TwitterDirectMessage> twitter_direct_messages; // disabled for now, twitter didn't like this approach
 
         private static ElmcityUtils.Monitor monitor;
 
@@ -133,7 +133,7 @@ namespace WorkerRole
             base.OnStop();
         }
 
-        private void RoleEnvironmentChanging(object sender, RoleEnvironmentChangingEventArgs e)
+        private void RoleEnvironmentChanging(object sender, RoleEnvironmentChangingEventArgs e)  // pro forma, not used, most config settings are in an azure table
         {
             // If a configuration setting is changing
             if (e.Changes.Any(change => change is RoleEnvironmentConfigurationSettingChange))
@@ -164,8 +164,8 @@ namespace WorkerRole
                     regions = Utils.GetRegionIds();
                     logger.LogMsg("info", "worker found " + regions.Count + " regions", null);
 
-                    twitter_direct_messages = TwitterApi.GetNewTwitterDirectMessages(); // get new control messages
-                    logger.LogMsg("info", "worker got " + twitter_direct_messages.Count + " messages", null);
+                    //twitter_direct_messages = TwitterApi.GetNewTwitterDirectMessages(); // get new control messages // disabled for now, twitter didn't like this
+                    //logger.LogMsg("info", "worker got " + twitter_direct_messages.Count + " messages", null);
 
                     //ids = MaybeAdjustIdsForTesting(ids);
 
@@ -173,7 +173,7 @@ namespace WorkerRole
 
                     BuildTodo(todo, ids);
 
-                    HandleTwitterMessages(todo, ids);
+                    //HandleTwitterMessages(todo, ids);
 
                     var union = todo.nonicaltasks.Union(todo.icaltasks).Union(todo.regiontasks);
 
@@ -230,6 +230,8 @@ namespace WorkerRole
             {
                 var calinfo = Utils.AcquireCalinfo(id);
 
+                /* disabled for now, twitter didn't like this
+                 * 
                 var messages_for_hub = TwitterMessagesForHub(twitter_direct_messages, calinfo);
 
                 if (messages_for_hub.Count > 0)
@@ -245,6 +247,7 @@ namespace WorkerRole
                     {
                         todo.start_requests.Add(id);
                     }
+                 */
 
                 if (calinfo.hub_enum == HubType.where)
                 {
@@ -288,6 +291,7 @@ namespace WorkerRole
             return ret;
         }
 
+        /* disabled for now, twitter didn't like it
         private void HandleTwitterMessages(Todo todo, List<string> ids)
         {
             foreach (var id in ids)
@@ -334,7 +338,7 @@ namespace WorkerRole
                     GenUtils.PriorityLogMsg("exception", "HandleMessages", e.Message);
                 }
             }
-        }
+        } */
 
         public void ProcessNonIcal(string id)
         {
