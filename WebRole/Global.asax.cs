@@ -154,7 +154,7 @@ namespace WebRole
 
         private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
-        public static OAuthTwitter oauth_twitter = new OAuthTwitter();
+        public static OAuthTwitter oauth_twitter = new OAuthTwitter(consumer_key: ElmcityController.settings["twitter_auth_consumer_key"], consumer_secret: ElmcityController.settings["twitter_auth_consumer_secret"]);
 
         public static WebRoleData wrd = new WebRoleData();
 
