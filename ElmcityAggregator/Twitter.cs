@@ -105,9 +105,7 @@ namespace CalendarAggregator
 		{
 			if (settings == null)
 				settings = GenUtils.GetSettingsFromAzureTable();
-			var oauth_twitter = new ElmcityUtils.OAuthTwitter();
-			oauth_twitter.token = settings["twitter_access_token"];
-			oauth_twitter.token_secret = settings["twitter_access_token_secret"];
+			var oauth_twitter = new OAuthTwitter(consumer_key: settings["twitter_api_consumer_key"], consumer_secret: settings["twitter_api_consumer_secret"], token: settings["twitter_api_token"], token_secret: settings["twitter_api_token_secret"]);
 			string xml = oauth_twitter.oAuthWebRequest(method, api_url, post_data);
 			return Encoding.UTF8.GetBytes(xml);
 		}
