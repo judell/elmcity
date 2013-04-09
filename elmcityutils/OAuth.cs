@@ -413,7 +413,7 @@ namespace ElmcityUtils
 			this.consumer_secret = consumer_secret; 
 		}
 
-		public string oAuthWebRequest(Method method, string url, string post_data)
+		public string oAuthWebRequest(Method method, string url, string oauth_verifier, string post_data)
 		{
 			string outUrl = "";
 			string querystring = "";
@@ -471,6 +471,9 @@ namespace ElmcityUtils
 					out querystring);
 
 			querystring += "&oauth_signature=" + this.UrlEncode(sig);
+
+			if ( oauth_verifier != null )
+				querystring += "&oauth_verifier=" + oauth_verifier;
 
 			//Convert the querystring to postData
 			if (method == Method.POST || method == Method.DELETE)
@@ -558,7 +561,7 @@ namespace ElmcityUtils
 		{
 			string ret = null;
 
-			string response = this.oAuthWebRequest(Method.GET, REQUEST_TOKEN, String.Empty);
+			string response = this.oAuthWebRequest(Method.GET, REQUEST_TOKEN, null, String.Empty);
 			if (response.Length > 0)
 			{
 				//response contains token and token secret.  We only need the token.
@@ -575,7 +578,7 @@ namespace ElmcityUtils
 
 				if (qs["oauth_token"] != null)
 				{
-					ret = AUTHORIZE + "?oauth_token=" + qs["oauth_token"];
+					ret = AUTHORIZE + "?oauth_token=" + qs["oauth_token"] + "&oauth_verifier=" + qs["oauth_verifier"];
 				}
 			}
 			return ret;
