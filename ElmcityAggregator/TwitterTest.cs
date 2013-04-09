@@ -23,6 +23,7 @@ namespace CalendarAggregator
 	public class TwitterTest
 	{
 
+		/* twitter features idle for now
 		[Test]
 		public void CanRetrieveDirectMessagesFromTwitter()
 		{
@@ -43,6 +44,7 @@ namespace CalendarAggregator
 			var result = TwitterApi.UserFollowsUser("elmcity_azure", "judell");
 			Assert.That(result == true);
 		}
+		 */
 
 	}
 }
