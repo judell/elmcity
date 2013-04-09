@@ -373,9 +373,9 @@ namespace ElmcityUtils
 		// from http://www.voiceoftech.com/swhitley/?p=681
 
 		public enum Method { GET, POST, DELETE };
-		public const string REQUEST_TOKEN = "http://twitter.com/oauth/request_token";
-		public const string AUTHORIZE = "http://twitter.com/oauth/authorize";
-		public const string ACCESS_TOKEN = "http://twitter.com/oauth/access_token";
+		public const string REQUEST_TOKEN = "https://twitter.com/oauth/request_token";
+		public const string AUTHORIZE = "https://twitter.com/oauth/authorize";
+		public const string ACCESS_TOKEN = "https://twitter.com/oauth/access_token";
 
 		private string consumer_key;
 		private string consumer_secret;
