@@ -827,7 +827,7 @@ if unsure please check http://{1}/{2}/stats",
 
         #region authentication
 
-        public ActionResult twitter_auth(string method, string url, string post_data, string oauth_token)
+        public ActionResult twitter_auth(string oauth_token, string oauth_verifier)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			var oauth_twitter = new OAuthTwitter(consumer_key: settings["twitter_auth_consumer_key"], consumer_secret: settings["twitter_auth_consumer_secret"]);
@@ -850,7 +850,7 @@ if unsure please check http://{1}/{2}/stats",
             {
                 var session_id = Request.Cookies[auth.cookie_name.ToString()].Value;
                 oauth_twitter.token = oauth_token;
-                string response = oauth_twitter.oAuthWebRequest(OAuthTwitter.Method.GET, OAuthTwitter.ACCESS_TOKEN, String.Empty);
+                string response = oauth_twitter.oAuthWebRequest(OAuthTwitter.Method.GET, OAuthTwitter.ACCESS_TOKEN, oauth_verifier, String.Empty);
                 if (response.Length > 0)
                 {
                     System.Collections.Specialized.NameValueCollection qs = HttpUtility.ParseQueryString(response);
