@@ -827,10 +827,12 @@ namespace WebRole
 
 		#region twitter
 
+        /* disabled for now, twitter wasn't happy about this approach
+
 		public ActionResult CallTwitterApi(string method, string url, string post_data, string oauth_token)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-			/* 
+
 			if (!this.AuthenticateAsSelf())
 				return new EmptyResult();
 
@@ -867,8 +869,6 @@ namespace WebRole
 			}
 
 			return r;
-			 */
-			return new EmptyResult();
 		}
 
 		public class TwitterApiResult : ActionResult
@@ -920,9 +920,10 @@ namespace WebRole
 				ElmcityApp.oauth_twitter.token_secret = settings["twitter_access_token_secret"];
 				string xml = ElmcityApp.oauth_twitter.oAuthWebRequest(method, api_url, post_data);
 				return xml;
-			}
+			} 
 
 		}
+
 
 		public string AutoOAuthLinkGet()
 		{
@@ -987,6 +988,7 @@ namespace WebRole
 			entity.Add("value", value);
 			ts.UpdateEntity("settings", "settings", name, entity);
 		}
+         */
 
 		#endregion
 
