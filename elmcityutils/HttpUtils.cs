@@ -182,7 +182,7 @@ namespace ElmcityUtils
 
 			try
 			{
-				request.ContentLength = 0;
+				//request.ContentLength = 0;
 
 				if (data != null && data.Length > 0)
 				{
@@ -227,6 +227,8 @@ namespace ElmcityUtils
 			{
 				//NUnit.Framework.Assert.IsNotNull(response);
 				Stream response_stream = response.GetResponseStream();
+				if (response_stream.CanRead == false)
+					return new byte[0];
 				//NUnit.Framework.Assert.IsNotNull(response_stream);
 				Encoding encoding;
 				var charset = response.CharacterSet ?? "";
