@@ -488,6 +488,23 @@ if unsure please check http://{1}/{2}/stats",
             return Content(ics, "text/calendar");
         }
 
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult ics_from_json(string json_url, string source, string tzname)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string ics = "";
+			try
+			{
+				var json = HttpUtils.FetchUrl(new Uri(json_url)).DataAsString();
+				ics = Utils.IcsFromJson(json, source, tzname);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "IcsFromJson", e.Message + e.StackTrace);
+			}
+			return Content(ics, "text/calendar");
+		}
+
         public ActionResult soon(string id, string type, string view, string count, string hours, string days)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
