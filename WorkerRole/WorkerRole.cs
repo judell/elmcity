@@ -280,6 +280,7 @@ namespace WorkerRole
 
         }
 
+		/* twitter messaging disabled for now, twitter did not like it
         private List<TwitterDirectMessage> TwitterMessagesForHub(List<TwitterDirectMessage> twitter_direct_messages, Calinfo calinfo)
         {
             List<TwitterDirectMessage> ret = new List<TwitterDirectMessage>();
@@ -291,7 +292,6 @@ namespace WorkerRole
             return ret;
         }
 
-        /* disabled for now, twitter didn't like it
         private void HandleTwitterMessages(Todo todo, List<string> ids)
         {
             foreach (var id in ids)
@@ -501,7 +501,7 @@ namespace WorkerRole
             if (todo.start_requests.HasItem(id))
             {
                 logger.LogMsg("info", "Received start message from " + id, null);
-                TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your start message");
+                //TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your start message");
                 started = type;
             }
             else
@@ -1002,8 +1002,9 @@ Future events {0}
                 failed += GenUtils.RunTests("ElmcityUtils");
                 failed += GenUtils.RunTests("WorkerRole");
                 failed += GenUtils.RunTests("WebRole");
-                if (failed > 0)
-                    TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed");
+				if (failed > 0)
+					//TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed");
+					GenUtils.PriorityLogMsg("warning", "TestRunner", failed.ToString() + " tests failed");
             }
             catch (Exception e)
             {
