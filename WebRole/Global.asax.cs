@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2475";
+        public static string version = "2476";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -400,6 +400,13 @@ namespace WebRole
 				"ics_from_json",
 				 new { controller = "Home", action = "ics_from_json" }
 				);
+
+			// convert ics to json
+			routes.MapRoute(
+				"ics_to_json",
+				"ics_to_json",
+				new { controller = "Home", action = "ics_to_json" }
+			);
 
             routes.MapRoute(
                 "keep_only_vevents",
