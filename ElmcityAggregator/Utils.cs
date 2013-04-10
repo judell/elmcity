@@ -1202,6 +1202,76 @@ namespace CalendarAggregator
 			return ics_text;
 		}
 
+		public static string IcsFromJson(string json, string source, string tzname)
+		{
+			var tzinfo = Utils.TzinfoFromName(tzname);
+			iCalendar ical = Utils.InitializeCalendarForTzinfo(tzinfo);
+			var list_of_dict = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(json);
+			foreach (var dict in list_of_dict)
+			{
+				/* 1 = required key/val, 0 = optional
+			 {
+	1			"dtstart": "2013-04-14T08:00:00",      # JsonConvert reads this as DateTime
+	0			"dtend": "2013-04-14T11:00:00",        # can be (typically is) empty
+	1			"title": "The Ticket ~ Dance ~ Rock",
+	0			"url": "http://www.facebook.com/events/616496838376153",
+	0	        "lat": "42.977274,",                    
+	0	        "lon": "-72.175455",
+	1			"allday": false,                       # JsonConvert readst his as Boolean
+	0			"description": "Mole Hill Theatre",     # can be (often is) empty
+	0			"location": "789 Gilsum Mine Road, East Alstead"  # in real life often not this useful
+		    } */
+				try
+				{
+					DateTimeWithZone dtstart_with_zone;
+					DateTimeWithZone dtend_with_zone;
+
+					DateTime dtstart = (DateTime) dict["dtstart"];
+					dtstart_with_zone = new DateTimeWithZone(dtstart,tzinfo);
+
+					DateTime dtend = DateTime.MinValue;
+					if (dict.ContainsKey("dtend"))
+						dtend = (DateTime) dict["dtend"];
+					dtend_with_zone = new DateTimeWithZone(dtend, tzinfo);
+
+					var title = (string)dict["title"];
+
+					string url = "";
+					if ( dict.ContainsKey("url") )
+						url = (string) dict["url"];
+
+					string lat = "";
+					if (dict.ContainsKey("lat"))
+						lat = (string)dict["lat"];
+
+					string lon = "";
+					if (dict.ContainsKey("lon"))
+						lon = (string)dict["lon"];
+
+					bool allday = (bool)dict["allday"];
+
+					string description = "";
+					if (dict.ContainsKey("description"))
+						description = (string)dict["description"];
+
+					string location = "";
+					if (dict.ContainsKey("location"))
+						location = (string)dict["location"];
+
+					var dday_event = Collector.MakeTmpEvt(tzinfo, dtstart: dtstart_with_zone, dtend: dtend_with_zone, title: title, url: url, location: location, description: description, lat: lat, lon: lon, allday: allday);
+					Collector.AddEventToDDayIcal(ical, dday_event);
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "IcsFromJson: " + source, e.Message + e.StackTrace);
+				}
+			}
+
+			var ical_serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer(ical);
+			var ics_text = ical_serializer.SerializeToString(ical);
+			return ics_text;
+		}
+
 		public static List<FacebookEvent> UnpackFacebookEventsFromJson(JObject fb_json)
 		{
 			var fb_events = new List<FacebookEvent>();
