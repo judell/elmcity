@@ -659,50 +659,50 @@ if unsure please check http://{1}/{2}/stats",
             return cr;
         }
 
-        [OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
-        public ActionResult view_calendar(string feedurl, string id)   
-        {
-            var r = new ContentResult();
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult view_calendar(string feedurl, string id)
+		{
+			var r = new ContentResult();
 			r.ContentType = "text/html";
 
 			if (id != String.Empty && Utils.CachedFeedObjExists(id, feedurl))
 				return view_cached_calendar(feedurl, id);
 
-            DDay.iCal.iCalendar ical;
-            var source = ""; // unneeded for this single-cal purpose
-            try
-            {
+			DDay.iCal.iCalendar ical;
+			var source = ""; // unneeded for this single-cal purpose
+			try
+			{
 				ical = Utils.iCalFromFeedUrl(feedurl, settings);
-            }
-            catch (Exception e)
-            {
-                r.Content = string.Format(@"Sorry, unable to parse {0} as an iCalendar feed. The error was: {1}", feedurl, e.Message + e.StackTrace);
-                return r;
-            }
+			}
+			catch (Exception e)
+			{
+				r.Content = string.Format(@"Sorry, unable to parse {0} as an iCalendar feed. The error was: {1}", feedurl, e.Message + e.StackTrace);
+				return r;
+			}
 
-            var events_to_include = new List<DDay.iCal.Event>();
-            var event_recurrence_types = new Dictionary<DDay.iCal.Event, Collector.RecurrenceType>();
-            var calinfo = new Calinfo(id);
-            var collector = new Collector(calinfo, settings);
-            try
-            {
-                DateTime utc_midnight_in_tz = Utils.MidnightInTz(calinfo.tzinfo).UniversalTime;
-                DateTime then = utc_midnight_in_tz.AddDays(calinfo.icalendar_horizon_days);
-                collector.FeedGather(utc_midnight_in_tz, then, 0, ical, source, events_to_include, event_recurrence_types, false);
-                var es_zoned = new ZonedEventStore(calinfo, SourceType.ical);
-                var fr = new FeedRegistry(id);
-                foreach (var evt in events_to_include)
-                    collector.AddIcalEvent(evt, fr, es_zoned, feedurl, source);
-                var es_zoneless = new ZonelessEventStore(calinfo);
-                r = view_calendar_helper(id, r, es_zoned, es_zoneless);
-            }
-            catch (Exception e)
-            {
-                r.Content = "Unable to view calendar. " + e.Message + e.StackTrace;
-                return r;
-            }
-            return r;
-        }
+			var events_to_include = new List<DDay.iCal.Event>();
+			var event_recurrence_types = new Dictionary<DDay.iCal.Event, Collector.RecurrenceType>();
+			var calinfo = new Calinfo(id);
+			var collector = new Collector(calinfo, settings);
+			try
+			{
+				DateTime utc_midnight_in_tz = Utils.MidnightInTz(calinfo.tzinfo).UniversalTime;
+				DateTime then = utc_midnight_in_tz.AddDays(calinfo.icalendar_horizon_days);
+				collector.FeedGather(utc_midnight_in_tz, then, 0, ical, source, events_to_include, event_recurrence_types, false);
+				var es_zoned = new ZonedEventStore(calinfo, SourceType.ical);
+				var fr = new FeedRegistry(id);
+				foreach (var evt in events_to_include)
+					collector.AddIcalEvent(evt, fr, es_zoned, feedurl, source);
+				var es_zoneless = new ZonelessEventStore(calinfo);
+				r = view_calendar_helper(id, r, es_zoned, es_zoneless);
+			}
+			catch (Exception e)
+			{
+				r.Content = "Unable to view calendar. " + e.Message + e.StackTrace;
+				return r;
+			}
+			return r;
+		}
 
         private static ContentResult view_calendar_helper(string id, ContentResult r, ZonedEventStore es_zoned, ZonelessEventStore es_zoneless)
         {
