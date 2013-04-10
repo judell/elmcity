@@ -20,7 +20,7 @@ using ElmcityUtils;
 
 namespace CalendarAggregator
 {
-
+	/*
 	public class TwitterDirectMessage
 	{
 		public string id { get; set; }
@@ -38,15 +38,6 @@ namespace CalendarAggregator
 			this.text = text;
 		}
 
-		/* ObjectUtils.DictObjToObj eliminates the need for idioms like this:
-          
-		  public TwitterDirectMessage(Dictionary<string, object> dict_obj)
-	   {
-		   this.id = (string) dict_obj["id"];
-		   this.sender_screen_name = (string) dict_obj["sender_screen_name"];
-		   this.recipient_screen_name = (string) dict_obj["recipient_screen_name"];
-		   this.text = (string) dict_obj["text"];
-	   }*/
 	}
 
 	public enum TwitterCommandName { start, meta_refresh, add_fb_feed, rem_fb_feed, show_fb_feeds, none };
@@ -228,4 +219,6 @@ namespace CalendarAggregator
 			return messages.FindAll(msg => msg.sender_screen_name == id);
 		}
 	}
+
+	 */
 }
