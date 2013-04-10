@@ -34,6 +34,8 @@ namespace CalendarAggregator
 		void Confirm(TCommand command, string confirmation);
 	}
 
+	/*
+
 	public class TwitterAction : IAction<TwitterCommand>
 	{
 		public virtual bool Validate(TwitterCommand twitter_command)
@@ -167,5 +169,6 @@ namespace CalendarAggregator
 		}
 
 	}
+	 */
 
 }
