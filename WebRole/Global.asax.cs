@@ -54,7 +54,7 @@ namespace WebRole
             GenUtils.PriorityLogMsg("exception", "last chance", msg + filterContext.Exception.StackTrace);
             if (msg.Length > 140)
                 msg = msg.Substring(0, 140);
-            TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.twitter_account, "last chance: " + msg);
+            //TwitterApi.SendTwitterDirectMessage(CalendarAggregator.Configurator.twitter_account, "last chance: " + msg);
             filterContext.ExceptionHandled = true;
             this.View("FinalError").ExecuteResult(this.ControllerContext);
         }
@@ -371,11 +371,35 @@ namespace WebRole
                  new { controller = "Home", action = "ics_from_xcal" }
                 );
 
+			// parse the findlocal feed, return ics
             routes.MapRoute(
                 "ics_from_findlocal",
                 "ics_from_findlocal",
                  new { controller = "Home", action = "ics_from_findlocal" }
                 );
+
+			/* parse this format:
+			 [
+			    {
+				"dtstart": "2013-04-10T18:00:00",
+				"dtend": "2013-04-10T21:00:00",
+				"categories": "music",
+				"title": "Trout rehearsal",
+				"url": "http://www.applehill.org",
+				"source": "Apple Hill Center for Chamber Music",
+				"allday": false,
+				"lat": "42.977274,",
+				"lon": "-72.175455",
+				"description": "",
+				"location": ""
+				}
+			] */
+
+			routes.MapRoute(
+				"ics_from_json",
+				"ics_from_json",
+				 new { controller = "Home", action = "ics_from_json" }
+				);
 
             routes.MapRoute(
                 "keep_only_vevents",
