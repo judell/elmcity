@@ -3356,7 +3356,73 @@ END:VTIMEZONE");
 			return css_text.ToString();
 		}
 
+		public static iCalendar iCalFromFeedUrl(string feedurl, Dictionary<string,string> settings)
+		{
+			DDay.iCal.iCalendar ical = default(DDay.iCal.iCalendar);
+			try
+			{
+
+				var feedtext = Encoding.UTF8.GetString(HttpUtils.FetchUrl(new Uri(feedurl)).bytes);
+				feedtext = Collector.MassageFeedText(null, feedurl, feedtext, settings);
+				return Collector.ParseTheFeed(feedtext);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "iCalFromFeedUrl: " + feedurl, e.Message + e.StackTrace);
+			}
+			return ical;
+		}
+
+		public static string iCalToJson(iCalendar ical, string tzname, int days)
+		{
+			var list_of_dict = new List<Dictionary<string, string>>();
+
+			foreach (DDay.iCal.Event evt in ical.Events)
+			{
+				var tzinfo = Utils.TzinfoFromName(tzname);
+				DateTime utc_midnight_in_tz = Utils.MidnightInTz(tzinfo).UniversalTime;
+				DateTime then = utc_midnight_in_tz.AddDays(days);
+
+				var occurrences = evt.GetOccurrences(utc_midnight_in_tz, then);
+				foreach (Occurrence occurrence in occurrences)
+				{
+					try
+					{
+						if (Collector.IsCurrentOrFutureDTStartInTz(occurrence.Period.StartTime.UTC, tzinfo))
+						{
+							var instance = Collector.PeriodizeRecurringEvent(evt, occurrence.Period);
+							DateTime dtstart = Utils.LocalDateTimeFromiCalDateTime((DDay.iCal.iCalDateTime)instance.DTStart, tzinfo);
+							DateTime dtend = Utils.LocalDateTimeFromiCalDateTime((DDay.iCal.iCalDateTime)instance.DTEnd, tzinfo);
+
+							var dict = new Dictionary<string, string>();
+							dict.Add("summary", instance.Summary ?? "");
+							if ( instance.Url != null)
+								dict.Add("url", instance.Url.ToString());
+							dict.Add("location", instance.Location ?? "");
+							dict.Add("description", instance.Description ?? "");
+							dict.Add("dtstart", dtstart.ToString("yyyy-MM-ddTHH:mm:ss"));
+							dict.Add("dtend", dtend.ToString("yyyy-MM-ddTHH:mm:ss"));
+							var cats = ical.Events[0].Categories.ToList();
+							if ( cats.Count > 0 )
+								dict.Add("categories", String.Join(",", ical.Events[0].Categories.ToList()));
+							if (instance.GeographicLocation != null)
+								dict.Add("geo", instance.GeographicLocation.ToString());
+							list_of_dict.Add(dict);
+						}
+					}
+					catch (Exception e)
+					{
+						GenUtils.PriorityLogMsg("exception", "RenderIcsAsJson", e.Message + e.StackTrace);
+					}
+				}
+			}
+
+			var json = JsonConvert.SerializeObject(list_of_dict);
+			return GenUtils.PrettifyJson(json);
+		}
+
 		#endregion
+
 	}
 
 	public class USCensusPopulationData

@@ -401,6 +401,13 @@ namespace WebRole
 				 new { controller = "Home", action = "ics_from_json" }
 				);
 
+			// convert ics to json
+			routes.MapRoute(
+				"ics_to_json",
+				"ics_to_json",
+				new { controller = "Home", action = "ics_to_json" }
+			);
+
             routes.MapRoute(
                 "keep_only_vevents",
                 "keep_only_vevents",
