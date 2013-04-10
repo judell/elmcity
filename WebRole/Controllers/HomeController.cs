@@ -489,45 +489,20 @@ if unsure please check http://{1}/{2}/stats",
         }
 
 		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
-		public ActionResult ics_from_json(string json_url, string tzname)
+		public ActionResult ics_from_json(string json_url, string source, string tzname)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 			string ics = "";
 			try
 			{
 				var json = HttpUtils.FetchUrl(new Uri(json_url)).DataAsString();
-				ics = Utils.IcsFromJson(json, source: json_url, tzname: tzname);
+				ics = Utils.IcsFromJson(json, source, tzname);
 			}
 			catch (Exception e)
 			{
 				GenUtils.LogMsg("exception", "IcsFromJson", e.Message + e.StackTrace);
 			}
 			return Content(ics, "text/calendar");
-		}
-
-		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
-		public ActionResult ics_to_json(string feedurl, string tzname, string days)
-		{
-			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-	
-			string json = "";
-			int daycount;
-
-			try
-				{
-				if ( days == String.Empty )
-					daycount = Convert.ToInt32(settings["icalendar_horizon_days"]);
-				else
-					daycount = Convert.ToInt32(days);
-
-				var ical = Utils.iCalFromFeedUrl(feedurl, settings);
-				json = Utils.iCalToJson(ical, tzname, daycount);
-				}
-			catch (Exception e)
-				{
-				GenUtils.LogMsg("exception", "IcsFromJson", e.Message + e.StackTrace);
-				}
-			return Content(json, "application/json");
 		}
 
         public ActionResult soon(string id, string type, string view, string count, string hours, string days)
@@ -660,19 +635,23 @@ if unsure please check http://{1}/{2}/stats",
         }
 
         [OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
-        public ActionResult view_calendar(string feedurl, string id)   
+        public ActionResult view_calendar(string feedurl, string id)
         {
             var r = new ContentResult();
-			r.ContentType = "text/html";
+            r.ContentType = "text/html";
 
-			if (id != String.Empty && Utils.CachedFeedObjExists(id, feedurl))
-				return view_cached_calendar(feedurl, id);
+            if (Utils.CachedFeedObjExists(id, feedurl))
+                return view_cached_calendar(feedurl, id);
 
             DDay.iCal.iCalendar ical;
             var source = ""; // unneeded for this single-cal purpose
             try
             {
-				ical = Utils.iCalFromFeedUrl(feedurl, settings);
+                var feedtext = Encoding.UTF8.GetString(HttpUtils.FetchUrl(new Uri(feedurl)).bytes);
+                feedtext = Collector.MassageFeedText(null, feedurl, feedtext, settings);
+                StringReader sr = new StringReader(feedtext);
+                IICalendarCollection icals = iCalendar.LoadFromStream(sr);
+                ical = (DDay.iCal.iCalendar)icals.First().iCalendar;
             }
             catch (Exception e)
             {
@@ -720,7 +699,7 @@ if unsure please check http://{1}/{2}/stats",
         public ActionResult view_cached_calendar(string feedurl, string id)
         {
             var r = new ContentResult();
-			r.ContentType = "text/html";
+            r.ContentType = "text/html";
 
             try
             {

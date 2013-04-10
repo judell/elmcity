@@ -356,7 +356,7 @@ namespace CalendarAggregator
 
 		}
 
-		public static List<ZonelessEvent> UniqueByTitleAndStart(string id, List<ZonelessEvent> events, bool save_tag_sources) 
+		public static List<ZonelessEvent> UniqueByTitleAndStart(string id, List<ZonelessEvent> events, bool save_tag_sources)
 		{
 			var tag_sources = new Dictionary<string, Dictionary<string, int>>();
 			
@@ -405,7 +405,7 @@ namespace CalendarAggregator
 					all_urls_and_sources[key] = new Dictionary<string, string>() { { evt.url, evt.source } };
 			}
 
-			if (save_tag_sources && id != null)
+			if (save_tag_sources)
 			{
 				var bs = BlobStorage.MakeDefaultBlobStorage();
 				bs.SerializeObjectToAzureBlob(tag_sources, id, "tag_sources.obj");

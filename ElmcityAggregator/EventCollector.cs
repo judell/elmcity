@@ -416,7 +416,7 @@ namespace CalendarAggregator
 			}
 		}
 
-		public static iCalendar ParseTheFeed(string feedtext)
+		private static iCalendar ParseTheFeed(string feedtext)
 		{
 			iCalendar ical;
 			StringReader sr = new StringReader(feedtext);
@@ -846,7 +846,7 @@ namespace CalendarAggregator
 						if (recurrence_type == RecurrenceType.Recurring && skip_date_only && evt.DTStart.HasTime == false) // workaround for https://github.com/dougrday/icalvalid/issues/7 and 8
 							continue;                                                                                      // note: this is now a fallback because MassageFeedText tries to patch date-only UNTIL, adding T000000
 
-						if (IsCurrentOrFutureDTStartInTz(occurrence.Period.StartTime.UTC, this.calinfo.tzinfo))
+						if (IsCurrentOrFutureDTStartInTz(occurrence.Period.StartTime.UTC))
 						{
 							var instance = PeriodizeRecurringEvent(evt, occurrence.Period);
 							events_to_include.Add(instance);
@@ -875,7 +875,7 @@ namespace CalendarAggregator
 		}
 
 		// clone the DDay.iCal event, update dtstart (and maybe dtend) with Year/Month/Day for this occurrence
-		public static DDay.iCal.Event PeriodizeRecurringEvent(DDay.iCal.Event evt, IPeriod period)
+		private DDay.iCal.Event PeriodizeRecurringEvent(DDay.iCal.Event evt, IPeriod period)
 		{
 			var kind = evt.Start.IsUniversalTime ? DateTimeKind.Utc : DateTimeKind.Local;
 
@@ -2074,9 +2074,9 @@ namespace CalendarAggregator
 				event_count_by_venue.Add(venue_name, 1);
 		}
 
-		public static bool IsCurrentOrFutureDTStartInTz(iCalDateTime ical_dtstart, TimeZoneInfo tzinfo)
+		public bool IsCurrentOrFutureDTStartInTz(iCalDateTime ical_dtstart)
 		{
-			var utc_last_midnight = Utils.MidnightInTz(tzinfo);
+			var utc_last_midnight = Utils.MidnightInTz(this.calinfo.tzinfo);
 			return ical_dtstart.UTC >= utc_last_midnight.UniversalTime;
 		}
 

@@ -328,7 +328,7 @@ namespace CalendarAggregator
 			var ical_now = new iCalDateTime(DateTime.Now.ToUniversalTime());
 			Assert.That(evt.GetOccurrences(ical_now).Count == 0);
 			var collector = new Collector(test_calinfo, settings);
-			Assert.IsTrue(Collector.IsCurrentOrFutureDTStartInTz(evt.Start.Date, test_calinfo.tzinfo));
+			Assert.IsTrue(collector.IsCurrentOrFutureDTStartInTz(evt.Start.Date));
 		}
 
 		[Test]
@@ -342,7 +342,7 @@ namespace CalendarAggregator
 			var ical = iCalendar.LoadFromStream(sr).First().Calendar;
 			var evt = ical.Events[0];
 			var collector = new Collector(test_calinfo, settings);
-			Assert.IsFalse(Collector.IsCurrentOrFutureDTStartInTz(evt.Start.Date, test_calinfo.tzinfo));
+			Assert.IsFalse(collector.IsCurrentOrFutureDTStartInTz(evt.Start.Date));
 		}
 
 		[Test]
@@ -361,7 +361,7 @@ namespace CalendarAggregator
 			Assert.That(occurrences.Count > 1);
 			var period = occurrences[1].Period;
 			var collector = new Collector(test_calinfo, settings);
-			Assert.That(Collector.IsCurrentOrFutureDTStartInTz(period.StartTime.Date, test_calinfo.tzinfo));
+			Assert.That(collector.IsCurrentOrFutureDTStartInTz(period.StartTime.Date));
 		}
 
 		#endregion
