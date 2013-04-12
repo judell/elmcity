@@ -372,7 +372,7 @@ namespace CalendarAggregator
 			try
 			{
 				var themes = Utils.GetThemesDict();
-				var theme_css = Utils.GetCssTheme(themes, theme_name);
+				var theme_css = Utils.GetCssTheme(themes, theme_name, (bool) args["mobile"]);
 				html = html.Replace("<!-- __CUSTOM_STYLE __ -->", string.Format("<style>\n{0}\n{1}</style>\n", 
 					IsDefaultThemeDict(themes) ? "/* this is the fallback theme, if used something went wrong */" : "",
 					theme_css
@@ -450,6 +450,10 @@ namespace CalendarAggregator
 			}
 
 			var html = RenderHtmlEventsOnly(eventstore, view, count, from, to, args);
+
+			// assume a css link like this:
+			// <link type="text/css" rel="stylesheet" href="http://elmcity.cloudapp.net/get_css_theme?theme_name=a2chron"/>
+			// html = html.Replace("get_css_theme?", "get_css_theme?mobile=yes&");
 
 			html = html.Replace("__MOBILE__", "yes");
 			if (args.ContainsKey("long") && args.ContainsKey("short"))
@@ -562,21 +566,25 @@ namespace CalendarAggregator
 				string datekey = Utils.DateKeyFromDateTime(evt.dtstart);
 				var event_builder = new StringBuilder();
 				var year_month_anchor = datekey.Substring(1, 6);
-				if (!year_month_anchors.Exists(ym => ym == year_month_anchor))
+
+				if ((bool)args["mobile"] == false)  // skip day anchors and headers in mobile view
 				{
-					builder.Append(string.Format("\n<a name=\"ym{0}\"></a>\n", year_month_anchor));
-					year_month_anchors.Add(year_month_anchor);
-				}
-				if (!day_anchors.Exists(d => d == datekey))
-				{
-					event_builder.Append(string.Format("\n<a name=\"{0}\"></a>\n", datekey));
-					var date = Utils.DateFromDateKey(datekey);
-					event_builder.Append(string.Format("<h1 id=\"{0}\" class=\"ed\"><b>{1}</b></h1>\n", datekey, date));
-					day_anchors.Add(datekey);
-					sequence_at_zero = true;
+					if (!year_month_anchors.Exists(ym => ym == year_month_anchor))
+					{
+						builder.Append(string.Format("\n<a name=\"ym{0}\"></a>\n", year_month_anchor));
+						year_month_anchors.Add(year_month_anchor);
+					}
+					if (!day_anchors.Exists(d => d == datekey))
+					{
+						event_builder.Append(string.Format("\n<a name=\"{0}\"></a>\n", datekey));
+						var date = Utils.DateFromDateKey(datekey);
+						event_builder.Append(string.Format("<h1 id=\"{0}\" class=\"ed\"><b>{1}</b></h1>\n", datekey, date));
+						day_anchors.Add(datekey);
+						sequence_at_zero = true;
+					}
 				}
 
-				if (announce_time_of_day)
+				if (announce_time_of_day && (bool) args["mobile"] == false) // skip time-of-day markers in mobile view
 				{
 					var time_of_day = Utils.ClassifyTime(evt.dtstart);
 

@@ -3330,7 +3330,7 @@ END:VTIMEZONE");
 			return themes;
 		}
 
-		public static string GetCssTheme(Dictionary<string, Dictionary<string, string>> themes, string theme_name)
+		public static string GetCssTheme(Dictionary<string, Dictionary<string, string>> themes, string theme_name, bool mobile)
 		{
 			var theme = new Dictionary<string, string>();
 			try
@@ -3343,6 +3343,10 @@ END:VTIMEZONE");
 				if (themes.ContainsKey("default"))
 					theme = themes["default"];
 			}
+
+			if (mobile)
+				theme[".bl"] = " { 'margin-bottom':'3%' } ";
+
 			var css_text = new StringBuilder();
 			foreach (var selector in theme.Keys)
 			{

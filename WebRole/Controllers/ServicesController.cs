@@ -176,6 +176,7 @@ namespace WebRole
 						render_args["test"] = this.test;
 						render_args["style"] = this.style;
 						render_args["theme"] = this.theme;
+						render_args["mobile"] = false;
 
 						bool mobile_declared = this.mobile.StartsWith("y");
 	
@@ -197,6 +198,7 @@ namespace WebRole
 							//if ( this.count == 0 )
 							this.count = Convert.ToInt32(settings["mobile_event_count"]);
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlForMobile);
+							render_args["mobile"] = true;
 							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "yes", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme);
 						}
 						else if (this.raw)
