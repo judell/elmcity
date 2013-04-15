@@ -119,6 +119,9 @@ namespace ElmcityUtils
 				if (content_type != null)
 					request.ContentType = content_type;
 
+				if (data == null || data.Length == 0 )
+					request.ContentLength = 0;
+
 				foreach (string key in headers.Keys)
 					request.Headers.Add(key, (string)headers[key]);
 
