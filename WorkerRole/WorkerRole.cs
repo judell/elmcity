@@ -980,8 +980,7 @@ Future events {0}
         {
             GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
 
-            WebRoleData.MakeWebRoleData();  // <!--should not be needed since UpdateRendererForId happens for each hub on each cycle-->
-            // restored here because UpdateRendererForId on a per-hub basis was contending for wrd.obj
+            WebRoleData.MakeWebRoleData(); 
 
             Utils.MakeWhereSummary();  // refresh http://elmcity.blob.core.windows.net/admin/where_summary.html
 
