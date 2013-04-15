@@ -138,6 +138,9 @@ namespace CalendarAggregator
 			return (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri);
 		}
 
+		// currently unused 
+		// could be wired into Metadata.UpdateMetadataForId
+		// meanwhile a hub metadata update happens in-memory but isn't saved until the next GeneralAdmin pass in WorkerRole (via MakeWebRoleData)
 		public static void UpdateRendererForId(string id)
 		{
 			var wrd = GetWrd();
