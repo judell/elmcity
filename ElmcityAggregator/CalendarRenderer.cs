@@ -372,7 +372,7 @@ namespace CalendarAggregator
 			try
 			{
 				var themes = Utils.GetThemesDict();
-				var theme_css = Utils.GetCssTheme(themes, theme_name, (bool) args["mobile"]);
+				var theme_css = Utils.GetCssTheme(themes, theme_name, (bool)args["mobile"], (string)args["mobile_long"], (string)args["ua"]);
 				html = html.Replace("<!-- __CUSTOM_STYLE __ -->", string.Format("<style>\n{0}\n{1}</style>\n", 
 					IsDefaultThemeDict(themes) ? "/* this is the fallback theme, if used something went wrong */" : "",
 					theme_css
@@ -406,15 +406,11 @@ namespace CalendarAggregator
 
 			var html = this.template_html.Replace("__EVENTS__", builder.ToString());
 
-			//html = html.Replace("__WIDTH__px", "100%"); // todo: remove this when template loses px
-			//html = html.Replace("__WIDTH__", "100%");
-
 			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
 
 			html = html.Replace("__ID__", this.id);
 			html = html.Replace("__TITLE__", MakeTitle(view));
 			html = html.Replace("__META__", MakeTitle(view) + " calendars happenings schedules");
-			//html = html.Replace("__TITLE__", this.calinfo.title);
 			html = html.Replace("__CSSURL__", this.calinfo.css);
 			html = MaybeOverrideTheme(args, html);
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
@@ -449,17 +445,32 @@ namespace CalendarAggregator
 				AdvanceToAnHourAgo(eventstore);
 			}
 
-			var html = RenderHtmlEventsOnly(eventstore, view, count, from, to, args);
-
 			// assume a css link like this:
 			// <link type="text/css" rel="stylesheet" href="http://elmcity.cloudapp.net/get_css_theme?theme_name=a2chron"/>
-			// html = html.Replace("get_css_theme?", "get_css_theme?mobile=yes&");
 
-			html = html.Replace("__MOBILE__", "yes");
+			var css = (string) args["css"];
+			var theme = css.Replace("http://elmcity.cloudapp.net/get_css_theme?theme_name=", "");
+			args["theme"] = theme;
+
+			var html = RenderHtmlEventsOnly(eventstore, view, count, from, to, args);
+
+			string mobile_long = "";
+			string ua = "";
+			if (args.ContainsKey("mobile_long") && args.ContainsKey("ua"))
+			{
+				mobile_long = (string)args["mobile_long"];   // the longest dimension of detected mobile device
+				ua = (string)args["ua"];                     // user agent
+			}
+
+			html = html.Replace("get_css_theme?", string.Format("get_css_theme?mobile=yes&mobile_long={0}&ua={1}&", mobile_long, ua));
+
+			html = this.InsertMobileTagSelector(html, (string) args["view"]);
+
+			html = html.Replace("__MOBILE__", "yes");                          // todo: remove this when conversion to server-side method is complete
 			if (args.ContainsKey("long") && args.ContainsKey("short"))
 			{
-				html = html.Replace("__MOBILE_LONG__", args["long"].ToString());
-				html = html.Replace("__MOBILE_SHORT__", args["short"].ToString());
+				html = html.Replace("__MOBILE_LONG__", args["mobile_long"].ToString());
+				html = html.Replace("__MOBILE_SHORT__", args["mobile_short"].ToString());
 			}
 			return html;
 		}
@@ -531,6 +542,37 @@ namespace CalendarAggregator
 			var dtnow = now_in_tz.LocalTime - TimeSpan.FromHours(1);
 			eventstore.events = eventstore.events.FindAll(evt => evt.dtstart >= dtnow);
 		}
+
+		private string InsertMobileTagSelector(string html, string view)
+		{
+			var uri = BlobStorage.MakeAzureBlobUri(this.id, "tags.json", false);
+			var json = HttpUtils.FetchUrl(uri).DataAsString();
+			var list_of_dict = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
+			var tags = new List<string>();
+			foreach (var dict in list_of_dict)
+				tags.Add(dict.Keys.First());
+			tags.Sort();
+			var sb = new StringBuilder();
+			sb.Append("<select style=\"font-size:130%; margin-bottom:10px;\" id=\"tag_select\" onchange=\"show_view()\">\n");
+			if (view == null)
+				sb.Append("<option selected>all</option>\n");
+			else
+				sb.Append("<option>all</option>\n");
+			foreach (var tag in tags)
+			{
+				if (tag != view)
+					sb.Append("<option>" + tag + "</option>\n");
+				else
+					sb.Append("<option selected>" + tag + "</option>\n");
+			}
+
+			sb.Append("</select>\n");
+			html = html.Replace("<!-- begin events -->", "<!-- begin events -->\n" + sb.ToString());
+			html = html.Replace("<!-- end events -->", "<!-- end events -->\n" + sb.ToString());
+			return html;
+		}
+
+
 
 		// the default html rendering chunks by day, this method processes the raw list of events into
 		// the ZonelessEventStore's event_dict like so:
