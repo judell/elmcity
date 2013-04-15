@@ -3330,7 +3330,8 @@ END:VTIMEZONE");
 			return themes;
 		}
 
-		public static string GetCssTheme(Dictionary<string, Dictionary<string, string>> themes, string theme_name, bool mobile)
+		// not using mobile_long at the moment, but might want it for scaling
+		public static string GetCssTheme(Dictionary<string, Dictionary<string, string>> themes, string theme_name, bool mobile, string mobile_long, string ua)
 		{
 			var theme = new Dictionary<string, string>();
 			try
@@ -3345,7 +3346,25 @@ END:VTIMEZONE");
 			}
 
 			if (mobile)
-				theme[".bl"] = " { 'margin-bottom':'3%' } ";
+			{
+				try
+				{
+					theme[".bl"] = " { 'margin-bottom':'3%' } ";
+					theme[".timeofday"] = " { 'display':'none' } ";
+					theme[".hubtitle"] = " { 'display':'none' } ";
+					theme[".ed"] = " { 'display':'none' } ";
+					if (ua.Contains("Windows Phone"))   // todo: investigate viewport-based method
+					{
+						var body_dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(theme["body"]);
+						body_dict.AddOrUpdateDictionary("font-size", "300%");  
+						theme["body"] = JsonConvert.SerializeObject(body_dict);
+					}
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "GetCssTheme: tweaking mobile settings", e.Message);
+				}
+			}
 
 			var css_text = new StringBuilder();
 			foreach (var selector in theme.Keys)
