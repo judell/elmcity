@@ -172,11 +172,12 @@ namespace WebRole
 				switch (this.type)
 				{
 					case "html":
-
+						render_args["view"] = this.view;
 						render_args["test"] = this.test;
-						render_args["style"] = this.style;
+						render_args["style"] = this.style;  
 						render_args["theme"] = this.theme;
 						render_args["mobile"] = false;
+						render_args["css"] = this.cr.calinfo.css;  // need to extract and pass along the default theme name
 
 						bool mobile_declared = this.mobile.StartsWith("y");
 	
@@ -376,6 +377,7 @@ namespace WebRole
 					{
 						render_args["short"] = width;
 						render_args["long"] = height;
+						render_args["ua"] = ua;
 						smartphone_detected = smartphone_screen_dimensions.ContainsKey(key);
 						if (smartphone_detected)
 							ElmcityApp.logger.LogMsg("smartphone", "IsMobile true, smartphone detected: " + key, ua);
