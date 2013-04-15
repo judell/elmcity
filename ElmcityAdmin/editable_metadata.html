@@ -696,6 +696,13 @@ String.prototype.startsWith = function(str){
 }
 
 
+if(!String.prototype.trim) {
+  String.prototype.trim = function () {
+    return this.replace(/^\s+|\s+$/g,'');
+  };
+}
+
+
 /*
 Array.prototype.find = function(searchStr) {
   var returnArray = false;
