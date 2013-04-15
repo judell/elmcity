@@ -206,11 +206,11 @@ if unsure please check http://{1}/{2}/stats",
         }
 
         [OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
-        public ActionResult get_css_theme(string theme_name, string mobile)
+        public ActionResult get_css_theme(string theme_name, string mobile, string mobile_long, string ua)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-			bool is_mobile = mobile.ToLower().StartsWith("y");
-            var result = Utils.GetCssTheme(ElmcityController.themes, theme_name, is_mobile);
+			bool is_mobile = mobile != null && mobile.ToLower().StartsWith("y");
+            var result = Utils.GetCssTheme(ElmcityController.themes, theme_name, is_mobile, mobile_long, ua);
             return Content(result, "text/css");
         }
 
