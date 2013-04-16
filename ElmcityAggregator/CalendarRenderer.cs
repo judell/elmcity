@@ -554,7 +554,8 @@ namespace CalendarAggregator
 			var tags = new List<string>();
 			foreach (var dict in list_of_dict)
 				tags.Add(dict.Keys.First());
-			tags.Sort();
+			var cmp = StringComparer.OrdinalIgnoreCase;
+			tags.Sort(cmp);
 			var sb = new StringBuilder();
 			sb.Append("<select style=\"font-size:130%; margin-bottom:10px;\" id=\"tag_select\" onchange=\"show_view()\">\n");
 			if (view == null)
