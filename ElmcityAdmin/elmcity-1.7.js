@@ -262,6 +262,7 @@ $(document).ready(function(){
 //  if ( is_eventsonly() && ! is_mobile() ) 
   if ( is_eventsonly() || is_mobile() ) 
     {
+/*
     $('.ed').remove();
     $('.timeofday').remove();
     $('#body').css('width', '100%');
@@ -269,6 +270,7 @@ $(document).ready(function(){
     if ( gup('tags') == 'no' )
       $('.cat').remove();
     $('.bl').css('width','90%');
+*/
     }
   else  
     {
@@ -349,12 +351,13 @@ $(document).ready(function(){
 
   if ( is_mobile() )
     {
-    rescale();
+//    rescale();
     }
   else
     {
     }
 
+/*
   if ( $('#tags').length && gup('taglist') != 'no' )
     {
       var href = host + elmcity_id + '/tag_cloud';
@@ -388,7 +391,7 @@ $(document).ready(function(){
     {
     add_mobile_switcher();
     }
-
+*/
 
 //  if ( ! is_mobile() && ! is_eventsonly() )  
 //    extend_events(1,false);
