@@ -442,9 +442,11 @@ namespace CalendarAggregator
 
 			eventstore = GetEventStore(eventstore, view, count, from, to);
 			if (from == DateTime.MinValue && to == DateTime.MinValue)
-			{
 				AdvanceToAnHourAgo(eventstore);
-			}
+
+			count = (int) args["mobile_event_count"];                        // wait until now to apply the reduction
+			eventstore.events = eventstore.events.Take(count).ToList();
+
 
 			// assume a css link like this:
 			// <link type="text/css" rel="stylesheet" href="http://elmcity.cloudapp.net/get_css_theme?theme_name=a2chron"/>

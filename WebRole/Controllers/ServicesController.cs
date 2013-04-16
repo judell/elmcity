@@ -198,10 +198,10 @@ namespace WebRole
 
 						if (is_mobile)
 						{
-							//if ( this.count == 0 )
-							this.count = Convert.ToInt32(settings["mobile_event_count"]);
-							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlForMobile);
+							//this.count = Convert.ToInt32(settings["mobile_event_count"]);  // no, let the renderer reduce the list 
+							render_args["mobile_event_count"] = Convert.ToInt32(settings["mobile_event_count"]);
 							render_args["mobile"] = true;
+							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlForMobile);
 							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "yes", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme);
 						}
 						else if (this.raw)
