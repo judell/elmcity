@@ -24,6 +24,7 @@ using System.Web.Mvc;
 using CalendarAggregator;
 using ElmcityUtils;
 using HtmlAgilityPack;
+using Newtonsoft.Json;
 
 namespace WebRole
 {
@@ -177,6 +178,7 @@ namespace WebRole
 						render_args["style"] = this.style;  
 						render_args["theme"] = this.theme;
 						render_args["mobile"] = false;
+						render_args["ua"] = "";
 						render_args["css"] = this.cr.calinfo.css;  // need to extract and pass along the default theme name
 
 						bool mobile_declared = this.mobile.StartsWith("y");
@@ -215,6 +217,9 @@ namespace WebRole
 						}
 						else
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtml);
+
+						//if (is_mobile)
+						//	GenUtils.LogMsg("info", "EventsResult", JsonConvert.SerializeObject(render_args));
 
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), render_args);
 
@@ -375,8 +380,8 @@ namespace WebRole
 						}
 					if (props["IsMobile"][0] == "True")
 					{
-						render_args["short"] = width;
-						render_args["long"] = height;
+						render_args["mobile_short"] = width;
+						render_args["mobile_long"] = height;
 						render_args["ua"] = ua;
 						smartphone_detected = smartphone_screen_dimensions.ContainsKey(key);
 						if (smartphone_detected)

@@ -435,6 +435,7 @@ namespace CalendarAggregator
 
 		public string RenderHtmlForMobile(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
 		{
+			//GenUtils.LogMsg("info", "RenderForMobile", JsonConvert.SerializeObject(args));
 			this.ResetCounters();
 
 			MaybeUseTestTemplate(args);
@@ -467,7 +468,7 @@ namespace CalendarAggregator
 			html = this.InsertMobileTagSelector(html, (string) args["view"]);
 
 			html = html.Replace("__MOBILE__", "yes");                          // todo: remove this when conversion to server-side method is complete
-			if (args.ContainsKey("long") && args.ContainsKey("short"))
+			if (args.ContainsKey("mobile_long") && args.ContainsKey("mobile_short"))
 			{
 				html = html.Replace("__MOBILE_LONG__", args["mobile_long"].ToString());
 				html = html.Replace("__MOBILE_SHORT__", args["mobile_short"].ToString());
