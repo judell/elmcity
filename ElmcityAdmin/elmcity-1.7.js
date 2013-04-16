@@ -357,7 +357,6 @@ $(document).ready(function(){
     {
     }
 
-/*
   if ( $('#tags').length && gup('taglist') != 'no' )
     {
       var href = host + elmcity_id + '/tag_cloud';
@@ -372,6 +371,7 @@ $(document).ready(function(){
        });
     }
 
+/*
   if ( is_mobile() )
     {
 
