@@ -314,6 +314,8 @@ namespace CalendarAggregator
 
 			var html = this.template_html.Replace("__EVENTS__", builder.ToString());
 
+			html = this.InsertTagSelector(html, view, eventsonly: false);
+
 			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
 			
 			html = html.Replace("__ID__", this.id);
@@ -406,6 +408,8 @@ namespace CalendarAggregator
 
 			var html = this.template_html.Replace("__EVENTS__", builder.ToString());
 
+			html = this.InsertTagSelector(html, view, eventsonly: true);
+
 			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
 
 			html = html.Replace("__ID__", this.id);
@@ -467,14 +471,16 @@ namespace CalendarAggregator
 
 			html = html.Replace("get_css_theme?", string.Format("get_css_theme?mobile=yes&mobile_long={0}&ua={1}&", mobile_long, ua));
 
-			html = this.InsertMobileTagSelector(html, (string) args["view"]);
+			//html = this.InsertTagSelector(html, (string) args["view"]);
 
+			/*
 			html = html.Replace("__MOBILE__", "yes");                          // todo: remove this when conversion to server-side method is complete
 			if (args.ContainsKey("mobile_long") && args.ContainsKey("mobile_short"))
 			{
 				html = html.Replace("__MOBILE_LONG__", args["mobile_long"].ToString());
 				html = html.Replace("__MOBILE_SHORT__", args["mobile_short"].ToString());
 			}
+			 */
 			return html;
 		}
 
@@ -546,7 +552,7 @@ namespace CalendarAggregator
 			eventstore.events = eventstore.events.FindAll(evt => evt.dtstart >= dtnow);
 		}
 
-		private string InsertMobileTagSelector(string html, string view)
+		private string InsertTagSelector(string html, string view, bool eventsonly)
 		{
 			var uri = BlobStorage.MakeAzureBlobUri(this.id, "tags.json", false);
 			var json = HttpUtils.FetchUrl(uri).DataAsString();
@@ -571,8 +577,13 @@ namespace CalendarAggregator
 			}
 
 			sb.Append("</select>\n");
-			html = html.Replace("<!-- begin events -->", "<!-- begin events -->\n" + sb.ToString());
-			html = html.Replace("<!-- end events -->", "<!-- end events -->\n" + sb.ToString());
+			if (eventsonly)
+			{
+				html = html.Replace("<!-- begin events -->", "<!-- begin events -->\n" + sb.ToString());
+				html = html.Replace("<!-- end events -->", "<!-- end events -->\n" + sb.ToString());
+			}
+			else
+				html = html.Replace("<div id=\"tags\"></div>", "<div id=\"tags\">" + sb.ToString() + "</div>");
 			return html;
 		}
 
