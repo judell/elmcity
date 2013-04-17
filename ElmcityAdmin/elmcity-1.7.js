@@ -342,6 +342,20 @@ $(document).ready(function(){
     $('.st').css(JSON.parse(style));
     }
 
+  if ( gup('sd') != '' )
+    {
+    var style = decodeURIComponent(gup('sd'));
+    style = style.replace(/'/g,'"');
+    $('.sd').css(JSON.parse(style));
+    }
+
+  if ( gup('atc') != '' )
+    {
+    var style = decodeURIComponent(gup('atc'));
+    style = style.replace(/'/g,'"');
+    $('.atc').css(JSON.parse(style));
+    }
+
   if ( gup('sourcestyle') != '' )
     {
     var style = decodeURIComponent(gup('sourcestyle'));
