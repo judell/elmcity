@@ -558,8 +558,13 @@ namespace CalendarAggregator
 			var json = HttpUtils.FetchUrl(uri).DataAsString();
 			var list_of_dict = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
 			var tags = new List<string>();
+			var counts = new Dictionary<string,string>();
 			foreach (var dict in list_of_dict)
-				tags.Add(dict.Keys.First());
+			{
+				var tag = dict.Keys.First();
+				tags.Add(tag);
+				counts[tag] = dict[tag];
+			}
 			var cmp = StringComparer.OrdinalIgnoreCase;
 			tags.Sort(cmp);
 			var sb = new StringBuilder();
@@ -570,10 +575,10 @@ namespace CalendarAggregator
 				sb.Append("<option>all</option>\n");
 			foreach (var tag in tags)
 			{
-				if (tag != view)
-					sb.Append("<option>" + tag + "</option>\n");
-				else
-					sb.Append("<option selected>" + tag + "</option>\n");
+				var option = "<option>" + tag + " (" + counts[tag] + ")" + "</option>\n";
+				if (tag == view)
+					option = option.Replace("<option>", "<option selected>");
+				sb.Append(option);
 			}
 
 			sb.Append("</select>\n");
