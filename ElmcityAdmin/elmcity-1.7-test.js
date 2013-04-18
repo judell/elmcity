@@ -342,6 +342,20 @@ $(document).ready(function(){
     $('.st').css(JSON.parse(style));
     }
 
+  if ( gup('sd') != '' )
+    {
+    var style = decodeURIComponent(gup('sd'));
+    style = style.replace(/'/g,'"');
+    $('.sd').css(JSON.parse(style));
+    }
+
+  if ( gup('atc') != '' )
+    {
+    var style = decodeURIComponent(gup('atc'));
+    style = style.replace(/'/g,'"');
+    $('.atc').css(JSON.parse(style));
+    }
+
   if ( gup('sourcestyle') != '' )
     {
     var style = decodeURIComponent(gup('sourcestyle'));
@@ -357,41 +371,11 @@ $(document).ready(function(){
     {
     }
 
-/*
-  if ( $('#tags').length && gup('taglist') != 'no' )
-    {
-      var href = host + elmcity_id + '/tag_cloud';
-//      console.log("tagcloud: " + href);
-      $.ajax({
-        url: href,
-        cache: false,
-        complete: function(xhr, status) {
-         var tags_json = JSON.parse(xhr.responseText);
-         tags(tags_json);
-         }
-       });
-    }
-
   if ( is_mobile() )
-    {
-
-      var href = host + elmcity_id + '/tag_cloud';
-      $.ajax({
-        url: href,
-        cache: false,
-        complete: function(xhr, status) {
-         var tags_json = JSON.parse(xhr.responseText);
-         mobile_tags(tags_json);
-         add_fullsite_switcher();
-         }
-       });
-
-    }
+    add_fullsite_switcher();
   else
-    {
     add_mobile_switcher();
-    }
-*/
+
 
 //  if ( ! is_mobile() && ! is_eventsonly() )  
 //    extend_events(1,false);

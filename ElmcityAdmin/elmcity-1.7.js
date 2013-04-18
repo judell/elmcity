@@ -259,18 +259,16 @@ $(document).ready(function(){
 
   var elmcity_id = get_elmcity_id();
 
-//  if ( is_eventsonly() && ! is_mobile() ) 
   if ( is_eventsonly() || is_mobile() ) 
     {
-/*
-    $('.ed').remove();
-    $('.timeofday').remove();
-    $('#body').css('width', '100%');
-    $('.hubtitle').remove();
     if ( gup('tags') == 'no' )
+      {
       $('.cat').remove();
-    $('.bl').css('width','90%');
-*/
+      $('#tag_select').remove();
+      }
+
+// if ( gup('taglist') == 'no' )
+//    $('#tag_select').remove();
     }
   else  
     {
@@ -356,6 +354,14 @@ $(document).ready(function(){
     $('.atc').css(JSON.parse(style));
     }
 
+  if ( gup('ed') != '' )
+    {
+    var style = decodeURIComponent(gup('ed'));
+    style = style.replace(/'/g,'"');
+    $('.ed').css(JSON.parse(style));
+    }
+
+
   if ( gup('sourcestyle') != '' )
     {
     var style = decodeURIComponent(gup('sourcestyle'));
@@ -371,41 +377,11 @@ $(document).ready(function(){
     {
     }
 
-  if ( $('#tags').length && gup('taglist') != 'no' )
-    {
-      var href = host + elmcity_id + '/tag_cloud';
-//      console.log("tagcloud: " + href);
-      $.ajax({
-        url: href,
-        cache: false,
-        complete: function(xhr, status) {
-         var tags_json = JSON.parse(xhr.responseText);
-         tags(tags_json);
-         }
-       });
-    }
-
-/*
   if ( is_mobile() )
-    {
-
-      var href = host + elmcity_id + '/tag_cloud';
-      $.ajax({
-        url: href,
-        cache: false,
-        complete: function(xhr, status) {
-         var tags_json = JSON.parse(xhr.responseText);
-         mobile_tags(tags_json);
-         add_fullsite_switcher();
-         }
-       });
-
-    }
+    add_fullsite_switcher();
   else
-    {
     add_mobile_switcher();
-    }
-*/
+
 
 //  if ( ! is_mobile() && ! is_eventsonly() )  
 //    extend_events(1,false);
