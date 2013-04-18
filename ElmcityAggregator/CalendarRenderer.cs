@@ -349,13 +349,13 @@ namespace CalendarAggregator
 			switch (this.calinfo.hub_enum)
 			{
 				case HubType.where:
-					_title = this.calinfo.where;
+					_title = String.IsNullOrEmpty(this.calinfo.title) ? this.calinfo.where : this.calinfo.title;
 					break;
 				case HubType.what:
-					_title = this.calinfo.what;
+					_title = String.IsNullOrEmpty(this.calinfo.title) ? this.calinfo.what : this.calinfo.title;
 					break;
 				case HubType.region:
-					_title = this.calinfo.id.ToLower();
+					_title = String.IsNullOrEmpty(this.calinfo.title) ? this.calinfo.where : this.calinfo.title;
 					break;
 				default:
 					_title = "";
