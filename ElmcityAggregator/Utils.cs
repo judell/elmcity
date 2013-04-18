@@ -3444,6 +3444,22 @@ END:VTIMEZONE");
 			return GenUtils.PrettifyJson(json);
 		}
 
+		public static void ZeroCountForService(string id, string event_service)
+		{
+			try
+			{
+				var dict = Metadata.LoadMetadataForIdFromAzureTable(id);
+				var key = event_service + "_events";
+				dict[key] = "0";
+				var dict_obj = ObjectUtils.DictStrToDictObj(dict);
+				TableStorage.UpmergeDictToTableStore(dict_obj, "metadata", id, id);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ZeroEventCountForService", e.Message);
+			}
+		}
+
 		#endregion
 
 	}

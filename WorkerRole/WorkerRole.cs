@@ -346,6 +346,7 @@ namespace WorkerRole
             var calinfo = new Calinfo(id);
             try
             {
+				CalendarAggregator.Utils.ZeroCount(id, "eventful");
                 DoEventful(calinfo);
             }
             catch (Exception e1)
@@ -354,6 +355,7 @@ namespace WorkerRole
             }
             try
             {
+				CalendarAggregator.Utils.ZeroCount(id, "upcoming");
                 DoUpcoming(calinfo);
             }
             catch (Exception e2)
@@ -362,6 +364,7 @@ namespace WorkerRole
             }
             try
             {
+				CalendarAggregator.Utils.ZeroCount(id, "eventbrite");
                 DoEventBrite(calinfo);
             }
             catch (Exception e3)
@@ -370,6 +373,7 @@ namespace WorkerRole
             }
             try
             {
+				CalendarAggregator.Utils.ZeroCount(id, "facebook");
                 DoFacebook(calinfo);
             }
             catch (Exception e4)
