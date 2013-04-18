@@ -344,42 +344,47 @@ namespace WorkerRole
         {
             logger.LogMsg("info", "worker starting on nonical tasks for " + id, null);
             var calinfo = new Calinfo(id);
+
             try
             {
-				CalendarAggregator.Utils.ZeroCount(id, "eventful");
+				CalendarAggregator.Utils.ZeroCountForService(id, "eventful");
                 DoEventful(calinfo);
             }
             catch (Exception e1)
             {
                 GenUtils.PriorityLogMsg("exception", "DoEventful", e1.Message + e1.StackTrace);
             }
+
             try
             {
-				CalendarAggregator.Utils.ZeroCount(id, "upcoming");
+				CalendarAggregator.Utils.ZeroCountForService(id, "upcoming");
                 DoUpcoming(calinfo);
             }
             catch (Exception e2)
             {
                 GenUtils.PriorityLogMsg("exception", "DoUpcoming", e2.Message + e2.StackTrace);
             }
+
             try
             {
-				CalendarAggregator.Utils.ZeroCount(id, "eventbrite");
+				CalendarAggregator.Utils.ZeroCountForService(id, "eventbrite");
                 DoEventBrite(calinfo);
             }
             catch (Exception e3)
             {
                 GenUtils.PriorityLogMsg("exception", "DoEventBrite", e3.Message + e3.StackTrace);
             }
+
             try
             {
-				CalendarAggregator.Utils.ZeroCount(id, "facebook");
+				CalendarAggregator.Utils.ZeroCountForService(id, "facebook");
                 DoFacebook(calinfo);
             }
             catch (Exception e4)
             {
                 GenUtils.PriorityLogMsg("exception", "DoFacebook", e4.Message + e4.StackTrace);
             }
+
         }
 
         public void ProcessIcal(string id)
