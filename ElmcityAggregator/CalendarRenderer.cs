@@ -257,10 +257,12 @@ namespace CalendarAggregator
 			return String.Format(jsonp + "('" + description + "')") ;
 		}
 
-		public string RenderFeedAsJson(string source)
+		public string RenderFeedAsJson(string source, string view)  
 		{
 			var es = this.es_getter(this.cache);
 			var events = es.events.FindAll(evt => FeedComesFrom(evt, source));
+			if ( ! String.IsNullOrEmpty(view) )
+				events = events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Contains(view));
 			var json = JsonConvert.SerializeObject(events);
 			return GenUtils.PrettifyJson(json);
 		}
@@ -408,7 +410,8 @@ namespace CalendarAggregator
 
 			var html = this.template_html.Replace("__EVENTS__", builder.ToString());
 
-			html = this.InsertTagSelector(html, view, eventsonly: true);
+			if (! args.ContainsKey("no_tag_selector") )
+				html = this.InsertTagSelector(html, view, eventsonly: true);
 
 			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
 
@@ -592,8 +595,6 @@ namespace CalendarAggregator
 			return html;
 		}
 
-
-
 		// the default html rendering chunks by day, this method processes the raw list of events into
 		// the ZonelessEventStore's event_dict like so:
 		// key: d20100710
@@ -609,6 +610,8 @@ namespace CalendarAggregator
 		{
 			if (args == null)
 				args = new Dictionary<string, object>();
+			if ( args.ContainsKey("mobile") == false )
+				args["mobile"] = false;
 			//OrganizeByDate(es);
 			var event_renderer = new EventRenderer(RenderEvtAsHtml);
 			var year_month_anchors = new List<string>(); // e.g. ym201201
@@ -629,7 +632,7 @@ namespace CalendarAggregator
 				var event_builder = new StringBuilder();
 				var year_month_anchor = datekey.Substring(1, 6);
 
-				if ((bool)args["mobile"] == false)  // skip day anchors and headers in mobile view
+				if  ((bool)args["mobile"] == false)  // skip day anchors and headers in mobile view
 				{
 					if (!year_month_anchors.Exists(ym => ym == year_month_anchor))
 					{

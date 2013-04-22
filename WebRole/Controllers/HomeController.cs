@@ -178,14 +178,14 @@ namespace WebRole
             return Content(description, "application/json");
         }
 
-        public ActionResult feed2json(string id, string source, string jsonp)
+        public ActionResult feed2json(string id, string source, string view, string jsonp)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
             string result;
             try
             {
                 var renderer = Utils.AcquireRenderer(id);
-                result = renderer.RenderFeedAsJson(source);
+				result = renderer.RenderFeedAsJson(source, view);
                 if (jsonp != null)
                     result = jsonp + "(" + result + ")";
                 return Content(result, "application/json");
@@ -713,7 +713,7 @@ if unsure please check http://{1}/{2}/stats",
             es_zoneless.ExcludePastEvents();
             es_zoneless.SortEventList();
             var cr = new CalendarRenderer(id);
-            r.Content = cr.RenderHtmlEventsOnly(es_zoneless, null, 0, DateTime.MinValue, DateTime.MinValue, new Dictionary<string, object>() { { "announce_time_of_day", false }, { "add_to_cal", false }, { "inline_descriptions", true } });
+            r.Content = cr.RenderHtmlEventsOnly(es_zoneless, null, 0, DateTime.MinValue, DateTime.MinValue, new Dictionary<string, object>() { { "announce_time_of_day", false }, { "add_to_cal", false }, { "inline_descriptions", true }, {"no_tag_selector",true } } );
             return r;
         }
 
