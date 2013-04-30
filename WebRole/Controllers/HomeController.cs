@@ -714,7 +714,7 @@ if unsure please check http://{1}/{2}/stats",
             es_zoneless.ExcludePastEvents();
             es_zoneless.SortEventList();
             var cr = new CalendarRenderer(id);
-            r.Content = cr.RenderHtmlEventsOnly(es_zoneless, null, 0, DateTime.MinValue, DateTime.MinValue, new Dictionary<string, object>() { { "announce_time_of_day", false }, { "add_to_cal", false }, { "inline_descriptions", true }, {"no_tag_selector",true } } );
+            r.Content = cr.RenderHtmlEventsOnly(es_zoneless, null, 0, DateTime.MinValue, DateTime.MinValue, new Dictionary<string, object>() { { "announce_time_of_day", false }, { "add_to_cal", false }, { "inline_descriptions", true }, {"taglist",false } } );
             return r;
         }
 
