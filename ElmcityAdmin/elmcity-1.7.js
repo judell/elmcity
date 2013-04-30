@@ -605,20 +605,6 @@ function add_href_arg(href, name, value)
   return href;
   }
 
-function show_mobile_view(picklist_location)
-  {
-  show_view();
-/*  
-  var selected = $('#mobile_tag_select_' + picklist_location + ' option:selected').text();
-  var href = location.href;
-  if ( selected == 'all' )
-   href = remove_href_arg(href, 'view');
-  else
-    href = add_href_arg(href, 'view', selected);
-  location.href = href;
-*/
-  }
-
 
 function dismiss_menu(id)
 {
