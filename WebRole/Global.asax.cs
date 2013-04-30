@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2483";
+        public static string version = "2485";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -231,6 +231,14 @@ namespace WebRole
                 new { controller = "Home", action = "get_editable_metadata" },
                 new { id = wrd.str_ready_ids }
             );
+
+			// alias
+			routes.MapRoute(
+				"edit",
+				"services/{id}/edit",
+				new { controller = "Home", action = "get_editable_metadata" },
+				new { id = wrd.str_ready_ids }
+			);
 
             routes.MapRoute(
                 "get_fb_ical_url",
