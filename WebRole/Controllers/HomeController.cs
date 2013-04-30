@@ -274,7 +274,8 @@ if unsure please check http://{1}/{2}/stats",
         public ActionResult about(string id)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-            var page = Utils.MakeAboutPage(id, settings);
+			var auth_mode = this.Authenticated(id);
+			var page = Utils.MakeAboutPage(id, settings, auth_mode);
             return Content(page, "text/html");
         }
 
