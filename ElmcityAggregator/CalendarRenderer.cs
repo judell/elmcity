@@ -572,7 +572,7 @@ namespace CalendarAggregator
 			var cmp = StringComparer.OrdinalIgnoreCase;
 			tags.Sort(cmp);
 			var sb = new StringBuilder();
-			sb.Append("<select style=\"font-size:130%; margin-bottom:10px;\" class=\"tag_select\" onchange=\"show_view()\">\n");
+			sb.Append("<select style=\"font-size:130%; margin-bottom:10px; margin-top:10px;\" class=\"tag_select\" onchange=\"show_view()\">\n");
 			if (view == null)
 				sb.Append("<option selected>all</option>\n");
 			else
