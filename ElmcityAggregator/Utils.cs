@@ -3144,9 +3144,10 @@ END:VTIMEZONE");
 			return feedurl;
 		}
 
-		public static string MakeAboutPage(string id, Dictionary<string,string> settings)
+		public static string MakeAboutPage(string id, Dictionary<string,string> settings, string auth_mode)
 		{
 			var calinfo = Utils.AcquireCalinfo(id);
+			var authenticated = auth_mode != null;
 
 			List<string> regions_belonged_to = new List<string>();
 			List<string> ids_for_region = new List<string>();
@@ -3186,15 +3187,21 @@ END:VTIMEZONE");
 						ElmcityUtils.Configurator.appdomain,	// 0
 						container);								// 1
 				region_msg += "</ul>";
+				var edit_feeds_link = MakeEditFeedsLink(id, auth_mode);
+				region_msg += "<p>" + edit_feeds_link + "</p>";
 			}
 
 			if (is_container)
 			{
 				region_msg = @"<p>This is a regional hub. The hubs that belong to this region are: </p><ul style=""list-style-type:none"">";
 				foreach (var contained in ids_for_region)
-					region_msg += string.Format(@"<li><p><a href=""http://{0}/{1}"">{1}</a></p></li>", 
+				{
+					var edit_feeds_link = MakeEditFeedsLink(contained, auth_mode);
+					region_msg += string.Format(@"<li><p><a href=""http://{0}/{1}"">{1}</a> {2} </p></li>",
 						ElmcityUtils.Configurator.appdomain,	// 0
-						contained);								// 1
+						contained,								// 1
+						edit_feeds_link);						// 2
+				}
 				region_msg += "</ul>";
 			}
 
@@ -3253,6 +3260,17 @@ END:VTIMEZONE");
 
 			page = page.Replace("__HUBSTATS__", tbody);
 			return page;
+		}
+
+		public static string MakeEditFeedsLink(string id, string auth_mode)
+		{
+			string edit_link = "";
+			if (auth_mode != null)
+				edit_link = string.Format(@"<span style=""font-size:smaller""><a href=""http://{0}/services/{1}/edit?flavor=feeds"">(edit feeds)</a></span>",
+						ElmcityUtils.Configurator.appdomain,
+						id
+						);
+			return edit_link;
 		}
 
 		public static iCalendar NewCalendarWithTimezone(TimeZoneInfo tzinfo)
