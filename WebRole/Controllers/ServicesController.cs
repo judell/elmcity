@@ -43,7 +43,7 @@ namespace WebRole
 		#region events
 
 		//[OutputCache(Duration = ... // output cache not used here, iis cache is managed directly
-		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme)
+		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist)
 		{
 			if (id == "a2cal")
 				id = "AnnArborChronicle";
@@ -57,7 +57,7 @@ namespace WebRole
 			try
 			{
 				var cr = ElmcityApp.wrd.renderers[id];
-				r = new EventsResult(this, cr, id, type, view, jsonp, count, from, to, eventsonly, mobile, test, raw, raw_sentinel, style, theme);
+				r = new EventsResult(this, cr, id, type, view, jsonp, count, from, to, eventsonly, mobile, test, raw, raw_sentinel, style, theme, taglist);
 			}
 			catch (Exception e)
 			{
@@ -84,12 +84,13 @@ namespace WebRole
 			string raw_sentinel;
 			string style;
 			string theme;
+			string taglist;
 
 			CalendarRenderer.ViewRenderer renderer = null;
 			string response_body = null;
 			byte[] response_bytes = new byte[0];
 
-			public EventsResult(ElmcityController controller, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme)
+			public EventsResult(ElmcityController controller, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist)
 			{
 				this.controller = controller;
 				this.cr = cr;
@@ -107,6 +108,7 @@ namespace WebRole
 				this.raw_sentinel = raw_sentinel;
 				this.style = style;
 				this.theme = theme;
+				this.taglist = !String.IsNullOrEmpty(taglist) ? taglist.ToLower() : "";
 
 				int _count = 0;
 				try
@@ -180,8 +182,9 @@ namespace WebRole
 						render_args["mobile"] = false;
 						render_args["ua"] = "";
 						render_args["css"] = this.cr.calinfo.css;  // need to extract and pass along the default theme name
+						render_args["taglist"] = String.IsNullOrEmpty(this.taglist) ? true : this.taglist.ToLower().StartsWith("n");
 
-						bool mobile_declared = this.mobile.StartsWith("y");
+						bool mobile_declared = this.mobile.ToLower().StartsWith("y");
 	
 						bool is_mobile;
 
@@ -193,7 +196,7 @@ namespace WebRole
 						else
 							is_mobile = mobile_declared;                                    // use declaration only
 
-						if (this.mobile.StartsWith("n"))                                  // maybe override with refusal
+						if ( this.mobile.ToLower().StartsWith("n") )                       // maybe override with refusal
 							is_mobile = false;
 
 						if (is_mobile)
@@ -204,12 +207,13 @@ namespace WebRole
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlForMobile);
 							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "yes", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme);
 						}
+						/* for dynamic event paging, not used now
 						else if (this.raw)
 						{
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlEventsOnlyRaw);
 							render_args["raw_sentinel"] = this.raw_sentinel;
 							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: null, mobile: null, test:test_arg, raw: raw_arg, style:this.style, theme:this.theme);
-						}
+						}*/
 						else if (this.eventsonly == "yes")
 						{
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlEventsOnly);

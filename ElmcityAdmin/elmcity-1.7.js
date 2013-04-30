@@ -264,11 +264,10 @@ $(document).ready(function(){
     if ( gup('tags') == 'no' )
       {
       $('.cat').remove();
-      $('#tag_select').remove();
       }
 
-// if ( gup('taglist') == 'no' )
-//    $('#tag_select').remove();
+    if ( gup('taglist') == 'no' )
+      $('.tag_select').remove();
     }
   else  
     {
@@ -565,86 +564,6 @@ if(!String.prototype.trim) {
     return this.replace(/^\s+|\s+$/g,'');
   };
 }
-
-
-function get_json_keys(tags_json)
-  {
-  var json_keys = [];
-  for (i in tags_json)
-    {
-    var obj = tags_json[i];
-    var key = $.keys(obj)[0];
-    json_keys.push(key);
-    }
-
-  json_keys.sort(case_insensitive_sort);
-  remove(json_keys,"...");
-  remove(json_keys,"http:");
-  return json_keys;
-  }
-
-function tags(tags_json)
-  {
-  var json_keys = get_json_keys(tags_json);  
-  if ( json_keys.length > 0 )
-    {
-    $('#tags').append('<div style="margin-bottom:3pt;font-style:italic">categories</div>');
-    $('#tags').append('<select id="tag_select" onchange="show_view()">');
-
-    if ( is_view() )
-      $('#tag_select').append('<option>all</option>');
-    else
-      $('#tag_select').append('<option selected>all</option>');
-
-    for ( i in json_keys )
-      {
-      var key = json_keys[i];
-      var obj = $.grep(tags_json, function (o) { return $.keys(o)[0] == key;} );
-      var count = key == "all" ? '' : ' (' + obj[0][key] + ')</p>';
-      var selected = '';
-      if ( gup('view') == key )
-         selected = ' selected';
-      $('#tag_select').append('<option ' + selected + ' value="' + key + '">' + key + count + '</option>');
-      }
-
-    $('#tags').append('</select>');
-    }
-
-  }
-
-function mobile_tags(tags_json)
-  {
-  var picklist_top = make_mobile_picklist('top', tags_json);
-  var picklist_bottom = make_mobile_picklist('bottom',tags_json);
-  $('#body').prepend(picklist_top);
-  $('#body').append(picklist_bottom);
-  $('.mobile_tag_select').css('font-size','150%').css('margin-bottom','8px');    
-  }
-
-function make_mobile_picklist(top_or_bottom,tags_json)
-  {
-  var picklist = '<select id="mobile_tag_select_' + top_or_bottom + '" class="mobile_tag_select" onchange="show_mobile_view(' + "'" + top_or_bottom + "'" + ')">';
-  var json_keys = get_json_keys(tags_json);  
-
-  picklist = picklist + '<option>all</option>';
-
-  var selected_view = '';
-
-  if ( is_view() )
-    selected_view = gup('view');
-//  else
-//    selected_view = json_keys[0];
-
-  for ( i in json_keys )
-    {
-    var key = json_keys[i];
-    var selected = ( key == selected_view ) ? ' selected' : '';
-    var option = '<option' + selected + '>' + key + '</option>';
-    picklist = picklist + option;
-    }
-  picklist = picklist + '</select>';
-  return picklist
-  }
 
 
 function case_insensitive_sort(a, b) 
