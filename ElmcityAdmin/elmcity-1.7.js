@@ -607,6 +607,8 @@ function add_href_arg(href, name, value)
 
 function show_mobile_view(picklist_location)
   {
+  show_view();
+/*  
   var selected = $('#mobile_tag_select_' + picklist_location + ' option:selected').text();
   var href = location.href;
   if ( selected == 'all' )
@@ -614,6 +616,7 @@ function show_mobile_view(picklist_location)
   else
     href = add_href_arg(href, 'view', selected);
   location.href = href;
+*/
   }
 
 
