@@ -230,6 +230,7 @@ function show_metadict(index, metadict)
 
   for ( var i in record_keys )
     {
+    var viewer = "";
     var key = record_keys[i];
     var row_id = index + '_' + key;
     if ( ! metadict.hasOwnProperty(key) )
@@ -240,12 +241,14 @@ function show_metadict(index, metadict)
       {
       var feedurl = metadict[key];
       val += validate_feedurl(feedurl);
+      viewer = '<a title="view the feed" href="http://elmcity.cloudapp.net/text_from_ics?url=' + encodeURIComponent(feedurl) + '">' + '<img src="http://elmcity.blob.core.windows.net/admin/glasses.png"/></a>';
       }
+
  
     table.append('<tr id="' + row_id + '">' + 
       '<td name="key">' + 
       '<a title="' + include_fields[key] + '">' + key + '</a>' +
-      '</td><td name="val">' + 
+      '</td><td>' + viewer + '</td><td name="val">' + 
       val + 
       '</td></tr>');
     }
