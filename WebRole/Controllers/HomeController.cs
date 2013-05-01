@@ -645,18 +645,22 @@ if unsure please check http://{1}/{2}/stats",
         [OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
         public ActionResult text_from_ics(string url, string property)
         {
-            var r = HttpUtils.FetchUrl(new Uri(url));
+            var cal_response = HttpUtils.FetchUrl(new Uri(url));
             var cr = new ContentResult();
-            cr.ContentType = "text/plain";
-            if (r.status != HttpStatusCode.OK)
+            cr.ContentType = "text/html";
+            if (cal_response.status != HttpStatusCode.OK)
             {
-                cr.Content = url = ": " + r.status.ToString();
+                cr.Content = url = ": " + cal_response.status.ToString();
             }
             else
             {
-                cr.Content = r.DataAsString();
-                if (!String.IsNullOrEmpty(property))
-                    cr.Content = GenUtils.FindCalProps(property, cr.Content);
+				var template_uri = BlobStorage.MakeAzureBlobUri("admin", "text_from_ics.tmpl");
+				var template_html = HttpUtils.FetchUrl(template_uri).DataAsString();
+				var cal_text = cal_response.DataAsString();
+				if (!String.IsNullOrEmpty(property))
+					cal_text = GenUtils.FindCalProps(property, cal_text);
+				template_html = template_html.Replace("__DATA__", cal_text);
+				cr.Content = template_html;
             }
             return cr;
         }

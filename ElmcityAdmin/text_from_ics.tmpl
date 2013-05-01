@@ -1,0 +1,58 @@
+<html>
+<head>
+<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
+<script>
+
+function onload()
+{
+if ( gup('property') != '' )
+  $('#property_select').val(gup('property'));
+}
+
+function view_feed()
+{
+var feedurl =  gup('url');
+var property = $('#property_select').val();
+var url = 'http://elmcity.cloudapp.net/text_from_ics' +
+                '?url=' +
+                feedurl +
+                '&property=' +
+                property;
+location.href = url;
+}
+
+// http://elmcity.cloudapp.net/text_from_ics?url=http%3A%2F%2Fwww.christiansburg.org%2Fcommon%2Fmodules%2FiCalendar%2FiCalendar.aspx%3FcatID%3D25%26feed%3Dcalendar&property=
+
+function gup( name )
+  {  
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");  
+  var regexS = "[\\?&]"+name+"=([^&#]*)";  
+  var regex = new RegExp( regexS );  
+  var results = regex.exec( window.location.href );   
+  if( results == null )    
+    return "";  
+  else    
+    return results[1].replace(/%20/,' ');
+  }
+</script>
+</head>
+
+
+<body onload="onload()">
+PROPERTY filter <select id="property_select" onchange="view_feed()">
+<option value="" selected="">none</option>
+<option value="SUMMARY">SUMMARY</option>
+<option value="DESCRIPTION">DESCRIPTION</option>
+<option value="LOCATION">LOCATION</option>
+<option value="URL">URL</option>
+<option value="CATEGORIES">CATEGORIES</option>
+<option value="DTSTART">DTSTART</option>
+<option value="DTEND">DTEND</option>
+</select>
+
+<pre>
+__DATA__
+</pre>
+
+</body>
+</html>
