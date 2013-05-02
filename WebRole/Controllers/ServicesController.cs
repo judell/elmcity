@@ -182,7 +182,10 @@ namespace WebRole
 						render_args["mobile"] = false;
 						render_args["ua"] = "";
 						render_args["css"] = this.cr.calinfo.css;  // need to extract and pass along the default theme name
-						render_args["taglist"] = String.IsNullOrEmpty(this.taglist) ? true : this.taglist.ToLower().StartsWith("n");
+						if (String.IsNullOrEmpty(this.taglist))
+							render_args["taglist"] = true;
+						else
+							render_args["taglist"] = !this.taglist.ToLower().StartsWith("n");
 
 						bool mobile_declared = this.mobile.ToLower().StartsWith("y");
 	
