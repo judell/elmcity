@@ -357,16 +357,6 @@ namespace WorkerRole
 
             try
             {
-				CalendarAggregator.Utils.ZeroCountForService(id, "upcoming");
-                DoUpcoming(calinfo);
-            }
-            catch (Exception e2)
-            {
-                GenUtils.PriorityLogMsg("exception", "DoUpcoming", e2.Message + e2.StackTrace);
-            }
-
-            try
-            {
 				CalendarAggregator.Utils.ZeroCountForService(id, "eventbrite");
                 DoEventBrite(calinfo);
             }
