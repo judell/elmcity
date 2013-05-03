@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2487";
+        public static string version = "2489";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -708,6 +708,7 @@ namespace WebRole
                 var themes = Utils.GetThemesDict();
                 if (ObjectUtils.DictOfDictStrEqualsDictOfDictStr(themes, ElmcityController.themes) == false)
                 {
+					GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes", "reloading themes");
                     lock (ElmcityController.themes)
                     {
                         ElmcityController.themes = themes;
