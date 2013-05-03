@@ -305,68 +305,28 @@ $(document).ready(function(){
     }
 
   if ( gup('datestyle') != '' )
-    {
-    var style = decodeURIComponent(gup('datestyle'));
-    style = style.replace(/'/g,'"');
-    $('.ed').css(JSON.parse(style));
-    }
+    apply_json_css('.ed', 'datestyle');
 
   if ( gup('itemstyle') != '' )
-    {
-    var style = decodeURIComponent(gup('itemstyle'));
-    style = style.replace(/'/g,'"');
-    $('.bl').css(JSON.parse(style));
-    }
+    apply_json_css('.bl', 'itemstyle');
 
   if ( gup('titlestyle') != '' )
-    {
-    var style = decodeURIComponent(gup('titlestyle'));
-    style = style.replace(/'/g,'"');
-    $('.ttl').css(JSON.parse(style));
-    }
+    apply_json_css('.ttl', 'titlestyle');
 
   if ( gup('linkstyle') != '' )
-    {
-    var style = decodeURIComponent(gup('linkstyle'));
-    style = style.replace(/'/g,'"');
-    $('.ttl a').css(JSON.parse(style));
-    }
+    apply_json_css('.ttl a', 'linkstyle');
 
   if ( gup('dtstartstyle') != '' )
-    {
-    var style = decodeURIComponent(gup('dtstartstyle'));
-    style = style.replace(/'/g,'"');
-    $('.st').css(JSON.parse(style));
-    }
+    apply_json_css('.st', 'dtstartstyle');
 
   if ( gup('sd') != '' )
-    {
-    var style = decodeURIComponent(gup('sd'));
-    style = style.replace(/'/g,'"');
-    $('.sd').css(JSON.parse(style));
-    }
+    apply_json_css('.sd', 'sd');
 
   if ( gup('atc') != '' )
-    {
-    var style = decodeURIComponent(gup('atc'));
-    style = style.replace(/'/g,'"');
-    $('.atc').css(JSON.parse(style));
-    }
-
-  if ( gup('ed') != '' )
-    {
-    var style = decodeURIComponent(gup('ed'));
-    style = style.replace(/'/g,'"');
-    $('.ed').css(JSON.parse(style));
-    }
-
+    apply_json_css('.atc', 'atc');
 
   if ( gup('sourcestyle') != '' )
-    {
-    var style = decodeURIComponent(gup('sourcestyle'));
-    style = style.replace(/'/g,'"');
-    $('.src').css(JSON.parse(style));
-    }
+    apply_json_css('.src', 'sourcestyle');
 
   if ( is_mobile() )
     {
@@ -386,6 +346,20 @@ $(document).ready(function(){
 //    extend_events(1,false);
 
   });
+
+function apply_json_css(element,style)
+  {
+  try 
+    {
+    var style = decodeURIComponent(gup(style));
+    style = style.replace(/'/g,'"');
+    $(element).css(JSON.parse(style));
+    }
+  catch (e)
+    {
+    console.log(e.description);
+    }
+  }
 
 function more()
   {
