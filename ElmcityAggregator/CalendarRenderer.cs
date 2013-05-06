@@ -309,6 +309,8 @@ namespace CalendarAggregator
 
 			AdvanceToAnHourAgo(eventstore);
 
+			var original_template = this.template_html;
+
 			MaybeUseTestTemplate(args);
 
 			var builder = new StringBuilder();
@@ -341,6 +343,9 @@ namespace CalendarAggregator
 			 */
 
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString() + " : " + this.calinfo.version_description);
+
+			if (args.Keys.Contains("test") && (bool)args["test"] == true)  // restore original template
+				this.template_html = original_template;
 
 			return html;
 		}
