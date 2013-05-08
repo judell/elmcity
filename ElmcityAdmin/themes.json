@@ -46,14 +46,14 @@
     ".desc"        :  " { } "
     },
 
-  "a2chron-unframed" : {
+  "unframed" : {
     "body"         :  " { 'font-family':'Constantia,LucidaBright', 'font-size':'11pt' } ",
     "div"          :  " { 'line-height' : '1.2' } ",
     ".hubtitle"    :  " { 'font-weight':'bold', 'font-size' : '13pt' } ",
     ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
-    "#datepicker"  :  " { 'font-size':'6pt' } ",
-    "#sidebar"     :  " { 'font-size':'smaller' } ",
-    "#tags"        :  " { 'text-align':'center' } ",
+    "#datepicker"  :  " { 'font-size':'6pt', 'visibility':'hidden' } ",
+    "#sidebar"     :  " { 'font-size':'smaller', 'visibility':'hidden'  } ",
+    "#tags"        :  " { 'text-align':'center', 'visibility':'hidden'  } ",
     ".bl"          :  " { 'line-height' :'1.5', 'margin-right':'25%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
     ".st"          :  " { 'border-bottom' : '1px dotted', 'color':'#333'} ",
     ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
