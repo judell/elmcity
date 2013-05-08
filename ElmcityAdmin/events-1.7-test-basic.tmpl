@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML+RDFa 1.0//EN" "http://www.w3.org/MarkUp/DTD/xhtml-rdfa-1.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>__TITLE__</title>
+<meta name="description" content="__META__">
+<link type="text/css" rel="stylesheet" href="__CSSURL__"/>
+
+<!-- JQUERY_UI_CSS -->
+<link type="text/css" href="http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/themes/smoothness/jquery-ui.css" rel="stylesheet" />
+<!-- /JQUERY_UI_CSS -->
+
+<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
+
+<!-- JQUERY_UI -->
+<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/jquery-ui.min.js'></script>
+<!-- /JQUERY_UI -->
+
+<script type="text/javascript" src="http://elmcity.blob.core.windows.net/admin/elmcity-1.7-test.js"></script>
+
+<!-- __CUSTOM_STYLE __ -->
+
+</head>
+
+<body>
+
+<div id="body">
+
+<div id="top_element"></div>
+
+<!-- SIDEBAR -->
+
+<div id="sidebar" style="text-align:center;position:absolute;left:80%;width:150px;">
+
+<!-- DATEPICKER -->
+<div id="datepicker"></div>
+<!-- /DATEPICKER -->
+
+<!-- TAGS -->
+<div id="tags"></div>
+<!-- /TAGS -->
+
+
+<p style="font-style:italic">sources</p>
+
+<p style="font-weight:bold"><a title="These are iCalendar feeds from organizations, clubs, and groups. Got one to contribute? Contact the curator!" target="_new" href="http://__APPDOMAIN__/services/__ID__/stats">__FEEDCOUNT__ iCalendar feeds</a></p>
+
+<table style="border-spacing:8px;margin:auto">
+<tr>
+<td align="center" valign="middle">
+<a title="eventful" href="http://eventful.com"><img alt="Local Events, Concerts, Tickets" src="http://elmcity.blob.core.windows.net/admin/eventful_logo.gif"></a>
+</td>
+<td align="center" valign="middle">
+<a title="eventbrite" href="http://eventbrite.com"><img src="http://elmcity.blob.core.windows.net/admin/eventbrite_logo.jpg" style="width:60px"></a>
+</td>
+</tr>
+
+<tr>
+<td align="center" valign="middle">
+<a title="facebook" href="http://facebook.com"><img width="60px" src="http://elmcity.blob.core.windows.net/admin/facebook.png"></a>
+</td>
+<td align="center" valign="middle">
+<a title="meetup" href="http://meetup.com"><img width="50px" src="http://elmcity.blob.core.windows.net/admin/meetup.png"></a>
+</td>
+</tr>
+
+<tr>
+<td align="center" valign="middle" colspan="2">
+<a title="last.fm" href="http://last.fm"><img width="70px" src="http://elmcity.blob.core.windows.net/admin/lastfm.gif"></a>
+</td>
+</tr>
+
+</table>
+
+<hr>
+
+<p style="margin-top:25px">
+<a title="about" target="elmcity_about" href="/__ID__/about">about this hub</a>
+</p>
+
+<p>
+<a title="how to post" target="_new" href="http://blog.jonudell.net/elmcity-project-faq/#contribute">how to post events</a>
+</p>
+
+<p>
+<a title="contact the curator" href="mailto:__CONTACT__?subject=calendar question or comment">contact the curator</a>
+</p>
+
+<p>
+<a id="subscribe" title="subscribe your calendar to this view" href="http://__APPDOMAIN__/__ID__/ics?view=__VIEW__"></a>
+</p>
+
+<p>
+<a id="switcher" title="switch view" href=""></a>
+</p>
+
+
+<hr>
+
+<p>
+<a title="powered by windows azure" id="windows azure" href="http://windowsazure.com"><img style="width:150px;margin-top:10px" src="http://elmcity.blob.core.windows.net/admin/pbwa.png"></a>
+</p>
+
+</div>
+
+<!-- /SIDEBAR -->
+
+
+<div id="elmcity_id" style="display:none">
+__ID__
+</div>
+
+<!--
+<div id="mobile" style="display:none">
+__MOBILE__
+</div>
+
+<div id="mobile_long" style="display:none">
+__MOBILE_LONG__
+</div>
+
+<div id="mobile_short" style="display:none">
+__MOBILE_SHORT__
+</div>
+-->
+
+
+<!-- begin events -->
+
+<div id="event-listing" style="clear:left">
+
+__EVENTS__
+
+</div>
+
+<!-- end events -->
+
+</div>
+
+<!--
+__GENERATED__
+-->
+
+<script>
+  setup_datepicker();
+ 
+  if (gup('top_element') == '' )
+    top_element = 'top_element';
+  else
+    top_element = gup('top_element');
+
+  if (gup('top_offset') == '' )
+    top_offset = 0;
+  else
+    top_offset = gup('top_offset');
+
+  position_sidebar(top_element)
+</script>
+
+
+</body>
+</html>

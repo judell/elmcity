@@ -46,6 +46,31 @@
     ".desc"        :  " { } "
     },
 
+  "a2chron-unframed" : {
+    "body"         :  " { 'font-family':'Constantia,LucidaBright', 'font-size':'11pt' } ",
+    "div"          :  " { 'line-height' : '1.2' } ",
+    ".hubtitle"    :  " { 'font-weight':'bold', 'font-size' : '13pt' } ",
+    ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
+    "#datepicker"  :  " { 'font-size':'6pt' } ",
+    "#sidebar"     :  " { 'font-size':'smaller' } ",
+    "#tags"        :  " { 'text-align':'center' } ",
+    ".bl"          :  " { 'line-height' :'1.5', 'margin-right':'25%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
+    ".st"          :  " { 'border-bottom' : '1px dotted', 'color':'#333'} ",
+    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
+    ".ed"          :  " { 'font-size':'12pt' }",
+    "a"            :  " { 'color' : 'black', 'text-decoration' : 'none' }",
+    "a:hover"      :  " { 'color' : 'gray' }",
+    ".ttl"         :  " {  }",
+    ".src"         :  " { 'font-size':'smaller', 'text-transform': 'uppercase' } ",
+    ".cat"         :  " { 'font-size':'smaller' } ",
+    ".sd"          :  " { } ",
+    ".sd a"        :  " { } ",
+    ".atc"         :  " { } ",
+    ".atc a"       :  " { } ",
+    ".desc"        :  " { } "
+    },
+
+
   "roanoke" : {
     "body"         :  " { 'font-family':'verdana,arial,sans-serif', 'font-size':'10pt' } ",
     ".hubtitle"    :  " { 'font-size' : '10pt', 'font-weight':'bold' } ",
@@ -92,6 +117,54 @@
     ".atc a"       :  " { } ",
     ".desc"        :  " { } ",
     ".test"        :  " { } "
+    },
+
+  "daily-press-ticket" : {
+    "body"         :  " { 'font-family':'helvetica,arial,sans-serif', 'font-size':'11pt' } ",
+    "div"          :  " { 'line-height' : '1.2' } ",
+    ".hubtitle"    :  " { 'display':'none' } ",
+    ".timeofday"   :  " { 'font-size':'11pt', 'margin-bottom':'4pt', 'margin-left':'0', 'margin-top':'0' } ",
+    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'80%', 'top':'30px' } ",
+    "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'755px', 'top':'240px', 'width':'150px' } ",
+    "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'80%', 'top':'200px', 'width':'150px' } ",
+    ".bl"          :  " { 'line-height' :'1.5', 'margin':'0 25% 10pt 1em', 'text-indent':'-1em' } ",
+    ".st"          :  " { 'border-bottom' : 'none', 'color':'#777'} ",
+    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
+    ".ed"          :  " { 'font-size':'12pt' }",
+    "a"            :  " { 'color' : 'black', 'text-decoration' : 'none' }",
+    "a:hover"      :  " { 'color' : 'black', 'text-decoration' : 'underline'  }",
+    ".ttl"         :  " { 'font-weight':'700' }",
+    ".src"         :  " { 'font-size':'smaller', 'text-transform': 'uppercase' } ",
+    ".cat"         :  " { 'display':'none' } ",
+    ".sd"          :  " { } ",
+    ".sd a"        :  " { } ",
+    ".atc"         :  " { } ",
+    ".atc a"       :  " { } ",
+    ".desc"        :  " { } "
+    },
+
+  "daily-press-news" : {
+    "body"         :  " { 'font-family':'helvetica,arial,sans-serif', 'font-size':'11pt' } ",
+    "div"          :  " { 'line-height' : '1.2' } ",
+    ".hubtitle"    :  " { 'display':'none' } ",
+    ".timeofday"   :  " { 'font-size':'11pt', 'margin-bottom':'4pt', 'margin-left':'0', 'margin-top':'0' } ",
+    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'80%', 'top':'30px' } ",
+    "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'755px', 'top':'240px', 'width':'150px' } ",
+    "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'80%', 'top':'200px', 'width':'150px' } ",
+    ".bl"          :  " { 'line-height' :'1.5', 'margin':'0 25% 10pt 1em', 'text-indent':'-1em' } ",
+    ".st"          :  " { 'border-bottom' : 'none', 'color':'#777777'} ",
+    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
+    ".ed"          :  " { 'font-size':'12pt' }",
+    "a"            :  " { 'color' : '#032152', 'text-decoration' : 'none' }",
+    "a:hover"      :  " { 'color' : '#032152', 'text-decoration' : 'underline'  }",
+    ".ttl"         :  " { 'color' : '#032152', 'font-weight':'700' }",
+    ".src"         :  " { 'font-size':'smaller', 'text-transform': 'uppercase' } ",
+    ".cat"         :  " { 'display':'none' } ",
+    ".sd"          :  " { } ",
+    ".sd a"        :  " { } ",
+    ".atc"         :  " { } ",
+    ".atc a"       :  " { } ",
+    ".desc"        :  " { } "
     }
 
 }
