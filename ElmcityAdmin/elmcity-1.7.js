@@ -49,7 +49,7 @@ function add_fullsite_switcher()
     remove_href_arg(href, 'mobile');
     href = add_href_arg(href, 'mobile', 'no');
     var long = $('#mobile_long').text().trim();
-    var switcher = '<p id="switcher"><a title="switch from mobile view to full" href="__HREF__">__OTHER__</a></p>';
+    var switcher = '<p class="sidebar" style="text-align:center"><a title="switch from full view to mobile" href="__HREF__">__OTHER__</a></p>';
     switcher = switcher.replace("__HREF__", href);
     switcher = switcher.replace("__OTHER__", "full site");
     $('body').append(switcher);
@@ -60,6 +60,17 @@ function add_fullsite_switcher()
     console.log(e.description);
     }
   }
+
+function position_sidebar(top_element)
+  {
+  var top_elt_bottom = $('#' + top_element)[0].getClientRects()[0].bottom;
+ 
+  if ( top_elt_bottom <= 0  )
+     $('#sidebar').css('top', $(window).scrollTop() - top_offset + 'px');
+   else
+     $('#sidebar').css('top', '0px');
+  }
+
 
 function add_mobile_switcher()
   {
@@ -132,6 +143,9 @@ function scroll(event)
   if ( is_mobile() || is_eventsonly() )
     return;
 
+  if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
+    position_sidebar(top_element);
+
   var date_str = find_current_name().replace('d','');
   var parsed = parse_yyyy_mm_dd(date_str)
   setDate(parsed['year'], parsed['month'], parsed['day']);
@@ -139,7 +153,6 @@ function scroll(event)
 
 function find_last_day()
   {
-//  console.log("find_last_day");
   if ( ! is_mobile() )
     {
     try
@@ -196,13 +209,15 @@ function find_current_name()
       else
         break;
       }
-    return before[before.length-1];  
+    var ret = before[before.length-1];
+    if ( typeof ret == 'undefined' )
+      ret = anchors[0].name;
     }
   catch (e)
     {
-     console.log(e.description);
-     return;
+     console.log("find_current_name: " + e.description);
     }
+  return ret;
   }
 
 
@@ -246,9 +261,19 @@ function setup_datepicker()
 
   setDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
+  if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
+    {
+    position_sidebar(top_element)
+    $('#sidebar').css('visibility','visible');
+    $('#datepicker').css('visibility','visible');
+    $('#tags').css('visibility','visible');
+    }
+
+  /*
   var more = '<div id="morelink" style="display:none;font-size:8pt;text-align:center">' + morelink() + '</div>';
 
   $('#datepicker').append(more);
+  */
 
   datepicker = true;
   }
@@ -268,11 +293,6 @@ $(document).ready(function(){
 
     if ( gup('taglist') == 'no' )
       $('.tag_select').remove();
-    }
-  else  
-    {
-    if ( datepicker == false )
-      setup_datepicker();
     }
 
   if ( is_view() && ! is_mobile() )
@@ -347,6 +367,11 @@ $(document).ready(function(){
 
 //  if ( ! is_mobile() && ! is_eventsonly() )  
 //    extend_events(1,false);
+
+  if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
+    setTimeout('setup_datepicker()', 200);
+  else
+    setup_datepicker();                            
 
   });
 
