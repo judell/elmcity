@@ -325,9 +325,6 @@ $(document).ready(function(){
   if ( gup('atc') != '' )
     apply_json_css('.atc', 'atc');
 
-  if ( gup('cat') != '' )
-    apply_json_css('.cat', 'cat');
-
   if ( gup('sourcestyle') != '' )
     apply_json_css('.src', 'sourcestyle');
 
@@ -341,8 +338,8 @@ $(document).ready(function(){
 
   if ( is_mobile() )
     add_fullsite_switcher();
-//  else
-//    add_mobile_switcher();
+  else
+    add_mobile_switcher();
 
 
 //  if ( ! is_mobile() && ! is_eventsonly() )  
@@ -555,18 +552,10 @@ function show_view()
   var selected = $('#tag_select option:selected').text();
   selected = selected.replace(/\s*\((\d+)\)/,'');
   var elmcity_id = get_elmcity_id();
-  var href;
   if ( selected == 'all' )
-    href = '/' + elmcity_id + '/';
+    location.href = '/' + elmcity_id + '/';
   else
-    href = '/' + elmcity_id + '/?view=' + encodeURIComponent(selected);
-  if ( gup('test') != '')
-    href = add_href_arg(href,'test',gup('test') );
-  if ( gup('theme') != '')
-    href = add_href_arg(href,'theme',gup('theme') );
-  if ( gup('count') != '')
-    href = add_href_arg(href,'count',gup('count') );
-  location.href = href;
+    location.href = '/' + elmcity_id + '/?view=' + encodeURIComponent(selected);
   }
 
 function remove_href_arg(href, name)

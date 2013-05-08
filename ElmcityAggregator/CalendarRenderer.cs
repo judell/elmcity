@@ -577,7 +577,7 @@ namespace CalendarAggregator
 			var cmp = StringComparer.OrdinalIgnoreCase;
 			tags.Sort(cmp);
 			var sb = new StringBuilder();
-			sb.Append("<select style=\"margin-bottom:10px; margin-top:10px;\" id=\"tag_select\" onchange=\"show_view()\">\n");
+			sb.Append("<select style=\"font-size:130%; margin-bottom:10px; margin-top:10px;\" id=\"tag_select\" onchange=\"show_view()\">\n");
 			if (view == null)
 				sb.Append("<option selected>all</option>\n");
 			else
@@ -597,8 +597,7 @@ namespace CalendarAggregator
 				//html = html.Replace("<!-- end events -->", "<!-- end events -->\n" + sb.ToString());
 			}
 			else
-				//html = html.Replace("<div id=\"tags\"></div>", "<div id=\"tags\">" + sb.ToString() + "</div>");
-				html = Regex.Replace(html, "(<div id=\"tags\"[^>]*?>)", "$1" + sb.ToString());
+				html = html.Replace("<div id=\"tags\"></div>", "<div id=\"tags\">" + sb.ToString() + "</div>");
 			return html;
 		}
 
