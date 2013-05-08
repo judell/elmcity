@@ -1,10 +1,11 @@
-var host = 'http://elmcity.cloudapp.net/';
+var host = 'http://0cc2a83d37004e55a492affa4757765d.cloudapp.net/';
 var anchor_names = [];
 var today = new Date();
 var last_day;
 var datepicker = false;
+var top_element;
+var top_offset;
 var long;
-
 
 function rescale()
   {
@@ -65,7 +66,7 @@ function add_mobile_switcher()
   {
   try
     {
-     var switcher = '<p style="text-align:center"><a title="switch from full view to mobile" href="__HREF__">__OTHER__</a></p>';
+     var switcher = '<p class="sidebar" style="text-align:center"><a title="switch from full view to mobile" href="__HREF__">__OTHER__</a></p>';
      var href = location.href;
      remove_href_arg(href, 'mobile');
      href = add_href_arg(href, 'mobile', 'yes');
@@ -127,10 +128,23 @@ function parse_mm_dd_yyyy(date_str)
   return { month: match[1], day: match[2], year: match[3] }
   }
 
+function position_sidebar(top_element)
+  {
+  var top_elt_bottom = $('#' + top_element)[0].getClientRects()[0].bottom;
+
+  if ( top_elt_bottom <= 0  )
+    $('#sidebar').css('top', $(window).scrollTop() - top_offset + 'px');
+  else
+    $('#sidebar').css('top', '0px');
+
+  }
+
 function scroll(event)
   {
   if ( is_mobile() || is_eventsonly() )
     return;
+
+  position_sidebar(top_element);
 
   var date_str = find_current_name().replace('d','');
   var parsed = parse_yyyy_mm_dd(date_str)
@@ -177,8 +191,6 @@ function find_current_name()
   if ( is_eventsonly() || is_mobile() ) 
     return;
 
-//  console.log("find_current_name");
-
   try
     {
     var before = [];
@@ -196,13 +208,16 @@ function find_current_name()
       else
         break;
       }
-    return before[before.length-1];  
+
+    var ret = before[before.length-1];
+    if ( typeof ret == 'undefined' )
+      ret = anchors[0].name;
     }
   catch (e)
     {
-     console.log(e.description);
-     return;
+     console.log("find_current_name: " + e.description);
     }
+    return ret;
   }
 
 
@@ -231,7 +246,8 @@ function setup_datepicker()
   {
   if ( datepicker )
      return;
-//  console.log("setup_datepicker");
+
+
 
   prep_day_anchors_and_last_day();
   
@@ -246,36 +262,32 @@ function setup_datepicker()
 
   setDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
+  position_sidebar(top_element)
+  $('#sidebar').css('visibility','visible');
+  $('#datepicker').css('visibility','visible');
+  $('#tags').css('visibility','visible');
+
+/*
   var more = '<div id="morelink" style="display:none;font-size:8pt;text-align:center">' + morelink() + '</div>';
 
   $('#datepicker').append(more);
-
-  datepicker = true;
+*/
   }
 
 
 $(document).ready(function(){
-		//  console.log("ready");
 
   var elmcity_id = get_elmcity_id();
 
-//  if ( is_eventsonly() && ! is_mobile() ) 
   if ( is_eventsonly() || is_mobile() ) 
     {
-/*
-    $('.ed').remove();
-    $('.timeofday').remove();
-    $('#body').css('width', '100%');
-    $('.hubtitle').remove();
     if ( gup('tags') == 'no' )
+      {
       $('.cat').remove();
-    $('.bl').css('width','90%');
-*/
-    }
-  else  
-    {
-    if ( datepicker == false )
-      setup_datepicker();
+      }
+
+    if ( gup('taglist') == 'no' )
+      $('.tag_select').remove();
     }
 
   if ( is_view() && ! is_mobile() )
@@ -308,60 +320,28 @@ $(document).ready(function(){
     }
 
   if ( gup('datestyle') != '' )
-    {
-    var style = decodeURIComponent(gup('datestyle'));
-    style = style.replace(/'/g,'"');
-    $('.ed').css(JSON.parse(style));
-    }
+    apply_json_css('.ed', 'datestyle');
 
   if ( gup('itemstyle') != '' )
-    {
-    var style = decodeURIComponent(gup('itemstyle'));
-    style = style.replace(/'/g,'"');
-    $('.bl').css(JSON.parse(style));
-    }
+    apply_json_css('.bl', 'itemstyle');
 
   if ( gup('titlestyle') != '' )
-    {
-    var style = decodeURIComponent(gup('titlestyle'));
-    style = style.replace(/'/g,'"');
-    $('.ttl').css(JSON.parse(style));
-    }
+    apply_json_css('.ttl', 'titlestyle');
 
   if ( gup('linkstyle') != '' )
-    {
-    var style = decodeURIComponent(gup('linkstyle'));
-    style = style.replace(/'/g,'"');
-    $('.ttl a').css(JSON.parse(style));
-    }
+    apply_json_css('.ttl a', 'linkstyle');
 
   if ( gup('dtstartstyle') != '' )
-    {
-    var style = decodeURIComponent(gup('dtstartstyle'));
-    style = style.replace(/'/g,'"');
-    $('.st').css(JSON.parse(style));
-    }
+    apply_json_css('.st', 'dtstartstyle');
 
   if ( gup('sd') != '' )
-    {
-    var style = decodeURIComponent(gup('sd'));
-    style = style.replace(/'/g,'"');
-    $('.sd').css(JSON.parse(style));
-    }
+    apply_json_css('.sd', 'sd');
 
   if ( gup('atc') != '' )
-    {
-    var style = decodeURIComponent(gup('atc'));
-    style = style.replace(/'/g,'"');
-    $('.atc').css(JSON.parse(style));
-    }
+    apply_json_css('.atc', 'atc');
 
   if ( gup('sourcestyle') != '' )
-    {
-    var style = decodeURIComponent(gup('sourcestyle'));
-    style = style.replace(/'/g,'"');
-    $('.src').css(JSON.parse(style));
-    }
+    apply_json_css('.src', 'sourcestyle');
 
   if ( is_mobile() )
     {
@@ -376,11 +356,23 @@ $(document).ready(function(){
   else
     add_mobile_switcher();
 
-
-//  if ( ! is_mobile() && ! is_eventsonly() )  
-//    extend_events(1,false);
+  setTimeout('setup_datepicker()', 100);
 
   });
+
+function apply_json_css(element,style)
+  {
+  try 
+    {
+    var style = decodeURIComponent(gup(style));
+    style = style.replace(/'/g,'"');
+    $(element).css(JSON.parse(style));
+    }
+  catch (e)
+    {
+    console.log(e.description);
+    }
+  }
 
 function more()
   {
@@ -561,86 +553,6 @@ if(!String.prototype.trim) {
 }
 
 
-function get_json_keys(tags_json)
-  {
-  var json_keys = [];
-  for (i in tags_json)
-    {
-    var obj = tags_json[i];
-    var key = $.keys(obj)[0];
-    json_keys.push(key);
-    }
-
-  json_keys.sort(case_insensitive_sort);
-  remove(json_keys,"...");
-  remove(json_keys,"http:");
-  return json_keys;
-  }
-
-function tags(tags_json)
-  {
-  var json_keys = get_json_keys(tags_json);  
-  if ( json_keys.length > 0 )
-    {
-    $('#tags').append('<div style="margin-bottom:3pt;font-style:italic">categories</div>');
-    $('#tags').append('<select id="tag_select" onchange="show_view()">');
-
-    if ( is_view() )
-      $('#tag_select').append('<option>all</option>');
-    else
-      $('#tag_select').append('<option selected>all</option>');
-
-    for ( i in json_keys )
-      {
-      var key = json_keys[i];
-      var obj = $.grep(tags_json, function (o) { return $.keys(o)[0] == key;} );
-      var count = key == "all" ? '' : ' (' + obj[0][key] + ')</p>';
-      var selected = '';
-      if ( gup('view') == key )
-         selected = ' selected';
-      $('#tag_select').append('<option ' + selected + ' value="' + key + '">' + key + count + '</option>');
-      }
-
-    $('#tags').append('</select>');
-    }
-
-  }
-
-function mobile_tags(tags_json)
-  {
-  var picklist_top = make_mobile_picklist('top', tags_json);
-  var picklist_bottom = make_mobile_picklist('bottom',tags_json);
-  $('#body').prepend(picklist_top);
-  $('#body').append(picklist_bottom);
-  $('.mobile_tag_select').css('font-size','150%').css('margin-bottom','8px');    
-  }
-
-function make_mobile_picklist(top_or_bottom,tags_json)
-  {
-  var picklist = '<select id="mobile_tag_select_' + top_or_bottom + '" class="mobile_tag_select" onchange="show_mobile_view(' + "'" + top_or_bottom + "'" + ')">';
-  var json_keys = get_json_keys(tags_json);  
-
-  picklist = picklist + '<option>all</option>';
-
-  var selected_view = '';
-
-  if ( is_view() )
-    selected_view = gup('view');
-//  else
-//    selected_view = json_keys[0];
-
-  for ( i in json_keys )
-    {
-    var key = json_keys[i];
-    var selected = ( key == selected_view ) ? ' selected' : '';
-    var option = '<option' + selected + '>' + key + '</option>';
-    picklist = picklist + option;
-    }
-  picklist = picklist + '</select>';
-  return picklist
-  }
-
-
 function case_insensitive_sort(a, b) 
   {
   var x = a.toLowerCase();
@@ -650,13 +562,21 @@ function case_insensitive_sort(a, b)
 
 function show_view()
   {
-  var selected = $('.tag_select option:selected').text();
+  var selected = $('#tag_select option:selected').text();
   selected = selected.replace(/\s*\((\d+)\)/,'');
   var elmcity_id = get_elmcity_id();
+  var href;
   if ( selected == 'all' )
-    location.href = '/' + elmcity_id + '/';
+    href = '/' + elmcity_id + '/';
   else
-    location.href = '/' + elmcity_id + '/?view=' + encodeURIComponent(selected);
+    href = '/' + elmcity_id + '/?view=' + encodeURIComponent(selected);
+  if ( gup('test') != '')
+    href = add_href_arg(href,'test',gup('test') );
+  if ( gup('theme') != '')
+    href = add_href_arg(href,'theme',gup('theme') );
+  if ( gup('count') != '')
+    href = add_href_arg(href,'count',gup('count') );
+  location.href = href;
   }
 
 function remove_href_arg(href, name)
@@ -678,17 +598,6 @@ function add_href_arg(href, name, value)
     href = href + '?' + name + '=' + value;
     }
   return href;
-  }
-
-function show_mobile_view(picklist_location)
-  {
-  var selected = $('#mobile_tag_select_' + picklist_location + ' option:selected').text();
-  var href = location.href;
-  if ( selected == 'all' )
-   href = remove_href_arg(href, 'view');
-  else
-    href = add_href_arg(href, 'view', selected);
-  location.href = href;
   }
 
 
