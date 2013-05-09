@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2489";
+        public static string version = "2492";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -654,7 +654,7 @@ namespace WebRole
             try
             {
                 var _wrd = WebRoleData.GetWrd();
-                if (_wrd.ready_ids.Count != ElmcityApp.wrd.ready_ids.Count)  // did # of hubs change?
+                if (_wrd.ready_ids.Count != ElmcityApp.wrd.ready_ids.Count)  // did # of hubs change? either on initial load or subsequently
                 {
                     new_routes = true;                                       // force rebuild of route map
                     GenUtils.LogMsg("info", "Reload: found a new hub", null);
