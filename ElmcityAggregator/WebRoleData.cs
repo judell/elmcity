@@ -57,8 +57,14 @@ namespace CalendarAggregator
 				GenUtils.LogMsg("info", "GatherWebRoleData: readying: " + id, null);
 
 				var cr = new CalendarRenderer(id);
-				this.renderers.Add(id, cr);
-				this.ready_ids.Add(id);
+				lock (this.renderers)
+				{
+					this.renderers.Add(id, cr);
+				}
+				lock (this.ready_ids)
+				{
+					this.ready_ids.Add(id);
+				}
 			});
 			//}
 
