@@ -3478,6 +3478,97 @@ END:VTIMEZONE");
 			}
 		}
 
+		public static void CheckFeedUrls(string id)
+		{
+			var report = new StringBuilder();
+
+			report.AppendLine(@"<html>
+<head><style>th { text-align:left }</style></head>
+<body>
+<table style=""border-spacing:8px"">
+<thead><th>id</th><th>source</th><th>well-formed</th><th>feed exists</th><th>feed parses</th><th>url</th></thead>
+<tbody>");
+
+			var ids = new List<string>();
+
+			if (Utils.IsRegion(id))
+				ids = Utils.GetIdsForRegion(id);
+			else
+				ids.Add(id);
+
+			foreach (var _id in ids)
+			{
+				var fr = new FeedRegistry(_id);
+				fr.LoadFeedsFromAzure(FeedLoadOption.all);
+				var feedurls = fr.feeds.Keys.ToList();
+				feedurls.Sort();
+
+				Parallel.ForEach(source: feedurls, body: (feedurl) =>
+				{
+					var result = CheckFeedRegistryEntry(_id, fr, feedurl);
+					if (result != null)
+					{
+						lock (report)
+						{
+							report.AppendLine(result);
+						}
+					}
+				});
+			}
+			report.AppendLine(@"</tbody>
+</body>
+</html>");
+			var html = report.ToString();
+			bs.PutBlob(id, "registry_check.html", html, "text/html");
+		}
+
+		public static string CheckFeedRegistryEntry(string id, FeedRegistry fr, string feedurl)
+		{
+			bool is_uri = false;
+			bool is_200 = false;
+			bool is_ical = false;
+
+			Uri uri = default(Uri);
+
+			try
+			{
+				uri = new Uri(feedurl);
+				is_uri = true;
+			}
+			catch { }
+
+			try
+			{
+				var r = HttpUtils.HeadFetchUrl(uri);
+				if (r.status == HttpStatusCode.OK)
+					is_200 = true;
+				else
+					is_200 = false;
+			}
+			catch { }
+
+			try
+			{
+				var feedtext = HttpUtils.FetchUrl(uri).DataAsString();
+				var ical = CalendarAggregator.Collector.ParseTheFeed(feedtext);
+				if (ical != null)
+					is_ical = true;
+				else
+					is_ical = false;
+			}
+			catch { }
+
+			string result = null;
+
+			var style = "";
+
+			if (!is_uri || !is_200 || !is_ical)
+				style = "background-color:rgb(206, 186, 186);";
+
+			result = string.Format(@"<tr style=""{0}""><td>{1}</td><td>{2}<td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td></tr>", style, id, fr.feeds[feedurl], is_uri, is_200, is_ical, feedurl);
+			return result;
+		}
+
 		#endregion
 
 	}
