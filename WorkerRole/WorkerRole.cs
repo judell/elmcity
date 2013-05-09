@@ -991,6 +991,7 @@ Future events {0}
                 failed += GenUtils.RunTests("ElmcityUtils");
                 failed += GenUtils.RunTests("WorkerRole");
                 failed += GenUtils.RunTests("WebRole");
+				bs.PutBlob("admin", "testrunner", failed.ToString() + " " + System.DateTime.UtcNow.ToString(), "text/plain");
 				if (failed > 0)
 					//TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed");
 					GenUtils.PriorityLogMsg("warning", "TestRunner", failed.ToString() + " tests failed");
