@@ -223,16 +223,6 @@ namespace CalendarAggregator
 					//foreach (var feedurl in feedurls)
 					Parallel.ForEach(source: feedurls, parallelOptions: options, body: (feedurl) =>
 					{
-
-						if (settings["eventful_feeds_enabled"] == "False" && feedurl.StartsWith("http://eventful.com/") )
-							return;
-
-						if ( settings["eventbrite_feeds_enabled"] == "False" && feedurl.Contains("ics_from_eventbrite") )
-							return;
-
-						if ( feedurl.StartsWith("http://upcoming.yahoo.com") 
-							return;
-
 						var tid = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
 						results_dict.TryAdd(feedurl, null);
