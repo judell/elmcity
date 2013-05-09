@@ -473,6 +473,7 @@ namespace CalendarAggregator
 
 		#endregion
 
+		/*
 		#region upcoming
 
 		[Test]
@@ -503,7 +504,7 @@ namespace CalendarAggregator
 			Assert.That(evt.dtstart.Minute == 0);
 			Assert.That(evt.dtstart.Second == 0);
 		}
-
+		
 		private static ZonelessEventStore ProcessUpcomingExample(string example, string source, Calinfo calinfo, Collector collector)
 		{
 			DeleteZonedObjects(calinfo.id);
@@ -515,6 +516,7 @@ namespace CalendarAggregator
 		}
 
 		#endregion
+		 */
 
 		#region feed cache
 
