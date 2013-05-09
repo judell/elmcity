@@ -230,6 +230,9 @@ namespace CalendarAggregator
 						if ( settings["eventbrite_feeds_enabled"] == "False" && feedurl.Contains("ics_from_eventbrite") )
 							return;
 
+						if ( feedurl.StartsWith("http://upcoming.yahoo.com") 
+							return;
+
 						var tid = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
 						results_dict.TryAdd(feedurl, null);
