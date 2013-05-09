@@ -303,6 +303,9 @@ namespace CalendarAggregator
 
 		public string RenderHtml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
 		{
+			if (args == null)
+				args = new Dictionary<string, object>();
+
 			this.ResetCounters();
 
 			eventstore = GetEventStore(eventstore, view, count, from, to);
