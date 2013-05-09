@@ -412,7 +412,7 @@ namespace WorkerRole
 
                 CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(region), Convert.ToInt32(settings["webrole_instance_count"]));
 
-                RenderTagsAndHtmlXmlJson(region);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
+                RenderTagsXmlJson(region);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
 
                 SaveRegionStats(region);
             }
@@ -450,7 +450,7 @@ namespace WorkerRole
 
             CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(id), Convert.ToInt32(settings["webrole_instance_count"]));
 
-            RenderTagsAndHtmlXmlJson(id);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
+            RenderTagsXmlJson(id);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
 
             var fr = new FeedRegistry(id);
             fr.LoadFeedsFromAzure(FeedLoadOption.all);
@@ -553,7 +553,7 @@ namespace WorkerRole
             return final_ids;
         }
 
-        public static void RenderTagsAndHtmlXmlJson(string id)
+        public static void RenderTagsXmlJson(string id)
         {
             var cr = new CalendarRenderer(id);
 
@@ -573,15 +573,6 @@ namespace WorkerRole
             catch (Exception e)
             {
                 logger.LogMsg("exception", "SaveAsJson: " + id, e.Message + e.StackTrace);
-            }
-
-            try
-            {
-                cr.SaveAsHtml();
-            }
-            catch (Exception e)
-            {
-                logger.LogMsg("exception", "SaveAsHtml: " + id, e.Message + e.StackTrace);
             }
 
             try
