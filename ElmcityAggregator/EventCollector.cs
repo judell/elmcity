@@ -578,7 +578,7 @@ namespace CalendarAggregator
 				if (evt.Start == null)
 				{
 					var msg = String.Format("null start date?!? {0}, {1}, {2}, {3}", id, tid, evt.Summary, source_name);
-					GenUtils.PriorityLogMsg("warning", msg, null);
+					GenUtils.LogMsg("warning", msg, null);
 					continue;
 				}
 

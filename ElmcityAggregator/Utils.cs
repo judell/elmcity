@@ -1347,7 +1347,7 @@ END:VCALENDAR",
 				}
 				catch ( Exception e )
 				{
-					GenUtils.PriorityLogMsg("exception", "IcsFromEventBriteOrganizerByLocation: unpacking city/state", e.Message + e.StackTrace);
+					GenUtils.LogMsg("exception", "IcsFromEventBriteOrganizerByLocation: unpacking city/state", e.Message + e.StackTrace);
 					continue;
 				}
 
@@ -1367,7 +1367,7 @@ END:VCALENDAR",
 				}
 				catch (Exception e)
 				{
-					GenUtils.PriorityLogMsg("exception", "IcsFromEventBriteOrganizerByLocation: Unpacking evt", e.Message + e.StackTrace);
+					GenUtils.LogMsg("exception", "IcsFromEventBriteOrganizerByLocation: Unpacking evt", e.Message + e.StackTrace);
 					continue;
 				}
 				var dday_event = Collector.MakeTmpEvt(calinfo, dtstart: dtstart_with_zone, dtend: DateTimeWithZone.MinValue(calinfo.tzinfo), title: title, url: url, location: location, description: location, lat: calinfo.lat, lon: calinfo.lon, allday: false);
@@ -1440,7 +1440,7 @@ END:VCALENDAR",
 				}
 				catch (Exception e)
 				{
-					GenUtils.PriorityLogMsg("exception", "IcsFromEventBriteOrganizer: " + organizer_id, e.Message + e.StackTrace);
+					GenUtils.LogMsg("exception", "IcsFromEventBriteOrganizer: " + organizer_id, e.Message + e.StackTrace);
 					continue;
 				}
 
@@ -1528,7 +1528,7 @@ END:VCALENDAR",
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "GetEventBriteOrganizerFromEventId", e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "GetEventBriteOrganizerFromEventId", e.Message + e.StackTrace);
 			}
 
 			return organizer_id;
@@ -1547,7 +1547,7 @@ END:VCALENDAR",
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "GetEventBriteVenue", e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "GetEventBriteVenue", e.Message + e.StackTrace);
 			}
 			return venue;
 		}
