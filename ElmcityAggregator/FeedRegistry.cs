@@ -163,12 +163,30 @@ namespace CalendarAggregator
 			stats.TryAdd(feedurl, fs);
 		}
 
-		// populate feed registry from azure table (includes what is public on delicious, and also private out-of-band)
+		// populate feed registry from azure table 
 		public void LoadFeedsFromAzure(FeedLoadOption option)
 		{
 			var dict = Metadata.LoadFeedsFromAzureTableForId(this.id, option);
+			var settings = GenUtils.GetSettingsFromAzureTable("settings");
 			foreach (var url in dict.Keys)
+			{
+				try
+				{
+					if (settings["eventful_feeds_enabled"] == "False" && url.StartsWith("http://eventful.com/"))
+						continue;
+					if (settings["eventbrite_feeds_enabled"] == "False" && url.Contains("ics_from_eventbrite"))
+						continue;
+					if (settings["lastfm_feeds_enabled"] == "False" && url.Contains("ics_from_lastfm_venue"))
+						continue;
+					if (url.StartsWith("http://upcoming.yahoo.com"))
+						continue;
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "CollectIcal", e.Message + e.StackTrace);
+				}
 				this.AddFeed(url, dict[url]);
+			}
 		}
 
 		// could have used pickled .NET objects here, but wanted to explore json serialization using
