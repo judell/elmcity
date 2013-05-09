@@ -108,7 +108,13 @@ namespace CalendarAggregator
 				GenUtils.LogMsg("info", info, null);
 				GenUtils.LogMsg("info", "new wrd: " + wrd.str_ready_ids, null);
 				sw.Start();
-				SaveWrd(wrd);
+				if (wrd.IsConsistent())
+					SaveWrd(wrd);
+				else
+				{
+					GenUtils.PriorityLogMsg("warning", "MakeWebRoleData: inconsistent", null);
+					wrd = GetWrd(); // fall back to last known good
+				}
 				sw.Stop();
 				GenUtils.LogMsg("info", "save wrd: " + sw.Elapsed.ToString(), null);
 			}
@@ -116,6 +122,7 @@ namespace CalendarAggregator
 			{
 				GenUtils.PriorityLogMsg("exception", "MakeWebRoleData: creating wrd", e3.Message);
 			}
+
 			return wrd;
 		}
 
@@ -180,6 +187,12 @@ namespace CalendarAggregator
 			{
 				GenUtils.PriorityLogMsg("exception", "AddNewHubToWrd", e.Message);
 			}
+		}
+
+
+		public bool IsConsistent()
+		{
+			return this.ready_ids.Count == this.where_ids.Count + this.what_ids.Count + this.region_ids.Count;
 		}
 
 	}
