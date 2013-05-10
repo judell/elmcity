@@ -890,7 +890,7 @@ Future events {0}
                     }
                     catch (Exception e)
                     {
-                        GenUtils.PriorityLogMsg("warning", "MergeICS: " + url, e.Message);
+                        GenUtils.LogMsg("warning", "MergeICS: " + url, e.Message);
                     }
                 }
 
