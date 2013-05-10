@@ -1108,7 +1108,7 @@ namespace CalendarAggregator
 		{
 			if (!feed_metadict.ContainsKey("feedurl"))
 			{
-                GenUtils.PriorityLogMsg("warning", "PrepareCats: feed_metadict lacks feedurl", id + " " + source);
+                GenUtils.LogMsg("warning", "PrepareCats: feed_metadict lacks feedurl", id + " " + source);
 				return ical_cats;
 			}
 
