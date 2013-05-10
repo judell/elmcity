@@ -154,7 +154,7 @@ namespace CalendarAggregator
 		// render an eventstore as xml, optionally limited by view and/or count
 		public string RenderXml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
 		{
-			eventstore = GetEventStore(eventstore, view, count, from, to);
+			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
 			var xml = new StringBuilder();
 			xml.Append("<events>\n");
@@ -229,7 +229,7 @@ namespace CalendarAggregator
 
 		public string RenderJson(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
 		{
-			eventstore = GetEventStore(eventstore, view, count, from, to);
+			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 			for (var i = 0; i < eventstore.events.Count; i++)
 			{
 				var evt = eventstore.events[i];
@@ -308,7 +308,7 @@ namespace CalendarAggregator
 
 			this.ResetCounters();
 
-			eventstore = GetEventStore(eventstore, view, count, from, to);
+			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
 			AdvanceToAnHourAgo(eventstore);
 
@@ -409,7 +409,7 @@ namespace CalendarAggregator
 		{
 			MaybeUseTestTemplate(args);
 
-			eventstore = GetEventStore(eventstore, view, count, from, to);
+			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
 			//AdvanceToAnHourAgo(eventstore);
 
@@ -456,7 +456,7 @@ namespace CalendarAggregator
 
 			MaybeUseTestTemplate(args);
 
-			eventstore = GetEventStore(eventstore, view, count, from, to);
+			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 			if (from == DateTime.MinValue && to == DateTime.MinValue)
 				AdvanceToAnHourAgo(eventstore);
 
@@ -502,7 +502,7 @@ namespace CalendarAggregator
 
 			MaybeUseTestTemplate(args);
 
-			eventstore = GetEventStore(eventstore, view, count, from, to);
+			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 			string title = null;
 			DateTime dtstart = DateTime.MinValue;
 			try
@@ -959,7 +959,7 @@ namespace CalendarAggregator
 
 		public string RenderIcs(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
 		{
-			eventstore = GetEventStore(eventstore, view, count, from, to);
+			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 			var ical = new DDay.iCal.iCalendar();
 			Collector.AddTimezoneToDDayICal(ical, this.calinfo.tzinfo);
 			var tzid = this.calinfo.tzinfo.Id;
@@ -1048,7 +1048,7 @@ namespace CalendarAggregator
 		{
 			try
 			{
-				eventstore = GetEventStore(eventstore, view, count, from, to);
+				eventstore = GetEventStore(eventstore, view, count, from, to, args);
 				var query = string.Format("view={0}&count={1}", view, count);
 				return Utils.RssFeedFromEventStore(this.id, query, eventstore);
 			}
@@ -1111,7 +1111,7 @@ namespace CalendarAggregator
 
 		#endregion
 
-		private ZonelessEventStore GetEventStore(ZonelessEventStore es, string view, int count, DateTime from, DateTime to)
+		private ZonelessEventStore GetEventStore(ZonelessEventStore es, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
 		{
 			// see RenderDynamicViewWithCaching:
 			// view_data = Encoding.UTF8.GetBytes(view_renderer(eventstore:null, view:view, view:count));
@@ -1169,53 +1169,40 @@ namespace CalendarAggregator
 			return es;
 		}
 
-		enum FilterMode { single, or_list, and_list };
-
 		// possibly filter an event list by view or count
 		public List<ZonelessEvent> Filter(string view, int count, DateTime from, DateTime to, ZonelessEventStore es)
 		{
 			var events = es.events;
-
-			FilterMode mode;
 
 			if ( from != DateTime.MinValue && to != DateTime.MinValue )
 				events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart <= to);  // reduce to time window
 
 			if (view != null) // reduce to matching categories
 			{
-				if (view.Contains('|'))
-					mode = FilterMode.or_list;
-				else if (view.Contains(','))
-					mode = FilterMode.and_list;
-				else
-					mode = FilterMode.single;
+				var view_list = view.Split(',').ToList();    // view=newportnewsva,sports,-soccer,-baseball
+				var remainder = new List<string>();
 
-				var view_list = new List<string>();
-
-				switch (mode)
+				foreach (var view_item in view_list)
 				{
-					case FilterMode.and_list:
-						view_list = view.Split(',').ToList();
-						foreach (var view_item in view_list)
-						{
-							var and_item = view_item.Trim();
-							events = events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Contains(and_item));
-						}
-						break;
-					case FilterMode.or_list:
-						view_list = view.Split('|').ToList();
-						events = events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Any(x => view_list.Contains(x.Trim())));
-						break;
-					case FilterMode.single:
-						events = events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Contains(view));
-						break;
-					default:
-						break;
+					if (view_item.StartsWith("-"))      // do exclusions first
+					{
+						var item = view_item.TrimStart('-');
+						events = events.FindAll(evt => evt.categories != null && !evt.categories.Split(',').ToList().Contains(item));
+					}
+					else
+						remainder.Add(view_item);
+				}
+
+				foreach (var view_item in remainder)    // then inclusions
+				{
+					events = events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Contains(view_item));
 				}
 
 			}
+
 			if (count != 0)   // reduce to first count events
 				events = events.Take(count).ToList();
+			
 			return events;
 		}
 
