@@ -2169,7 +2169,7 @@ END:VCALENDAR",
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "get_fb_ical_url: " + fb_page_url + "," + elmcity_id, e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "get_fb_ical_url: " + fb_page_url + "," + elmcity_id, e.Message + e.StackTrace);
 			}
 			return fb_ical_url;
 		}
@@ -3478,15 +3478,15 @@ END:VTIMEZONE");
 			}
 		}
 
-		public static void CheckFeedUrls(string id)
+		public static void CheckFeedAndHomeUrls(string id)
 		{
 			var report = new StringBuilder();
 
 			report.AppendLine(@"<html>
 <head><style>th { text-align:left }</style></head>
 <body>
-<table style=""border-spacing:8px"">
-<thead><th>id</th><th>source</th><th>well-formed</th><th>feed exists</th><th>feed parses</th><th>url</th></thead>
+<table style=""table-layout: fixed; width:100%; border-spacing:8px"">
+<thead><th>id</th><th>source</th><th>feed well-formed</th><th>feed exists</th><th>feed parses</th><th>feed url</th><th>home well-formed</th><th>home exists</th><th>home url</th></thead>
 <tbody>");
 
 			var ids = new List<string>();
@@ -3505,7 +3505,8 @@ END:VTIMEZONE");
 
 				Parallel.ForEach(source: feedurls, body: (feedurl) =>
 				{
-					var result = CheckFeedRegistryEntry(_id, fr, feedurl);
+					var metadict = Metadata.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, _id);
+					var result = CheckFeedRegistryEntry(_id, fr, feedurl, metadict);
 					if (result != null)
 					{
 						lock (report)
@@ -3522,39 +3523,46 @@ END:VTIMEZONE");
 			bs.PutBlob(id, "registry_check.html", html, "text/html");
 		}
 
-		public static string CheckFeedRegistryEntry(string id, FeedRegistry fr, string feedurl)
+		public static string CheckFeedRegistryEntry(string id, FeedRegistry fr, string feedurl, Dictionary<string, string> metadict)
 		{
-			bool is_uri = false;
-			bool is_200 = false;
-			bool is_ical = false;
+			bool feed_is_uri = false;
+			bool feed_is_200 = false;
+			bool feed_is_ical = false;
 
-			Uri uri = default(Uri);
+			bool home_is_uri = false;
+			bool home_is_200 = false;
+
+			Uri feed_uri = default(Uri);
+			Uri home_uri = default(Uri);
 
 			try
 			{
-				uri = new Uri(feedurl);
-				is_uri = true;
+				feed_uri = new Uri(feedurl);
+				feed_is_uri = true;
+				home_uri = new Uri(metadict["url"]);
+				home_is_uri = true;
 			}
 			catch { }
 
 			try
 			{
-				var r = HttpUtils.HeadFetchUrl(uri);
+				var r = HttpUtils.HeadFetchUrl(feed_uri);
 				if (r.status == HttpStatusCode.OK)
-					is_200 = true;
-				else
-					is_200 = false;
+					feed_is_200 = true;
+				r = HttpUtils.HeadFetchUrl(home_uri);
+				if (r.status == HttpStatusCode.OK)
+					home_is_200 = true;
 			}
 			catch { }
 
 			try
 			{
-				var feedtext = HttpUtils.FetchUrl(uri).DataAsString();
+				var feedtext = HttpUtils.FetchUrl(feed_uri).DataAsString();
 				var ical = CalendarAggregator.Collector.ParseTheFeed(feedtext);
 				if (ical != null)
-					is_ical = true;
+					feed_is_ical = true;
 				else
-					is_ical = false;
+					feed_is_ical = false;
 			}
 			catch { }
 
@@ -3562,13 +3570,14 @@ END:VTIMEZONE");
 
 			var style = "";
 
-			if (!is_uri || !is_200 || !is_ical)
+			if (!feed_is_uri || !feed_is_200 || !feed_is_ical || !home_is_uri || !home_is_200)
 				style = "background-color:rgb(206, 186, 186);";
 
-			result = string.Format(@"<tr style=""{0}""><td>{1}</td><td>{2}<td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td></tr>", style, id, fr.feeds[feedurl], is_uri, is_200, is_ical, feedurl);
+			result = string.Format(@"<tr style=""{0}""><td>{1}</td><td>{2}<td>{3}</td><td>{4}</td><td>{5}</td><td>{6}</td><td>{7}</td><td>{8}</td><td>{9}</td></tr>",
+				style, id, fr.feeds[feedurl], feed_is_uri, feed_is_200, feed_is_ical, feedurl, home_is_uri, home_is_200, home_uri);
 			return result;
-		}
 
+		}
 		#endregion
 
 	}
