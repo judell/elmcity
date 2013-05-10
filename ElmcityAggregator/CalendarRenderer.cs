@@ -379,13 +379,18 @@ namespace CalendarAggregator
 	{
 		if (args == null)
 			return html;
+
+		bool mobile = args.ContainsKey("mobile") ? (bool)args["mobile"] : false;
+		string mobile_long = args.ContainsKey("mobile_long") ? (string) args["mobile_long"] : "";
+		string ua = args.ContainsKey("ua") ? (string) args["ua"] : "";
+
 		if (args.ContainsKey("theme") && args["theme"] != null )
 		{
 			var theme_name = args["theme"].ToString();
 			try
 			{
 				var themes = Utils.GetThemesDict();
-				var theme_css = Utils.GetCssTheme(themes, theme_name, (bool)args["mobile"], (string)args["mobile_long"], (string)args["ua"]);
+				var theme_css = Utils.GetCssTheme(themes, theme_name, mobile, mobile_long, ua);
 				html = html.Replace("<!-- __CUSTOM_STYLE __ -->", string.Format("<style>\n{0}\n{1}</style>\n", 
 					IsDefaultThemeDict(themes) ? "/* this is the fallback theme, if used something went wrong */" : "",
 					theme_css
