@@ -416,7 +416,7 @@ namespace CalendarAggregator
 
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
-			//AdvanceToAnHourAgo(eventstore);
+			AdvanceToAnHourAgo(eventstore);
 
 			var builder = new StringBuilder();
 
