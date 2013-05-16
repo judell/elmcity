@@ -368,6 +368,9 @@ $(document).ready(function(){
 //  if ( ! is_mobile() && ! is_eventsonly() )  
 //    extend_events(1,false);
 
+  if ( is_eventsonly() )
+    return;
+
   if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
     setTimeout('setup_datepicker()', 200);
   else
