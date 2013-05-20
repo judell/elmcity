@@ -43,7 +43,7 @@ namespace WebRole
 		#region events
 
 		//[OutputCache(Duration = ... // output cache not used here, iis cache is managed directly
-		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist)
+		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist, string tags)
 		{
 			if (id == "a2cal")
 				id = "AnnArborChronicle";
@@ -57,7 +57,7 @@ namespace WebRole
 			try
 			{
 				var cr = ElmcityApp.wrd.renderers[id];
-				r = new EventsResult(this, cr, id, type, view, jsonp, count, from, to, eventsonly, mobile, test, raw, raw_sentinel, style, theme, taglist);
+				r = new EventsResult(this, cr, id, type, view, jsonp, count, from, to, eventsonly, mobile, test, raw, raw_sentinel, style, theme, taglist, tags);
 			}
 			catch (Exception e)
 			{
@@ -85,12 +85,13 @@ namespace WebRole
 			string style;
 			string theme;
 			string taglist;
+			string tags;
 
 			CalendarRenderer.ViewRenderer renderer = null;
 			string response_body = null;
 			byte[] response_bytes = new byte[0];
 
-			public EventsResult(ElmcityController controller, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist)
+			public EventsResult(ElmcityController controller, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist, string tags)
 			{
 				this.controller = controller;
 				this.cr = cr;

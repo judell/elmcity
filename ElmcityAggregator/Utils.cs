@@ -2494,11 +2494,11 @@ END:VCALENDAR",
 				id);
 		}
 
-		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string style, string theme)
+		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string style, string theme, string taglist, string tags)
 		{
 			var viewkey = string.Format("/services/{0}/{1}?view={2}&count={3}&from={4}&to={5}", id, type, view, count, from, to);
 			if (type == "html")
-				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme;
+				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags;
 			return viewkey;
 		}
 
