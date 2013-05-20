@@ -38,6 +38,12 @@ a:hover {
 <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js"></script>
 
 <script>
+
+function ec_id()
+{
+alert("Your Elm City ID is the ID of your hub. For example: BostonMA, CTNEXT, seattleopencalendar");
+}
+
 function get_fb_ical_url()
 {
 var fb_page_url = $('#fb_page_url').val();
@@ -335,7 +341,7 @@ Here is the bookmarklet: <a href="javascript:(function(){document.head.appendChi
 Some Facebook pages, like <a href="https://www.facebook.com/BerkeleyUndergroundFilmSociety?sk=events">Berkeley Underground Film Society</a>, include calendars.
 </p>
 <p>
-This helper accepts the URL of a Facebook page and an elmcity ID. It produces a corresponding iCalendar feed URL that you can add to your hub's registry.
+This helper accepts the URL of a Facebook page and an <a href="javascript:ec_id()">Elm City ID</a>. It produces a corresponding iCalendar feed URL that you can add to your hub's registry.
 </p>
 
 <table>
@@ -346,7 +352,7 @@ This helper accepts the URL of a Facebook page and an elmcity ID. It produces a 
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="fb_elmcity_id" value="berkeley"></td>
 </tr>
 
@@ -367,7 +373,7 @@ Note: This now works both for Facebook fan pages as shown above, and also for gr
 <h2>EventBrite Page</h2>
 
 <p>
-This helper accepts the URL of an EventBrite event page and an elmcity id. It finds the EventBrite ID for the event, synthesizes an iCalendar feed for that event, and produces an iCalendar feed URL that you can add to your hub's registry.
+This helper accepts the URL of an EventBrite event page and an <a href="javascript:ec_id()">Elm City ID</a>. It finds the EventBrite ID for the event, synthesizes an iCalendar feed for that event, and produces an iCalendar feed URL that you can add to your hub's registry.
 </p>
 
 <table>
@@ -378,7 +384,7 @@ This helper accepts the URL of an EventBrite event page and an elmcity id. It fi
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="eb_eid_id" value="BostonMA"></td>
 </tr>
 
@@ -395,7 +401,7 @@ This helper accepts the URL of an EventBrite event page and an elmcity id. It fi
 <h2>EventBrite Organizer</h2>
 
 <p>
-This helper accepts the URL of an EventBrite event page and an elmcity ID. It finds the organizer for the event, synthesizes an iCalendar feed for that organizer's events, and produces a iCalendar feed URL that you can add to your hub's registry.
+This helper accepts the URL of an EventBrite event page and an <a href="javascript:ec_id()">Elm City ID</a>. It finds the organizer for the event, synthesizes an iCalendar feed for that organizer's events, and produces a iCalendar feed URL that you can add to your hub's registry.
 </p>
 
 <table>
@@ -407,7 +413,7 @@ This helper accepts the URL of an EventBrite event page and an elmcity ID. It fi
 
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="eb_organizer_id" value="BostonMA"></td>
 </tr>
 
@@ -599,7 +605,7 @@ The <a href="http://events.seattlepi.com/search?cat=1&st=event">Arts & Crafts ca
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="rss_id" value="seattleopencalendar"></td>
 </tr>
 
@@ -683,7 +689,7 @@ One way to produce a jazz feed for Vinology is to restrict the feed to only even
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="filter_elmcity_id" value="a2cal"></td>
 </tr>
 
@@ -713,7 +719,7 @@ Another way produce a jazz feed for Vinology is to restrict the feed to only eve
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" value="a2cal"></td>
 </tr>
 
@@ -752,7 +758,7 @@ Here's how the Berkeley hub uses iCalendar filtering to construct the BAM/PFA fi
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="bampfa_elmcity_id" value="berkeley"></td>
 </tr>
 
@@ -795,7 +801,7 @@ Here's how the socialhartford hub uses iCalendar filtering to construct feeds fo
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="hartford_elmcity_id_away" value="socialhartford"></td>
 </tr>
 
@@ -828,7 +834,7 @@ And for home games:
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="hartford_elmcity_id_home" value="socialhartford"></td>
 </tr>
 
@@ -863,7 +869,7 @@ If you include or exclude a comma-separated list of keywords, they'll OR togethe
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="crazy_wisdom_elmcity_id" value="a2cal"></td>
 </tr>
 
@@ -896,7 +902,7 @@ Here's an excluder for Let's Dance Southern Vermont, a feed of dance events with
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="lets_dance_elmcity_id" value="BrattleboroVT"></td>
 </tr>
 
@@ -954,7 +960,7 @@ This helper accepts a feed URL and shows you the raw contents of the feed. If yo
 <h2>view feed as html</h2>
 
 <p>
-This helper accepts a feed URL and an elmcity ID. It formats the feed as HTML, so you can check the contents of the feed.
+This helper accepts a feed URL and an <a href="javascript:ec_id()">Elm City ID</a>. It formats the feed as HTML, so you can check the contents of the feed.
 </p>
 
 <table>
@@ -965,7 +971,7 @@ This helper accepts a feed URL and an elmcity ID. It formats the feed as HTML, s
 </tr>
 
 <tr>
-<td style="text-align:right">elmcity ID: </td>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
 <td><input style="width:1.5in" id="calviewer_id" value="elmcity"></td>
 </tr>
 
