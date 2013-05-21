@@ -344,7 +344,7 @@ namespace CalendarAggregator
 					JsonConvert.SerializeObject(this.calinfo) );
 			 */
 
-			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString() + " : " + this.calinfo.version_description);
+			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
 
 			if (args.Keys.Contains("test") && (bool)args["test"] == true)  // restore original template
 				this.template_html = original_template;

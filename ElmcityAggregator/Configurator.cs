@@ -827,8 +827,6 @@ namespace CalendarAggregator
 		{ get { return _has_locations; } }
 		private bool _has_locations;
 
-		public string version_description = "2012-11-07T09:41 (js/tmpl 1.7)";
-
 		/*
 		public Dictionary<string, string> metadict
 		{ get { return _metadict; } }
