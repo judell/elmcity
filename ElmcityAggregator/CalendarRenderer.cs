@@ -308,9 +308,8 @@ namespace CalendarAggregator
 
 			this.ResetCounters();
 
+			args["AdvanceToAnHourAgo"] = true;
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
-
-			AdvanceToAnHourAgo(eventstore);
 
 			var original_template = this.template_html;
 
@@ -414,9 +413,8 @@ namespace CalendarAggregator
 		{
 			MaybeUseTestTemplate(args);
 
+			args["AdvanceToAnHourAgo"] = true;
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
-
-			AdvanceToAnHourAgo(eventstore);
 
 			var builder = new StringBuilder();
 
@@ -462,10 +460,7 @@ namespace CalendarAggregator
 			MaybeUseTestTemplate(args);
 
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
-			if (from == DateTime.MinValue && to == DateTime.MinValue)
-				AdvanceToAnHourAgo(eventstore);
-
-			count = (int) args["mobile_event_count"];                        // wait until now to apply the reduction
+			count = (int) args["mobile_event_count"];                        // maybe apply further reduction
 			eventstore.events = eventstore.events.Take(count).ToList();
 
 
@@ -1125,6 +1120,8 @@ namespace CalendarAggregator
 				es = this.es_getter(this.cache); // get the eventstore. if the getter is GetEventStoreWithCaching
 			// then it will use HttpUtils.RetrieveBlobFromServerCacheOrUri
 			// which gets from cache if it can, else fetches uri and loads cache
+			if (args.ContainsKey("AdvanceToAnHourAgo") && (bool)args["AdvanceToAnHourAgo"] == true)
+				AdvanceToAnHourAgo(es);
 			es.events = Filter(view, count, from, to, es); // then filter if requested
 			return es;
 		}
