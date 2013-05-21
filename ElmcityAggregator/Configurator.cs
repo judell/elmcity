@@ -935,6 +935,8 @@ namespace CalendarAggregator
 						GenUtils.PriorityLogMsg("warning", "Configurator: no lat and/or lon for " + id, null);
 					}
 
+					this.SetShowBadges();
+
 				}
 
 				// if (metadict.ContainsKey("what"))
@@ -943,6 +945,7 @@ namespace CalendarAggregator
 					this._hub_enum = HubType.what;
 					this._what = metadict[this.hub_enum.ToString()];
 					this._where = Configurator.nowhere;
+					this.SetShowBadges();
 				}
 
 				if (metadict["type"] == "region")
