@@ -301,7 +301,7 @@ namespace CalendarAggregator
 			return RenderHtml(eventstore: es, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
 		}
 
-		public string RenderHtml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
+		public string RenderHtml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
 		{
 			if (args == null)
 				args = new Dictionary<string, object>();
@@ -324,7 +324,7 @@ namespace CalendarAggregator
 				html = this.InsertTagSelector(html, view, eventsonly: false);
 
 			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
-			
+
 			html = html.Replace("__ID__", this.id);
 			html = html.Replace("__CSSURL__", this.calinfo.css);
 			html = MaybeOverrideTheme(args, html);
@@ -344,11 +344,22 @@ namespace CalendarAggregator
 					JsonConvert.SerializeObject(this.calinfo) );
 			 */
 
+			html = RenderBadges(html);
+
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
 
 			if (args.Keys.Contains("test") && (bool)args["test"] == true)  // restore original template
 				this.template_html = original_template;
 
+			return html;
+		}
+
+		private string RenderBadges(string html)
+		{
+			html = html.Replace("__EVENTFUL_LOGO_DISPLAY__",	this.calinfo.show_eventful_badge	? "inline" : "none");
+			html = html.Replace("__EVENTBRITE_LOGO_DISPLAY__",	this.calinfo.show_eventbrite_badge	? "inline" : "none");
+			html = html.Replace("__MEETUP_LOGO_DISPLAY__",		this.calinfo.show_meetup_badge		? "inline" : "none");
+			html = html.Replace("__FACEBOOK_LOGO_DISPLAY__",	this.calinfo.show_facebook_badge	? "inline" : "none");
 			return html;
 		}
 
