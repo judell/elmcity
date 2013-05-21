@@ -827,6 +827,11 @@ namespace CalendarAggregator
 		{ get { return _has_locations; } }
 		private bool _has_locations;
 
+		public bool show_eventful_badge;
+		public bool show_eventbrite_badge;
+		public bool show_meetup_badge;
+		public bool show_facebook_badge;
+
 		/*
 		public Dictionary<string, string> metadict
 		{ get { return _metadict; } }
@@ -953,6 +958,14 @@ namespace CalendarAggregator
 				GenUtils.PriorityLogMsg("exception", "new Calinfo: " + id, e.Message + e.StackTrace);
 			}
 
+		}
+
+		private void SetShowBadges()
+		{
+			this.show_eventbrite_badge = Utils.ShowEventBriteBadge(this.id);
+			this.show_eventful_badge = Utils.ShowEventfulBadge(this.id);
+			this.show_meetup_badge = Utils.ShowMeetupBadge(this.id);
+			this.show_facebook_badge = Utils.ShowFacebookBadge(this.id);
 		}
 
 		public Calinfo(TimeZoneInfo tzinfo)
