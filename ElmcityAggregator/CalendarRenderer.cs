@@ -91,7 +91,7 @@ namespace CalendarAggregator
 		// in WebRole: when serving renderings
 		public CalendarRenderer(string id)
 		{
-			this.calinfo = Utils.AcquireCalinfo(id);
+			this.calinfo = new Calinfo(id);
 			this.cache = null;
 			this.ResetCounters();
 			this.es_getter = new EventStoreGetter(GetEventStoreWithCaching);
