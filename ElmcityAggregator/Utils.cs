@@ -3578,6 +3578,39 @@ END:VTIMEZONE");
 			return result;
 
 		}
+
+		public static bool ShowEventfulBadge(string id)
+		{
+			var calinfo = Utils.AcquireCalinfo(id);
+			return calinfo.eventful;
+		}
+
+		public static bool ShowFacebookBadge(string id)
+		{
+			var fr = new FeedRegistry(id);
+			fr.LoadFeedsFromAzure(FeedLoadOption.all);
+			return fr.feeds.Keys.ToList().Exists(x => x.Contains("ics_from_fb_page"));
+		}
+
+		public static bool ShowMeetupBadge(string id)
+		{
+			var fr = new FeedRegistry(id);
+			fr.LoadFeedsFromAzure(FeedLoadOption.all);
+			return fr.feeds.Keys.ToList().Exists(x => x.Contains("www.meetup.com"));
+		}
+
+		public static bool ShowEventBriteBadge(string id)
+		{
+			var calinfo = Utils.AcquireCalinfo(id);
+			var uses_eventbrite_service = calinfo.eventbrite;
+			var fr = new FeedRegistry(id);
+			fr.LoadFeedsFromAzure(FeedLoadOption.all);
+			var uses_eventbrite_feeds =
+				fr.feeds.Keys.ToList().Exists(x => x.Contains("get_ical_url_from_eid_of_eventbrite_event_page")) ||
+				fr.feeds.Keys.ToList().Exists(x => x.Contains("ics_from_eventbrite_organizer_id"));
+			return uses_eventbrite_service || uses_eventbrite_feeds;
+		}
+
 		#endregion
 
 	}
