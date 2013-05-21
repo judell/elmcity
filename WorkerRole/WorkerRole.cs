@@ -177,13 +177,6 @@ namespace WorkerRole
 
                     var union = todo.nonicaltasks.Union(todo.icaltasks).Union(todo.regiontasks);
 
-                    var options = new ParallelOptions();
-                    Parallel.ForEach(source: union, parallelOptions: options, body: (id) =>
-                    {
-                        Utils.RecreatePickledCalinfoAndRenderer(id);
-                    }
-                    );
-
                     foreach (var id in todo.nonicaltasks)           // this won't be parallelized because of api rate throttling in nonical service endpoints
                     {
                         Scheduler.UpdateStartTaskForId(id, TaskType.nonicaltasks);  // the todo list has a general start time, now update it to actual start
