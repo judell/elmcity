@@ -249,10 +249,10 @@ namespace CalendarAggregator
 		{
 			var es = this.es_getter(this.cache);
 			var evt = es.events.Find(e => e.title == title && e.dtstart == DateTime.Parse(dtstart));
-			var description = evt.description.Replace("'", "\\'").Replace("\n", " ").Replace("\r", " ");
+			var description = evt.description.Replace("'", "\\'").Replace("\n", "<br>").Replace("\r", "");
 			string location = "";
 			if (!String.IsNullOrEmpty(evt.location))
-				location = String.Format("<br>{0}", evt.location.Replace("'", "\\'"));
+				location = String.Format("<br>{0}", evt.location.Replace("'", "\\'")).Replace("\n", "<br>").Replace("\r", "");
 			description = ( "<span class=\"desc\">" + location + "<br><br>" + description + "</span>").UrlsToLinks();
 			return String.Format(jsonp + "('" + description + "')") ;
 		}
