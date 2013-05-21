@@ -199,7 +199,7 @@ namespace WorkerRole
                     }
 
                     var nonregions = union.Except(regions);
-                    Parallel.ForEach(source: nonregions, parallelOptions: options, body: (id) =>
+                    Parallel.ForEach(source: nonregions, body: (id) =>
                     {
                         FinalizeHub(id);
                     }
@@ -962,6 +962,13 @@ Future events {0}
         public void GeneralAdmin(object o, ElapsedEventArgs args)
         {
             GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
+
+			var ids = Metadata.LoadHubIdsFromAzureTable();
+			Parallel.ForEach(source: ids, body: (id) =>
+			{
+				Utils.RecreatePickledCalinfoAndRenderer(id);
+			}
+				);
 
             WebRoleData.MakeWebRoleData(); 
 
