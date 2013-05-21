@@ -827,10 +827,10 @@ namespace CalendarAggregator
 		{ get { return _has_locations; } }
 		private bool _has_locations;
 
-		public bool show_eventful_badge;
-		public bool show_eventbrite_badge;
-		public bool show_meetup_badge;
-		public bool show_facebook_badge;
+		public bool show_eventful_badge = false;
+		public bool show_eventbrite_badge = false;
+		public bool show_meetup_badge = false;
+		public bool show_facebook_badge = false;
 
 		/*
 		public Dictionary<string, string> metadict
@@ -935,7 +935,7 @@ namespace CalendarAggregator
 						GenUtils.PriorityLogMsg("warning", "Configurator: no lat and/or lon for " + id, null);
 					}
 
-					this.SetShowBadges();
+					this.SetShowBadgesForHub();
 
 				}
 
@@ -945,7 +945,7 @@ namespace CalendarAggregator
 					this._hub_enum = HubType.what;
 					this._what = metadict[this.hub_enum.ToString()];
 					this._where = Configurator.nowhere;
-					this.SetShowBadges();
+					this.SetShowBadgesForHub();
 				}
 
 				if (metadict["type"] == "region")
@@ -953,6 +953,7 @@ namespace CalendarAggregator
 					this._hub_enum = HubType.region;
 					this._what = Configurator.nothing;
 					this._where = Configurator.nowhere;
+					this.SetShowBadgesForRegion();
 				}
 			}
 
@@ -963,12 +964,36 @@ namespace CalendarAggregator
 
 		}
 
-		private void SetShowBadges()
+		private void SetShowBadgesForHub()
 		{
 			this.show_eventbrite_badge = Utils.ShowEventBriteBadge(this.id);
 			this.show_eventful_badge = Utils.ShowEventfulBadge(this.id);
 			this.show_meetup_badge = Utils.ShowMeetupBadge(this.id);
 			this.show_facebook_badge = Utils.ShowFacebookBadge(this.id);
+		}
+
+		private void SetShowBadgesForRegion()
+		{
+			var ids = Utils.GetIdsForRegion(this.id);
+
+			foreach (var _id in ids)
+			{
+				if (Utils.ShowEventBriteBadge(_id))
+					this.show_eventbrite_badge = true;
+
+				if (Utils.ShowEventfulBadge(_id))
+					this.show_eventful_badge = true;
+
+				if (Utils.ShowMeetupBadge(_id))
+					this.show_meetup_badge = true;
+
+				if (Utils.ShowFacebookBadge(_id))
+					this.show_facebook_badge = true;
+
+				if (this.show_eventbrite_badge && this.show_eventful_badge && this.show_meetup_badge && this.show_facebook_badge)
+					break;
+			}
+
 		}
 
 		public Calinfo(TimeZoneInfo tzinfo)
