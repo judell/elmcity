@@ -110,6 +110,7 @@ namespace WebRole
 				this.style = style;
 				this.theme = theme;
 				this.taglist = !String.IsNullOrEmpty(taglist) ? taglist.ToLower() : "";
+				this.tags = !String.IsNullOrEmpty(tags) ? tags.ToLower() : "";
 
 				int _count = 0;
 				try
@@ -169,7 +170,7 @@ namespace WebRole
 
 				var test_arg = this.test ? "yes" : "";
 				var raw_arg = this.raw ? "yes" : "";
-				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, this.eventsonly, this.mobile, test:test_arg, raw:raw_arg, style:this.style, theme:this.theme);
+				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, this.eventsonly, this.mobile, test:test_arg, raw:raw_arg, style:this.style, theme:this.theme, taglist:this.taglist, tags:this.tags);
 
 				var render_args = new Dictionary<string, object>();
 
@@ -209,7 +210,7 @@ namespace WebRole
 							render_args["mobile_event_count"] = Convert.ToInt32(settings["mobile_event_count"]);
 							render_args["mobile"] = true;
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlForMobile);
-							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "yes", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme);
+							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "yes", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme, taglist:this.taglist, tags:this.tags);
 						}
 						/* for dynamic event paging, not used now
 						else if (this.raw)
@@ -221,7 +222,7 @@ namespace WebRole
 						else if (this.eventsonly == "yes")
 						{
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlEventsOnly);
-							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme);
+							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme, taglist:this.taglist, tags:this.tags);
 						}
 						else
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtml);
