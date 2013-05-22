@@ -165,57 +165,67 @@ namespace ElmcityUtils
 
 		static public int RunTests(string dll_name)
 		{
-			LogMsg("info", "GenUtils.RunTests", "starting");
-			var ts = TableStorage.MakeDefaultTableStorage();
-			var a = System.Reflection.Assembly.Load(dll_name);
-			var types = a.GetExportedTypes().ToList();
-			var test_classes = types.FindAll(type => type.Name.EndsWith("Test")).ToList();
-			test_classes.Sort((x, y) => x.Name.CompareTo(y.Name));
-
 			var tests_failed = 0;
 
-			foreach (Type test_class in test_classes)  // e.g. DeliciousTest
+			try
 			{
-				object o = Activator.CreateInstance(test_class);
+				LogMsg("info", "GenUtils.RunTests", "starting");
+				var ts = TableStorage.MakeDefaultTableStorage();
+				var a = System.Reflection.Assembly.Load(dll_name);
+				var types = a.GetExportedTypes().ToList();
+				var test_classes = types.FindAll(type => type.Name.EndsWith("Test")).ToList();
+				test_classes.Sort((x, y) => x.Name.CompareTo(y.Name));
 
-				var members = test_class.GetMembers().ToList();
-				members.Sort((x, y) => x.Name.CompareTo(y.Name));
 
-				foreach (var member in members)
+
+				foreach (Type test_class in test_classes)  // e.g. DeliciousTest
 				{
-					var attrs = member.GetCustomAttributes(false).ToList();
-					var is_test = attrs.Exists(attr => attr.GetType() == typeof(NUnit.Framework.TestAttribute));
-					if (is_test == false)
-						continue;
+					object o = Activator.CreateInstance(test_class);
 
-					var entity = new Dictionary<string, object>();
-					var partition_key = test_class.FullName;
-					var row_key = member.Name;
-					entity["PartitionKey"] = partition_key;
-					entity["RowKey"] = row_key;
+					var members = test_class.GetMembers().ToList();
+					members.Sort((x, y) => x.Name.CompareTo(y.Name));
 
-					try
+					foreach (var member in members)
 					{
-						test_class.InvokeMember(member.Name, invokeAttr: BindingFlags.InvokeMethod, binder: null, target: o, args: null);
-						entity["outcome"] = "OK";
-						entity["reason"] = "";
-					}
-					catch (Exception e)
-					{
-						var msg = e.Message + e.StackTrace;
-						entity["outcome"] = "Fail";
-						entity["reason"] = e.InnerException.Message + e.InnerException.StackTrace;
-						tests_failed += 1;
-					}
+						var attrs = member.GetCustomAttributes(false).ToList();
+						var is_test = attrs.Exists(attr => attr.GetType() == typeof(NUnit.Framework.TestAttribute));
+						if (is_test == false)
+							continue;
 
-					var tablename = Configurator.test_results_tablename;
-					if (ts.ExistsEntity(tablename, partition_key, row_key))
-						ts.MergeEntity(tablename, partition_key, row_key, entity);
-					else
-						ts.InsertEntity(tablename, entity);
+						var entity = new Dictionary<string, object>();
+						var partition_key = test_class.FullName;
+						var row_key = member.Name;
+						entity["PartitionKey"] = partition_key;
+						entity["RowKey"] = row_key;
+
+						try
+						{
+							test_class.InvokeMember(member.Name, invokeAttr: BindingFlags.InvokeMethod, binder: null, target: o, args: null);
+							entity["outcome"] = "OK";
+							entity["reason"] = "";
+						}
+						catch (Exception e)
+						{
+							var msg = e.Message + e.StackTrace;
+							entity["outcome"] = "Fail";
+							entity["reason"] = e.InnerException.Message + e.InnerException.StackTrace;
+							tests_failed += 1;
+						}
+
+						var tablename = Configurator.test_results_tablename;
+						if (ts.ExistsEntity(tablename, partition_key, row_key))
+							ts.MergeEntity(tablename, partition_key, row_key, entity);
+						else
+							ts.InsertEntity(tablename, entity);
+					}
 				}
+				LogMsg("info", "GenUtils.RunTests", "done");
 			}
-			LogMsg("info", "GenUtils.RunTests", "done");
+			catch (Exception e)
+			{
+				PriorityLogMsg("exception", "RunTests", e.Message + e.StackTrace);
+				tests_failed = 999;
+			}
 			return tests_failed;
 		}
 
