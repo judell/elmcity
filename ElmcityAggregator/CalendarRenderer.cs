@@ -1124,6 +1124,8 @@ namespace CalendarAggregator
 
 		private ZonelessEventStore GetEventStore(ZonelessEventStore es, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
 		{
+			if (args == null)
+				args = new Dictionary<string, object>();
 			// see RenderDynamicViewWithCaching:
 			// view_data = Encoding.UTF8.GetBytes(view_renderer(eventstore:null, view:view, view:count));
 			// the renderer might be, e.g., CalendarRenderer.RenderHtml, which calls this method
