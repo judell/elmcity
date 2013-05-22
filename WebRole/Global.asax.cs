@@ -654,6 +654,12 @@ namespace WebRole
             try
             {
                 var _wrd = WebRoleData.GetWrd();
+				if (! wrd.IsConsistent())
+				{
+					GenUtils.PriorityLogMsg("warning", "inconsistent WebRoleData!", null);
+					return;
+				}
+
                 if (_wrd.ready_ids.Count != ElmcityApp.wrd.ready_ids.Count)  // did # of hubs change? either on initial load or subsequently
                 {
                     new_routes = true;                                       // force rebuild of route map
@@ -663,26 +669,7 @@ namespace WebRole
                         ElmcityApp.wrd = _wrd;                               // update WebRoleData
                     }
                 }
-                foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's CalendarRenderer.Calinfo change?
-                {
-                    var cached_calinfo = ElmcityApp.wrd.renderers[id].calinfo;
-                    var current_calinfo = Utils.AcquireCalinfo(id);
-                    var cached_dict = ObjectUtils.ObjToDictStr(cached_calinfo);
-                    var current_dict = ObjectUtils.ObjToDictStr(current_calinfo);
-                    if (ObjectUtils.DictStrEqualsDictStr(cached_dict, current_dict) == false)  // calinfo.obj on blob store is different
-                    {
-                        GenUtils.LogMsg("info", "Reload: new calinfo+renderer for " + id, null);
-                        lock (ElmcityApp.wrd)
-                        {
-                            var renderer = Utils.AcquireRenderer(id);                         // load new renderer, maybe custom for this hub
-                            ElmcityApp.wrd.renderers[id] = renderer;                          // update the renderer (and its calinfo)
-                            var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
-                            var url = Utils.MakeBaseZonelessUrl(id);
-                            cache.Remove(url);                                               // flush cached objects for id
-                            var obj = HttpUtils.FetchUrl(new Uri(url));						// rewarm cache
-                        }
-                    }
-                }
+
             }
             catch (Exception e1)
             {
