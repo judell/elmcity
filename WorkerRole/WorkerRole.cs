@@ -989,7 +989,7 @@ Future events {0}
                 int failed;
                 failed = GenUtils.RunTests("CalendarAggregator");
                 failed += GenUtils.RunTests("ElmcityUtils");
-                failed += GenUtils.RunTests("WorkerRole");
+                //failed += GenUtils.RunTests("WorkerRole");
                 failed += GenUtils.RunTests("WebRole");
 				bs.PutBlob("admin", "testrunner", failed.ToString() + " " + System.DateTime.UtcNow.ToString(), "text/plain");
 				if (failed > 0)
