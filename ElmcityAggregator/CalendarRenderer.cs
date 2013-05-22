@@ -94,7 +94,7 @@ namespace CalendarAggregator
 		public CalendarRenderer(string id)
 		{
 			this.timestamp = DateTime.UtcNow;
-			this.calinfo = new Calinfo(id);
+			this.calinfo = Utils.AcquireCalinfo(id);
 			this.cache = null;
 			this.ResetCounters();
 			this.es_getter = new EventStoreGetter(GetEventStoreWithCaching);
