@@ -305,7 +305,6 @@ $(document).ready(function(){
       }
    catch (e)
       {
-      console.log(e.description);
       }
 
 
@@ -707,13 +706,14 @@ var current_id;
 
 function active_description(description)
 {
-//description = description.replace('<br><br>','<br>');
 quoted_id = '\'' + current_id + '\'';
 var x = '<span><a title="hide description" href="javascript:hide_desc(' + quoted_id + ')">[x]</a> </span>';
 
 var s = '<div style="overflow:hidden;text-indent:0" id="' + current_id + '_desc' + '">' + description + ' ' + x + '</div>';
 
 elt = $('#' + current_id);
+
+s = s.replace('<br><br>','<br>');
 
 elt.append(s);
 }
