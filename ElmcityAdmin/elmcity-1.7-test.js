@@ -1,11 +1,10 @@
-var host = 'http://0cc2a83d37004e55a492affa4757765d.cloudapp.net/';
+var host = 'http://elmcity.cloudapp.net/';
 var anchor_names = [];
 var today = new Date();
 var last_day;
 var datepicker = false;
-var top_element;
-var top_offset;
 var long;
+
 
 function rescale()
   {
@@ -50,7 +49,7 @@ function add_fullsite_switcher()
     remove_href_arg(href, 'mobile');
     href = add_href_arg(href, 'mobile', 'no');
     var long = $('#mobile_long').text().trim();
-    var switcher = '<p id="switcher"><a title="switch from mobile view to full" href="__HREF__">__OTHER__</a></p>';
+    var switcher = '<p class="sidebar" style="text-align:center"><a title="switch from full view to mobile" href="__HREF__">__OTHER__</a></p>';
     switcher = switcher.replace("__HREF__", href);
     switcher = switcher.replace("__OTHER__", "full site");
     $('body').append(switcher);
@@ -62,11 +61,22 @@ function add_fullsite_switcher()
     }
   }
 
+function position_sidebar(top_element)
+  {
+  var top_elt_bottom = $('#' + top_element)[0].getClientRects()[0].bottom;
+ 
+  if ( top_elt_bottom <= 0  )
+     $('#sidebar').css('top', $(window).scrollTop() - top_offset + 'px');
+   else
+     $('#sidebar').css('top', '0px');
+  }
+
+
 function add_mobile_switcher()
   {
   try
     {
-     var switcher = '<p class="sidebar" style="text-align:center"><a title="switch from full view to mobile" href="__HREF__">__OTHER__</a></p>';
+     var switcher = '<p style="text-align:center"><a title="switch from full view to mobile" href="__HREF__">__OTHER__</a></p>';
      var href = location.href;
      remove_href_arg(href, 'mobile');
      href = add_href_arg(href, 'mobile', 'yes');
@@ -128,23 +138,13 @@ function parse_mm_dd_yyyy(date_str)
   return { month: match[1], day: match[2], year: match[3] }
   }
 
-function position_sidebar(top_element)
-  {
-  var top_elt_bottom = $('#' + top_element)[0].getClientRects()[0].bottom;
-
-  if ( top_elt_bottom <= 0  )
-    $('#sidebar').css('top', $(window).scrollTop() - top_offset + 'px');
-  else
-    $('#sidebar').css('top', '0px');
-
-  }
-
 function scroll(event)
   {
   if ( is_mobile() || is_eventsonly() )
     return;
 
-  position_sidebar(top_element);
+  if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
+    position_sidebar(top_element);
 
   var date_str = find_current_name().replace('d','');
   var parsed = parse_yyyy_mm_dd(date_str)
@@ -153,7 +153,6 @@ function scroll(event)
 
 function find_last_day()
   {
-//  console.log("find_last_day");
   if ( ! is_mobile() )
     {
     try
@@ -191,6 +190,8 @@ function find_current_name()
   if ( is_eventsonly() || is_mobile() ) 
     return;
 
+//  console.log("find_current_name");
+
   try
     {
     var before = [];
@@ -208,7 +209,6 @@ function find_current_name()
       else
         break;
       }
-
     var ret = before[before.length-1];
     if ( typeof ret == 'undefined' )
       ret = anchors[0].name;
@@ -217,7 +217,7 @@ function find_current_name()
     {
      console.log("find_current_name: " + e.description);
     }
-    return ret;
+  return ret;
   }
 
 
@@ -246,8 +246,7 @@ function setup_datepicker()
   {
   if ( datepicker )
      return;
-
-
+//  console.log("setup_datepicker");
 
   prep_day_anchors_and_last_day();
   
@@ -262,20 +261,26 @@ function setup_datepicker()
 
   setDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
-  position_sidebar(top_element)
-  $('#sidebar').css('visibility','visible');
-  $('#datepicker').css('visibility','visible');
-  $('#tags').css('visibility','visible');
+  if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
+    {
+    position_sidebar(top_element)
+    $('#sidebar').css('visibility','visible');
+    $('#datepicker').css('visibility','visible');
+    $('#tags').css('visibility','visible');
+    }
 
-/*
+  /*
   var more = '<div id="morelink" style="display:none;font-size:8pt;text-align:center">' + morelink() + '</div>';
 
   $('#datepicker').append(more);
-*/
+  */
+
+  datepicker = true;
   }
 
 
 $(document).ready(function(){
+		//  console.log("ready");
 
   var elmcity_id = get_elmcity_id();
 
@@ -300,7 +305,6 @@ $(document).ready(function(){
       }
    catch (e)
       {
-      console.log(e.description);
       }
 
 
@@ -340,6 +344,9 @@ $(document).ready(function(){
   if ( gup('atc') != '' )
     apply_json_css('.atc', 'atc');
 
+  if ( gup('cat') != '' )
+    apply_json_css('.cat', 'cat');
+
   if ( gup('sourcestyle') != '' )
     apply_json_css('.src', 'sourcestyle');
 
@@ -353,10 +360,20 @@ $(document).ready(function(){
 
   if ( is_mobile() )
     add_fullsite_switcher();
-  else
-    add_mobile_switcher();
+//  else
+//    add_mobile_switcher();
 
-  setTimeout('setup_datepicker()', 100);
+
+//  if ( ! is_mobile() && ! is_eventsonly() )  
+//    extend_events(1,false);
+
+  if ( is_eventsonly() )
+    return;
+
+  if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
+    setTimeout('setup_datepicker()', 200);
+  else
+    setup_datepicker();                            
 
   });
 
@@ -689,13 +706,14 @@ var current_id;
 
 function active_description(description)
 {
-//description = description.replace('<br><br>','<br>');
 quoted_id = '\'' + current_id + '\'';
 var x = '<span><a title="hide description" href="javascript:hide_desc(' + quoted_id + ')">[x]</a> </span>';
 
 var s = '<div style="overflow:hidden;text-indent:0" id="' + current_id + '_desc' + '">' + description + ' ' + x + '</div>';
 
 elt = $('#' + current_id);
+
+s = s.replace('<br><br>','<br>');
 
 elt.append(s);
 }
