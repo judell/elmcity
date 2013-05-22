@@ -86,11 +86,14 @@ namespace CalendarAggregator
 		//private int day_counter;
 		private int time_of_day_counter;
 
+		public DateTime timestamp;
+
 		// used by the service in both WorkerRole and WebRole
 		// in WorkerRole: when saving renderings
 		// in WebRole: when serving renderings
 		public CalendarRenderer(string id)
 		{
+			this.timestamp = DateTime.UtcNow;
 			this.calinfo = new Calinfo(id);
 			this.cache = null;
 			this.ResetCounters();

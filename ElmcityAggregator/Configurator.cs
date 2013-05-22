@@ -832,6 +832,8 @@ namespace CalendarAggregator
 		public bool show_meetup_badge = false;
 		public bool show_facebook_badge = false;
 
+		public DateTime timestamp;
+
 		/*
 		public Dictionary<string, string> metadict
 		{ get { return _metadict; } }
@@ -840,6 +842,8 @@ namespace CalendarAggregator
 
 		public Calinfo(string id)
 		{
+			this.timestamp = DateTime.UtcNow;
+
 			var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
 			try
 			{
