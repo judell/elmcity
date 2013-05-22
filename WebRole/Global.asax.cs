@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2492";
+        public static string version = "2496";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -675,7 +675,6 @@ namespace WebRole
                         lock (ElmcityApp.wrd)
                         {
                             var renderer = Utils.AcquireRenderer(id);                         // load new renderer, maybe custom for this hub
-                            GenUtils.LogMsg("info", "renderer.calinfo.version_description: " + renderer.calinfo.version_description, null);
                             ElmcityApp.wrd.renderers[id] = renderer;                          // update the renderer (and its calinfo)
                             var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
                             var url = Utils.MakeBaseZonelessUrl(id);
@@ -782,7 +781,7 @@ namespace WebRole
             }
             catch (Exception ex)
             {
-                GenUtils.PriorityLogMsg("exception", "MonitorAdmin", ex.Message + ex.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "MakeTablesAndCharts", ex.Message + ex.StackTrace);
             }
         }
 
