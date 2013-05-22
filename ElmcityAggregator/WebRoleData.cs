@@ -192,7 +192,9 @@ namespace CalendarAggregator
 
 		public bool IsConsistent()
 		{
-			return this.ready_ids.Count == this.where_ids.Count + this.what_ids.Count + this.region_ids.Count;
+			var ready_ids_consistent = this.ready_ids.Count == this.where_ids.Count + this.what_ids.Count + this.region_ids.Count;
+			var renderers_consistent = this.ready_ids.Count == this.renderers.Count;
+			return ready_ids_consistent && renderers_consistent;
 		}
 
 	}
