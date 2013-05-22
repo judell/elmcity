@@ -998,7 +998,7 @@ Future events {0}
             }
             catch (Exception e)
             {
-                logger.LogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
+                GenUtils.PriorityLogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
             }
         }
 
