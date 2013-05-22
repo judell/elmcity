@@ -970,32 +970,48 @@ namespace CalendarAggregator
 
 		private void SetShowBadgesForHub()
 		{
-			this.show_eventbrite_badge = Utils.ShowEventBriteBadge(this.id);
-			this.show_eventful_badge = Utils.ShowEventfulBadge(this.id);
-			this.show_meetup_badge = Utils.ShowMeetupBadge(this.id);
-			this.show_facebook_badge = Utils.ShowFacebookBadge(this.id);
+			try
+			{
+				this.show_eventbrite_badge = Utils.ShowEventBriteBadge(this);
+				this.show_eventful_badge = Utils.ShowEventfulBadge(this);
+				this.show_meetup_badge = Utils.ShowMeetupBadge(this);
+				this.show_facebook_badge = Utils.ShowFacebookBadge(this);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "SetShowBadgesForHub: " + this.id, e.Message + e.StackTrace);
+			}
 		}
 
 		private void SetShowBadgesForRegion()
 		{
-			var ids = Utils.GetIdsForRegion(this.id);
-
-			foreach (var _id in ids)
+			try
 			{
-				if (Utils.ShowEventBriteBadge(_id))
-					this.show_eventbrite_badge = true;
+				var ids = Utils.GetIdsForRegion(this.id);
 
-				if (Utils.ShowEventfulBadge(_id))
-					this.show_eventful_badge = true;
+				foreach (var _id in ids)
+				{
+					var calinfo = Utils.AcquireCalinfo(_id);
 
-				if (Utils.ShowMeetupBadge(_id))
-					this.show_meetup_badge = true;
+					if (Utils.ShowEventBriteBadge(calinfo))
+						this.show_eventbrite_badge = true;
 
-				if (Utils.ShowFacebookBadge(_id))
-					this.show_facebook_badge = true;
+					if (Utils.ShowEventfulBadge(calinfo))
+						this.show_eventful_badge = true;
 
-				if (this.show_eventbrite_badge && this.show_eventful_badge && this.show_meetup_badge && this.show_facebook_badge)
-					break;
+					if (Utils.ShowMeetupBadge(calinfo))
+						this.show_meetup_badge = true;
+
+					if (Utils.ShowFacebookBadge(calinfo))
+						this.show_facebook_badge = true;
+
+					if (this.show_eventbrite_badge && this.show_eventful_badge && this.show_meetup_badge && this.show_facebook_badge)
+						break;
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "SetShowBadgesForRegion: " + this.id, e.Message + e.StackTrace);
 			}
 
 		}
