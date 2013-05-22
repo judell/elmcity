@@ -372,7 +372,7 @@ namespace WorkerRole
 
         public void ProcessIcal(string id)
         {
-            var calinfo = new Calinfo(id);
+			var calinfo = Utils.AcquireCalinfo(id);
             logger.LogMsg("info", "worker starting on ical tasks for " + id, null);
             var fr = new FeedRegistry(id);
             DoIcal(fr, calinfo);
@@ -380,7 +380,7 @@ namespace WorkerRole
 
         public void ProcessRegion(string region)
         {
-            var calinfo = new Calinfo(region);
+			var calinfo = Utils.AcquireCalinfo(region);
             logger.LogMsg("info", "worker starting on region tasks for " + region, null);
 
             try
