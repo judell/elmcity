@@ -670,6 +670,24 @@ namespace WebRole
                     }
                 }
 
+                foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's renderer change?
+                {
+					var cached_renderer = ElmcityApp.wrd.renderers[id];
+					var current_renderer = Utils.AcquireRenderer(id);
+                    if (cached_renderer.timestamp != current_renderer.timestamp && ! Utils.RenderersAreEqual(cached_renderer, current_renderer) )  // changed
+                    {
+                        GenUtils.LogMsg("info", "Reload: new renderer for " + id, null);
+                        lock (ElmcityApp.wrd)
+                        {
+                            ElmcityApp.wrd.renderers[id] = current_renderer;                  // update the renderer
+                            var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
+                            var url = Utils.MakeBaseZonelessUrl(id);
+                            cache.Remove(url);                                               // flush cached objects for id
+                            var obj = HttpUtils.FetchUrl(new Uri(url));						// rewarm cache
+                        }
+                    }
+                }
+
             }
             catch (Exception e1)
             {
