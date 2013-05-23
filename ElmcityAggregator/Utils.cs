@@ -1604,7 +1604,7 @@ END:VCALENDAR",
 		
 		#endregion
 
-		#region metadata history
+		#region metadata 
 
 		//	ViewData["result"] = CalendarAggregator.Utils.GetMetaHistory(a_name, b_name, id, flavor);
 
@@ -1812,9 +1812,13 @@ END:VCALENDAR",
 		public static void RecreateAllPickles()
 		{
 			var ids = Metadata.LoadHubIdsFromAzureTable();
-			foreach (var id in ids)
-				RecreatePickledCalinfoAndRenderer(id);
+			Parallel.ForEach(source: ids, body: (id) =>
+			{
+				Utils.RecreatePickledCalinfoAndRenderer(id);
+			}
+					);
 		}
+
 
 		#endregion
 
