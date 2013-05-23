@@ -993,16 +993,16 @@ namespace CalendarAggregator
 				{
 					var calinfo = Utils.AcquireCalinfo(_id);
 
-					if (Utils.ShowEventBriteBadge(calinfo))
+					if (calinfo.show_eventbrite_badge)
 						this.show_eventbrite_badge = true;
 
-					if (Utils.ShowEventfulBadge(calinfo))
+					if (calinfo.show_eventful_badge)
 						this.show_eventful_badge = true;
 
-					if (Utils.ShowMeetupBadge(calinfo))
+					if (calinfo.show_meetup_badge)
 						this.show_meetup_badge = true;
 
-					if (Utils.ShowFacebookBadge(calinfo))
+					if (calinfo.show_facebook_badge)
 						this.show_facebook_badge = true;
 
 					if (this.show_eventbrite_badge && this.show_eventful_badge && this.show_meetup_badge && this.show_facebook_badge)
