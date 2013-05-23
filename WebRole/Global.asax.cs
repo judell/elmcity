@@ -156,7 +156,7 @@ namespace WebRole
 
         // public static OAuthTwitter oauth_twitter = new OAuthTwitter(consumer_key: ElmcityController.settings["twitter_auth_consumer_key"], consumer_secret: ElmcityController.settings["twitter_auth_consumer_secret"]);
 
-        public static WebRoleData wrd = new WebRoleData();
+		public static WebRoleData wrd;
 
         public static string get_events_param_types = "html|xml|json|ics|rss|tags_json|stats|tags_html|jswidget|today_as_html";
 
@@ -623,10 +623,15 @@ namespace WebRole
             var msg = "WebRole: Application_Start";
             GenUtils.PriorityLogMsg("info", msg, null);
 
+			ElmcityApp.wrd = WebRoleData.GetWrd();
+
+			ElmcityApp.RegisterRoutes(RouteTable.Routes, ElmcityApp.wrd);
+
             Utils.ScheduleTimer(PurgeCache, CalendarAggregator.Configurator.webrole_cache_purge_interval_minutes, name: "PurgeCache", startnow: false);
-            Utils.ScheduleTimer(ReloadSettingsAndRoutes, minutes: CalendarAggregator.Configurator.webrole_reload_interval_minutes, name: "ReloadSettingsAndRoutes", startnow: true);
-            Utils.ScheduleTimer(MakeTablesAndCharts, minutes: CalendarAggregator.Configurator.web_make_tables_and_charts_interval_minutes, name: "MakeTablesAndCharts", startnow: false);
-            ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
+			Utils.ScheduleTimer(ReloadSettingsAndRoutes, minutes: CalendarAggregator.Configurator.webrole_reload_interval_minutes, name: "ReloadSettingsAndRoutes", startnow: true);
+			Utils.ScheduleTimer(MakeTablesAndCharts, minutes: CalendarAggregator.Configurator.web_make_tables_and_charts_interval_minutes, name: "MakeTablesAndCharts", startnow: false);
+            
+			ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
         }
 
         // encapsulate _reload with the signature needed by Utils.ScheduleTimer
@@ -670,44 +675,43 @@ namespace WebRole
                     }
                 }
 
+				bool changed = false;
+
                 foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's renderer change?
                 {
 					var cached_renderer = ElmcityApp.wrd.renderers[id];
 					var current_renderer = Utils.AcquireRenderer(id);
-                    if (cached_renderer.timestamp != current_renderer.timestamp && ! Utils.RenderersAreEqual(cached_renderer, current_renderer) )  // changed
-                    {
-                        GenUtils.LogMsg("info", "Reload: new renderer for " + id, null);
-                        lock (ElmcityApp.wrd)
-                        {
-                            ElmcityApp.wrd.renderers[id] = current_renderer;                  // update the renderer
-                            var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
-                            var url = Utils.MakeBaseZonelessUrl(id);
-                            cache.Remove(url);                                               // flush cached objects for id
-                            var obj = HttpUtils.FetchUrl(new Uri(url));						// rewarm cache
-                        }
-						WebRoleData.SaveWrd(wrd);                                           // persist, and save timestamped version
-                    }
+					if (cached_renderer.timestamp != current_renderer.timestamp || cached_renderer.calinfo.timestamp != current_renderer.calinfo.timestamp) // timestamp changed
+					{
+						if ( ! Utils.RenderersAreEqual(cached_renderer, current_renderer, except_keys: new List<string>() { "timestamp" } ) )  // other changes too
+						{
+							changed = true;
+							GenUtils.LogMsg("info", "Reload: new renderer for " + id, null);
+							lock (ElmcityApp.wrd)
+							{
+								ElmcityApp.wrd.renderers[id] = current_renderer;                  // update the renderer
+								if (ElmcityApp.home_controller != null)                               // skip this if we found a change on startup, controller not ready
+								{
+									var cache = new AspNetCache(ElmcityApp.home_controller.HttpContext.Cache);
+									var url = Utils.MakeBaseZonelessUrl(id);
+									cache.Remove(url);                                               // flush cached objects for id
+									var obj = HttpUtils.FetchUrl(new Uri(url));						// rewarm cache
+								}
+							}
+
+						}
+					}
+   
                 }
+
+			if (changed)
+				WebRoleData.SaveWrd(wrd); 
 
             }
             catch (Exception e1)
             {
-                GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: cannot check/update wrd", e1.Message);
-                try
-                {
-                    var __wrd = ElmcityApp.wrd = WebRoleData.MakeWebRoleData();
-					System.Diagnostics.Debug.Assert(__wrd != null);
-                    lock (ElmcityApp.wrd)
-                    {
-                        ElmcityApp.wrd = __wrd;
-                    }
-                }
-                catch (Exception e2)
-                {
-                    GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: cannot remake wrd", e2.Message);
-                }
+				GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: cannot check/update wrd", e1.Message + e1.StackTrace);
             }
-
 
             try
             {
