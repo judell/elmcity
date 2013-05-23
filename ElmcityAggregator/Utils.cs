@@ -3609,6 +3609,20 @@ END:VTIMEZONE");
 			return uses_eventbrite_service || uses_eventbrite_feeds;
 		}
 
+		public static bool RenderersAreEqual(CalendarRenderer r1, CalendarRenderer r2)
+		{
+			var dict_renderer_1 = ObjectUtils.ObjToDictStr(r1);
+			var dict_calinfo_1 = ObjectUtils.ObjToDictStr(r1.calinfo);
+
+			var dict_renderer_2 = ObjectUtils.ObjToDictStr(r2);
+			var dict_calinfo_2 = ObjectUtils.ObjToDictStr(r2.calinfo);
+
+			return (
+				ObjectUtils.DictStrEqualsDictStr(dict_renderer_1, dict_renderer_2) &&
+				ObjectUtils.DictStrEqualsDictStr(dict_calinfo_1, dict_calinfo_2)
+				);
+		}
+
 		#endregion
 
 	}
