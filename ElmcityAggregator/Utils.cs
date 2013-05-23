@@ -3613,13 +3613,19 @@ END:VTIMEZONE");
 			return uses_eventbrite_service || uses_eventbrite_feeds;
 		}
 
-		public static bool RenderersAreEqual(CalendarRenderer r1, CalendarRenderer r2)
+		public static bool RenderersAreEqual(CalendarRenderer r1, CalendarRenderer r2, List<string> except_keys)
 		{
 			var dict_renderer_1 = ObjectUtils.ObjToDictStr(r1);
+			except_keys.ForEach(x => dict_renderer_1.Remove(x));
+
 			var dict_calinfo_1 = ObjectUtils.ObjToDictStr(r1.calinfo);
+			except_keys.ForEach(x => dict_calinfo_1.Remove(x));
 
 			var dict_renderer_2 = ObjectUtils.ObjToDictStr(r2);
+			except_keys.ForEach(x => dict_renderer_2.Remove(x));
+
 			var dict_calinfo_2 = ObjectUtils.ObjToDictStr(r2.calinfo);
+			except_keys.ForEach(x => dict_calinfo_2.Remove(x));
 
 			return (
 				ObjectUtils.DictStrEqualsDictStr(dict_renderer_1, dict_renderer_2) &&
