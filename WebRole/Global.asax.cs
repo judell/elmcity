@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2496";
+        public static string version = "2497";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -147,7 +147,7 @@ namespace WebRole
 
         public static Logger logger = new Logger();
 
-        public static string pagetitle = "the elmcity project";
+        public static string pagetitle = "the Elm City project";
 
         public static ElmcityController home_controller;
         public static ElmcityController services_controller;
