@@ -945,14 +945,7 @@ Future events {0}
         {
             GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
 
-			var ids = Metadata.LoadHubIdsFromAzureTable();
-			Parallel.ForEach(source: ids, body: (id) =>
-			{
-				Utils.RecreatePickledCalinfoAndRenderer(id);
-			}
-				);
-
-            WebRoleData.MakeWebRoleData(); 
+            // WebRoleData.MakeWebRoleData(); 
 
             Utils.MakeWhereSummary();  // refresh http://elmcity.blob.core.windows.net/admin/where_summary.html
 
