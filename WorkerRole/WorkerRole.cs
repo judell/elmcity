@@ -405,7 +405,7 @@ namespace WorkerRole
 
                 CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(region), Convert.ToInt32(settings["webrole_instance_count"]));
 
-                RenderTagsXmlJson(region);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
+                RenderTags(region);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
 
                 SaveRegionStats(region);
             }
@@ -424,7 +424,7 @@ namespace WorkerRole
 
             Utils.UpdateFeedCountForId(id);
 
-            var calinfo = new Calinfo(id);
+			var calinfo = Utils.AcquireCalinfo(id);
 
             EventStore.CombineZonedEventStoresToZonelessEventStore(id, settings); // todo: lease the blog
 
@@ -443,7 +443,7 @@ namespace WorkerRole
 
             CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(id), Convert.ToInt32(settings["webrole_instance_count"]));
 
-            RenderTagsXmlJson(id);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
+            RenderTags(id);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
 
             var fr = new FeedRegistry(id);
             fr.LoadFeedsFromAzure(FeedLoadOption.all);
@@ -546,27 +546,9 @@ namespace WorkerRole
             return final_ids;
         }
 
-        public static void RenderTagsXmlJson(string id)
+        public static void RenderTags(string id)
         {
-            var cr = new CalendarRenderer(id);
-
-            try
-            {
-                cr.SaveAsXml();
-            }
-            catch (Exception e)
-            {
-                logger.LogMsg("exception", "SaveAsXml: " + id, e.Message + e.StackTrace);
-            }
-
-            try
-            {
-                cr.SaveAsJson();
-            }
-            catch (Exception e)
-            {
-                logger.LogMsg("exception", "SaveAsJson: " + id, e.Message + e.StackTrace);
-            }
+			var cr = Utils.AcquireRenderer(id);
 
             try
             {
