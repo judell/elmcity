@@ -34,7 +34,7 @@ namespace WebRole
 		[Test]
 		public void EventsAsHtmlView()
 		{
-			var uri = new Uri(path + "?view=test_category");
+			var uri = new Uri(path + "?view=" + category);
 			var html = HttpUtils.FetchUrl(uri).DataAsString();
 			Assert.That(html.Contains(@"<span class=""st"" property=""v:startDate"" content=""9999-01-01T09:01"">Fri 09:01 AM</span>"));
 		}
@@ -52,7 +52,7 @@ namespace WebRole
 		[Test]
 		public void EventsAsXmlView()
 		{
-			var uri = new Uri(path + "/xml?view=test_category");
+			var uri = new Uri(path + "/xml?view=" + category);
 			var r = HttpUtils.FetchUrl(uri);
 			var doc = XmlUtils.XmlDocumentFromHttpResponse(r);
 			XmlNodeList nodes = doc.SelectNodes("//event");
