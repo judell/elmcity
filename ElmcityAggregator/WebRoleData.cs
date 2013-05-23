@@ -128,6 +128,11 @@ namespace CalendarAggregator
 
 		public static void SaveWrd(WebRoleData wrd)
 		{
+			if (!wrd.IsConsistent())
+			{
+				GenUtils.PriorityLogMsg("warning", "inconsistent WebRoleData!", null);
+				return;
+			}
 			var bs = BlobStorage.MakeDefaultBlobStorage();
 			var lease_response = bs.RetryAcquireLease("admin", "wrd.obj");
 			if (lease_response.status == HttpStatusCode.Created)
@@ -138,6 +143,11 @@ namespace CalendarAggregator
 				var r = bs.PutBlob("admin", "wrd.obj", headers, bytes, "binary/octet-stream");
 				if (r.HttpResponse.status != HttpStatusCode.Created)
 					GenUtils.PriorityLogMsg("warning", "SaveWrd: cannot save", null);
+
+				var timestamped_name = string.Format("wrd." + string.Format("{0:yyyy.MM.dd.HH.mm}.obj", DateTime.UtcNow));
+				r = bs.PutBlob("wrd", timestamped_name, bytes);
+				if (r.HttpResponse.status != HttpStatusCode.Created)
+					GenUtils.PriorityLogMsg("warning", "SaveWrd: cannot save timestamped backup", null);
 			}
 			else
 			{
@@ -149,25 +159,6 @@ namespace CalendarAggregator
 		{
 			var uri = BlobStorage.MakeAzureBlobUri("admin", "wrd.obj", false);
 			return (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri);
-		}
-
-		// currently unused 
-		// could be wired into Metadata.UpdateMetadataForId
-		// meanwhile a hub metadata update happens in-memory but isn't saved until the next GeneralAdmin pass in WorkerRole (via MakeWebRoleData)
-		public static void UpdateRendererForId(string id)
-		{
-			var wrd = GetWrd();
-			var bs = BlobStorage.MakeDefaultBlobStorage();
-			try
-			{
-				var cr = new CalendarRenderer(id);
-				wrd.renderers[id] = cr;
-				SaveWrd(wrd);
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "UpdateRendererForId: " + id, e.Message);
-			}
 		}
 
 		public void AddNewHubToWrd(string id)
