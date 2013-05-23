@@ -654,9 +654,9 @@ namespace WebRole
             try
             {
                 var _wrd = WebRoleData.GetWrd();
-				if (! wrd.IsConsistent())
+				if (_wrd == null || wrd.IsConsistent() == false)
 				{
-					GenUtils.PriorityLogMsg("warning", "inconsistent WebRoleData!", null);
+					GenUtils.PriorityLogMsg("warning", "null or inconsistent WebRoleData!", null);
 					return;
 				}
 
@@ -685,6 +685,7 @@ namespace WebRole
                             cache.Remove(url);                                               // flush cached objects for id
                             var obj = HttpUtils.FetchUrl(new Uri(url));						// rewarm cache
                         }
+						WebRoleData.SaveWrd(wrd);                                           // persist, and save timestamped version
                     }
                 }
 
@@ -695,6 +696,7 @@ namespace WebRole
                 try
                 {
                     var __wrd = ElmcityApp.wrd = WebRoleData.MakeWebRoleData();
+					System.Diagnostics.Debug.Assert(__wrd != null);
                     lock (ElmcityApp.wrd)
                     {
                         ElmcityApp.wrd = __wrd;
