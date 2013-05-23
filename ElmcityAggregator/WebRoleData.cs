@@ -39,11 +39,8 @@ namespace CalendarAggregator
 		// the /services/peekskill family of URLs won't become active until the hub joins the list of ready_ids
 		public string str_ready_ids;
 
-		public WebRoleData()
-		{
-		}
 
-		public WebRoleData(bool testing, string test_id)
+		public WebRoleData()
 		{
 			GenUtils.LogMsg("info", String.Format("WebRoleData: {0}, {1}, {2}, {3}", procname, procid, domain_name, thread_id), null);
 
@@ -101,7 +98,7 @@ namespace CalendarAggregator
 			{
 				var sw = new Stopwatch();
 				sw.Start();
-				wrd = new WebRoleData(testing: false, test_id: null);
+				wrd = new WebRoleData();
 				sw.Stop();
 				GenUtils.LogMsg("info", "new wrd: " + sw.Elapsed.ToString(), null);
 				var info = String.Format("new wrd: where_ids: {0}, what_ids: {1}, region_ids {2}", wrd.where_ids.Count, wrd.what_ids.Count, wrd.region_ids.Count);
