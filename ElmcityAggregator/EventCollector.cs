@@ -1154,7 +1154,7 @@ namespace CalendarAggregator
 			}
 			catch
 			{
-				GenUtils.PriorityLogMsg("exception", "AddCategoriesFromCatString: " + evt.Summary + ": " + cats, null);
+				GenUtils.LogMsg("exception", "AddCategoriesFromCatString: " + evt.Summary + ": " + cats, null);
 			}
 		}
 

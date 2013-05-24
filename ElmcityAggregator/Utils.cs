@@ -659,7 +659,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.PriorityLogMsg("exception", "CalcDistance: " + str_lat1 + "," + str_lat2, e.Message);
+					GenUtils.LogMsg("exception", "CalcDistance: " + str_lat1 + "," + str_lat2, e.Message);
 					distance = 0;
 				}
 				return distance;
