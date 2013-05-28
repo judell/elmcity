@@ -1120,7 +1120,7 @@ namespace CalendarAggregator
 				}
 				catch ( Exception e )
 				{
-					GenUtils.PriorityLogMsg("warning", "IcsFromCsv: " + feed_url, e.Message + e.StackTrace);
+					GenUtils.LogMsg("warning", "IcsFromCsv: " + feed_url, e.Message + e.StackTrace);
 				}
 			}
 
