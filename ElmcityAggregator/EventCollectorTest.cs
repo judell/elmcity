@@ -76,8 +76,8 @@ namespace CalendarAggregator
 			foreach (var example in eventful_examples)
 				UpdateYYYY(example, "xml");
 
-			foreach (var example in upcoming_examples)
-				UpdateYYYY(example, "xml");
+			//foreach (var example in upcoming_examples)
+			//	UpdateYYYY(example, "xml");
 
 			foreach (var example in eventbrite_examples)
 				UpdateYYYY(example, "xml");
@@ -650,6 +650,59 @@ namespace CalendarAggregator
 
 		#endregion
 
+		#region categories
+
+		[Test]
+		public void MaybeApplyCatmapAddsExpectedCats()    // any matching category should expand via the map(without removing the matched category)
+		{
+			var test_feedurl = "test_feedurl";
+			var collector_keene = new Collector(new Calinfo("elmcity"), settings);
+			collector_keene.per_feed_catmaps[test_feedurl] = new Dictionary<string, string>() 
+				{
+					{ "a", "l,M,n,O,p" },   // this will map
+					{ "z", "q" }            // this won't
+				};
+
+			var feed_metadict = new Dictionary<string, string>() { { "feedurl", test_feedurl } };
+
+			var evt = new DDay.iCal.Event();
+
+			evt.Categories.Add("a");  // set event categories
+			evt.Categories.Add("b");
+			evt.Categories.Add("b");  // this dupe should go away
+
+			var list = collector_keene.MaybeApplyCatmap(evt.Categories.ToList(), feed_metadict, "testKeene", "Keene Test Hub");
+			list.Sort(String.CompareOrdinal);
+			Assert.IsTrue(list.SequenceEqual(new List<string>() { "a", "b", "l", "m", "n", "o", "p" }));
+		}
+
+		[Test]
+		public void CategoriesAreAddeViaFeedOrEventMetadict()
+		{
+			var list = new List<string>() { "a", "B" };
+			var metadict = new Dictionary<string,string>() { { "category", "b, X,y, Z" } };  // spaces should be trimmed, caps lowered
+			var cat_string = metadict["category"];
+			var l = Collector.SplitLowerTrimAndUniqifyCats(cat_string);
+			list = list.Union(l).ToList();
+			list.Sort();
+		Assert.IsTrue(list.SequenceEqual( new List<string>() { "a", "b", "x", "y", "z" } ));
+		}
+
+		[Test]
+		public void ExpandedCategoryListMergesWithHubTaxonomy()
+		{
+			var collector_keene = new Collector(new Calinfo("elmcity"), settings);
+			collector_keene.tags = new List<string>() { "x", "y", "z" };                    // set hub taxonomy
+			var list = new List<string>() { "a", "b", "x", "http://foo", "", "y", "z" };    
+			var qualified_list = Collector.RemoveDisqualifyingCats(list);
+			var final_list = new List<string>();
+			collector_keene.MaybeAddSquigglies(qualified_list, final_list);
+			Assert.IsTrue(final_list.SequenceEqual(new List<string>() { "{a}", "{b}", "x", "y", "z" } ) );  // adds to hub taxonomy marked in squigglies
+
+		}
+
+		#endregion
+
 		#region other
 
 		[Test]
@@ -747,62 +800,6 @@ namespace CalendarAggregator
 			//Assert.That(evt.list_of_urls_and_sources[0][0] == "http://1" && evt.list_of_urls_and_sources[0][1] == "source1");
 			//Assert.That(evt.list_of_urls_and_sources[1][0] == "http://2" && evt.list_of_urls_and_sources[1][1] == "source2");
 			//Assert.That(evt.list_of_urls_and_sources[2][0] == "http://3" && evt.list_of_urls_and_sources[2][1] == "source3");
-		}
-
-		[Test]
-		public void UpcomingUrlsAreNormalized()
-		{
-			DeleteZonedObjects(keene_test_hub);
-
-			var dtstart = new DateTimeWithZone(DateTime.Now, calinfo_keene.tzinfo);
-			var dtend = new DateTimeWithZone(dtstart.LocalTime + TimeSpan.FromHours(1), calinfo_keene.tzinfo);
-
-
-			var es1 = new ZonedEventStore(calinfo_keene, SourceType.ical);
-			es1.AddEvent(
-				"event",
-				"http://upcoming.yahoo.com/event/8504144/",
-				"Comedy Showcase",
-				dtstart,
-				dtend,
-				"1",
-				"1",
-				false,
-				"comedy",
-				"first event",
-				"first location"
-				);
-
-			es1.Serialize();
-
-			var es2 = new ZonedEventStore(calinfo_keene, SourceType.upcoming);
-			es2.AddEvent(
-				"event",
-				"http://upcoming.yahoo.com/event/8504144",
-				"Ann Arbor Comedy Showcase",
-				dtstart,
-				dtend,
-				"1",
-				"1",
-				false,
-				"upcoming",
-				"first event",
-				"first location"
-				);
-
-			es2.Serialize();
-
-			EventStore.CombineZonedEventStoresToZonelessEventStore(keene_test_hub, settings);
-
-			var es = new ZonelessEventStore(calinfo_keene).Deserialize();
-			Assert.That(es.events.Count == 1);
-
-			var evt = es.events.Find(e => e.title == "event");
-
-			var categories = evt.categories.Split(',').ToList();
-			categories.Sort();
-			Assert.That(categories.SequenceEqual(new List<string>() { "comedy", "upcoming" }));
-			Assert.That(evt.urls_and_sources.Keys.Count == 1);
 		}
 
 		[Test]
