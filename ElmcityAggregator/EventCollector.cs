@@ -48,7 +48,7 @@ namespace CalendarAggregator
 
 		//private Dictionary<string, string> metadict = new Dictionary<string, string>();
 
-		private List<string> tags;
+		public List<string> tags { get; set; }
 
 		private HashSet<string> eventbrite_tags = new HashSet<string>();
 
@@ -96,7 +96,7 @@ namespace CalendarAggregator
 		private const int eventbrite_page_size = 10;
 
 		private ConcurrentDictionary<string, Dictionary<string, string>> per_feed_metadata_cache = new ConcurrentDictionary<string, Dictionary<string, string>>();
-		private ConcurrentDictionary<string, Dictionary<string, string>> per_feed_catmaps = new ConcurrentDictionary<string, Dictionary<string, string>>();
+		public ConcurrentDictionary<string, Dictionary<string, string>> per_feed_catmaps = new ConcurrentDictionary<string, Dictionary<string, string>>();
 
 		// public methods used by worker to collect events from all source types
 		public Collector(Calinfo calinfo, Dictionary<string, string> settings)
@@ -1058,98 +1058,132 @@ namespace CalendarAggregator
 
 		private void SetCategories(DDay.iCal.Event evt, Dictionary<string, string> feed_metadict, Dictionary<string, string> metadata_from_description, string id, string source)
 		{
-			var list = evt.Categories.ToList();
+			var list = evt.Categories.ToList(); // start with categories on the iCal event
 
 			try
 			{
-				list = PrepareCats(list, feed_metadict, id, source);  // normalize, and apply catmap if it exists
+				list = MaybeApplyCatmap(list, feed_metadict, id, source);  // apply catmap if it exists
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "PrepareCats: " + JsonConvert.SerializeObject(feed_metadict), e.Message);
+				GenUtils.PriorityLogMsg("exception", "SetCategories: " + JsonConvert.SerializeObject(feed_metadict), e.Message);
 				return;
+			}
+
+			if (feed_metadict.ContainsKey("category"))				// add feed-level categories from feed metadata
+			{
+				var cat_string = feed_metadict["category"];
+				var l = SplitLowerTrimAndUniqifyCats(cat_string);
+				list = list.Union(l).ToList();
+			}
+
+			if (metadata_from_description.ContainsKey("category"))			// add event-level categories from Description
+			{
+				var cat_string = metadata_from_description["category"];
+				var l = SplitLowerTrimAndUniqifyCats(cat_string);
+				list = list.Union(l).ToList();
 			}
 			
 			// foreach (var cat in evt.Categories)                         // restrict to active taxonomy -- but not for now
 			//	list = list.RemoveUnlessFound(cat.ToLower(), this.tags);
-			
+
+
+			var qualified_list = RemoveDisqualifyingCats(list);
+
+			var final_list = new List<string>();
+
+			MaybeAddSquigglies(qualified_list, final_list);
+
+			final_list.Sort(String.CompareOrdinal);
 			evt.Categories.Clear();
 			foreach (var cat in list)
 			{
-				var c = cat.ToLower();
-				if (c.StartsWith("http:"))								// lose bogus categories
-					continue;
-				if (this.tags.HasItem(c))                      // if matches a tag in the active taxonomy
-					evt.Categories.Add(c);								// use unmodified
-				else
-					evt.Categories.Add("{" + c + "}");                  // else mark as contributor-provided 
-			}
-
-			if (feed_metadict.ContainsKey("category"))				// apply feed-level categories from feed metadata
-			{
-				var cat_string = feed_metadict["category"];
-				AddCategoriesFromCatString(evt, cat_string);
-			}
-
-			if (metadata_from_description.ContainsKey("category"))			// apply event-level categories from Description
-			{
-				var cat_string = metadata_from_description["category"];
-				AddCategoriesFromCatString(evt, cat_string);
-			}
-
-			list = evt.Categories.ToList();   // sort
-			list.Sort(String.CompareOrdinal);
-			evt.Categories.Clear();
-			foreach (var cat in list)
 				evt.Categories.Add(cat);
+			}
 		}
 
-		private List<string> PrepareCats(List<string> ical_cats, Dictionary<string,string> feed_metadict, string id, string source)
+		public void MaybeAddSquigglies(List<string> qualified_list, List<string> final_list)
+		{
+			foreach (var cat in qualified_list)
+			{
+				if (this.tags.HasItem(cat))							    // if matches a tag in the active taxonomy
+					final_list.Add(cat);									// use unmodified
+				else
+					final_list.Add(ContributedTag(cat));                  // else mark as contributor-provided 
+			}
+		}
+
+
+		public static List<string> RemoveDisqualifyingCats(List<string> cats)
+		{
+			var result = new List<string>();
+			foreach (var cat in cats)
+			{
+				if (cat.StartsWith("http:"))								// lose bogus categories from Google Calendar
+					continue;
+				if (cat.Length == 0)									// lose empty tags
+					continue;
+				result.Add(cat);
+			}
+			return result;
+		}
+
+		public static string ContributedTag(string tag)
+		{
+			return "{" + tag + "}";
+		}
+
+		public List<string> MaybeApplyCatmap(List<string> existing_cats, Dictionary<string,string> feed_metadict, string id, string source)
 		{
 			if (!feed_metadict.ContainsKey("feedurl"))
 			{
-                GenUtils.LogMsg("warning", "PrepareCats: feed_metadict lacks feedurl", id + " " + source);
-				return ical_cats;
+                GenUtils.LogMsg("warning", "ApplyCatmap: feed_metadict lacks feedurl", id + " " + source);
+				return existing_cats;
 			}
 
 			var feedurl = feed_metadict["feedurl"];
 
 			if (!per_feed_catmaps.ContainsKey(feedurl))
-				return ical_cats;
+				return existing_cats;
 
-			var catmap = per_feed_catmaps[feedurl];
+			Dictionary<string,string> catmap = per_feed_catmaps[feedurl];
 
-			List<string> ical_cats_clone = ical_cats.Select(i => i).ToList();
+			List<string> mapped_cats = LowerTrimAndUniqifyCats(existing_cats);  // initialize with existing 
 
-			foreach (var cat in ical_cats_clone)
+			foreach (var existing_cat in existing_cats)
 			{
-				var items = cat.Split(',');
-				foreach (var item in items)
+				if (catmap != null && catmap.ContainsKey(existing_cat))                      // add mapped category (or categories)
 				{
-					var c = item.ToLower().Trim();
-					if (catmap != null && catmap.ContainsKey(c))
-					{
-						c = catmap[c].ToLower().Trim();
-						foreach (var _c in c.Split(',')) // multiples allowed here too
+					var per_existing_item_mapped_cats = SplitLowerTrimAndUniqifyCats(catmap[existing_cat]);  // multiples allowed here too
+					foreach ( var mapped_cat in per_existing_item_mapped_cats )
 						{
-							var __c = _c.Trim();
-							ical_cats.Add(__c);
+							mapped_cats.Add(mapped_cat);
 						}
-					}
 				}
 			}
-			return ical_cats;
+			mapped_cats.Sort(String.CompareOrdinal);
+			return mapped_cats.Distinct().ToList();
+		}
+
+		public static List<string> SplitLowerTrimAndUniqifyCats(string catstring)
+		{
+			var list = catstring.Split(',').ToList();
+			return LowerTrimAndUniqifyCats(list);
+		}
+
+		public static List<string> LowerTrimAndUniqifyCats(List<string> cats)
+		{
+			return cats.Select(x => x.Trim()).Select(x => x.ToLower()).Distinct().ToList();
 		}
 
 		public static void AddCategoriesFromCatString(DDay.iCal.Event evt, string cats)
 		{
 			try
 			{
-				var catlist = cats.Split(',');
+				var catlist = SplitLowerTrimAndUniqifyCats(cats);
 				foreach (var cat in catlist)
 				{
-					var c = cat.Trim();
-					evt.Categories.Add(c);
+					evt.Categories.Add(cat);
 				}
 			}
 			catch

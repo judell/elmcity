@@ -416,6 +416,8 @@ namespace CalendarAggregator
 		public const int default_radius = 5;     // default for where hubs
 		public const int default_population = 0;  // in case pop lookup fails
 
+		public const int max_tag_chars = 22;
+
 		public const string default_tz = "Eastern";
 
 		public const string nowhere = "nowhere";
