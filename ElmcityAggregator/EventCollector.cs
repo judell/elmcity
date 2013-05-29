@@ -1504,7 +1504,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.PriorityLogMsg("exception", "CallEventfulApi", response.status + "," + response.message + "," + e.Message);
+					GenUtils.LogMsg("exception", "CallEventfulApi", response.status + "," + response.message + "," + e.Message);
 				}
 			}
 			return xdoc;
@@ -1920,7 +1920,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.PriorityLogMsg("exception", "CallEventBriteApi", response.status + "," + response.message + "," + e.Message + e.StackTrace);
+					GenUtils.LogMsg("exception", "CallEventBriteApi", response.status + "," + response.message + "," + e.Message + e.StackTrace);
 				}
 			}
 
@@ -2004,7 +2004,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "CallFacebookApi", response.status + "," + response.message + "," + e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "CallFacebookApi", response.status + "," + response.message + "," + e.Message + e.StackTrace);
 				return "";
 			}
 		}
