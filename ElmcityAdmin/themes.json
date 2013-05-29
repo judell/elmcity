@@ -27,7 +27,7 @@
     "div"          :  " { 'line-height' : '1.2' } ",
     ".hubtitle"    :  " { 'font-weight':'bold', 'font-size' : '13pt' } ",
     ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
-    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'65%', 'top':'30px' } ",
+    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'65%', 'top':'50px' } ",
     "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'65%', 'top':'240px', 'width':'150px' } ",
     "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'65%', 'top':'200px', 'width':'150px' } ",
     ".bl"          :  " { 'line-height' :'1.5', 'margin-right':'40%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
