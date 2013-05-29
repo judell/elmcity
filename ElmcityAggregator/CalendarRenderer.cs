@@ -578,7 +578,7 @@ namespace CalendarAggregator
 			eventstore.events = eventstore.events.FindAll(evt => evt.dtstart >= dtnow);
 		}
 
-		private string InsertTagSelector(string html, string view, bool eventsonly)
+		public string InsertTagSelector(string html, string view, bool eventsonly)
 		{
 			var uri = BlobStorage.MakeAzureBlobUri(this.id, "tags.json", false);
 			var json = HttpUtils.FetchUrl(uri).DataAsString();
@@ -601,7 +601,10 @@ namespace CalendarAggregator
 				sb.Append("<option>all</option>\n");
 			foreach (var tag in tags)
 			{
-				var option = "<option>" + tag + " (" + counts[tag] + ")" + "</option>\n";
+				string maybe_truncated_tag = tag;
+				if ( tag.Length > Configurator.max_tag_chars )
+					maybe_truncated_tag = tag.Substring(0, Configurator.max_tag_chars) + "&#8230;";
+				var option = "<option value=\"" + tag + "\">" + maybe_truncated_tag + " (" + counts[tag] + ")" + "</option>\n";
 				if (tag == view)
 					option = option.Replace("<option>", "<option selected>");
 				sb.Append(option);
