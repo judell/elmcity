@@ -685,7 +685,8 @@ namespace CalendarAggregator
 			var l = Collector.SplitLowerTrimAndUniqifyCats(cat_string);
 			list = list.Union(l).ToList();
 			list.Sort();
-		Assert.IsTrue(list.SequenceEqual( new List<string>() { "a", "b", "x", "y", "z" } ));
+			list = Collector.LowerTrimAndUniqifyCats(list);
+			Assert.IsTrue(list.SequenceEqual( new List<string>() { "a", "b", "x", "y", "z" } ));
 		}
 
 		[Test]
