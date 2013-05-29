@@ -394,7 +394,7 @@ namespace WorkerRole
             DoIcal(fr, calinfo);
         }
 
-        public void ProcessRegion(string region)
+        public static void ProcessRegion(string region)
         {
 			var calinfo = Utils.AcquireCalinfo(region);
             logger.LogMsg("info", "worker starting on region tasks for " + region, null);
@@ -404,16 +404,21 @@ namespace WorkerRole
                 var es_region = new ZonelessEventStore(calinfo);
 
                 var ids = Utils.GetIdsForRegion(region);
-                foreach (var id in ids)
-                {
-                    var uri = BlobStorage.MakeAzureBlobUri(id, id + ".zoneless.obj", false);
-                    var es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
-                    foreach (var evt in es.events)
-                    {
-                        evt.categories += "," + id.ToLower();  // so tag viewer can slice region by hub name
-                        es_region.events.Add(evt);
-                    }
-                }
+
+				Parallel.ForEach(source: ids, body: (id) =>
+				{
+					var uri = BlobStorage.MakeAzureBlobUri(id, id + ".zoneless.obj", false);
+					var es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
+					foreach (var evt in es.events)
+					{
+						evt.categories += "," + id.ToLower();  // so tag viewer can slice region by hub name
+						lock (es_region)
+						{
+							es_region.events.Add(evt);
+						}
+					}
+				}
+				);
 
                 Utils.UpdateFeedCountForId(region);
 
@@ -421,7 +426,9 @@ namespace WorkerRole
 
                 CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(region), Convert.ToInt32(settings["webrole_instance_count"]));
 
-                RenderTags(region);  
+                RenderTags(region);
+
+				Utils.TagsByHub(region);
 
                 SaveRegionStats(region);
             }

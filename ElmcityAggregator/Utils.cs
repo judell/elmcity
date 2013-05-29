@@ -2429,36 +2429,42 @@ END:VCALENDAR",
 
 		#region other
 
-		public static int UpdateFeedCountForId(string id)
+		public static void UpdateFeedCountForId(string id)
 		{
 			var ids = new List<string>() { }; // the container
 			var final_count = 0;
 
-			if (Utils.IsRegion(id))  // add many nodes to container
+			if (Utils.IsRegion(id))  // collect contained hub ids
 			{
 				foreach (var _id in Utils.GetIdsForRegion(id))
 					ids.Add(_id);
 			}
-			else                     // add single node to container
+			else                     // use hub id
 				ids.Add(id);
 
-			foreach (var _id in ids)  // update node(s)
+			Parallel.ForEach(source: ids, body: (_id) =>
 			{
 				var fr = new FeedRegistry(_id);
 				fr.LoadFeedsFromAzure(FeedLoadOption.all);
 				var count = fr.feeds.Count();
-				final_count += count;
-				var dict = new Dictionary<string, object>() { { "feed_count", count.ToString() } };
-				TableStorage.DictObjToTableStore(TableStorage.Operation.merge, dict, "metadata", _id, _id);
-			}
+				lock (final_count)
+				{
+					final_count += count;     // remember count for container
+				}
+				if (!Utils.IsRegion(_id)) // update count for single hub
+				{
+					var dict = new Dictionary<string, object>() { { "feed_count", count.ToString() } };
+					TableStorage.DictObjToTableStore(TableStorage.Operation.merge, dict, "metadata", _id, _id);
+				}
+			});
 
-			if (Utils.IsRegion(id))  // update container
+			if (Utils.IsRegion(id))  // update count for container
 			{
 				var dict = new Dictionary<string, object>() { { "feed_count", final_count.ToString() } };
 				TableStorage.DictObjToTableStore(TableStorage.Operation.merge, dict, "metadata", id, id);
 			}
 
-			return final_count;
+			return;
 		}
 
 		public static bool UseNonIcalService(NonIcalType type, Dictionary<string, string> settings, Calinfo calinfo)
