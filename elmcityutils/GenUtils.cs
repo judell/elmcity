@@ -625,6 +625,21 @@ namespace ElmcityUtils
 
 	}
 
+	public static class ObjectExtensions
+	{
+
+		public static T CloneObject<T>(this T obj) where T : class        // http://stackoverflow.com/questions/2023210/cannot-access-protected-member-object-memberwiseclone
+		{
+			if (obj == null) return null;
+			System.Reflection.MethodInfo inst = obj.GetType().GetMethod("MemberwiseClone",
+				System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+			if (inst != null)
+				return (T)inst.Invoke(obj, null);
+			else
+				return null;
+		}
+	}
+
 	public static class StringExtensions
 	{
 
