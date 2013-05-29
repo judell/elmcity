@@ -2132,7 +2132,7 @@ END:VCALENDAR",
 			return page;
 		}
 
-		public static List<Dictionary<string, string>> GetTagsForHubAsListDict(string id)
+		public static List<Dictionary<string, string>> GetTagsAndCountsForHubAsListDict(string id)
 		{
 			try
 			{
@@ -2146,6 +2146,13 @@ END:VCALENDAR",
 				GenUtils.PriorityLogMsg("exception", "GetTagsForHubAsListDict: " + id, e.Message + e.StackTrace);
 				return new List<Dictionary<string, string>>();
 			}
+		}
+
+		public static List<string> GetTagsForHub(string id)
+		{
+			var list_of_dict = GetTagsAndCountsForHubAsListDict(id);
+			var list = list_of_dict.Select(x => x.Keys.First()).ToList();
+			return list;
 		}
 
 		#endregion
