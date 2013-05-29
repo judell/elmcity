@@ -579,7 +579,8 @@ function case_insensitive_sort(a, b)
 
 function show_view()
   {
-  var selected = $('#tag_select option:selected').text();
+//  var selected = $('#tag_select option:selected').text();
+  var selected = $('#tag_select option:selected').val();
   selected = selected.replace(/\s*\((\d+)\)/,'');
   var elmcity_id = get_elmcity_id();
   var href;
