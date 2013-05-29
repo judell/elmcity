@@ -1096,7 +1096,7 @@ namespace CalendarAggregator
 
 			final_list.Sort(String.CompareOrdinal);
 			evt.Categories.Clear();
-			foreach (var cat in list)
+			foreach (var cat in final_list)
 			{
 				evt.Categories.Add(cat);
 			}
