@@ -154,7 +154,12 @@ namespace CalendarAggregator
 
 		public static WebRoleData GetWrd()
 		{
-			var uri = BlobStorage.MakeAzureBlobUri("admin", "wrd.obj", false);
+			return GetWrd("wrd.obj");
+		}
+
+		public static WebRoleData GetWrd(string name)
+		{
+			var uri = BlobStorage.MakeAzureBlobUri("admin", name, false);
 			return (WebRoleData)BlobStorage.DeserializeObjectFromUri(uri);
 		}
 
