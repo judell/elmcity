@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2497";
+        public static string version = "2499";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -658,24 +658,28 @@ namespace WebRole
 
             try
             {
-                var _wrd = WebRoleData.GetWrd();
-				if (_wrd == null || wrd.IsConsistent() == false)
+                var new_wrd = WebRoleData.GetWrd();
+				if (new_wrd == null || wrd.IsConsistent() == false)
 				{
 					GenUtils.PriorityLogMsg("warning", "null or inconsistent WebRoleData!", null);
 					return;
 				}
 
-                if (_wrd.ready_ids.Count != ElmcityApp.wrd.ready_ids.Count)  // did # of hubs change? either on initial load or subsequently
+                if (new_wrd.ready_ids.Count != ElmcityApp.wrd.ready_ids.Count)  // did # of hubs change? either on initial load or subsequently
                 {
                     new_routes = true;                                       // force rebuild of route map
                     GenUtils.LogMsg("info", "Reload: found a new hub", null);
+					WebRoleData.SaveTimestampedWrd(ElmcityApp.wrd);
                     lock (ElmcityApp.wrd)
                     {
-                        ElmcityApp.wrd = _wrd;                               // update WebRoleData
+                        ElmcityApp.wrd = new_wrd;                               // update WebRoleData
                     }
                 }
 
+				/*
+
 				bool changed = false;
+				List<string> changed_ids = new List<string>();
 
                 foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's renderer change?
                 {
@@ -686,6 +690,7 @@ namespace WebRole
 						if ( ! Utils.RenderersAreEqual(cached_renderer, current_renderer, except_keys: new List<string>() { "timestamp" } ) )  // other changes too
 						{
 							changed = true;
+							changed_ids.Add(id);
 							GenUtils.LogMsg("info", "Reload: new renderer for " + id, null);
 							lock (ElmcityApp.wrd)
 							{
@@ -704,8 +709,11 @@ namespace WebRole
    
                 }
 
-			if (changed)
-				WebRoleData.SaveWrd(wrd); 
+				if (changed)  // alert the worker to rebuild wrd
+				{
+					bs.PutBlob("admin", CalendarAggregator.Configurator.webrole_sentinel, string.Join(",", changed_ids));
+				}
+				 */
 
             }
             catch (Exception e1)
@@ -733,8 +741,12 @@ namespace WebRole
 
             if (new_routes)
             {
+				var existing_routes = RouteTable.Routes;
+				var route_count = existing_routes.Count;
                 try
                 {
+					GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes: registering " + route_count + " routes", null);
+
                     lock (RouteTable.Routes)
                     {
                         RouteTable.Routes.Clear();
@@ -744,7 +756,9 @@ namespace WebRole
                 }
                 catch (Exception e3)
                 {
-                    GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: registering routes", e3.Message);
+                    GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: registering " + route_count + " routes", e3.Message + e3.StackTrace);
+					RouteTable.Routes.Clear();
+					ElmcityApp.RegisterRoutes(existing_routes, ElmcityApp.wrd);
                 }
             }
 
@@ -823,52 +837,3 @@ namespace WebRole
     }
 }
 
-
-////   
-
-/*
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Web.Http;
-using System.Web.Mvc;
-using System.Web.Routing;
-using ElmcityUtils;
- */
-
-/*
-using System;
-using System.IO;
-using System.Reflection;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Timers;
-using System.Text;
-using System.Web;
-using System.Web.Mvc;
-using System.Web.Routing;
-//using System.Web.Caching;
-using CalendarAggregator;
-using ElmcityUtils;
-using System.Net;
-using Newtonsoft.Json;
-
-namespace WebRole
-{
-    // Note: For instructions on enabling IIS6 or IIS7 classic mode, 
-    // visit http://go.microsoft.com/?LinkId=9394801
-    public class MvcApplication : System.Web.HttpApplication
-    {
-       protected void Application_Start()
-        {
-            GenUtils.PriorityLogMsg("DEBUG", "WebRole: Application_Start", "MVC4");
-
-            AreaRegistration.RegisterAllAreas();
-
-            RouteConfig.RegisterRoutes(RouteTable.Routes);
-        }
-    }
-}
-*/
