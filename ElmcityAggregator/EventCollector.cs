@@ -1095,6 +1095,8 @@ namespace CalendarAggregator
 			MaybeAddSquigglies(qualified_list, final_list);
 
 			final_list.Sort(String.CompareOrdinal);
+			final_list = LowerTrimAndUniqifyCats(final_list);
+
 			evt.Categories.Clear();
 			foreach (var cat in final_list)
 			{
