@@ -64,7 +64,7 @@ namespace WebRole
 		{
 			var uri = new Uri(path + "/json");
 			var json = HttpUtils.FetchUrl(uri).DataAsString();
-			var list_of_dict = (List<Dictionary<string,object>>) JsonConvert.DeserializeObject <List<Dictionary<string, object>>>(json);
+			var list_of_dict = (List<Dictionary<string, object>>) JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(json);
 			Assert.That(list_of_dict.Count == 2);
 		}
 
