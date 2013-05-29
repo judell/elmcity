@@ -580,9 +580,7 @@ namespace CalendarAggregator
 
 		public string InsertTagSelector(string html, string view, bool eventsonly)
 		{
-			var uri = BlobStorage.MakeAzureBlobUri(this.id, "tags.json", false);
-			var json = HttpUtils.FetchUrl(uri).DataAsString();
-			var list_of_dict = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
+			var list_of_dict = Utils.GetTagsForHubAsListDict(this.id);
 			var tags = new List<string>();
 			var counts = new Dictionary<string,string>();
 			foreach (var dict in list_of_dict)

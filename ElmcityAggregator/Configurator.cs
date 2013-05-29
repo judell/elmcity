@@ -439,6 +439,7 @@ namespace CalendarAggregator
 		//public static string pubsubhubub_uri = "http://pubsubhubbub.appspot.com/";
 
 		public static string webrole_sentinel = "webrole_sentinel.txt";
+		public static string tags_json = "tags.json";
 		
 		public static int GetIntSetting(Dictionary<string,string> metadict, Dictionary<string,string> usersettings, string key)
 		    {

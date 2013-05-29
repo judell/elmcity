@@ -2132,6 +2132,22 @@ END:VCALENDAR",
 			return page;
 		}
 
+		public static List<Dictionary<string, string>> GetTagsForHubAsListDict(string id)
+		{
+			try
+			{
+				var uri = BlobStorage.MakeAzureBlobUri(id, Configurator.tags_json, false);
+				var json = HttpUtils.FetchUrl(uri).DataAsString();
+				var list_of_dict = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
+				return list_of_dict;
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "GetTagsForHubAsListDict: " + id, e.Message + e.StackTrace);
+				return new List<Dictionary<string, string>>();
+			}
+		}
+
 		#endregion
 
 		#region curatorial url-bulding helpers
