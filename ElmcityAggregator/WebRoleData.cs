@@ -141,15 +141,23 @@ namespace CalendarAggregator
 				if (r.HttpResponse.status != HttpStatusCode.Created)
 					GenUtils.PriorityLogMsg("warning", "SaveWrd: cannot save", null);
 
-				var timestamped_name = string.Format("wrd." + string.Format("{0:yyyy.MM.dd.HH.mm.ss}.obj", DateTime.UtcNow));
-				r = bs.PutBlob("wrd", timestamped_name, bytes, "binary/octet-stream");
-				if (r.HttpResponse.status != HttpStatusCode.Created)
-					GenUtils.PriorityLogMsg("warning", "SaveWrd: cannot save timestamped backup", null);
+				SaveTimestampedWrd(wrd);
 			}
 			else
 			{
 				GenUtils.PriorityLogMsg("warning", "SaveWrd: cannot lease", null);
 			}
+		}
+
+		public static BlobStorageResponse SaveTimestampedWrd(WebRoleData wrd)
+		{
+			var bs = BlobStorage.MakeDefaultBlobStorage();
+			var timestamped_name = string.Format("wrd." + string.Format("{0:yyyy.MM.dd.HH.mm.ss}.obj", DateTime.UtcNow));
+			var bytes = ObjectUtils.SerializeObject(wrd);
+			var r = bs.PutBlob("wrd", timestamped_name, bytes, "binary/octet-stream");
+			if (r.HttpResponse.status != HttpStatusCode.Created)
+				GenUtils.PriorityLogMsg("warning", "SaveTimestampedWrd: cannot save", null);
+			return r;
 		}
 
 		public static WebRoleData GetWrd()
