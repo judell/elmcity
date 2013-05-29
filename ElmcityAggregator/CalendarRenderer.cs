@@ -606,7 +606,7 @@ namespace CalendarAggregator
 					maybe_truncated_tag = tag.Substring(0, Configurator.max_tag_chars) + "&#8230;";
 				var option = "<option value=\"" + tag + "\">" + maybe_truncated_tag + " (" + counts[tag] + ")" + "</option>\n";
 				if (tag == view)
-					option = option.Replace("<option>", "<option selected>");
+					option = option.Replace("<option ", "<option selected ");
 				sb.Append(option);
 			}
 
