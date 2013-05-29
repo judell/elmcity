@@ -14,6 +14,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -2135,13 +2136,14 @@ END:VCALENDAR",
 		public static string TagsByHub(string region)
 		{
 			var ids = Utils.GetIdsForRegion(region);
-			var tags_by_hub = new Dictionary<string,List<string>>();
-			foreach (var id in ids)
+			var tags_by_hub = new ConcurrentDictionary<string,List<string>>();
+
+			Parallel.ForEach(source: ids, body: (id) =>
 			{
 				var hubtags = Utils.GetTagsForHub(id);
 				foreach (var tag in hubtags)
 					tags_by_hub.AddOrAppendDictOfListT(tag, id);
-			}
+			});
 
 			List<string> tags = tags_by_hub.Keys.ToList();
 			tags.Sort(String.CompareOrdinal);
@@ -2432,7 +2434,7 @@ END:VCALENDAR",
 		public static void UpdateFeedCountForId(string id)
 		{
 			var ids = new List<string>() { }; // the container
-			var final_count = 0;
+			var final_count = new List<int>() { 0 };  // encapsulate in ref type for locking
 
 			if (Utils.IsRegion(id))  // collect contained hub ids
 			{
@@ -2449,7 +2451,7 @@ END:VCALENDAR",
 				var count = fr.feeds.Count();
 				lock (final_count)
 				{
-					final_count += count;     // remember count for container
+					final_count[0] += count;     // remember count for container
 				}
 				if (!Utils.IsRegion(_id)) // update count for single hub
 				{
@@ -2460,7 +2462,7 @@ END:VCALENDAR",
 
 			if (Utils.IsRegion(id))  // update count for container
 			{
-				var dict = new Dictionary<string, object>() { { "feed_count", final_count.ToString() } };
+				var dict = new Dictionary<string, object>() { { "feed_count", final_count[0].ToString() } };
 				TableStorage.DictObjToTableStore(TableStorage.Operation.merge, dict, "metadata", id, id);
 			}
 
