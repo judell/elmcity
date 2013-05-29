@@ -28,6 +28,7 @@ using Microsoft.WindowsAzure.ServiceRuntime;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Threading;
 
 namespace WorkerRole
 {
@@ -177,6 +178,8 @@ namespace WorkerRole
 
                     var union = todo.nonicaltasks.Union(todo.icaltasks).Union(todo.regiontasks);
 
+					//MaybeRemakeWebRoleData();
+
                     foreach (var id in todo.nonicaltasks)           // this won't be parallelized because of api rate throttling in nonical service endpoints
                     {
                         Scheduler.UpdateStartTaskForId(id, TaskType.nonicaltasks);  // the todo list has a general start time, now update it to actual start
@@ -199,7 +202,7 @@ namespace WorkerRole
                     }
 
                     var nonregions = union.Except(regions);
-                    Parallel.ForEach(source: nonregions, body: (id) =>
+                    Parallel.ForEach(source: nonregions,  body: (id) =>
                     {
                         FinalizeHub(id);
                     }
@@ -215,6 +218,19 @@ namespace WorkerRole
                 GenUtils.PriorityLogMsg("exception", "Worker.Run", e.Message + e.StackTrace);
             }
         }
+
+		public static void MaybeRemakeWebRoleData()
+		{
+			var webrole_sentinel_uri = BlobStorage.MakeAzureBlobUri("admin", CalendarAggregator.Configurator.webrole_sentinel, false);
+			if (BlobStorage.ExistsBlob(webrole_sentinel_uri))
+			{
+				var list = HttpUtils.FetchUrl(webrole_sentinel_uri).DataAsString();
+				GenUtils.LogMsg("info", "worker role remaking wrd for " + list, null);
+				var args = new Dictionary<string, string>();
+				WebRoleData.MakeWebRoleData();
+				bs.DeleteBlob("admin", CalendarAggregator.Configurator.webrole_sentinel);
+			}
+		}
 
         private void BuildTodo(Todo todo, List<string> ids)
         {
@@ -336,7 +352,7 @@ namespace WorkerRole
         public void ProcessNonIcal(string id)
         {
             logger.LogMsg("info", "worker starting on nonical tasks for " + id, null);
-            var calinfo = new Calinfo(id);
+			var calinfo = Utils.AcquireCalinfo(id);
 
             try
             {
@@ -405,7 +421,7 @@ namespace WorkerRole
 
                 CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(region), Convert.ToInt32(settings["webrole_instance_count"]));
 
-                RenderTags(region);  // static renderings, mainly for debugging now that GetEvents uses dynamic rendering
+                RenderTags(region);  
 
                 SaveRegionStats(region);
             }
@@ -945,8 +961,6 @@ Future events {0}
         {
             GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
 
-            // WebRoleData.MakeWebRoleData(); 
-
             Utils.MakeWhereSummary();  // refresh http://elmcity.blob.core.windows.net/admin/where_summary.html
 
             Utils.MakeWhatSummary();  // refresh http://elmcity.blob.core.windows.net/admin/what_summary.html
@@ -973,7 +987,7 @@ Future events {0}
             }
             catch (Exception e)
             {
-                GenUtils.PriorityLogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
+                logger.LogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
             }
         }
 
