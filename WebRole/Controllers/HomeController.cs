@@ -365,7 +365,7 @@ if unsure please check http://{1}/{2}/stats",
             }
             catch (Exception e)
             {
-                GenUtils.PriorityLogMsg("exception", "ics_from_fb_page: " + fb_id + ", " + elmcity_id, e.Message + e.StackTrace);
+                GenUtils.LogMsg("exception", "ics_from_fb_page: " + fb_id + ", " + elmcity_id, e.Message + e.StackTrace);
             }
             return Content(ics, "text/calendar");
         }
