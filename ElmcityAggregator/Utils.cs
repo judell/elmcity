@@ -2134,7 +2134,6 @@ END:VCALENDAR",
 
 		public static string TagsByHub(string region)
 		{
-			var region = "HamptonRoadsVA";
 			var ids = Utils.GetIdsForRegion(region);
 			var tags_by_hub = new Dictionary<string,List<string>>();
 			foreach (var id in ids)
@@ -2166,6 +2165,8 @@ END:VCALENDAR",
 			html.AppendLine("</html>");
 
 			bs.PutBlob(region, "tags_by_hub.html", html.ToString(), "text/html");
+
+			return html.ToString();
 		}
 
 		public static List<Dictionary<string, string>> GetTagsAndCountsForHubAsListDict(string id)
