@@ -2132,6 +2132,42 @@ END:VCALENDAR",
 			return page;
 		}
 
+		public static string TagsByHub(string region)
+		{
+			var region = "HamptonRoadsVA";
+			var ids = Utils.GetIdsForRegion(region);
+			var tags_by_hub = new Dictionary<string,List<string>>();
+			foreach (var id in ids)
+			{
+				var hubtags = Utils.GetTagsForHub(id);
+				foreach (var tag in hubtags)
+					tags_by_hub.AddOrAppendDictOfListT(tag, id);
+			}
+
+			List<string> tags = tags_by_hub.Keys.ToList();
+			tags.Sort(String.CompareOrdinal);
+
+			var html = new StringBuilder();
+			html.AppendLine(String.Format(@"<html>
+<head><style>body {{ font-family: verdana; margin:.5in }}</style><title>tags by hub for region {0}</title></head>
+<body><h1>tags by hub for region {0}</h1>",
+			region)
+			);
+
+			foreach (var tag in tags)
+			{
+				List<string> hubs = tags_by_hub[tag];
+
+				var links = hubs.Select(x => "<a href=\"" + ElmcityUtils.Configurator.azure_blobhost + "/" + x.ToLower() + "/tag_sources.html#" + tag + "\">" + x + "</a>");
+
+				html.AppendLine(@"<p>" + "<b>" + tag + "</b>: " + String.Join(", ", links) + "</p>");
+			}
+
+			html.AppendLine("</html>");
+
+			bs.PutBlob(region, "tags_by_hub.html", html.ToString(), "text/html");
+		}
+
 		public static List<Dictionary<string, string>> GetTagsAndCountsForHubAsListDict(string id)
 		{
 			try
