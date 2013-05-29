@@ -206,6 +206,45 @@ namespace CalendarAggregator
 
 		#endregion xml
 
+		#region text
+
+		// render an eventstore as xml, optionally limited by view and/or count
+		public string RenderText(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
+		{
+			eventstore = GetEventStore(eventstore, view, count, from, to, args);
+
+			var text = new StringBuilder();
+
+			var event_renderer = new EventRenderer(RenderEvtAsText);
+
+			var eventstring = new StringBuilder();
+
+			foreach (var evt in eventstore.events)
+				AppendEvent(eventstring, event_renderer, evt, new Dictionary<string, object>());
+
+			text.Append(eventstring.ToString());
+
+			return text.ToString();
+		}
+
+		// render a single event as text
+		private string RenderEvtAsText(ZonelessEvent evt, Calinfo calinfo, Dictionary<string, object> args)
+		{
+			var text = new StringBuilder();
+
+			text.AppendLine(evt.title);
+			text.AppendLine(evt.dtstart.ToString());	
+			text.AppendLine(evt.source);
+			text.AppendLine(evt.location);
+			text.AppendLine(evt.description);
+			text.AppendLine();
+
+			return text.ToString();
+		}
+
+		#endregion
+
+
 		#region json
 
 		public BlobStorageResponse SaveAsJson()
