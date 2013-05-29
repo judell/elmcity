@@ -968,7 +968,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "AddIcalEvent", source + ": " + e.Message + ": " + evt.Summary);
+				GenUtils.LogMsg("exception", "AddIcalEvent", source + ": " + e.Message + ": " + evt.Summary);
 			}
 		}
 
