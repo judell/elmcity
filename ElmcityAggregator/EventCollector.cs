@@ -1059,6 +1059,8 @@ namespace CalendarAggregator
 		private void SetCategories(DDay.iCal.Event evt, Dictionary<string, string> feed_metadict, Dictionary<string, string> metadata_from_description, string id, string source)
 		{
 			var list = evt.Categories.ToList(); // start with categories on the iCal event
+			char[] squigglies = { '{', '}' };
+			list = list.Select(x => x.Trim(squigglies)).ToList();  // remove their squigglies if present because if {{ this }} happens it's weird
 
 			try
 			{
@@ -1175,6 +1177,7 @@ namespace CalendarAggregator
 
 		public static List<string> LowerTrimAndUniqifyCats(List<string> cats)
 		{
+
 			return cats.Select(x => x.Trim()).Select(x => x.ToLower()).Distinct().ToList();
 		}
 
