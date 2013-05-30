@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2499";
+        public static string version = "2500";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -626,6 +626,7 @@ namespace WebRole
 			ElmcityApp.wrd = WebRoleData.GetWrd();
 
 			ElmcityApp.RegisterRoutes(RouteTable.Routes, ElmcityApp.wrd);
+			GenUtils.PriorityLogMsg("info", RouteTable.Routes.Count + " routes registered", null);
 
             Utils.ScheduleTimer(PurgeCache, CalendarAggregator.Configurator.webrole_cache_purge_interval_minutes, name: "PurgeCache", startnow: false);
 			Utils.ScheduleTimer(ReloadSettingsAndRoutes, minutes: CalendarAggregator.Configurator.webrole_reload_interval_minutes, name: "ReloadSettingsAndRoutes", startnow: true);
@@ -749,15 +750,20 @@ namespace WebRole
 
                     lock (RouteTable.Routes)
                     {
+						var route_count_old = RouteTable.Routes.Count;
+						GenUtils.PriorityLogMsg("info", RouteTable.Routes.Count + " routes before reload", null);
                         RouteTable.Routes.Clear();
                         ElmcityApp.RegisterRoutes(RouteTable.Routes, ElmcityApp.wrd);
+						GenUtils.PriorityLogMsg("info", RouteTable.Routes.Count + " routes registered", null);
+						var route_count_new = RouteTable.Routes.Count;
+						if (route_count_new < route_count_old)
+							GenUtils.PriorityLogMsg("warning", "route count was " + route_count_old + ", is " + route_count_new, null);
                         // RouteDebug.RouteDebugger.RewriteRoutesForTesting(RouteTable.Routes);
                     }
                 }
                 catch (Exception e3)
                 {
                     GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: registering " + route_count + " routes", e3.Message + e3.StackTrace);
-					RouteTable.Routes.Clear();
 					ElmcityApp.RegisterRoutes(existing_routes, ElmcityApp.wrd);
                 }
             }
