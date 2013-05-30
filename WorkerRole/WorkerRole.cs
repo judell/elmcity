@@ -181,18 +181,18 @@ namespace WorkerRole
 
 					//MaybeRemakeWebRoleData();
 
-					foreach (var id in todo.nonicaltasks)           // this won't be parallelized because of api rate throttling in nonical service endpoints
-					{
-						Scheduler.UpdateStartTaskForId(id, TaskType.nonicaltasks);  // the todo list has a general start time, now update it to actual start
-						ProcessNonIcal(id);
-						StopTask(id, TaskType.nonicaltasks);
-					}
-
 					foreach (var id in todo.icaltasks)              // this can be parallelized because there are many separate/unique endpoints
 					{
 						Scheduler.UpdateStartTaskForId(id, TaskType.icaltasks);
 						ProcessIcal(id);
 						StopTask(id, TaskType.icaltasks);
+					}
+
+					foreach (var id in todo.nonicaltasks)           // this won't be parallelized because of api rate throttling in nonical service endpoints
+					{
+						Scheduler.UpdateStartTaskForId(id, TaskType.nonicaltasks);  // the todo list has a general start time, now update it to actual start
+						ProcessNonIcal(id);
+						StopTask(id, TaskType.nonicaltasks);
 					}
 
 					foreach (var id in todo.regiontasks)            // this can be also be parallelized as needed
@@ -279,11 +279,14 @@ namespace WorkerRole
 
 				if (calinfo.hub_enum == HubType.region)
 				{
-					if (StartTask(id, calinfo, TaskType.regiontasks) == TaskType.regiontasks) // time to rebuild a region?
+					if (RegionIsStale(id)) // time to rebuild a region?
+					{
+						Scheduler.StartTaskForId(id, TaskType.regiontasks);
 						lock (todo.regiontasks)
 						{
 							todo.regiontasks.Add(id);
 						}
+					}
 				}
 			}
 			);
@@ -1011,6 +1014,25 @@ Future events {0}
 			{
 				logger.LogMsg("exception", "IronPythonAdmin", ex.Message + ex.StackTrace);
 			}
+		}
+
+		public static bool RegionIsStale(string region)
+		{
+			var stale = false;
+			var bs = BlobStorage.MakeDefaultBlobStorage();
+			var region_props = bs.GetBlobProperties(region.ToLower(), region + ".zoneless.obj");
+			var region_modified = DateTime.Parse(region_props.HttpResponse.headers["Last-Modified"]);
+			foreach (var hub in Utils.GetIdsForRegion(region))
+			{
+				var hub_props = bs.GetBlobProperties(hub.ToLower(), hub + ".zoneless.obj");
+				var hub_modified = DateTime.Parse(hub_props.HttpResponse.headers["Last-Modified"]);
+				if (hub_modified > region_modified)
+				{
+					stale = true;
+					break;
+				}
+			}
+			return stale;
 		}
 
 		/*

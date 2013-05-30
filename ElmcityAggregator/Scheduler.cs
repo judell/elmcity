@@ -157,12 +157,6 @@ namespace CalendarAggregator
 		{
 			var id = calinfo.id;
 
-			if (Scheduler.ExistsTaskRecordForId(id, type) == false)
-			{
-				GenUtils.PriorityLogMsg("error", "MaybeStartTaskForId: " + id, "task record does not exist but should");
-				return TaskType.none;
-			}
-
 			TimeSpan interval = IntervalFromType(type);
 
 			var task = FetchTaskForId(id, type);
@@ -198,12 +192,13 @@ namespace CalendarAggregator
 
 		public static HttpResponse UnlockId(string id, TaskType type)
 		{
-			if (ExistsLockRecordForId(id, type))
-			{
+			//if (ExistsLockRecordForId(id, type))    // don't need to check, if doesn't exist delete will just fail
+			//{
 				var tasktable = type.ToString();
-				return ts.DeleteEntity(tasktable, lock_pk, id).http_response;
-			}
-			else
+				// return ts.DeleteEntity(tasktable, lock_pk, id).http_response;    // don't need to wait for verification
+				return ts.MaybeDeleteEntity(tasktable, lock_pk, id).http_response;
+			//}
+			//else
 				return default(HttpResponse);
 		}
 
