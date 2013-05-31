@@ -41,8 +41,8 @@ namespace WorkerRole
 		{
 			icaltasks = new List<string>();
 			nonicaltasks = new List<string>();
-			regiontasks = new List<string>();
-			twitter_messages = new List<string>();
+			//regiontasks = new List<string>();
+			//twitter_messages = new List<string>();
 			start_requests = new List<string>();
 		}
 	};
@@ -173,11 +173,11 @@ namespace WorkerRole
 
 					todo = new Todo();
 
-					BuildTodo(todo, ids);
+					var icals_and_nonicals = ids.Except(regions).ToList();
+
+					BuildTodo(todo, icals_and_nonicals);
 
 					//HandleTwitterMessages(todo, ids);
-
-					var union = todo.nonicaltasks.Union(todo.icaltasks).Union(todo.regiontasks);
 
 					//MaybeRemakeWebRoleData();
 
@@ -195,22 +195,26 @@ namespace WorkerRole
 						StopTask(id, TaskType.nonicaltasks);
 					}
 
-					foreach (var id in todo.regiontasks)            // this can be also be parallelized as needed
-					{
-						Scheduler.UpdateStartTaskForId(id, TaskType.regiontasks);
-						ProcessRegion(id);
-						StopTask(id, TaskType.regiontasks);
-					}
-
-					var nonregions = union.Except(regions);
-					Parallel.ForEach(source: nonregions, body: (id) =>
+					var finalizers = todo.nonicaltasks.Union(todo.icaltasks);  // finalize ical and/or nonical updates
+					Parallel.ForEach(source: finalizers, body: (id) =>
 					{
 						FinalizeHub(id);
 					}
 					);
 
+					foreach (var id in Utils.GetRegionIds())            // now update regions, this can be also be parallelized as needed
+					{
+						if (RegionIsStale(id))
+						{
+							Scheduler.UpdateStartTaskForId(id, TaskType.regiontasks);
+							ProcessRegion(id);
+							StopTask(id, TaskType.regiontasks);
+						}
+					}
+
+
 					logger.LogMsg("info", "worker sleeping", null);
-					Utils.Wait(CalendarAggregator.Configurator.scheduler_check_interval_minutes);
+					Utils.WaitMinutes(Convert.ToInt32(settings["scheduler_check_interval_minutes"]));
 
 				}
 			}
@@ -236,7 +240,8 @@ namespace WorkerRole
 		private void BuildTodo(Todo todo, List<string> ids)
 		{
 			var options = new ParallelOptions();
-			Parallel.ForEach(source: ids, parallelOptions: options, body: (id) =>
+			//options.MaxDegreeOfParallelism = 1;
+			Parallel.ForEach(source: ids, parallelOptions:options, body: (id) =>
 			{
 				var calinfo = Utils.AcquireCalinfo(id);
 
@@ -277,20 +282,20 @@ namespace WorkerRole
 						}
 				}
 
-				if (calinfo.hub_enum == HubType.region)
-				{
-					if (RegionIsStale(id)) // time to rebuild a region?
-					{
-						Scheduler.StartTaskForId(id, TaskType.regiontasks);
-						lock (todo.regiontasks)
-						{
-							todo.regiontasks.Add(id);
-						}
-					}
-				}
 			}
 			);
 
+		}
+
+		private static void MaybePutRegionOnTodo(Todo todo, string id)
+		{
+			if (RegionIsStale(id)) // time to rebuild a region?
+			{
+				lock (todo.regiontasks)
+				{
+					todo.regiontasks.Add(id);
+				}
+			}
 		}
 
 		/* twitter messaging disabled for now, twitter did not like it
@@ -517,14 +522,16 @@ namespace WorkerRole
 
 			TaskType started = TaskType.none;
 
+			/*
 			if (todo.start_requests.HasItem(id))
 			{
 				logger.LogMsg("info", "Received start message from " + id, null);
 				//TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your start message");
 				started = type;
 			}
-			else
-				started = Scheduler.MaybeStartTaskForId(now, calinfo, type);
+			else */
+
+			started = Scheduler.MaybeStartTaskForId(now, calinfo, type);
 
 			if (started == TaskType.none)
 				Scheduler.UnlockId(id, type);
@@ -1019,18 +1026,25 @@ Future events {0}
 		public static bool RegionIsStale(string region)
 		{
 			var stale = false;
-			var bs = BlobStorage.MakeDefaultBlobStorage();
-			var region_props = bs.GetBlobProperties(region.ToLower(), region + ".zoneless.obj");
-			var region_modified = DateTime.Parse(region_props.HttpResponse.headers["Last-Modified"]);
-			foreach (var hub in Utils.GetIdsForRegion(region))
+			try
 			{
-				var hub_props = bs.GetBlobProperties(hub.ToLower(), hub + ".zoneless.obj");
-				var hub_modified = DateTime.Parse(hub_props.HttpResponse.headers["Last-Modified"]);
-				if (hub_modified > region_modified)
+				var bs = BlobStorage.MakeDefaultBlobStorage();
+				var region_props = bs.GetBlobProperties(region.ToLower(), region + ".zoneless.obj");
+				var region_modified = DateTime.Parse(region_props.HttpResponse.headers["Last-Modified"]);
+				foreach (var hub in Utils.GetIdsForRegion(region))
 				{
-					stale = true;
-					break;
+					var hub_props = bs.GetBlobProperties(hub.ToLower(), hub + ".zoneless.obj");
+					var hub_modified = DateTime.Parse(hub_props.HttpResponse.headers["Last-Modified"]);
+					if (hub_modified > region_modified)
+					{
+						stale = true;
+						break;
+					}
 				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "RegionIsStale: " + region, e.Message + e.StackTrace);
 			}
 			return stale;
 		}
