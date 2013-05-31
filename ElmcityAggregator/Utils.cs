@@ -2558,6 +2558,11 @@ END:VCALENDAR",
 			System.Threading.Thread.Sleep(seconds * 1000);
 		}
 
+		public static void WaitMinutes(int minutes)
+		{
+			System.Threading.Thread.Sleep(minutes * 60 * 1000);
+		}
+
 		public static string MakeBaseZonelessUrl(string id)
 		{
 			return string.Format("{0}/{1}/{2}.zoneless.obj",
