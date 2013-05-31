@@ -53,7 +53,7 @@ namespace CalendarAggregator
 			{
 				GenUtils.LogMsg("info", "GatherWebRoleData: readying: " + id, null);
 
-				var cr = new CalendarRenderer(id);
+				var cr = new CalendarRenderer(id);  // note: currently acquires vs creates calinfo, if changes at that level repickle calinfo(s) first
 				lock (this.renderers)
 				{
 					this.renderers.Add(id, cr);
