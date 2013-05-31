@@ -210,7 +210,7 @@ namespace WorkerRole
 					);
 
 					logger.LogMsg("info", "worker sleeping", null);
-					Utils.Wait(CalendarAggregator.Configurator.scheduler_check_interval_minutes * 60);
+					Utils.Wait(CalendarAggregator.Configurator.scheduler_check_interval_minutes);
 
 				}
 			}
