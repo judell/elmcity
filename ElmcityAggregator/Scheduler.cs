@@ -199,7 +199,7 @@ namespace CalendarAggregator
 				return ts.MaybeDeleteEntity(tasktable, lock_pk, id).http_response;
 			//}
 			//else
-				return default(HttpResponse);
+			//	return default(HttpResponse);
 		}
 
 		public static bool IsAbandoned(string id, TaskType type)

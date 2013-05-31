@@ -650,12 +650,13 @@ namespace CalendarAggregator
 			sb.Append("</select>\n");
 			if (eventsonly)
 			{
-				html = html.Replace("<!-- begin events -->", "<!-- begin events -->\n" + sb.ToString());
-				//html = html.Replace("<!-- end events -->", "<!-- end events -->\n" + sb.ToString());
+				html = html.Replace("<!-- begin events -->", "<!-- begin events -->\n" + sb.ToString()); // insert tags at top of event list
 			}
 			else
-				//html = html.Replace("<div id=\"tags\"></div>", "<div id=\"tags\">" + sb.ToString() + "</div>");
-				html = Regex.Replace(html, "(<div id=\"tags\"[^>]*?>)", "$1" + sb.ToString());
+			{
+				html = html.Replace("<!--__CATEGORIES__-->", "<div style=\"font-style:italic\">categories</div>"); // label the tags
+				html = html.Replace("<!--__TAGS__-->", sb.ToString());   // insert tags in sidebar
+			}
 			return html;
 		}
 
