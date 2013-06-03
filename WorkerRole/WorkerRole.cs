@@ -181,27 +181,48 @@ namespace WorkerRole
 
 					//MaybeRemakeWebRoleData();
 
+					TimeSpan total_time;
+					TimeSpan ical_time;
+					TimeSpan finalize_time;
+					TimeSpan nonical_time;
+					TimeSpan region_time;
+
+					var sw_total = new Stopwatch();
+					var sw_ical = new Stopwatch();
+					var sw_finalize = new Stopwatch();
+					var sw_nonical = new Stopwatch();
+					var sw_region = new Stopwatch();
+
+					sw_total.Start();
+
+					sw_ical.Start();
 					foreach (var id in todo.icaltasks)              // this can be parallelized because there are many separate/unique endpoints
 					{
 						Scheduler.UpdateStartTaskForId(id, TaskType.icaltasks);
 						ProcessIcal(id);
 						StopTask(id, TaskType.icaltasks);
 					}
+					sw_ical.Stop();
 
+					sw_nonical.Start();
 					foreach (var id in todo.nonicaltasks)           // this won't be parallelized because of api rate throttling in nonical service endpoints
 					{
 						Scheduler.UpdateStartTaskForId(id, TaskType.nonicaltasks);  // the todo list has a general start time, now update it to actual start
 						ProcessNonIcal(id);
 						StopTask(id, TaskType.nonicaltasks);
 					}
+					sw_nonical.Stop();
 
+					sw_finalize.Start();
 					var finalizers = todo.nonicaltasks.Union(todo.icaltasks);  // finalize ical and/or nonical updates
 					Parallel.ForEach(source: finalizers, body: (id) =>
 					{
 						FinalizeHub(id);
 					}
 					);
+					sw_finalize.Stop();
 
+					sw_region.Start();
 					foreach (var id in Utils.GetRegionIds())            // now update regions, this can be also be parallelized as needed
 					{
 						if (RegionIsStale(id))
@@ -211,7 +232,19 @@ namespace WorkerRole
 							StopTask(id, TaskType.regiontasks);
 						}
 					}
+					sw_region.Stop();
 
+					sw_total.Stop();
+
+					logger.LogMsg("info", String.Format("worker: ical {0}, finalize {1}, nonical {2}, region {3}, total {4}",
+							sw_ical.Elapsed.ToString(),
+							sw_finalize.Elapsed.ToString(),
+							sw_nonical.Elapsed.ToString(),
+							sw_region.Elapsed.ToString(),
+							sw_total.Elapsed.ToString()
+							),
+						null
+						);
 
 					logger.LogMsg("info", "worker sleeping", null);
 					Utils.WaitMinutes(Convert.ToInt32(settings["scheduler_check_interval_minutes"]));
