@@ -164,15 +164,19 @@ namespace CalendarAggregator
 				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire core tags", e1.Message + e1.StackTrace);
 			}
 
-			try
+			try                                            // curator-defined core taxonomy
 			{
-                foreach (var tag in Utils.GetTagsFromJson(this.id))
-                    this.tags.Add(tag);
-            }
-            catch (Exception e0)
-            {
+				var id_for_tags = Utils.IsRegion(this.id) ? this.id : Utils.RegionsBelongedTo(this.id).First();  // if contained use container's tags
+				foreach (var tag in Utils.GetTagsFromJson(id_for_tags))
+				{
+					if ( ! tag.StartsWith("{") )
+						this.tags.Add(tag);
+				}
+			}
+			catch (Exception e0)
+			{
 				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire extended tags", e0.Message + e0.StackTrace);
-            }
+			}
 
 
 		}
@@ -694,6 +698,9 @@ namespace CalendarAggregator
 			{
 				feedtext = response.DataAsString();
 			}
+
+			// to thwart unnecessary cache invalidation
+			feedtext = Utils.RemoveComponent(feedtext, "DTSTAMP");
 
 			if (cached_feed_text.Contains("X-QUOTA-THROTTLED"))
 				GenUtils.LogMsg("warning", "GetFeedTextFromFeed", "cached text contains X-QUOTA-THROTTLED");
