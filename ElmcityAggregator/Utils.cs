@@ -757,7 +757,7 @@ namespace CalendarAggregator
 				query += String.Format(" and RowKey lt '{0}'", until_ticks);
 			if (! String.IsNullOrEmpty(conditions))
 				query += " and " + conditions;
-			TableStorageListDictResponse r = ts.QueryAllEntitiesAsListDict(tablename, query, 0);
+			TableStorageListDictResponse r = ts.QueryAllEntitiesAsListDict(tablename, query, max:10000);
 			var dicts = r.list_dict_obj;
 			if (dicts.Count == 0)
 				return;
