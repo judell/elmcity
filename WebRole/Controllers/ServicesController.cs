@@ -464,14 +464,17 @@ namespace WebRole
 				this.include = include;
 				this.exclude = exclude;
 
-				if ( ! String.IsNullOrEmpty(from) && ! String.IsNullOrEmpty(until) )   // use from/until style
+				if ( ! String.IsNullOrEmpty(from)  )   // use from/until style
 				{
 					this.style = LogStyle.from_until;
 					try
 					{
 						var max_span = TimeSpan.FromHours(24);
 						this.from = DateTime.Parse(from).ToUniversalTime();
-						this.until = DateTime.Parse(until).ToUniversalTime();
+						if (String.IsNullOrEmpty(until))
+							this.until = this.from + TimeSpan.FromHours(1);
+						else
+							this.until = DateTime.Parse(until).ToUniversalTime();
 						if ( this.until > this.from + max_span )
 							this.until = this.from + max_span;
 					}
