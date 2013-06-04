@@ -374,7 +374,7 @@ namespace WebRole
 						{
 						width = props["ScreenPixelsWidth"][0];
 						height = props["ScreenPixelsHeight"][0];
-						if (width.ToLower() != "Unknown" && height.ToLower() != "unknown")
+						if (width.ToLower() != "unknown" && height.ToLower() != "unknown")
 						{
 							var w = Convert.ToInt32(width);
 							var h = Convert.ToInt32(height);
