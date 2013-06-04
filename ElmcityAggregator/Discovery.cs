@@ -629,7 +629,7 @@ namespace CalendarAggregator
 			var query = string.Format("$filter=PartitionKey eq '{0}' and RowKey eq '{1}' and name ne ''",
 				name_and_pk,
 				group_id);
-			var qresult = ts.QueryAllEntitiesAsListDict(name_and_pk, query);
+			var qresult = ts.QueryAllEntitiesAsListDict(name_and_pk, query, 0);
 			return qresult.list_dict_obj.Count > 0;
 		}
 

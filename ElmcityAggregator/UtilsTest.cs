@@ -297,7 +297,7 @@ import System
 		public void NoHubRecordsHaveWhereAndWhat()
 		{
 			var query = "$filter=where ne '' and what ne ''";
-			var tsr = ts.QueryAllEntitiesAsListDict("metadata", query);
+			var tsr = ts.QueryAllEntitiesAsListDict("metadata", query, 0);
 			Assert.That(tsr.list_dict_obj.Count == 0);
 		}
 
@@ -305,7 +305,7 @@ import System
 		public void AllWhereHubRecordsHaveProperType()
 		{
 			var query = "$filter=where ne '' or what ne ''";
-			var tsr = ts.QueryAllEntitiesAsListDict("metadata", query);
+			var tsr = ts.QueryAllEntitiesAsListDict("metadata", query, 0);
 			var list_dict_obj = tsr.list_dict_obj;
 			foreach (var dict_obj in list_dict_obj)
 			{

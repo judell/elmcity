@@ -256,7 +256,7 @@ namespace ElmcityUtils
 			var settings = new Dictionary<string, string>();
 			var query = string.Format("$filter=PartitionKey eq '{0}'", tablename);
 			var ts = TableStorage.MakeSecureTableStorage();
-			var ts_response = ts.QueryAllEntitiesAsListDict(tablename, query);
+			var ts_response = ts.QueryAllEntitiesAsListDict(tablename, query, 0);
 			var dicts = ts_response.list_dict_obj;
 			foreach (var dict in dicts)
 			{

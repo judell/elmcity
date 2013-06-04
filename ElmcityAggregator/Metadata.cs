@@ -96,7 +96,7 @@ namespace CalendarAggregator
 
 					// query existing feeds
 					var existing_query = string.Format("$filter=PartitionKey eq '{0}' and feedurl ne ''", id);
-					var existing_feeds = ts.QueryAllEntitiesAsListDict("metadata", existing_query).list_dict_obj;
+					var existing_feeds = ts.QueryAllEntitiesAsListDict("metadata", existing_query, 0).list_dict_obj;
 					List<object> _existing_feed_urls = (List<object>) existing_feeds.Select(feed => feed["feedurl"]).ToList();
 					List<string> existing_feed_urls = (List<string>) _existing_feed_urls.Select(x => x.ToString()).ToList();
 
@@ -252,7 +252,7 @@ namespace CalendarAggregator
 			var d = new Dictionary<string, string>();
 
 			var ts = TableStorage.MakeDefaultTableStorage();
-			var r = ts.QueryAllEntitiesAsListDict("metadata", q);
+			var r = ts.QueryAllEntitiesAsListDict("metadata", q, 0);
 			try
 			{
 				foreach (var dict in r.list_dict_obj)
@@ -273,7 +273,7 @@ namespace CalendarAggregator
 		private static List<string> QueryIds(string q)
 		{
 			var ids = new List<string>();
-			var r = ts.QueryAllEntitiesAsListDict("metadata", q);
+			var r = ts.QueryAllEntitiesAsListDict("metadata", q, 0);
 			foreach (var dict in r.list_dict_obj)
 				ids.Add((string)dict["PartitionKey"]);
 			return ids;
@@ -296,7 +296,7 @@ namespace CalendarAggregator
 		public static Dictionary<string, string> LoadFeedsFromAzureTableForId(string id, FeedLoadOption option)
 		{
 			var q = string.Format("$filter=(PartitionKey eq '{0}' and feedurl ne '' )", id);
-			var qdicts = ts.QueryAllEntitiesAsListDict("metadata", q).list_dict_obj;
+			var qdicts = ts.QueryAllEntitiesAsListDict("metadata", q, 0).list_dict_obj;
 			var feed_dict = new Dictionary<string, string>();
 			foreach (var dict in qdicts)
 			{

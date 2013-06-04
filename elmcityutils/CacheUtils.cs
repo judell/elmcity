@@ -288,7 +288,7 @@ namespace ElmcityUtils
 		public static List<Dictionary<string, object>> FetchPurgeableCacheDicts()
 		{
 			var query = String.Format("$filter=(PartitionKey eq '{0}')", cache_control_tablename);
-			var marked_cache_url_dicts = ts.QueryAllEntitiesAsListDict(cache_control_tablename, query).list_dict_obj;
+			var marked_cache_url_dicts = ts.QueryAllEntitiesAsListDict(cache_control_tablename, query,0).list_dict_obj;
 			var purgeable_cache_dicts = marked_cache_url_dicts.FindAll(dict => (int)dict["count"] > 0);
 			return purgeable_cache_dicts;
 		}

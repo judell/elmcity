@@ -49,7 +49,7 @@ namespace ElmcityUtils
 		private static List<Dictionary<string, string>> GetPriorityLogTriggers(TableStorage ts)
 		{
 			var query = "$filter=(PartitionKey eq 'prioritylogtriggers')";
-			var ts_response = ts.QueryAllEntitiesAsListDict("prioritylogtriggers", query);
+			var ts_response = ts.QueryAllEntitiesAsListDict("prioritylogtriggers", query, 0);
 			var list_dict_obj = ts_response.list_dict_obj;
 			var list_dict_str = new List<Dictionary<string, string>>();
 			foreach (var dict_obj in list_dict_obj)
@@ -273,7 +273,7 @@ namespace ElmcityUtils
 			var counter_objects = new Dictionary<string, PerformanceCounter>();
 
 			var query = "$filter=(PartitionKey eq 'counters')";
-			var ts_response = ts.QueryAllEntitiesAsListDict("counters", query);
+			var ts_response = ts.QueryAllEntitiesAsListDict("counters", query, 0);
 			var counter_names_and_categories = ts_response.list_dict_obj;
 
 			foreach (var counter_name_and_category in counter_names_and_categories)
@@ -579,7 +579,7 @@ namespace ElmcityUtils
 			var tablename = Configurator.azure_log_table;
 
 			var q = String.Format("$filter=(PartitionKey eq 'log' and RowKey gt '{0}' and RowKey lt '{1}')", since.Ticks, until.Ticks);
-			var ts_response = ts.QueryAllEntitiesAsListDict(tablename, q);
+			var ts_response = ts.QueryAllEntitiesAsListDict(tablename, q, 0);
 			string rowkey = null;
 
 			elmcity_log_entry elmcity_log_entry;
