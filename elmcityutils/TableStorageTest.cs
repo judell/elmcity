@@ -162,9 +162,29 @@ namespace ElmcityUtils
 		{
 			if (ts.ExistsEntity(test_table, test_query) == false)
 				CreateEntityIsSuccessful();
-			var ts_response = ts.QueryAllEntitiesAsListDict(test_table, test_query);
+			var ts_response = ts.QueryAllEntitiesAsListDict(test_table, test_query, 0);
 			var dicts = ts_response.list_dict_obj;
 			AssertEntity(dicts);
+		}
+
+		[Test]
+		public void QueryAllEntitiesRestricts()
+		{
+			CreateEntityIsSuccessful();
+			var entity = new Dictionary<string, object>();
+			entity.Add("PartitionKey", test_partition);
+			entity.Add("RowKey", "Row2");
+			Assert.AreEqual(HttpStatusCode.Created, ts.InsertEntity(test_table, entity).http_response.status);
+			entity = new Dictionary<string, object>();
+			entity.Add("PartitionKey", test_partition);
+			entity.Add("RowKey", "Row3");
+			Assert.AreEqual(HttpStatusCode.Created, ts.InsertEntity(test_table, entity).http_response.status);
+			var ts_response = ts.QueryAllEntitiesAsListDict(test_table, null, 2);
+			var dicts = ts_response.list_dict_obj;
+			Assert.AreEqual(2, dicts.Count);
+			ts.DeleteEntity(test_table, test_partition, "Row2");
+			ts.DeleteEntity(test_table, test_partition, "Row3");
+			HttpUtils.Wait(short_wait);
 		}
 
 		[Test]

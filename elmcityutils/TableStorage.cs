@@ -484,7 +484,7 @@ namespace ElmcityUtils
 			return sb.ToString();
 		}
 
-		public TableStorageListDictResponse QueryAllEntitiesAsListDict(string table, string query)
+		public TableStorageListDictResponse QueryAllEntitiesAsListDict(string table, string query, int max)
 		{
 			var list_dict_obj = new List<Dictionary<string, object>>();
 			HttpResponse last_http_response = default(HttpResponse);
@@ -496,7 +496,10 @@ namespace ElmcityUtils
 				foreach (var response_dict in response_dicts)
 				{
 					list_dict_obj.Add(response_dict);
+					if (max != 0 && list_dict_obj.Count >= max)
+						break;
 				}
+
 			}
 
 			return new TableStorageListDictResponse(last_http_response, list_dict_obj);
