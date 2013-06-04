@@ -757,7 +757,7 @@ namespace CalendarAggregator
 				query += String.Format(" and RowKey lt '{0}'", until_ticks);
 			if (! String.IsNullOrEmpty(conditions))
 				query += " and " + conditions;
-			TableStorageListDictResponse r = ts.QueryAllEntitiesAsListDict(tablename, query);
+			TableStorageListDictResponse r = ts.QueryAllEntitiesAsListDict(tablename, query, 0);
 			var dicts = r.list_dict_obj;
 			if (dicts.Count == 0)
 				return;
@@ -1830,7 +1830,7 @@ END:VCALENDAR",
 			try
 			{
 				var q = String.Format("$filter=RowKey eq '{0}'", id);
-				var list = ts.QueryAllEntitiesAsListDict(table, q).list_dict_obj;
+				var list = ts.QueryAllEntitiesAsListDict(table, q, 0).list_dict_obj;
 				return list.Count >= 1;
 			}
 			catch (Exception e)
@@ -1981,10 +1981,8 @@ END:VCALENDAR",
 </tr>";
 			foreach (var id in wrd.what_ids)
 			{
-				//if (IsReady(wrd, id) == false)
-				//	continue;
-				var row = string.Format(row_template,
-					String.Format(@"<a title=""view outputs"" href=""/services/{0}"">{0}</a>", id)
+				var row = String.Format(row_template,
+					String.Format(@"<a title=""view hub"" href=""http://{0}/{1}"">{0}</a>", ElmcityUtils.Configurator.appdomain, id)
 					);
 				summary.Append(row);
 			}
@@ -2989,7 +2987,7 @@ END:VTIMEZONE");
 
 		public static List<string> GetRegionIds()
 		{
-			var dicts = ts.QueryAllEntitiesAsListDict("regions", "").list_dict_obj;
+			var dicts = ts.QueryAllEntitiesAsListDict("regions", "", 0).list_dict_obj;
 			var ids = dicts.Select(x => x["PartitionKey"].ToString()).ToList();
 			return ids;
 		}
@@ -3010,7 +3008,7 @@ END:VTIMEZONE");
 
 		public static List<string> RegionsBelongedTo(string id)
 		{
-			var regions = ts.QueryAllEntitiesAsListDict("regions", "$filter=PartitionKey ne ''").list_dict_obj;
+			var regions = ts.QueryAllEntitiesAsListDict("regions", "$filter=PartitionKey ne ''", 0).list_dict_obj;
 			var list = new List<string>();
 			foreach (var region in regions)
 			{
@@ -3197,7 +3195,7 @@ END:VTIMEZONE");
 
 		public static Dictionary<string,int> GetSmartPhoneScreenDimensions()
 		{
-			var screendata = ts.QueryAllEntitiesAsListDict("mobilescreens", "$filter=Type eq 'Smartphone'").list_dict_obj;
+			var screendata = ts.QueryAllEntitiesAsListDict("mobilescreens", "$filter=Type eq 'Smartphone'", 0).list_dict_obj;
 			var pairs = screendata.Select(pair => new List<string>() { pair["Width"] as string, pair["Height"] as string });
 			var sorted_pairs = new Dictionary<string, int>();
 			foreach (var pair in pairs)
