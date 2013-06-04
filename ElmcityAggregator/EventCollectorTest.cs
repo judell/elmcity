@@ -26,7 +26,6 @@ namespace CalendarAggregator
 	[TestFixture]
 	public class EventCollectorTest
 	{
-		private string test_venue = "testvenue";
 		private string test_eventful_args = "date=Next+Week&location=03431&within=15&units=mi";
 		private static string min_date = string.Format("{0:yyyy-MM-dd}", DateTime.UtcNow);
 		private static Apikeys test_apikeys = new Apikeys();
@@ -385,16 +384,6 @@ namespace CalendarAggregator
 			var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args, "events/search", "event");
 			Assert.That(events.Count() > 0);
 		}
-
-		[Test]
-		public void EventfulQueryYieldsValidFirstEvent()
-		{
-			var collector = new Collector(test_calinfo, settings);
-			var events = (IEnumerable<XElement>)collector.EventfulIterator(1, test_eventful_args, "events/search", "event");
-			var es = new ZonedEventStore(test_calinfo, SourceType.ical);
-			collector.AddEventfulEvent(es, test_venue, events.First());
-			Assert.That(es.events[0].title != "");
-		} 
 
 		[Test]
 		public void SummitScienceAt7PMLocal()
