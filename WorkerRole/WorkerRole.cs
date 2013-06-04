@@ -181,12 +181,6 @@ namespace WorkerRole
 
 					//MaybeRemakeWebRoleData();
 
-					TimeSpan total_time;
-					TimeSpan ical_time;
-					TimeSpan finalize_time;
-					TimeSpan nonical_time;
-					TimeSpan region_time;
-
 					var sw_total = new Stopwatch();
 					var sw_ical = new Stopwatch();
 					var sw_finalize = new Stopwatch();
@@ -196,12 +190,14 @@ namespace WorkerRole
 					sw_total.Start();
 
 					sw_ical.Start();
-					foreach (var id in todo.icaltasks)              // this can be parallelized because there are many separate/unique endpoints
+
+					Parallel.ForEach(source: todo.icaltasks, body: (id) =>
+					//foreach (var id in todo.icaltasks)              // this can be parallelized because there are many separate/unique endpoints
 					{
 						Scheduler.UpdateStartTaskForId(id, TaskType.icaltasks);
 						ProcessIcal(id);
 						StopTask(id, TaskType.icaltasks);
-					}
+					});
 					sw_ical.Stop();
 
 					sw_nonical.Start();
