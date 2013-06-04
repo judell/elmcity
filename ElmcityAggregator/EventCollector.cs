@@ -132,7 +132,7 @@ namespace CalendarAggregator
 			this.mustats.blobname = "meetup_stats";
 		}
 
-		private void LoadTags()
+		public void LoadTags()
 		{
             if (this.tags != null)
                 return;
@@ -146,7 +146,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire cat maps", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire cat maps: " + this.id, e.Message + e.StackTrace);
 			}
 
             try
@@ -161,21 +161,32 @@ namespace CalendarAggregator
 			}
 			catch (Exception e1)
 			{
-				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire core tags", e1.Message + e1.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire core tags: " + this.id, e1.Message + e1.StackTrace);
 			}
 
 			try                                            // curator-defined core taxonomy
 			{
-				var id_for_tags = Utils.IsRegion(this.id) ? this.id : Utils.RegionsBelongedTo(this.id).First();  // if contained use container's tags
+				string id_for_tags;
+				if (Utils.IsRegion(this.id))           // if id  is region
+					id_for_tags = this.id;             // use region's tags
+				else
+				{
+					var containers = Utils.RegionsBelongedTo(this.id);
+					if (containers.Count > 0)                           // if id is contained hub
+						id_for_tags = containers.First();               // use (primary) region's tags
+					else                                         // id is standalone hub
+						id_for_tags = this.id;                   // use its own tags
+				}
+
 				foreach (var tag in Utils.GetTagsFromJson(id_for_tags))
 				{
-					if ( ! tag.StartsWith("{") )
+					if ( ! tag.StartsWith("{") )        // exclude contributor defined
 						this.tags.Add(tag);
 				}
 			}
 			catch (Exception e0)
 			{
-				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire extended tags", e0.Message + e0.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire extended tags: " + this.id, e0.Message + e0.StackTrace);
 			}
 
 
