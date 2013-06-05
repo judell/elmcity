@@ -233,10 +233,14 @@ namespace CalendarAggregator
 			var text = new StringBuilder();
 
 			text.AppendLine(evt.title);
-			text.AppendLine(evt.dtstart.ToString());	
-			text.AppendLine(evt.source);
-			text.AppendLine(evt.location);
-			text.AppendLine(evt.description);
+			var start = evt.dtstart.ToString("M/d/yyyy h:m tt").Replace(":0 ", " ");
+			text.AppendLine(start);
+			if ( ! String.IsNullOrEmpty(evt.source) )
+				text.AppendLine(evt.source);
+			if ( ! String.IsNullOrEmpty(evt.location) )
+				text.AppendLine(evt.location);
+			if ( ! String.IsNullOrEmpty(evt.description) && evt.description != evt.location)
+				text.AppendLine(evt.description);
 			text.AppendLine();
 
 			return text.ToString();
