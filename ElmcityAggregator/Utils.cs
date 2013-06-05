@@ -3446,12 +3446,29 @@ END:VTIMEZONE");
 					theme[".timeofday"] = " { 'display':'none' } ";
 					theme[".hubtitle"] = " { 'display':'none' } ";
 					theme[".ed"] = " { 'display':'none' } ";
-					if (ua.Contains("Windows Phone"))   // todo: investigate viewport-based method
+
+					if ( ! theme.ContainsKey("#tag_select") )
+						theme["#tag_select"] = " {  } ";
+
+					var body_dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(theme["body"]);
+					var tag_select_dict = JsonConvert.DeserializeObject<Dictionary<string,string>>(theme["#tag_select"]);
+					var m_long = Convert.ToInt16(mobile_long);
+					if (m_long <= 400)
 					{
-						var body_dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(theme["body"]);
-						body_dict.AddOrUpdateDictionary("font-size", "300%");  
-						theme["body"] = JsonConvert.SerializeObject(body_dict);
+						body_dict.AddOrUpdateDictionary("font-size", "300%");
+						tag_select_dict.AddOrUpdateDictionary("font-size", "200%");
 					}
+					else if (m_long > 400 && m_long < 1000)
+					{
+						body_dict.AddOrUpdateDictionary("font-size", "200%");
+						tag_select_dict.AddOrUpdateDictionary("font-size", "150%");
+					}
+					else
+					{
+						body_dict.AddOrUpdateDictionary("font-size", "100%");
+					}
+					theme["body"] = JsonConvert.SerializeObject(body_dict);
+					theme["#tag_select"] = JsonConvert.SerializeObject(tag_select_dict);
 				}
 				catch (Exception e)
 				{
