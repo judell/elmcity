@@ -350,13 +350,6 @@ $(document).ready(function(){
   if ( gup('sourcestyle') != '' )
     apply_json_css('.src', 'sourcestyle');
 
-  if ( is_mobile() )
-    {
-//    rescale();
-    }
-  else
-    {
-    }
 
   if ( is_mobile() )
     add_fullsite_switcher();
