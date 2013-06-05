@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2502";
+        public static string version = "2505";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -158,7 +158,7 @@ namespace WebRole
 
 		public static WebRoleData wrd;
 
-        public static string get_events_param_types = "html|xml|json|ics|rss|tags_json|stats|tags_html|jswidget|today_as_html";
+        public static string get_events_param_types = "html|xml|json|ics|rss|text|tags_json|stats|tags_html|jswidget|today_as_html";
 
         public ElmcityApp()
         {

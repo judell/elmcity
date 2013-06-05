@@ -281,6 +281,18 @@ namespace WebRole
 						}.ExecuteResult(context);
 						break;
 
+					case "text":
+						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderText);
+						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
+						string tcontent = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, null);
+						new ContentResult
+						{
+							ContentEncoding = UTF8,
+							ContentType = "text/plain",
+							Content = tcontent
+						}.ExecuteResult(context);
+						break;
+
 					case "tags_json":
 						string tjcontent = cr.RenderTagCloudAsJson();
 						if (this.jsonp != null)
