@@ -77,15 +77,15 @@ namespace WebRole
 			int count { get; set; }
 			DateTime from;
 			DateTime to;
-			string eventsonly;
-			string mobile;
+			bool eventsonly;
+			bool mobile;
 			bool test;
 			bool raw;
 			string raw_sentinel;
 			string style;
 			string theme;
-			string taglist;
-			string tags;
+			bool taglist;
+			bool tags;
 
 			CalendarRenderer.ViewRenderer renderer = null;
 			string response_body = null;
@@ -102,15 +102,15 @@ namespace WebRole
 				this.jsonp = jsonp;
 				this.from = from == null ? DateTime.MinValue : Utils.DateTimeFromISO8601DateStr(from, DateTimeKind.Local);
 				this.to = from == null ? DateTime.MinValue : Utils.DateTimeFromISO8601DateStr(to, DateTimeKind.Local);
-				this.eventsonly = eventsonly;
-				this.mobile = !String.IsNullOrEmpty(mobile) ? mobile.ToLower() : "";
-				this.test = !String.IsNullOrEmpty(test) && test.ToLower().StartsWith("y");
-				this.raw = !String.IsNullOrEmpty(raw) && raw.ToLower().StartsWith("y");
+				this.eventsonly = String.IsNullOrEmpty(eventsonly) ? false : eventsonly.ToLower().StartsWith("y");
+				this.mobile = String.IsNullOrEmpty(mobile) ? false : mobile.ToLower().StartsWith("y");
+				this.test = String.IsNullOrEmpty(test) ? false : test.ToLower().StartsWith("y");
+				this.raw = String.IsNullOrEmpty(raw) ? false : raw.ToLower().StartsWith("y");
 				this.raw_sentinel = raw_sentinel;
 				this.style = style;
 				this.theme = theme;
-				this.taglist = !String.IsNullOrEmpty(taglist) ? taglist.ToLower() : "";
-				this.tags = !String.IsNullOrEmpty(tags) ? tags.ToLower() : "";
+				this.taglist = String.IsNullOrEmpty(taglist) ? true : taglist.ToLower().StartsWith("n");  // default this one to true
+				this.tags = String.IsNullOrEmpty(tags) ? false : tags.ToLower().StartsWith("y");
 
 				int _count = 0;
 				try
@@ -168,11 +168,9 @@ namespace WebRole
 				var from_str = string.Format(fmt, this.from);
 				var to_str = string.Format(fmt, this.to);
 
-				var test_arg = this.test ? "yes" : "";
-				var raw_arg = this.raw ? "yes" : "";
-				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, this.eventsonly, this.mobile, test:test_arg, raw:raw_arg, style:this.style, theme:this.theme, taglist:this.taglist, tags:this.tags);
-
 				var render_args = new Dictionary<string, object>();
+
+				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: this.eventsonly, mobile: this.mobile, test: this.test, raw: this.raw, style: this.style, theme: this.theme, taglist: this.taglist, tags: this.tags);
 
 				switch (this.type)
 				{
@@ -184,12 +182,9 @@ namespace WebRole
 						render_args["mobile"] = false;
 						render_args["ua"] = "";
 						render_args["css"] = this.cr.calinfo.css;  // need to extract and pass along the default theme name
-						if (String.IsNullOrEmpty(this.taglist))
-							render_args["taglist"] = true;
-						else
-							render_args["taglist"] = !this.taglist.ToLower().StartsWith("n");
+						render_args["taglist"] = this.taglist;
 
-						bool mobile_declared = this.mobile.ToLower().StartsWith("y");
+						bool mobile_declared = this.mobile;
 	
 						bool is_mobile;
 
@@ -201,7 +196,7 @@ namespace WebRole
 						else
 							is_mobile = mobile_declared;                                    // use declaration only
 
-						if ( this.mobile.ToLower().StartsWith("n") )                       // maybe override with refusal
+						if ( ! this.mobile )                       // maybe override with refusal
 							is_mobile = false;
 
 						if (is_mobile)
@@ -210,7 +205,6 @@ namespace WebRole
 							render_args["mobile_event_count"] = Convert.ToInt32(settings["mobile_event_count"]);
 							render_args["mobile"] = true;
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlForMobile);
-							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "yes", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme, taglist:this.taglist, tags:this.tags);
 						}
 						/* for dynamic event paging, not used now
 						else if (this.raw)
@@ -219,16 +213,17 @@ namespace WebRole
 							render_args["raw_sentinel"] = this.raw_sentinel;
 							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: null, mobile: null, test:test_arg, raw: raw_arg, style:this.style, theme:this.theme);
 						}*/
-						else if (this.eventsonly.StartsWith("y"))
+						else if (this.eventsonly)
 						{
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlEventsOnly);
-							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme, taglist:this.taglist, tags:this.tags);
 						}
 						else
+						{
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtml);
-
-						//if (is_mobile)
-						//	GenUtils.LogMsg("info", "EventsResult", JsonConvert.SerializeObject(render_args));
+						}
+						
+						// update for mobile detection
+						view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: this.eventsonly, mobile: this.mobile, test: this.test, raw: this.raw, style: this.style, theme: this.theme, taglist: this.taglist, tags: this.tags);
 
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), render_args);
 
@@ -344,17 +339,6 @@ namespace WebRole
 						{
 							ContentType = "text/html",
 							Content = cr.RenderJsWidget(),
-							ContentEncoding = UTF8
-						}.ExecuteResult(context);
-						break;
-
-					case "search":
-						blob_uri = BlobStorage.MakeAzureBlobUri(this.id, this.id + ".search.html",false);
-						this.response_bytes = (byte[])CacheUtils.RetrieveBlobAndEtagFromServerCacheOrUri(this.cr.cache, blob_uri)["response_body"];
-						new ContentResult
-						{
-							ContentType = "text/html",
-							Content = Encoding.UTF8.GetString(this.response_bytes),
 							ContentEncoding = UTF8
 						}.ExecuteResult(context);
 						break;
