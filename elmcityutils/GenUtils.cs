@@ -148,10 +148,14 @@ namespace ElmcityUtils
 		{
 			var sql_builder = new SqlConnectionStringBuilder();
 
+			/*
+
 			sql_builder.DataSource = "tcp:" + Configurator.sql_azure_host;
 			sql_builder.InitialCatalog = "elmcity";
 			sql_builder.UserID = Configurator.sql_azure_user;
 			sql_builder.Password = Configurator.sql_azure_pass;
+			 * 
+			 */
 
 			string sql_provider_string = sql_builder.ToString();
 
