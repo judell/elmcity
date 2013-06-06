@@ -3,41 +3,46 @@ var anchor_names = [];
 var today = new Date();
 var last_day;
 var datepicker = false;
-var long;
+var is_mobile = false;
+var is_mobile_declared = false;
+var is_mobile_detected = false;
+var is_eventsonly = false;
+var is_theme = false;
+var is_view = false;
+var is_sidebar = true;
+
+/*
+text-align:center;
+position:fixed;
+font-size:smaller;
+left:65%;
+top:200px;
+width:150px;
+*/
 
 
-function rescale()
+function adjust_for_small_screen(max_height)
   {
-    long = $('#mobile_long').text().trim();
-    $('.ed').css('font-size','80%');    
-    $('.ttl').css('font-size','100%');    
-    $('.st').css('font-size','100%');    
-    $('.src').css('font-size','100%');    
-    $('.bl').addClass('_bl');
-    $('.bl').removeClass('bl');
-    $('._bl').css('margin-bottom','3%');
-    $('.ed').css('margin-top','4%');
-    $('.timeofday').remove();
-  }
+  $('#datepicker').remove();
+  $('#sidebar').remove();
+  $('.hubtitle').remove();
+  $('#tags div').remove();
+  $('#tags').css('position','static').css('top',0).css('left',0);
+  $('.ed').css('margin-top','4%');
+  $('.timeofday').remove();
 
-function alt()
-  {
-//  long = 800;
-  }
-
-function is_theme()
-  {
-  return gup('theme') != '';
-  }
-
-function is_eventsonly()
-  {
-  return gup('eventsonly') == 'yes';
-  }
-
-function is_view()
-  {
-  return gup('view') != '';
+  if ( max_height <= 400 )
+    {
+    $('body').css('font-size', '300%');
+    $('#tag_select').css('font-size','200%');
+    $('.ed').css('font-size','150%');
+    }
+  else if ( max_height > 400 && max_height < 1000 )
+    {
+    $('body').css('font-size', '200%');
+    $('#tag_select').css('font-size','150%');
+    $('.ed').css('font-size','125%');
+    }
   }
 
 
@@ -100,19 +105,6 @@ function get_elmcity_id()
   return $('#elmcity_id').text().trim();
   }
 
-function is_mobile()
-  {
-  var is_mobile = false;
-
-  if ( $('#mobile').text().trim() == 'yes' && ! gup('mobile').startsWith('n') )  // detected and not refused
-    is_mobile = true;
-
-  if ( gup('mobile').startsWith('y') )                         // declared
-    is_mobile = true;
-
-  return is_mobile;
-  }
-
 
 function gup( name )
   {  
@@ -140,7 +132,7 @@ function parse_mm_dd_yyyy(date_str)
 
 function scroll(event)
   {
-  if ( is_mobile() || is_eventsonly() )
+  if ( is_mobile || is_eventsonly )
     return;
 
   if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
@@ -153,21 +145,17 @@ function scroll(event)
 
 function find_last_day()
   {
-  if ( ! is_mobile() )
+  try
     {
-    try
-      {
-      var last_anchor = anchor_names[anchor_names.length - 1];
-      var parsed = parse_yyyy_mm_dd(last_anchor.replace('d',''));
-      return new Date(parsed['year'], parsed['month'] - 1, parsed['day']);
-      }
-    catch (e)
-      {
-      return new Date();
-      }
+    var last_anchor = anchor_names[anchor_names.length - 1];
+    var parsed = parse_yyyy_mm_dd(last_anchor.replace('d',''));
+    return new Date(parsed['year'], parsed['month'] - 1, parsed['day']);
+    }
+  catch (e)
+    {
+    return new Date();
     }
   }
-
 
 function get_anchor_names(anchors)
   {
@@ -187,7 +175,7 @@ function day_anchors()
 
 function find_current_name()
   {
-  if ( is_eventsonly() || is_mobile() ) 
+  if ( is_eventsonly || is_mobile ) 
     return;
 
 //  console.log("find_current_name");
@@ -237,10 +225,6 @@ function prep_day_anchors_and_last_day()
   last_day = find_last_day();
   }
 
-function morelink()
-  {
-  return '<a title="' + $('a[name^="d"]').length + ' days included, click to add 2 weeks" href="javascript:more()">more</a>';
-  }
 
 function setup_datepicker()
   {
@@ -269,33 +253,47 @@ function setup_datepicker()
     $('#tags').css('visibility','visible');
     }
 
-  /*
-  var more = '<div id="morelink" style="display:none;font-size:8pt;text-align:center">' + morelink() + '</div>';
-
-  $('#datepicker').append(more);
-  */
-
   datepicker = true;
   }
 
 
 $(document).ready(function(){
-		//  console.log("ready");
 
   var elmcity_id = get_elmcity_id();
 
-  if ( is_eventsonly() || is_mobile() ) 
-    {
-    if ( gup('tags') == 'no' )
-      {
-      $('.cat').remove();
-      }
+  is_theme = gup('theme') != '';
 
-    if ( gup('taglist') == 'no' )
-      $('.tag_select').remove();
+  is_view = gup('view') != '';
+    
+  is_eventsonly = gup('eventsonly').startsWith('y');
+
+  is_mobile_declared = gup('mobile').startsWith('y');
+
+  is_mobile_detected = $('#mobile_detected').text().trim() == "__MOBILE_DETECTED__";
+
+  is_mobile = is_mobile_declared || is_mobile_detected;
+
+  if ( is_eventsonly || is_mobile )                     
+    $('.bl').css('margin-right','3%');       // could overwrite theme-defined?
+
+  var max_height = Math.max(screen.height,screen.width);
+
+  if ( ! is_mobile_detected && max_height < 1000 )    
+    {
+    is_mobile = true;
+    is_eventsonly = true;
+    adjust_for_small_screen(max_height);
     }
 
-  if ( is_view() && ! is_mobile() )
+  is_sidebar = ( ! is_mobile ) && ( ! is_eventsonly );
+
+  if ( gup('tags') == 'no' )
+    $('.cat').remove();
+
+  if ( gup('taglist') == 'no' )
+      $('.tag_select').remove();
+
+  if ( is_view && is_sidebar )
     try
       {
       var href = $('#subscribe').attr('href');
@@ -307,7 +305,6 @@ $(document).ready(function(){
       {
       }
 
-
   if ( gup('timeofday') == 'no' )
     $('.timeofday').remove();
 
@@ -317,11 +314,8 @@ $(document).ready(function(){
     $('div.bl').css('margin','1em 0 0 1em');
     }
 
-  if ( is_theme() )  // invoke it
-    { 
-//    $('link')[0].href = add_href_arg($('link')[0].href, "theme_name", gup("theme"));
+  if ( is_theme )  // invoke it
     $('link')[0].href = 'http://elmcity.cloudapp.net/get_css_theme?theme_name=' + gup('theme');
-    }
 
   if ( gup('datestyle') != '' )
     apply_json_css('.ed', 'datestyle');
@@ -351,16 +345,16 @@ $(document).ready(function(){
     apply_json_css('.src', 'sourcestyle');
 
 
-  if ( is_mobile() )
-    add_fullsite_switcher();
+//  if ( is_mobile )
+//    add_fullsite_switcher();
 //  else
 //    add_mobile_switcher();
 
 
-//  if ( ! is_mobile() && ! is_eventsonly() )  
+//  if ( ! is_mobile && ! is_eventsonly() )  
 //    extend_events(1,false);
 
-  if ( is_eventsonly() )
+  if ( ! is_sidebar )
     return;
 
   if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
@@ -384,60 +378,14 @@ function apply_json_css(element,style)
     }
   }
 
-function more()
+function scrollToElement(id) 
   {
-  extend_events(14,true);
+//  $("html, body").animate({
+//        scrollTop: $('#' + id).offset().top }, 0
+//    );
+  window.scrollTo(0, $('#' + id).offset().top);
   }
 
-function extend_events(extend_days,show_progress)
-  {
-//  console.log("extend_events");
-  $('#morelink').empty();
-  
-  if ( show_progress )
-    $('#morelink').append('<p><img src="http://elmcity.blob.core.windows.net/admin/ajax-loader.gif"></p>');
-
-  var from_day = last_day;
-  var from = from_day.toISOString().substring(0,10) + "T00:00";
-  var to_day = from_day;
-  to_day.addDays(extend_days);
-  var to = to_day.toISOString().substring(0,10) + "T00:00";
-  var href = location.href;
-  href = href.replace(/#.+/,'')
-  href = remove_href_arg(href, 'count');
-  href = add_href_arg(href, 'from',from);
-  href = add_href_arg(href, 'to',to);
-  href = add_href_arg(href, 'raw','yes');
-
-  var last_id = find_id_of_last_event();
-  var title = get_summary(last_id);
-  var dtstart = get_dtstart(last_id);
-  var raw_sentinel = title + '__|__' + dtstart;
-  href = add_href_arg(href, 'raw_sentinel',raw_sentinel);
-
-//  console.log("extend: " + href);
-
-  $.ajax({
-       url: href,
-       cache: false,
-
-       complete: function(xhr, status) { 
-         var events = xhr.responseText;
-         if ( events.length )
-           {
-           $('.events').append(events);
-           prep_day_anchors_and_last_day();
-           $('#datepicker').datepicker("option","maxDate", last_day);
-           $('#datepicker').datepicker("refresh");  
-           $('#morelink').empty();
-           $('#morelink').append(morelink());
-           show_id('morelink');
-           }
-         else
-           hide_id('morelink');
-         }
-       });
-  }
 
 function setDate(year,month,day)
   {
@@ -489,39 +437,6 @@ function maybeZeroPad(str)
   {
   if ( str.length == 1 ) str = '0' + str;
   return str;
-  }
-
-
-function show_id (id)
-  {
-  var id = '#' + id;
-  var display = $(id).get(0).style.display;
-  if ( display == 'none' )
-    $(id).show();
-  }
-
-function hide_id (id)
-  {
-  var id = '#' + id;
-  var display = $(id).get(0).style.display;
-  if ( display != 'none' )
-    $(id).hide();
-  }
-
-
-
-function scrollToElement(id) 
-  {
-//  $("html, body").animate({
-//        scrollTop: $('#' + id).offset().top }, 0
-//    );
-  window.scrollTo(0, $('#' + id).offset().top);
-  }
-
-function show_more(id)
-  {
-  $('div.' + id).show();
-  $('span.' + id).remove();
   }
 
 function remove(array, str)
@@ -771,6 +686,96 @@ $.extend({
       }
    });
 
+
+/*
+function morelink()
+  {
+  return '<a title="' + $('a[name^="d"]').length + ' days included, click to add 2 weeks" href="javascript:more()">more</a>';
+  }
+
+function more()
+  {
+  extend_events(14,true);
+  }
+
+function extend_events(extend_days,show_progress)
+  {
+//  console.log("extend_events");
+  $('#morelink').empty();
+  
+  if ( show_progress )
+    $('#morelink').append('<p><img src="http://elmcity.blob.core.windows.net/admin/ajax-loader.gif"></p>');
+
+  var from_day = last_day;
+  var from = from_day.toISOString().substring(0,10) + "T00:00";
+  var to_day = from_day;
+  to_day.addDays(extend_days);
+  var to = to_day.toISOString().substring(0,10) + "T00:00";
+  var href = location.href;
+  href = href.replace(/#.+/,'')
+  href = remove_href_arg(href, 'count');
+  href = add_href_arg(href, 'from',from);
+  href = add_href_arg(href, 'to',to);
+  href = add_href_arg(href, 'raw','yes');
+
+  var last_id = find_id_of_last_event();
+  var title = get_summary(last_id);
+  var dtstart = get_dtstart(last_id);
+  var raw_sentinel = title + '__|__' + dtstart;
+  href = add_href_arg(href, 'raw_sentinel',raw_sentinel);
+
+//  console.log("extend: " + href);
+
+  $.ajax({
+       url: href,
+       cache: false,
+
+       complete: function(xhr, status) { 
+         var events = xhr.responseText;
+         if ( events.length )
+           {
+           $('.events').append(events);
+           prep_day_anchors_and_last_day();
+           $('#datepicker').datepicker("option","maxDate", last_day);
+           $('#datepicker').datepicker("refresh");  
+           $('#morelink').empty();
+           $('#morelink').append(morelink());
+           show_id('morelink');
+           }
+         else
+           hide_id('morelink');
+         }
+       });
+  }
+
+  var more = '<div id="morelink" style="display:none;font-size:8pt;text-align:center">' + morelink() + '</div>';
+
+  $('#datepicker').append(more);
+
+function show_id (id)
+  {
+  var id = '#' + id;
+  var display = $(id).get(0).style.display;
+  if ( display == 'none' )
+    $(id).show();
+  }
+
+function hide_id (id)
+  {
+  var id = '#' + id;
+  var display = $(id).get(0).style.display;
+  if ( display != 'none' )
+    $(id).hide();
+  }
+
+
+function show_more(id)
+  {
+  $('div.' + id).show();
+  $('span.' + id).remove();
+  }
+
+  */
 
 
 
