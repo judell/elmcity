@@ -79,6 +79,9 @@ namespace WebRole
 			DateTime to;
 			bool eventsonly;
 			bool mobile;
+			bool mobile_detected;
+			bool mobile_declared;
+			bool mobile_refused;
 			bool test;
 			bool raw;
 			string raw_sentinel;
@@ -103,7 +106,8 @@ namespace WebRole
 				this.from = from == null ? DateTime.MinValue : Utils.DateTimeFromISO8601DateStr(from, DateTimeKind.Local);
 				this.to = from == null ? DateTime.MinValue : Utils.DateTimeFromISO8601DateStr(to, DateTimeKind.Local);
 				this.eventsonly = String.IsNullOrEmpty(eventsonly) ? false : eventsonly.ToLower().StartsWith("y");
-				this.mobile = String.IsNullOrEmpty(mobile) ? false : mobile.ToLower().StartsWith("y");
+				this.mobile_declared = String.IsNullOrEmpty(mobile) ? false : mobile.ToLower().StartsWith("y");
+				this.mobile_refused = String.IsNullOrEmpty(mobile) ? false : mobile.ToLower().StartsWith("n");
 				this.test = String.IsNullOrEmpty(test) ? false : test.ToLower().StartsWith("y");
 				this.raw = String.IsNullOrEmpty(raw) ? false : raw.ToLower().StartsWith("y");
 				this.raw_sentinel = raw_sentinel;
@@ -179,31 +183,27 @@ namespace WebRole
 						render_args["test"] = this.test;
 						render_args["style"] = this.style;  
 						render_args["theme"] = this.theme;
-						render_args["mobile"] = false;
+						render_args["mobile_detected"] = false;
 						render_args["ua"] = "";
 						render_args["css"] = this.cr.calinfo.css;  // need to extract and pass along the default theme name
 						render_args["taglist"] = this.taglist;
 
-						bool mobile_declared = this.mobile;
-	
-						bool is_mobile;
-
 						if (settings["use_mobile_detection"] == "yes")                      // detect or use declaration
 						{
-							bool smartphone_detected = TryDetectSmartPhone(render_args);
-							is_mobile = smartphone_detected || mobile_declared;
+							this.mobile_detected = TryDetectSmartPhone(render_args);
+							render_args["mobile_detected"] = this.mobile_detected;
+							this.mobile = this.mobile_detected || this.mobile_declared;
 						}
 						else
-							is_mobile = mobile_declared;                                    // use declaration only
+							this.mobile = this.mobile_declared;                                    // use declaration only
 
-						if ( ! this.mobile )                       // maybe override with refusal
-							is_mobile = false;
+						if ( ! this.mobile_refused )                       // maybe override with refusal
+							this.mobile = false;
 
-						if (is_mobile)
+						if (this.mobile)
 						{
 							//this.count = Convert.ToInt32(settings["mobile_event_count"]);  // no, let the renderer reduce the list 
 							render_args["mobile_event_count"] = Convert.ToInt32(settings["mobile_event_count"]);
-							render_args["mobile"] = true;
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlForMobile);
 						}
 						/* for dynamic event paging, not used now

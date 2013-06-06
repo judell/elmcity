@@ -540,7 +540,8 @@ namespace CalendarAggregator
 
 			html = html.Replace("get_css_theme?", string.Format("get_css_theme?mobile=yes&mobile_long={0}&ua={1}&", mobile_long, ua));
 
-			html = html.Replace("__MOBILE_NOT_DETECTED__", "__MOBILE_DETECTED__");
+			if ( args.ContainsKey("mobile_detected") && (bool) args["mobile_detected"] )
+				html = html.Replace("__MOBILE_NOT_DETECTED__", "__MOBILE_DETECTED__");
 
 			return html;
 		}
