@@ -219,7 +219,7 @@ namespace WebRole
 							render_args["raw_sentinel"] = this.raw_sentinel;
 							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: null, mobile: null, test:test_arg, raw: raw_arg, style:this.style, theme:this.theme);
 						}*/
-						else if (this.eventsonly == "yes")
+						else if (this.eventsonly.StartsWith("y"))
 						{
 							this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderHtmlEventsOnly);
 							view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: "yes", mobile: "", test:test_arg, raw:raw_arg, style:this.style, theme:this.theme, taglist:this.taglist, tags:this.tags);
