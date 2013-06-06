@@ -197,7 +197,7 @@ namespace WebRole
 						else
 							this.mobile = this.mobile_declared;                                    // use declaration only
 
-						if ( ! this.mobile_refused )                       // maybe override with refusal
+						if ( this.mobile_refused )                       // maybe override with refusal
 							this.mobile = false;
 
 						if (this.mobile)
