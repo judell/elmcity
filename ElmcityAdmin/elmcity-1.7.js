@@ -228,7 +228,7 @@ function prep_day_anchors_and_last_day()
 
 function setup_datepicker()
   {
-  if ( datepicker )
+  if ( is_eventsonly || is_mobile || datepicker ) 
      return;
 //  console.log("setup_datepicker");
 
@@ -287,11 +287,11 @@ $(document).ready(function(){
 
   is_sidebar = ( ! is_mobile ) && ( ! is_eventsonly );
 
-  if ( gup('tags') == 'no' )
+  if ( gup('tags').startsWith('n') )
     $('.cat').remove();
 
-  if ( gup('taglist') == 'no' )
-      $('.tag_select').remove();
+  if ( gup('taglist').startsWith('n') )
+      $('#tag_select').remove();
 
   if ( is_view && is_sidebar )
     try
