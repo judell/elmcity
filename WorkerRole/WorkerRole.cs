@@ -469,6 +469,8 @@ namespace WorkerRole
 				Utils.TagsByHub(region);
 
 				SaveRegionStats(region);
+
+				Utils.SaveQuickStatsForRegion(region);
 			}
 			catch (Exception e)
 			{
