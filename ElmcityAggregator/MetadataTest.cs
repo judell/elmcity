@@ -42,18 +42,41 @@ namespace CalendarAggregator
 		}
 
 		[Test]
-		public void FeedUpdateIsSuccessful()
+		public void DuplicateFeedsAreFound()
 		{
+			var list_dict_str = new List<Dictionary<string, string>>();
+			list_dict_str.Add(new Dictionary<string, string>()
+				{
+					{"feedurl","a"},
+					{"source", "a"}
+				} 
+				);
+			list_dict_str.Add(new Dictionary<string, string>()
+				{
+					{"feedurl","a"},
+					{"source", "b"}
+				}
+				);
+			var dupes = ObjectUtils.FindDuplicateValuesForKey(list_dict_str, "feedurl");
+			Assert.AreEqual(1, dupes.Count);
+			Assert.AreEqual("a", dupes.First());
 		}
 
 		[Test]
-		public void FeedAddIsSuccessful()
+		public void ExactDuplicateFeedsAreCoalesced()
 		{
-		}
-
-		[Test]
-		public void FeedDeleteIsSuccessful()
-		{
+			var list_dict_str = new List<Dictionary<string, string>>();
+			var dict = new Dictionary<string, string>()
+				{
+					{"feedurl","a"},
+					{"source", "a"}
+				};
+			list_dict_str.Add(dict);
+			list_dict_str.Add(dict);
+			var dupes = ObjectUtils.FindDuplicateValuesForKey(list_dict_str, "feedurl");
+			list_dict_str = ObjectUtils.RemoveExactDuplicates(list_dict_str, dupes, "feedurl");
+			Assert.AreEqual(1, list_dict_str.Count);
+			Assert.That(ObjectUtils.DictStrEqualsDictStr(list_dict_str.First(), dict));
 		}
 
 	}
