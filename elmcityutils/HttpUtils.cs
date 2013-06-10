@@ -128,6 +128,13 @@ namespace ElmcityUtils
 			return DoHttpWebRequest(request, UTf8ByteArray);
 		}
 
+		public static HttpResponse FetchUrl(string url)
+		{
+			var uri = new Uri(url);
+			return FetchUrl(uri);
+		}
+
+
 		public static HttpResponse SlowFetchUrl(Uri url, int delay_secs)
 		{
 			System.Threading.Thread.Sleep(TimeSpan.FromSeconds(1));
