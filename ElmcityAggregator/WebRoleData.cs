@@ -151,6 +151,8 @@ namespace CalendarAggregator
 
 		public static BlobStorageResponse SaveTimestampedWrd(WebRoleData wrd)
 		{
+			foreach (var key in wrd.renderers.Keys)
+				wrd.renderers[key].cache = null;   // cannot serialize cache
 			var bs = BlobStorage.MakeDefaultBlobStorage();
 			var timestamped_name = string.Format("wrd." + string.Format("{0:yyyy.MM.dd.HH.mm.ss}.obj", DateTime.UtcNow));
 			var bytes = ObjectUtils.SerializeObject(wrd);
