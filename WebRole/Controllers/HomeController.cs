@@ -807,20 +807,32 @@ if unsure please check http://{1}/{2}/stats",
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
             var auth_mode = this.Authenticated(id);
-            string result = "";
+			string content_type = "text/plain";
+			string content;
 
-            if (auth_mode != null)
+			/*
+			var dupes = Metadata.FindDuplicateFeedsFromJson(json);
+            if ( dupes.Count > 0 )
+			{
+				var sb = new StringBuilder();
+				sb.AppendLine();
+				foreach (var dupe in dupes)
+					sb.AppendLine(dupe);
+				bs.PutBlob(id, "dupefeeds.txt", sb.ToString(), "text/plain");
+			}*/
+
+            if (auth_mode == null)
             {
-                result = json;
-                var args = new Dictionary<string, string>() { { "id", id }, { "json", json } };
-                ThreadPool.QueueUserWorkItem(new WaitCallback(put_json_feeds_handler), args);
+				content = AuthFailMessage(id);
             }
-            else
+ 			else
             {
-                result = AuthFailMessage(id);
+				content = json;
+				var args = new Dictionary<string, string>() { { "id", id }, { "json", json } };
+				ThreadPool.QueueUserWorkItem(new WaitCallback(put_json_feeds_handler), args);
             }
 
-            return Content(result, "text/plain");
+            return Content(content, content_type);
         }
 
         private void put_json_feeds_handler(Object args)
