@@ -1094,6 +1094,11 @@ namespace CalendarAggregator
 			{
 				var cat_string = feed_metadict["category"];
 				var l = SplitLowerTrimAndUniqifyCats(cat_string);
+				foreach (var tag in l)                              // include these in the core taxonomy
+				{
+					if (!this.tags.Contains(tag))
+						this.tags.Add(tag);
+				}
 				list = list.Union(l).ToList();
 			}
 
