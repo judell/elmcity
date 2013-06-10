@@ -3301,27 +3301,7 @@ END:VTIMEZONE");
 
 				if (is_contained || is_standalone)
 				{
-					var task = Scheduler.FetchTaskForId(id, TaskType.icaltasks);
-					var dtstop = TimeZoneInfo.ConvertTimeFromUtc(task.stop, calinfo.tzinfo);
-					var interval = Convert.ToInt16(settings["ical_aggregate_interval_hours"]);
-					var time_format = "M/d/yyyy h:mm tt";
-					if (dtstop != DateTime.MinValue)
-					{
-						var dtnext = dtstop.AddHours(interval);
-						tbody += string.Format(row_template, "last scan of iCalendar feeds", dtstop.ToString(time_format));
-						tbody += string.Format(row_template, "next scan at", dtnext.ToString(time_format));
-					}
-					else
-					{
-						tbody += string.Format(row_template, "next scan at", "in progress now");
-					}
-					tbody += string.Format(row_template, "# of events from iCalendar feeds", dict["ical_events"]);
-					if (calinfo.hub_enum != HubType.what)
-					{
-						tbody += string.Format(row_template, "# of events from Eventful", dict["eventful_events"]);
-						tbody += string.Format(row_template, "# of events from Upcoming", dict["upcoming_events"]);
-						tbody += string.Format(row_template, "# of events from EventBrite", dict["eventbrite_events"]);
-					}
+					tbody = QuickStatsForHub(id, settings, calinfo, dict, row_template, tbody);
 				}
 				else if (is_container)
 					tbody += string.Format(row_template, "(see member hubs for details)", "");
@@ -3335,6 +3315,50 @@ END:VTIMEZONE");
 
 			page = page.Replace("__HUBSTATS__", tbody);
 			return page;
+		}
+
+		public static void SaveQuickStatsForRegion(string region)
+		{
+			var settings = GenUtils.GetSettingsFromAzureTable();
+			var sb = new StringBuilder();
+			var row_template = @"<tr><td>{0}</td><td style=""text-align:right"">{1}</td></tr>";
+			foreach (var id in Utils.GetIdsForRegion(region))
+			{
+				var tbody = "";
+				sb.AppendLine("<p>" + id + "</p><table>");
+				var query = string.Format("$filter=PartitionKey eq '{0}' and RowKey eq '{1}'", id, id);
+				var dict = TableStorage.QueryForSingleEntityAsDictStr(ts, "metadata", query);
+				tbody += string.Format(row_template, "# of iCalendar feeds", dict["feed_count"]);
+				sb.AppendLine (Utils.QuickStatsForHub(id, settings, Utils.AcquireCalinfo(id), dict, row_template, tbody));
+				sb.AppendLine("</table>");
+
+			}
+			bs.PutBlob(region, "quickstats.html", sb.ToString(), "text/html");
+		}
+
+		public static string QuickStatsForHub(string id, Dictionary<string, string> settings, Calinfo calinfo, Dictionary<string, string> dict, string row_template, string tbody)
+		{
+			var task = Scheduler.FetchTaskForId(id, TaskType.icaltasks);
+			var dtstop = TimeZoneInfo.ConvertTimeFromUtc(task.stop, calinfo.tzinfo);
+			var interval = Convert.ToInt16(settings["ical_aggregate_interval_hours"]);
+			var time_format = "M/d/yyyy h:mm tt";
+			if (dtstop != DateTime.MinValue)
+			{
+				var dtnext = dtstop.AddHours(interval);
+				tbody += string.Format(row_template, "last scan of iCalendar feeds", dtstop.ToString(time_format));
+				tbody += string.Format(row_template, "next scan at", dtnext.ToString(time_format));
+			}
+			else
+			{
+				tbody += string.Format(row_template, "next scan at", "in progress now");
+			}
+			tbody += string.Format(row_template, "# of events from iCalendar feeds", dict["ical_events"]);
+			if (calinfo.hub_enum != HubType.what)
+			{
+				tbody += string.Format(row_template, "# of events from Eventful", dict["eventful_events"]);
+				tbody += string.Format(row_template, "# of events from EventBrite", dict["eventbrite_events"]);
+			}
+			return tbody;
 		}
 
 		public static string MakeEditFeedsLink(string id, string auth_mode)
