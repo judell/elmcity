@@ -628,6 +628,12 @@ elt.append(s);
 }
 
 
+function show_more(id)
+  {
+  $('div.' + id).show();
+  $('span.' + id).remove();
+  }
+
 function hide_desc(id)
 {
 quoted_id = '\'' + id + '\'';
@@ -766,13 +772,6 @@ function hide_id (id)
   var display = $(id).get(0).style.display;
   if ( display != 'none' )
     $(id).hide();
-  }
-
-
-function show_more(id)
-  {
-  $('div.' + id).show();
-  $('span.' + id).remove();
   }
 
   */
