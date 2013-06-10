@@ -64,7 +64,7 @@ namespace CalendarAggregator
 			try
 			{
 				list_metadict_str = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
-				var dupes = FindDuplicateFeeds(list_metadict_str);
+				var dupes = ObjectUtils.FindDuplicateValuesForKey(list_metadict_str, "feedurl");
 				if (dupes.Count > 0)
 					GenUtils.PriorityLogMsg("warning", string.Format("{0} duplicate feeds for {1}", dupes.Count, id), null);
 			}
@@ -222,13 +222,24 @@ namespace CalendarAggregator
 			TableStorage.UpmergeDictToTableStore(metadict_obj, table: "metadata", partkey: id, rowkey: rowkey);
 		}
 
-		public static List<string> FindDuplicateFeeds(List<Dictionary<string,string>> list_dict_str)
+		public static List<string> FindDuplicateFeeds(List<Dictionary<string, string>> list_dict_str)
 		{
-			var feedurls = new Dictionary<string, int>();
-			foreach (var dict in list_dict_str)
-				feedurls.IncrementOrAdd(dict["feedurl"]);
-			var dupes = feedurls.ToList().FindAll(x => Convert.ToInt16(x.Value) > 1);
-			return dupes.Select(x => x.Key).ToList();
+			return ObjectUtils.FindDuplicateValuesForKey(list_dict_str, "feedurl");
+		}
+
+
+		public static List<string> FindDuplicateFeedsFromJson(string json)
+		{
+			var list_metadict_str = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
+			return ObjectUtils.FindDuplicateValuesForKey(list_metadict_str, "feedurl");
+		}
+
+		public static List<string> FindDuplicateFeedsFromId(string id)
+		{
+			var uri = BlobStorage.MakeAzureBlobUri(id, id + ".feeds.json");
+			var json = HttpUtils.FetchUrl(uri).DataAsString();
+			var list_metadict_str = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
+			return FindDuplicateFeeds(list_metadict_str);
 		}
 
 		public static List<string> LoadHubIdsFromAzureTable()

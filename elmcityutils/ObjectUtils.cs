@@ -290,6 +290,31 @@ namespace ElmcityUtils
 
 		}
 
+		public static List<Dictionary<string, string>> RemoveExactDuplicates(List<Dictionary<string, string>> list_dict_str, List<string> list_dupe_values, string key)
+		{
+			var remove = new List<Dictionary<string, string>>();
+			var readd = new List<Dictionary<string, string>>();
+			foreach (var value in list_dupe_values)
+			{
+				var dict_str = list_dict_str.First(x => x[key] == value);									  // save first occurrence
+				var dupes = list_dict_str.FindAll(x => ObjectUtils.DictStrEqualsDictStr(x, dict_str));
+				remove = (List<Dictionary<string, string>>)remove.Concat(dupes).ToList();					// remove all occurrences
+				readd.Add(dict_str);                                                                       // add back first occurrence
+			}
+			list_dict_str = (List<Dictionary<string, string>>)list_dict_str.Except(remove).ToList();
+			list_dict_str = (List<Dictionary<string, string>>)list_dict_str.Concat(readd).ToList();
+			return list_dict_str;
+		}
+
+		public static List<string> FindDuplicateValuesForKey(List<Dictionary<string, string>> list_dict_str, string key)
+		{
+			var feedurls = new Dictionary<string, int>();
+			foreach (var dict in list_dict_str)
+				feedurls.IncrementOrAdd(dict[key]);
+			var dupes = feedurls.ToList().FindAll(x => Convert.ToInt16(x.Value) > 1);
+			return dupes.Select(x => x.Key).ToList();
+		}
+
 		private static bool AllDictsHaveKeys(List<Dictionary<string,string>> list_dict_str)
 		{
 			var empty_dicts = list_dict_str.FindAll(x => x.Keys.Count == 0);
