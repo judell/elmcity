@@ -2245,7 +2245,7 @@ END:VCALENDAR",
 			// or
 			//"http://m.facebook.com/BerkeleyUndergroundFilmSociety?id=179173202101438&refsrc=http%3A%2F%2Fwww.facebook.com%2FBerkeleyUndergroundFilmSociety&_rdr"
 			var id = "unknown";
-			try
+			try                                                                     // method 1
 			{
 				url = url.Replace("www.facebook.com", "m.facebook.com");
 				var page = HttpUtils.FetchUrl(new Uri(url)).DataAsString();
@@ -2267,6 +2267,21 @@ END:VCALENDAR",
 			catch (Exception e)
 			{
 				GenUtils.LogMsg("exception", "id_from_fb_fanpage_or_group: " + url, e.Message);
+			}
+
+			if (id == "unknown")							// method 2
+			{
+				try
+				{
+					var name = Regex.Match(url, @"facebook.com/(\w+)").Groups[1];
+					var json = HttpUtils.FetchUrl("http://graph.facebook.com/" + name).DataAsString();
+					var dict = JsonConvert.DeserializeObject<Dictionary<string,object>>(json);
+					id = (string) dict["id"];
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", "id_from_fb_fanpage_or_group: " + url, e.Message);
+				}
 			}
 
 			return id;
