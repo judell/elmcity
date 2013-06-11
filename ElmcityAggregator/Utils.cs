@@ -3319,7 +3319,10 @@ END:VTIMEZONE");
 					tbody = QuickStatsForHub(id, settings, calinfo, dict, row_template, tbody);
 				}
 				else if (is_container)
-					tbody += string.Format(row_template, "(see member hubs for details)", "");
+				{
+					var text = String.Format(@"see member hubs for <a href=""http://elmcity.blob.core.windows.net/{0}/quickstats.html"">details</a>", id.ToLower());
+					tbody += string.Format(row_template, text, "");
+				}
 
 			}
 			catch (Exception e)
@@ -3348,6 +3351,9 @@ END:VTIMEZONE");
 				sb.AppendLine("</table>");
 
 			}
+			var tmpl = BlobStorage.GetAzureBlobAsString(region, "quickstats.tmpl");
+			tmpl = tmpl.Replace("__REGION__", region);
+			var html = tmpl.Replace("__BODY__", sb.ToString());
 			bs.PutBlob(region, "quickstats.html", sb.ToString(), "text/html");
 		}
 
