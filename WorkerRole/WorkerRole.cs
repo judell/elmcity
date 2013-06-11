@@ -779,6 +779,8 @@ namespace WorkerRole
 			var ids = Utils.GetIdsForRegion(region);
 			var region_report = new StringBuilder();
 
+			var chunks = new Dictionary<string, string>();
+
 			Parallel.ForEach(source: ids, body: (id) =>
 			{
 				var hub_report = new StringBuilder();
@@ -791,12 +793,15 @@ namespace WorkerRole
 				var table = doc.DocumentNode.SelectSingleNode("//table");
 				hub_report.AppendLine(table.WriteContentTo());
 				hub_report.AppendLine("</table>");
-				lock (region_report)
+				lock (chunks)
 				{
-					region_report.Append(hub_report.ToString());
+					chunks[id] = hub_report.ToString();    // to enable sorted output
 				}
 			}
 			);
+
+			foreach (var id in ids)
+				region_report.AppendLine(chunks[id]);
 
 			var region_calinfo = Utils.AcquireCalinfo(region);
 			var report = Utils.EmbedHtmlSnippetInDefaultPageWrapper(region_calinfo, region_report.ToString());
