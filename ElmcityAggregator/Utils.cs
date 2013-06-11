@@ -3283,6 +3283,7 @@ END:VTIMEZONE");
 				region_msg += "<p>" + edit_feeds_link + "</p>";
 				var tag_stats_link = String.Format(@"<a class=""side-link"" href=""{0}/{1}/tag_sources.html"">tags by feed</a>", ElmcityUtils.Configurator.azure_blobhost, id.ToLower());
 				region_msg += "<p>" + tag_stats_link + "</p>";
+				region_msg = InsertAllStatsLink(id, region_msg);
 			}
 
 			if (is_container)
@@ -3290,6 +3291,8 @@ END:VTIMEZONE");
 				region_msg = "<p>This is a regional hub.</p>";
 				var tag_stats_link = String.Format(@"<a class=""side-link"" href=""{0}/{1}/tags_by_hub.html"">tags by hub</a>", ElmcityUtils.Configurator.azure_blobhost, id.ToLower());
 				region_msg += "<p>" + tag_stats_link + "</p>";
+				region_msg = InsertRegionQuickStatsLink(id, region_msg);
+				region_msg = InsertAllStatsLink(id, region_msg);
 				region_msg += "<p>The hubs that belong to this region are: </p>" + ul;
 				foreach (var contained in ids_for_region)
 				{
@@ -3342,6 +3345,20 @@ END:VTIMEZONE");
 			return page;
 		}
 
+		private static string InsertRegionQuickStatsLink(string id, string region_msg)
+		{
+			var quick_stats_link = String.Format(@"<a class=""side-link"" href=""{0}/{1}/region-quickstats.html"">quick stats</a>", ElmcityUtils.Configurator.azure_blobhost, id.ToLower());
+			region_msg += "<p>" + quick_stats_link + "</p>";
+			return region_msg;
+		}
+
+		private static string InsertAllStatsLink(string id, string region_msg)
+		{
+			var all_stats_link = String.Format(@"<a class=""side-link"" href=""http://{0}/{1}/stats"">detailed stats</a>", ElmcityUtils.Configurator.appdomain, id);
+			region_msg += "<p>" + all_stats_link + "</p>";
+			return region_msg;
+		}
+
 		public static void SaveQuickStatsForRegion(string region)
 		{
 			var settings = GenUtils.GetSettingsFromAzureTable();
@@ -3361,7 +3378,7 @@ END:VTIMEZONE");
 			var tmpl = BlobStorage.GetAzureBlobAsString("admin", "region-quickstats.tmpl");
 			tmpl = tmpl.Replace("__REGION__", region);
 			var html = tmpl.Replace("__BODY__", sb.ToString());
-			bs.PutBlob(region, "quickstats.html", html, "text/html");
+			bs.PutBlob(region, "region-quickstats.html", html, "text/html");
 		}
 
 		public static string QuickStatsForHub(string id, Dictionary<string, string> settings, Calinfo calinfo, Dictionary<string, string> dict, string row_template, string tbody)
