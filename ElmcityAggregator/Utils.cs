@@ -3351,7 +3351,7 @@ END:VTIMEZONE");
 				sb.AppendLine("</table>");
 
 			}
-			var tmpl = BlobStorage.GetAzureBlobAsString(region, "quickstats.tmpl");
+			var tmpl = BlobStorage.GetAzureBlobAsString(admin, "quickstats.tmpl");
 			tmpl = tmpl.Replace("__REGION__", region);
 			var html = tmpl.Replace("__BODY__", sb.ToString());
 			bs.PutBlob(region, "quickstats.html", sb.ToString(), "text/html");
