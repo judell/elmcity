@@ -411,7 +411,7 @@ namespace ElmcityUtils
 
 		public static string GetAzureBlobAsString(string container, string name)
 		{
-			return GetAzureBlobAsString(container, name);
+			return GetAzureBlobAsString(container, name, false);
 		}
 
 		public static string MakeSafeBlobnameFromUrl(string url)
