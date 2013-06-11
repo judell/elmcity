@@ -409,6 +409,11 @@ namespace ElmcityUtils
 			return HttpUtils.FetchUrl(uri).DataAsString();
 		}
 
+		public static string GetAzureBlobAsString(string container, string name)
+		{
+			return GetAzureBlobAsString(container, name);
+		}
+
 		public static string MakeSafeBlobnameFromUrl(string url)
 		{
 			var name = TableStorage.MakeSafeRowkey(url);
