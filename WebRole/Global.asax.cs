@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2506";
+        public static string version = "2507";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -673,25 +673,16 @@ namespace WebRole
 					WebRoleData.SaveTimestampedWrd(ElmcityApp.wrd);
                     lock (ElmcityApp.wrd)
                     {
-                        ElmcityApp.wrd = new_wrd;                               // update WebRoleData
+                        ElmcityApp.wrd = new_wrd;                               // update WebRoleData (todo: rewarm caches affected)
                     }
                 }
-
-				/*
-
-				bool changed = false;
-				List<string> changed_ids = new List<string>();
 
                 foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's renderer change?
                 {
 					var cached_renderer = ElmcityApp.wrd.renderers[id];
 					var current_renderer = Utils.AcquireRenderer(id);
-					if (cached_renderer.timestamp != current_renderer.timestamp || cached_renderer.calinfo.timestamp != current_renderer.calinfo.timestamp) // timestamp changed
+					if (cached_renderer.timestamp != current_renderer.timestamp ) // timestamp changed
 					{
-						if ( ! Utils.RenderersAreEqual(cached_renderer, current_renderer, except_keys: new List<string>() { "timestamp" } ) )  // other changes too
-						{
-							changed = true;
-							changed_ids.Add(id);
 							GenUtils.LogMsg("info", "Reload: new renderer for " + id, null);
 							lock (ElmcityApp.wrd)
 							{
@@ -707,16 +698,9 @@ namespace WebRole
 
 						}
 					}
-   
+  
                 }
 
-				if (changed)  // alert the worker to rebuild wrd
-				{
-					bs.PutBlob("admin", CalendarAggregator.Configurator.webrole_sentinel, string.Join(",", changed_ids));
-				}
-				 */
-
-            }
             catch (Exception e1)
             {
 				GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: cannot check/update wrd", e1.Message + e1.StackTrace);
