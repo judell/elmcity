@@ -3269,9 +3269,11 @@ END:VTIMEZONE");
 
 			string region_msg = "";
 
+			string ul = @"<ul style=""list-style-type:none;padding-left:0"">";
+
 			if (is_contained)
 			{
-				region_msg = @"<p>Regions that contain this hub:</p> <ul style=""list-style-type:none"">";
+				region_msg = @"<p>Regions that contain this hub:</p>" + ul;
 				foreach (var container in regions_belonged_to)
 					region_msg += string.Format(@"<li><p><a href=""http://{0}/{1}"">{1}</a></p></li>", 
 						ElmcityUtils.Configurator.appdomain,	// 0
@@ -3279,15 +3281,20 @@ END:VTIMEZONE");
 				region_msg += "</ul>";
 				var edit_feeds_link = MakeEditFeedsLink(id, auth_mode);
 				region_msg += "<p>" + edit_feeds_link + "</p>";
+				var tag_stats_link = String.Format(@"<a class=""side-link"" href=""{0}/{1}/tag_sources.html"">tags by feed</a>", ElmcityUtils.Configurator.azure_blobhost, id.ToLower());
+				region_msg += "<p>" + tag_stats_link + "</p>";
 			}
 
 			if (is_container)
 			{
-				region_msg = @"<p>This is a regional hub. The hubs that belong to this region are: </p><ul style=""list-style-type:none"">";
+				region_msg = "<p>This is a regional hub.</p>";
+				var tag_stats_link = String.Format(@"<a class=""side-link"" href=""{0}/{1}/tags_by_hub.html"">tags by hub</a>", ElmcityUtils.Configurator.azure_blobhost, id.ToLower());
+				region_msg += "<p>" + tag_stats_link + "</p>";
+				region_msg += "<p>The hubs that belong to this region are: </p>" + ul;
 				foreach (var contained in ids_for_region)
 				{
 					var edit_feeds_link = MakeEditFeedsLink(contained, auth_mode);
-					region_msg += string.Format(@"<li><p><a href=""http://{0}/{1}"">{1}</a> {2} </p></li>",
+					region_msg += string.Format(@"<li><p><a href=""http://{0}/{1}"">{1}</a> <div>{2}</div> </p></li>",
 						ElmcityUtils.Configurator.appdomain,	// 0
 						contained,								// 1
 						edit_feeds_link);						// 2
@@ -3354,7 +3361,7 @@ END:VTIMEZONE");
 			var tmpl = BlobStorage.GetAzureBlobAsString("admin", "region-quickstats.tmpl");
 			tmpl = tmpl.Replace("__REGION__", region);
 			var html = tmpl.Replace("__BODY__", sb.ToString());
-			bs.PutBlob(region, "quickstats.html", sb.ToString(), "text/html");
+			bs.PutBlob(region, "quickstats.html", html, "text/html");
 		}
 
 		public static string QuickStatsForHub(string id, Dictionary<string, string> settings, Calinfo calinfo, Dictionary<string, string> dict, string row_template, string tbody)
@@ -3386,7 +3393,7 @@ END:VTIMEZONE");
 		{
 			string edit_link = "";
 			if (auth_mode != null)
-				edit_link = string.Format(@"<span style=""font-size:smaller""><a href=""http://{0}/services/{1}/edit?flavor=feeds"">(edit feeds)</a></span>",
+				edit_link = string.Format(@"<a class=""side-link"" href=""http://{0}/services/{1}/edit?flavor=feeds"">edit feeds</a>",
 						ElmcityUtils.Configurator.appdomain,
 						id
 						);
