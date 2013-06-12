@@ -468,7 +468,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "TransferCachedResults", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "TransferCachedStats " + id + ", " + feedurl, e.Message + e.StackTrace);
 			}
 		}
 
@@ -508,7 +508,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "TransferCachedStats", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "TransferCachedStats " + id + ", " + feedurl, e.Message + e.StackTrace);
 			}
 		}
 
