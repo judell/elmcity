@@ -225,6 +225,8 @@ if unsure please check http://{1}/{2}/stats",
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
             var result = Utils.get_fb_ical_url(fb_page_url, elmcity_id);
+			if (result.Contains("fb_id=unknown"))
+				result = "Sorry, I can't make a feed URL for this Facebook page.";
             return Content(result);
         }
 
