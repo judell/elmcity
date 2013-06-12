@@ -1145,6 +1145,24 @@ namespace CalendarAggregator
 			var ical = new DDay.iCal.iCalendar();
 			Collector.AddTimezoneToDDayICal(ical, tzinfo);
 
+			string slat = null;
+			string slon = null;
+
+			try
+			{
+				var j = HttpUtils.FetchUrl("http://graph.facebook.com/" + fb_id).DataAsString();
+				var o = JsonConvert.DeserializeObject<Dictionary<string, object>>(j);
+				JObject location = (JObject)o["location"];
+				var lat = (float)location["latitude"];
+				var lon = (float)location["longitude"];
+				slat = lat.ToString();
+				slon = lon.ToString();
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("warning", "IcsFromFbPage: " + fb_id, "cannot get lat/lon: " + e.Message);
+			}
+
 			foreach (JObject event_dict in j_obj["data"])
 			{
 				string id;
@@ -1166,7 +1184,7 @@ namespace CalendarAggregator
 					location = event_dict["location"].Value<string>();
 				}
 				catch { }
-				var evt = Collector.MakeTmpEvt(calinfo, dtstart:dtstart_with_zone, dtend:DateTimeWithZone.MinValue(calinfo.tzinfo), title:name, url:url, location: location, description: location, lat: null, lon: null, allday: false);
+				var evt = Collector.MakeTmpEvt(calinfo, dtstart:dtstart_with_zone, dtend:DateTimeWithZone.MinValue(calinfo.tzinfo), title:name, url:url, location: location, description: location, lat: slat, lon: slon, allday: false);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
 
@@ -2478,6 +2496,8 @@ END:VCALENDAR",
 				var dict = new Dictionary<string, object>() { { "feed_count", final_count[0].ToString() } };
 				TableStorage.DictObjToTableStore(TableStorage.Operation.merge, dict, "metadata", id, id);
 			}
+
+			Utils.RecreatePickledCalinfoAndRenderer(id);
 
 			return;
 		}
