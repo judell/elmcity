@@ -121,7 +121,7 @@ namespace CalendarAggregator
 			var source = "Ann Arbor City";
 			var fr = new FeedRegistry(keene_test_hub);
 
-			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene);
+			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene, true);
 
 			Assert.That(zes.events.Count == 0);
 		}
@@ -133,7 +133,7 @@ namespace CalendarAggregator
 			var source = "Silk City Flick Fest";
 			var fr = new FeedRegistry(keene_test_hub);
 
-			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene);
+			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene, true);
 
 			Assert.That(zes.events.Count == 1);
 			var evt = zes.events[0];
@@ -151,7 +151,7 @@ namespace CalendarAggregator
 			var source = "Cedar Hill Commemorates";
 			var fr = new FeedRegistry(keene_test_hub);
 
-			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene);
+			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene, true);
 
 			Assert.That(zes.events.Count == 1);
 			var evt = zes.events[0];
@@ -168,7 +168,7 @@ namespace CalendarAggregator
 			var source = "Grace Worship";
 			var fr = new FeedRegistry(keene_test_hub);
 
-			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene);
+			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene,true);
 
 			Assert.That(zes.events.Count == 1);
 			var evt = zes.events[0];
@@ -185,7 +185,7 @@ namespace CalendarAggregator
 			var source = "berkeleyside";
 			var fr = new FeedRegistry(berkeley_test_hub);
 
-			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley);
+			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley, true);
 
 			Assert.That(zes.events.Count == 1);
 			var evt = zes.events[0];
@@ -201,8 +201,26 @@ namespace CalendarAggregator
 			var example = "hillside";
 			var source = "hillside";
 			var fr = new FeedRegistry(berkeley_test_hub);
-			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley);
+			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley, true);
 			HillsideExampleIsCorrectObj(zes, null, null);
+		}
+
+		public static bool __AfternoonTeaAt3PMLocal()      // this version leaves cached ics and obj 
+		{
+			var example = "hillside";
+			var source = "hillside";
+			var fr = new FeedRegistry(berkeley_test_hub);
+			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley, false);
+			try
+			{
+				HillsideExampleIsCorrectObj(zes, null, null);
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
+
 		}
 
 		private static bool _AfternoonTeaAt3PMLocal()    // this version expects an altered feed
@@ -210,7 +228,7 @@ namespace CalendarAggregator
 			var example = "hillside";
 			var source = "hillside";
 			var fr = new FeedRegistry(berkeley_test_hub);
-			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley);
+			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley, false);
 			try
 			{
 				HillsideExampleIsCorrectObj(zes, "Afternoon Tea", "Afternoon Coffee");
@@ -254,7 +272,7 @@ namespace CalendarAggregator
 			var source = "Keene Chorale";
 			var fr = new FeedRegistry(keene_test_hub);
 
-			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene);
+			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene, true);
 
 			Assert.That(zes.events.Count == 1);
 			var evt = zes.events[0];
@@ -271,7 +289,7 @@ namespace CalendarAggregator
 			var source = "UC Berkeley";
 			var fr = new FeedRegistry(berkeley_test_hub);
 
-			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley);
+			var zes = ProcessIcalExample(example, source, calinfo_berkeley, fr, collector_berkeley, true);
 
 			Assert.That(zes.events.Count == 1);
 			var evt = zes.events[0];
@@ -288,7 +306,7 @@ namespace CalendarAggregator
 			var source = "Monadnock Folklore Society";
 			var fr = new FeedRegistry(keene_test_hub);
 
-			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene);
+			var zes = ProcessIcalExample(example, source, calinfo_keene, fr, collector_keene, true);
 
 			Assert.That(zes.events.Count == 1);
 			var evt = zes.events[0];
@@ -298,10 +316,11 @@ namespace CalendarAggregator
 			Assert.That(evt.dtstart.Second == 0);
 		}
 
-		private static ZonelessEventStore ProcessIcalExample(string example, string source, Calinfo calinfo, FeedRegistry fr, Collector collector)
+		private static ZonelessEventStore ProcessIcalExample(string example, string source, Calinfo calinfo, FeedRegistry fr, Collector collector, bool purge)
 		{
 			DeleteZonedObjects(calinfo.id);
-			Utils.PurgeFeedCacheForHub(calinfo.id);
+			if ( purge )
+				Utils.PurgeFeedCacheForHub(calinfo.id);
 			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false).ToString();
 			fr.AddFeed(feedurl, source);
 			var es = new ZonedEventStore(calinfo, SourceType.ical);
@@ -534,7 +553,7 @@ namespace CalendarAggregator
 
 			var stopwatch = new System.Diagnostics.Stopwatch();
 			stopwatch.Start();
-			AfternoonTeaAt3PMLocal(); // process the hillside example once to make sure ics and obj cached
+			Assert.That(__AfternoonTeaAt3PMLocal()); // process the hillside example leaving ics and obj cached
 			stopwatch.Stop();
 			var time1 = stopwatch.Elapsed;
 
@@ -544,6 +563,7 @@ namespace CalendarAggregator
 			var ics_cached_uri = BlobStorage.MakeAzureBlobUri("feedcache", ics_cached_name);
 			var cached_text = HttpUtils.FetchUrl(ics_cached_uri).DataAsString();
 			var feed_text = HttpUtils.FetchUrl(new Uri(feedurl)).DataAsString();
+			feed_text = Utils.RemoveComponent(feed_text, "DTSTAMP");  // because it's subtracted before MassageFeed          
 			Assert.That(cached_text == feed_text);                  // cached ics should match feed ics
 
 			stopwatch.Reset();
