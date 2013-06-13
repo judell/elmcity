@@ -512,7 +512,10 @@ namespace WorkerRole
 			fr.LoadFeedsFromAzure(FeedLoadOption.all);
 
 			if (calinfo.hub_enum == CalendarAggregator.HubType.where)
+			{
 				SaveWhereStats(fr, calinfo);
+				Utils.SaveMeetupLocations(calinfo, settings);
+			}
 
 			if (calinfo.hub_enum == CalendarAggregator.HubType.what)
 				SaveWhatStats(fr, calinfo);
