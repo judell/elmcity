@@ -301,6 +301,7 @@ namespace CalendarAggregator
 		private static ZonelessEventStore ProcessIcalExample(string example, string source, Calinfo calinfo, FeedRegistry fr, Collector collector)
 		{
 			DeleteZonedObjects(calinfo.id);
+			Utils.PurgeFeedCacheForHub(calinfo.id);
 			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false).ToString();
 			fr.AddFeed(feedurl, source);
 			var es = new ZonedEventStore(calinfo, SourceType.ical);
@@ -514,8 +515,7 @@ namespace CalendarAggregator
 		{
 			var example = "hillside";
 			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false).ToString();
-			ClearCachedIcs("feedcache", feedurl);
-			ClearCachedObj(calinfo_berkeley, "feedcache", feedurl);
+			Utils.PurgeFeedCacheForHub(calinfo_berkeley.id);
 			AfternoonTeaAt3PMLocal(); // process the hillside example
 			var ics_cached_uri = GetFeedCacheUri(GetFeedIcsCacheName(feedurl));
 			var cached_ics = Utils.GetCachedFeedText(feedurl);
@@ -531,8 +531,6 @@ namespace CalendarAggregator
 		{
 			var example = "hillside";
 			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false).ToString();
-			ClearCachedIcs("feedcache", feedurl);  // empty cached ics
-			ClearCachedObj(calinfo_berkeley, "feedcache", feedurl);  // empty cached obj
 
 			var stopwatch = new System.Diagnostics.Stopwatch();
 			stopwatch.Start();
@@ -564,11 +562,11 @@ namespace CalendarAggregator
 		{
 			var example = "hillside";
 			var feedurl = BlobStorage.MakeAzureBlobUri("admin", example + ".ics", false).ToString();
-			ClearCachedIcs("feedcache", feedurl);
-			var obj_blob_name = ClearCachedObj(calinfo_berkeley, "feedcache", feedurl);
+			Utils.PurgeFeedCacheForHub(calinfo_berkeley.id);
 			AfternoonTeaAt3PMLocal(); // process the hillside example once to make sure ics and obj cached
 			Assert.That(CachedIcsNonempty(feedurl));  // cached ics exists, not empty
 			Assert.That(CachedObjNonempty(feedurl));  // cached obj exists, not empty
+			var obj_blob_name = Utils.MakeCachedFeedObjName(calinfo_berkeley.id, feedurl);
 			var blob_props = bs.GetBlobProperties("feedcache", obj_blob_name);
 			var old_last_mod = blob_props.HttpResponse.headers["Last-Modified"];
 			AlterIcs(example, "Afternoon Tea", "Afternoon Coffee");  // now alter the ics
@@ -602,39 +600,6 @@ namespace CalendarAggregator
 			string blob_name = Utils.MakeCachedFeedObjName(berkeley_test_hub, feedurl);
 			var es = (ZonedEventStore) ObjectUtils.GetTypedObj<ZonedEventStore>("feedcache", blob_name);
 			return es.events.Count > 0;
-		}
-
-		private static void ClearCachedIcs(string cache_dir, string feedurl)
-		{
-			ClearIcsFeedInCache(cache_dir, feedurl);
-			HttpUtils.Wait(2);
-			var ics_blob_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
-			var ics_cached_uri = BlobStorage.MakeAzureBlobUri(cache_dir, ics_blob_name, false);
-			var ics = HttpUtils.FetchUrl(ics_cached_uri).DataAsString();
-			Assert.That(ics == ""); // verify empty
-		}
-
-		private static string ClearCachedObj(Calinfo calinfo, string cache_dir, string feedurl)
-		{
-			ClearObjFeedInCache(calinfo, cache_dir, feedurl);
-			var obj_blob_name = Utils.MakeCachedFeedObjName(calinfo.id, feedurl);
-			HttpUtils.Wait(2);
-			var es = (ZonedEventStore)ObjectUtils.GetTypedObj<ZonedEventStore>(cache_dir, obj_blob_name);
-			Assert.That(es.events.Count == 0); // verify empty
-			return obj_blob_name;
-		}
-
-		public static void ClearIcsFeedInCache(string cache_dir, string feedurl)
-		{
-			var blob_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
-			bs.PutBlob(cache_dir, blob_name, "");
-		}
-
-		public static void ClearObjFeedInCache(Calinfo calinfo, string cache_dir, string feedurl)
-		{
-			var blob_name = Utils.MakeCachedFeedObjName(calinfo.id, feedurl);
-			var es = new ZonedEventStore(calinfo, SourceType.ical);
-			bs.SerializeObjectToAzureBlob(es, cache_dir, blob_name);
 		}
 
 		#endregion
