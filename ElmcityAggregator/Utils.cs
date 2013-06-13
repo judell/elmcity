@@ -3810,6 +3810,46 @@ END:VTIMEZONE");
 				);
 		}
 
+		public static void SaveMeetupLocations(Calinfo calinfo, Dictionary<string,string> settings)
+		{
+			try
+			{
+				var id = calinfo.id;
+				var json = HttpUtils.FetchUrl("http://elmcity.cloudapp.net/" + id + "/json").DataAsString();
+				var list = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(json);
+				var l = new List<string>();
+				var dict = new Dictionary<string, List<string>>();
+				foreach (var obj in list)
+				{
+					var url = (string)obj["url"];
+					if (!url.Contains("meetup"))
+						continue;
+					var location = (string)obj["location"];
+					var title = (string)obj["title"];
+					var dtstart = (DateTime)obj["dtstart"];
+					try
+					{
+						var addr = Regex.Match(location, @"\((.+)\)").Groups[1].Value;
+						if (string.IsNullOrEmpty(addr))
+							continue;
+						var latlon = Utils.LookupLatLon(settings["bing_maps_key"], addr).ToList();
+						var start = TimeZoneInfo.ConvertTimeFromUtc(dtstart, calinfo.tzinfo);
+						dict.Add(title + start.ToString(), latlon);
+					}
+					catch (Exception e)
+					{
+						var m = e.Message;
+					}
+					l.Add(location);
+				}
+				bs.SerializeObjectToAzureBlob(dict, id, "meetup_locations.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "SaveMeetupLocations: " + calinfo.id, e.Message);
+			}
+		}
+
 		#endregion
 
 	}
