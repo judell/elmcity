@@ -55,7 +55,7 @@ namespace CalendarAggregator
 		private Dictionary<string, string> eventful_cat_map;
 		private Dictionary<string, string> eventbrite_cat_map;
 
-		public enum UpcomingSearchStyle { location, latlon };
+		private Dictionary<string, List<string>> meetup_locations = null;
 
 		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
@@ -187,6 +187,18 @@ namespace CalendarAggregator
 
 		}
 
+		public void LoadMeetupLocations()
+		{
+			try
+			{
+				this.meetup_locations = ObjectUtils.GetTypedObj<Dictionary<string, List<string>>>(id, "meetup_locations.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("warning", "LoadMeetupLocations: " + this.id, e.Message);
+			}
+		}
+
 		#region ical
 
 		public void CollectIcal(FeedRegistry fr, ZonedEventStore es)
@@ -197,6 +209,8 @@ namespace CalendarAggregator
 		public void CollectIcal(FeedRegistry fr, ZonedEventStore es, bool test)
 		{
 			this.LoadTags();
+
+			this.LoadMeetupLocations();
 
 			using (ical_ical)
 			 {
@@ -227,6 +241,8 @@ namespace CalendarAggregator
 				GenUtils.LogMsg("info", id + " loading " + feedurls.Count() + " feeds", null);
 
 				var results_dict = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
+
+				options.MaxDegreeOfParallelism = 1;
 
 				try
 				{
@@ -960,7 +976,12 @@ namespace CalendarAggregator
 				var localend = evt.DTEnd.IsUniversalTime ? TimeZoneInfo.ConvertTimeFromUtc(evt.End.UTC, tzinfo) : evt.End.Local;
 				dtend = new DateTimeWithZone(localend, tzinfo);
 
-				MakeGeo(this.calinfo, evt, this.calinfo.lat, this.calinfo.lon);
+				string lat = null;
+				string lon = null;
+
+				MaybeAdjustLatLonForMeetup(evt.Summary + evt.DTStart.ToString(), ref lat, ref lon);
+
+				MaybeUpdateGeo(this.calinfo, evt, lat, lon);
 
 				string categories = null;
 				if (evt.Categories != null && evt.Categories.Count() > 0)
@@ -970,9 +991,9 @@ namespace CalendarAggregator
 
 				string location = this.calinfo.has_locations ? evt.Location : null;
 
-				es.AddEvent(title: evt.Summary, url: evt.Url.ToString(), source: source, dtstart: dtstart, dtend: dtend, lat: this.calinfo.lat, lon: this.calinfo.lon, allday: evt.IsAllDay, categories: categories, description: description, location: location);
+				es.AddEvent(title: evt.Summary, url: evt.Url.ToString(), source: source, dtstart: dtstart, dtend: dtend, lat: evt.GeographicLocation.Latitude.ToString(), lon: evt.GeographicLocation.Longitude.ToString(), allday: evt.IsAllDay, categories: categories, description: description, location: location);
 
-				var evt_tmp = MakeTmpEvt(this.calinfo, dtstart: dtstart, dtend: dtend, title: evt.Summary, url: evt.Url.ToString(), location: evt.Location, description: source, lat: this.calinfo.lat, lon: this.calinfo.lon, allday: evt.IsAllDay);
+				var evt_tmp = MakeTmpEvt(this.calinfo, dtstart: dtstart, dtend: dtend, title: evt.Summary, url: evt.Url.ToString(), location: evt.Location, description: source, lat: evt.GeographicLocation.Latitude.ToString(), lon: evt.GeographicLocation.Longitude.ToString(), allday: evt.IsAllDay);
 				AddEventToDDayIcal(ical_ical, evt_tmp);
 
 				if ( fr.stats.ContainsKey(feedurl) )   // won't be true when adding to the per-feed obj cache
@@ -985,34 +1006,42 @@ namespace CalendarAggregator
 			}
 		}
 
-		public static void MakeGeo(Calinfo calinfo, DDay.iCal.Event evt, string lat, string lon)
+		private void MaybeAdjustLatLonForMeetup(string title_plus_dtstart, ref string lat, ref string lon)
 		{
-			if (String.IsNullOrEmpty(lat) || string.IsNullOrEmpty(lon))
-				return;
-
-			if ( calinfo.hub_enum == HubType.where) 
+			if (meetup_locations.Keys.Contains(title_plus_dtstart))
 			{
-				if (evt.GeographicLocation == null)           // override with hub's location
+				try
 				{
-					try
-					{
-						if (lat == null)                // e.g., because called from IcsFromRssPlusXcal
-							lat = calinfo.lat;
-
-						if (lon == null)
-							lon = calinfo.lon;
-
-						MakeGeo(evt, lat, lon);
-					}
-					catch (Exception e)
-					{
-						GenUtils.PriorityLogMsg("exception", "AddIcalEvent: " + calinfo.id + " cannot make evt.Geo", e.Message + evt.Summary.ToString());
-					}
+					var meetup_location = meetup_locations[title_plus_dtstart];
+					lat = meetup_location[0];
+					lon = meetup_location[1];
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", "MaybeAdjustLatLonForMeetup", e.Message);
 				}
 			}
 		}
 
-		public static void MakeGeo(DDay.iCal.Event evt, string lat, string lon)
+		public static void MaybeUpdateGeo(Calinfo calinfo, DDay.iCal.Event evt, string lat, string lon)
+		{
+			if (calinfo.hub_enum == HubType.where)
+			{
+				try
+				{
+					if (evt.GeographicLocation == null && lat == null && lon == null)                // default to hub location
+						UpdateGeo(evt, calinfo.lat, calinfo.lon);
+				}
+
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "AddIcalEvent: " + calinfo.id + " cannot make evt.Geo", e.Message + evt.Summary.ToString());
+				}
+			}
+		}
+
+
+		public static void UpdateGeo(DDay.iCal.Event evt, string lat, string lon)
 		{
 			if (String.IsNullOrEmpty(lat) || string.IsNullOrEmpty(lon))
 				return;
@@ -1876,10 +1905,7 @@ namespace CalendarAggregator
 				evt.Description = description;
 			else
 				evt.Description = url;
-			if ( calinfo == null )
-				MakeGeo(calinfo, evt, lat, lon);
-			else
-				MakeGeo(evt, lat, lon);
+
 			evt.Start = new iCalDateTime(dtstart.LocalTime);               // always local because the final ics file will use vtimezone
 			evt.Start.TZID = calinfo.tzinfo.Id;
 			if (!dtend.Equals(DateTimeWithZone.MinValue(calinfo.tzinfo)))
