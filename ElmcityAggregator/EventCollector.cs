@@ -242,8 +242,6 @@ namespace CalendarAggregator
 
 				var results_dict = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
 
-				options.MaxDegreeOfParallelism = 1;
-
 				try
 				{
 					//foreach (var feedurl in feedurls)
