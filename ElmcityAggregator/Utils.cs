@@ -3850,6 +3850,26 @@ END:VTIMEZONE");
 			}
 		}
 
+		public static void PurgeFeedCacheForRegion(string region)
+		{
+			var ids = Utils.GetIdsForRegion(region);
+			foreach (var id in ids)
+				PurgeFeedCacheForHub(id);
+		}
+
+		public static void PurgeFeedCacheForHub(string id)
+		{
+			var fr = new FeedRegistry(id);
+			fr.LoadFeedsFromAzure(FeedLoadOption.all);
+
+			Parallel.ForEach(source: fr.feeds.Keys, body: (feedurl) =>
+			{
+				var blob_name_ics = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
+				bs.DeleteBlob("feedcache", blob_name_ics);
+				var blob_name_obj = Utils.MakeCachedFeedObjName(id, feedurl);
+				bs.DeleteBlob("feedcache", blob_name_obj);
+			});
+		}
 		#endregion
 
 	}
