@@ -196,6 +196,7 @@ namespace CalendarAggregator
 			catch (Exception e)
 			{
 				GenUtils.LogMsg("warning", "LoadMeetupLocations: " + this.id, e.Message);
+				this.meetup_locations = new Dictionary<string, List<string>>();
 			}
 		}
 
