@@ -198,19 +198,6 @@ namespace CalendarAggregator
 			}
 		}
 
-		public static void StoreUpcomingTaggables(string id, Dictionary<string, string> settings, Calinfo calinfo)
-		{
-			try
-			{
-				var upcoming_taggables = GetUpcomingVenues(calinfo, settings);
-				bs.SerializeObjectToAzureBlob(upcoming_taggables, id, "upcoming.taggables.obj");
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "StoreTaggables: Upcoming", e.Message);
-			}
-		}
-
 		public static void StoreEventfulTaggables(string id, Dictionary<string, string> settings, Calinfo calinfo)
 		{
 			try
@@ -235,47 +222,6 @@ namespace CalendarAggregator
 			{
 				GenUtils.PriorityLogMsg("exception", "StoreTaggables: Facebook", e.Message);
 			}
-		}
-
-		public static List<TaggableSource> GetUpcomingVenues(Calinfo calinfo, Dictionary<string, string> settings)
-		{
-			var collector = new Collector(calinfo, settings);
-
-			var args = collector.MakeUpcomingApiArgs(Collector.UpcomingSearchStyle.latlon);
-			var method = "event.search";
-			var xdoc = collector.CallUpcomingApi(method, args);
-			int page_count = 1;
-			var result_count = Collector.GetUpcomingResultCount(xdoc);
-
-			page_count = (result_count / 100 == 0) ? 1 : result_count / 100;
-
-			var events = collector.UpcomingIterator(page_count, "event.search");
-
-			var venues = new List<TaggableSource>();
-			var name_and_pk = "upcomingsources";
-
-			Parallel.ForEach(source: events, body: (xelt) =>
-			{
-				var city = xelt.Attribute("venue_city");
-				if (city.Value.ToLower() != calinfo.City)
-					return;
-				var id = xelt.Attribute("venue_id").Value;
-				var state = xelt.Attribute("venue_state_code");
-
-				var name = xelt.Attribute("venue_name");
-				// http://upcoming.yahoo.com/venue/863238/NH/Keene/The-Colonial-Theatre/
-				var home_url = string.Format("http://upcoming.yahoo.com/venue/{0}/{1}/{2}/{3}/",
-					id,
-					state.Value,
-					city.Value,
-					name.Value.Replace(" ", "-")
-					);
-				var ical_url = "http://upcoming.yahoo.com/calendar/v2/venue/" + id;
-				var taggable = new TaggableSource(name.Value, calinfo.id, home_url, ical_url, city.Value);
-				venues.Add(taggable);
-				RememberTaggable(name_and_pk, id, taggable);
-			});
-			return venues;
 		}
 
 		public static List<TaggableSource> GetEventfulVenues(Calinfo calinfo, int min_per_venue, Dictionary<string, string> settings)

@@ -61,7 +61,6 @@ namespace CalendarAggregator
 
 		// one for each non-ical source
 		private NonIcalStats estats; // eventful
-		private NonIcalStats ustats; // upcoming
 		private NonIcalStats ebstats; // eventbrite
 		private NonIcalStats fbstats; // facebook
 		private NonIcalStats mustats; // meetup
@@ -78,7 +77,6 @@ namespace CalendarAggregator
 
 		private iCalendar ical_ical;
 		private iCalendar eventful_ical;
-		private iCalendar upcoming_ical;
 		private iCalendar eventbrite_ical;
 		private iCalendar facebook_ical;
 
@@ -116,14 +114,11 @@ namespace CalendarAggregator
 			// http://elmcity.blob.core.windows.net/a2cal/a2cal.ics
 			this.ical_ical = NewCalendarWithTimezone();
 			this.eventful_ical = NewCalendarWithTimezone();
-			this.upcoming_ical = NewCalendarWithTimezone();
 			this.eventbrite_ical = NewCalendarWithTimezone();
 			this.facebook_ical = NewCalendarWithTimezone();
 
 			this.estats = new NonIcalStats();
 			this.estats.blobname = "eventful_stats";
-			this.ustats = new NonIcalStats();
-			this.ustats.blobname = "upcoming_stats";
 			this.ebstats = new NonIcalStats();
 			this.ebstats.blobname = "eventbrite_stats";
 			this.fbstats = new NonIcalStats();
@@ -1538,234 +1533,6 @@ namespace CalendarAggregator
 
 		#endregion eventful
 
-		#region upcoming
-
-		public void CollectUpcoming(ZonedEventStore es, bool test)
-		{
-			using (upcoming_ical)
-			{
-				var page_size = test ? test_pagesize : 100;
-				var args = MakeUpcomingApiArgs(UpcomingSearchStyle.latlon);
-				var method = "event.search";
-				var xdoc = CallUpcomingApi(method, args);
-				int page_count = 1;
-				try
-				{
-					var result_count = GetUpcomingResultCount(xdoc);
-
-					if (result_count == 0) // try the other search style (upcoming seems flaky that way)
-					{
-						args = MakeUpcomingApiArgs(UpcomingSearchStyle.latlon);
-						xdoc = CallUpcomingApi(method, args);
-						GetUpcomingResultCount(xdoc);
-					}
-
-					page_count = result_count / page_size;
-				}
-				catch
-				{
-					GenUtils.LogMsg("warning", "CollectUpcoming", "resultcount unavailable");
-					return;
-				}
-
-				if (test == true && page_count > test_pagecount) page_count = test_pagecount;
-				if (page_count == 0) page_count = 1;
-
-				var msg = string.Format("{0}: loading {1} upcoming events", this.id, page_count * page_size);
-				GenUtils.LogMsg("info", msg, null);
-
-				Dictionary<string, int> event_count_by_venue = new Dictionary<string, int>();
-				int event_num = 0;
-
-				var uniques = new Dictionary<string, XElement>();  // dedupe by name + start
-				foreach (var evt in UpcomingIterator(page_count, method))
-					uniques.AddOrUpdateDictionary<string, XElement>(evt.Attribute("name").ToString() + evt.Attribute("start_date").ToString(), evt);
-
-				foreach (XElement evt in uniques.Values)
-				{
-					event_num += 1;
-					if (event_num > Configurator.upcoming_max_events)
-						break;
-
-					var dtstart = DateTimeWithZoneFromUpcomingXEvent(evt);
-
-					if (dtstart.UniversalTime < Utils.MidnightInTz(this.calinfo.tzinfo).UniversalTime)
-						continue;
-
-					var venue_name = evt.Attribute("venue_name").Value;
-					IncrementEventCountByVenue(event_count_by_venue, venue_name);
-
-					AddUpcomingEvent(es, venue_name, evt);
-				}
-
-				ustats.venuecount = event_count_by_venue.Keys.Count;
-				ustats.whenchecked = DateTime.Now.ToUniversalTime();
-
-				SerializeStatsAndIntermediateOutputs(es, upcoming_ical, ustats, SourceType.upcoming);
-			}
-		}
-
-		private DateTimeWithZone DateTimeWithZoneFromUpcomingXEvent(XElement evt)
-		{
-			bool all_day = false;
-			return DateTimeWithZoneFromUpcomingXEvent(evt, ref all_day);
-		}
-
-		private DateTimeWithZone DateTimeWithZoneFromUpcomingXEvent(XElement evt, ref bool allday)
-		{
-			string str_date = "";
-			string str_time = "";
-			try
-			{
-				str_date = evt.Attribute("start_date").Value;
-				str_time = evt.Attribute("start_time").Value;
-				if (str_time == "")
-				{
-					str_time = "00:00:00";
-					allday = true;
-				}
-				var str_dtstart = str_date + " " + str_time;
-				var _dtstart = Utils.LocalDateTimeFromLocalDateStr(str_dtstart);
-				var dtstart = new DateTimeWithZone(_dtstart, this.calinfo.tzinfo);
-				return dtstart;
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "DateTimeWithZoneFromUpcomingXEvent: " + string.Format("date[{0}] time[{1}]", str_date, str_time), e.Message + e.StackTrace);
-				return new DateTimeWithZone(DateTime.MinValue, this.calinfo.tzinfo);
-			}
-		}
-
-		public static int GetUpcomingResultCount(XDocument xdoc)
-		{
-			var str_result_count = xdoc.Document.Root.Attribute("resultcount").Value;
-			return Convert.ToInt32(str_result_count);
-		}
-
-		public string MakeUpcomingApiArgs(UpcomingSearchStyle search_style)
-		{
-			string fmt = "{0:yyyy-MM-dd}";
-			var now = Utils.MidnightInTz(this.calinfo.tzinfo).LocalTime;
-			var min_date = string.Format(fmt, now);
-			var max_date = MakeDateArg(fmt, now, this.calinfo.population);
-
-			string location_arg;
-			if (search_style == UpcomingSearchStyle.latlon)
-				location_arg = String.Format("{0},{1}", this.calinfo.lat, this.calinfo.lon);
-			else
-				location_arg = String.Format("{0}", this.calinfo.where);
-
-			return string.Format("location={0}&radius={1}&min_date={2}&max_date={3}", location_arg, this.calinfo.radius, min_date, max_date);
-		}
-
-		public string MakeDateArg(string fmt, DateTime now, int population)
-		{
-			string date_arg = String.Format(fmt, now + TimeSpan.FromDays(90));
-			if (population > 250000)
-				date_arg = String.Format(fmt, now + TimeSpan.FromDays(60));
-			if (population > 300000)
-				date_arg = String.Format(fmt, now + TimeSpan.FromDays(60));
-			return date_arg;
-		}
-
-		public void AddUpcomingEvent(ZonedEventStore es, string venue_name, XElement evt)
-		{
-			var title = evt.Attribute("name").Value;
-			var event_url = "http://upcoming.yahoo.com/event/" + evt.Attribute("id").Value;
-			var source = venue_name;
-			var venue_id = evt.Attribute("venue_id").Value;
-			var venue_url = "http://upcoming.yahoo.com/venue/" + venue_id;
-
-			string lat = this.calinfo.lat;  // default to hub's lat/lon
-			string lon = this.calinfo.lon;
-
-			try
-			{
-				lat = evt.Attribute("latitude").Value;
-				lon = evt.Attribute("longitude").Value;
-			}
-			catch
-			{
-				GenUtils.LogMsg("warning", "AddUpcomingEvent", "cannot parse lat/lon");
-			}
-
-			string categories = "upcoming";
-
-			if (evt.Attribute("tags") != null)
-			{
-				var evt_tags = evt.Attribute("tags").Value.Split(',');
-				if (evt_tags.Length > 0)
-				{
-					var intersection = this.tags.Intersect(evt_tags);
-					categories += "," + String.Join(",", intersection.ToArray());
-				}
-			}
-
-			ustats.eventcount++;
-
-			bool all_day = false;
-			var dtstart = DateTimeWithZoneFromUpcomingXEvent(evt, ref all_day);
-
-			string location = venue_name;
-			string venue_address = evt.Attribute("venue_address").Value;
-			if (!String.IsNullOrEmpty(venue_address))
-				location += ", " + venue_address;
-
-			var evt_tmp = MakeTmpEvt(this.calinfo, dtstart, DateTimeWithZone.MinValue(this.calinfo.tzinfo), title, url: event_url, location: location, description: source, lat: lat, lon: lon, allday: all_day);
-			AddEventToDDayIcal(upcoming_ical, evt_tmp);
-
-			var min = DateTimeWithZone.MinValue(this.calinfo.tzinfo);
-
-			es.AddEvent(title: title, url: event_url, source: source, dtstart: dtstart, dtend: min, lat: lat, lon: lon, allday: all_day, categories: categories, description: null, location: location);
-		}
-
-		public IEnumerable<XElement> UpcomingIterator(int page_count, string method)
-		{
-			for (int i = 1; i <= page_count; i++)
-			{
-				var this_args = string.Format("{0}&page={1}", MakeUpcomingApiArgs(UpcomingSearchStyle.location), i);
-				var xdoc = CallUpcomingApi(method, this_args);
-				if (GetUpcomingResultCount(xdoc) == 0)
-				{
-					this_args = string.Format("{0}&page={1}", MakeUpcomingApiArgs(UpcomingSearchStyle.latlon), i); // try other way
-					xdoc = CallUpcomingApi(method, this_args);
-				}
-				foreach (XElement evt in xdoc.Descendants("event"))
-					yield return evt;
-			}
-		}
-
-		public XDocument CallUpcomingApi(string method, string args)
-		{
-			XDocument xdoc = new XDocument();
-			if (this.mock_upcoming)
-			{
-				var uri = BlobStorage.MakeAzureBlobUri("admin", "philharmonia.xml", false);
-				var r = HttpUtils.FetchUrl(uri);
-				xdoc = XmlUtils.XdocFromXmlBytes(r.bytes);
-			}
-			else
-			{
-				var response = default(HttpResponse);
-				try
-				{
-					var key = this.apikeys.upcoming_api_key;
-					string host = "http://upcoming.yahooapis.com/services/rest/";
-					string url = string.Format("{0}?rollup=none&api_key={1}&method={2}&{3}", host, key, method, args);
-					var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
-					response = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, data: null, wait_secs: this.wait_secs, max_tries: this.max_retries, timeout_secs: this.timeout_secs);
-					xdoc = XmlUtils.XdocFromXmlBytes(response.bytes);
-				}
-				catch (Exception e)
-				{
-					GenUtils.PriorityLogMsg("exception", "CallUpcomingApi", response.status + "," + response.message + "," + e.Message + e.StackTrace);
-				}
-			}
-			return xdoc;
-		}
-
-		#endregion upcoming
-
 		#region eventbrite
 
 		public void CollectEventBrite(ZonedEventStore es)
@@ -2063,6 +1830,17 @@ namespace CalendarAggregator
 		}
 		#endregion
 
+		public string MakeDateArg(string fmt, DateTime now, int population)
+		{
+			string date_arg = String.Format(fmt, now + TimeSpan.FromDays(90));
+			if (population > 250000)
+				date_arg = String.Format(fmt, now + TimeSpan.FromDays(60));
+			if (population > 300000)
+				date_arg = String.Format(fmt, now + TimeSpan.FromDays(60));
+			return date_arg;
+		}
+
+
 		private iCalendar NewCalendarWithTimezone()
 		{
 			var ical = new iCalendar();
@@ -2120,8 +1898,7 @@ namespace CalendarAggregator
 			return MakeTmpEvt(calinfo, dtstart, dtend, title, url, location, description, lat, lon, allday);
 		}
 
-
-		private static void IncrementEventCountByVenue(Dictionary<string, int> event_count_by_venue, string venue_name)
+				private static void IncrementEventCountByVenue(Dictionary<string, int> event_count_by_venue, string venue_name)
 		{
 			if (event_count_by_venue.ContainsKey(venue_name))
 				event_count_by_venue[venue_name]++;
@@ -2185,9 +1962,6 @@ namespace CalendarAggregator
 			{
 				case SourceType.facebook:
 					entity["facebook_events"] = this.fbstats.eventcount;
-					break;
-				case SourceType.upcoming:
-					entity["upcoming_events"] = this.ustats.eventcount;
 					break;
 				case SourceType.eventful:
 					entity["eventful_events"] = this.estats.eventcount;
