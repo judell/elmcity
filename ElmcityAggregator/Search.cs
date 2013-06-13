@@ -201,6 +201,13 @@ namespace CalendarAggregator
 			}
 		}
 
+		public static string RawBingSearch(string search_expresson)
+		{
+			var url_template = "http://api.search.live.net/json.aspx?AppId=" + Configurator.bing_api_key + "&Market=en-US&Sources=Web&Adult=Strict&Query={0}&Web.Count=50";
+			var url = new Uri(String.Format(url_template, search_expresson));
+			return CallSearchApi(url);
+		}
+
 		public static List<SearchResult> BingSearch(string search_expression, int max, Dictionary<string, object> stats_dict)
 		{
 			var url_template = "http://api.search.live.net/json.aspx?AppId=" + Configurator.bing_api_key + "&Market=en-US&Sources=Web&Adult=Strict&Query={0}&Web.Count=50";
