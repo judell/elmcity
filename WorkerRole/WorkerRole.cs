@@ -387,7 +387,7 @@ namespace WorkerRole
             }
         } */
 
-		public void ProcessNonIcal(string id)
+		public static void ProcessNonIcal(string id)
 		{
 			logger.LogMsg("info", "worker starting on nonical tasks for " + id, null);
 			var calinfo = Utils.AcquireCalinfo(id);
@@ -424,7 +424,7 @@ namespace WorkerRole
 
 		}
 
-		public void ProcessIcal(string id)
+		public static void ProcessIcal(string id)
 		{
 			var calinfo = Utils.AcquireCalinfo(id);
 			logger.LogMsg("info", "worker starting on ical tasks for " + id, null);
@@ -481,7 +481,7 @@ namespace WorkerRole
 			logger.LogMsg("info", "worker done processing region " + region, null);
 		}
 
-		public void FinalizeHub(string id)
+		public static void FinalizeHub(string id)
 		{
 			logger.LogMsg("info", "worker finalizing hub: " + id, null);
 
@@ -660,16 +660,6 @@ namespace WorkerRole
 				var eventful = new ZonedEventStore(calinfo, SourceType.eventful);
 				Collector coll = new Collector(calinfo, settings);
 				coll.CollectEventful(eventful, testing);
-			}
-		}
-
-		public static void DoUpcoming(Calinfo calinfo)
-		{
-			if (settings["use_upcoming"] == "true" && calinfo.upcoming)
-			{
-				var upcoming = new ZonedEventStore(calinfo, SourceType.upcoming);
-				Collector coll = new Collector(calinfo, settings);
-				coll.CollectUpcoming(upcoming, testing);
 			}
 		}
 
