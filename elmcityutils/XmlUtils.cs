@@ -73,6 +73,16 @@ namespace ElmcityUtils
 		}
 
 
+		public static string NodeValue(XmlNode node, string xpath)
+		{
+			var value_node = node.SelectSingleNode(xpath);
+			if (value_node != null)
+				return value_node.FirstChild.Value;
+			else
+				return null;
+		}
+
+
 		public static string GetXAttrValue(XContainer xelt, XNamespace ns, string elt_name, string attr_name)
 		{
 			var descendants = xelt.Descendants(ns + elt_name);
