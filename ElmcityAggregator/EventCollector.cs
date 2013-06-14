@@ -263,6 +263,9 @@ namespace CalendarAggregator
 							eids_and_categories = Utils.CategoriesFromEventfulAtomFeed(atom_url);
 						}
 
+						if (feedurl.Contains("upcoming.yahoo.com"))
+							return;
+
 						iCalendar ical = new DDay.iCal.iCalendar();
 						string source_name = "source_name";
 						List<DDay.iCal.Event> events_to_include = new List<DDay.iCal.Event>();
@@ -1028,8 +1031,13 @@ namespace CalendarAggregator
 			{
 				try
 				{
-					if (evt.GeographicLocation == null && lat == null && lon == null)                // default to hub location
-						UpdateGeo(evt, calinfo.lat, calinfo.lon);
+					if (evt.GeographicLocation == null)                    // if no geo (normally happens)
+					{
+						if (lat == null && lon == null)                   // and no lat/lon (often happens)
+							UpdateGeo(evt, calinfo.lat, calinfo.lon);     // default to hub location
+						else
+							UpdateGeo(evt, lat, lon);
+					}
 				}
 
 				catch (Exception e)
@@ -1904,6 +1912,8 @@ namespace CalendarAggregator
 				evt.Description = description;
 			else
 				evt.Description = url;
+
+			MaybeUpdateGeo(calinfo, evt, lat, lon);
 
 			evt.Start = new iCalDateTime(dtstart.LocalTime);               // always local because the final ics file will use vtimezone
 			evt.Start.TZID = calinfo.tzinfo.Id;
