@@ -985,6 +985,12 @@ namespace CalendarAggregator
 
 				MaybeUpdateGeo(this.calinfo, evt, lat, lon);
 
+				if (evt.GeographicLocation != null)
+				{
+					lat = evt.GeographicLocation.Latitude.ToString();
+					lat = evt.GeographicLocation.Longitude.ToString();
+				}
+
 				string categories = null;
 				if (evt.Categories != null && evt.Categories.Count() > 0)
 					categories = string.Join(",", evt.Categories.ToList().Select(cat => cat.ToString().ToLower()));
@@ -993,9 +999,9 @@ namespace CalendarAggregator
 
 				string location = this.calinfo.has_locations ? evt.Location : null;
 
-				es.AddEvent(title: evt.Summary, url: evt.Url.ToString(), source: source, dtstart: dtstart, dtend: dtend, lat: evt.GeographicLocation.Latitude.ToString(), lon: evt.GeographicLocation.Longitude.ToString(), allday: evt.IsAllDay, categories: categories, description: description, location: location);
+				es.AddEvent(title: evt.Summary, url: evt.Url.ToString(), source: source, dtstart: dtstart, dtend: dtend, lat: lat, lon: lon, allday: evt.IsAllDay, categories: categories, description: description, location: location);
 
-				var evt_tmp = MakeTmpEvt(this.calinfo, dtstart: dtstart, dtend: dtend, title: evt.Summary, url: evt.Url.ToString(), location: evt.Location, description: source, lat: evt.GeographicLocation.Latitude.ToString(), lon: evt.GeographicLocation.Longitude.ToString(), allday: evt.IsAllDay);
+				var evt_tmp = MakeTmpEvt(this.calinfo, dtstart: dtstart, dtend: dtend, title: evt.Summary, url: evt.Url.ToString(), location: evt.Location, description: source, lat: lat, lon: lon, allday: evt.IsAllDay);
 				AddEventToDDayIcal(ical_ical, evt_tmp);
 
 				if ( fr.stats.ContainsKey(feedurl) )   // won't be true when adding to the per-feed obj cache
@@ -1027,13 +1033,11 @@ namespace CalendarAggregator
 
 		public static void MaybeUpdateGeo(Calinfo calinfo, DDay.iCal.Event evt, string lat, string lon)
 		{
-			if (calinfo.hub_enum == HubType.where)
-			{
 				try
 				{
 					if (evt.GeographicLocation == null)                    // if no geo (normally happens)
 					{
-						if (lat == null && lon == null)                   // and no lat/lon (often happens)
+						if (lat == null && lon == null && calinfo.hub_enum == HubType.where )          // and no lat/lon (often happens)
 							UpdateGeo(evt, calinfo.lat, calinfo.lon);     // default to hub location
 						else
 							UpdateGeo(evt, lat, lon);
@@ -1044,7 +1048,6 @@ namespace CalendarAggregator
 				{
 					GenUtils.PriorityLogMsg("exception", "AddIcalEvent: " + calinfo.id + " cannot make evt.Geo", e.Message + evt.Summary.ToString());
 				}
-			}
 		}
 
 
