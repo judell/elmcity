@@ -625,6 +625,50 @@ if unsure please check http://{1}/{2}/stats",
             return Content(ics, "text/calendar");
         }
 
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult map(string id, string where, string days, string view)
+		{
+			string content;
+			var calinfo = Utils.AcquireCalinfo(id);
+			try
+			{
+				if (String.IsNullOrEmpty(days))
+					days = "7";
+
+				var daycount = Convert.ToInt16(days);
+
+
+				var today = Utils.MidnightInTz(calinfo.tzinfo).LocalTime;
+				var until = today + TimeSpan.FromDays(daycount);
+				var datearg = string.Format("?from={0:yyyy-MM-ddT00:00}&to={1:yyyy-MM-ddT00:00}", today, until);
+
+				var args = datearg;
+					
+				if ( ! String.IsNullOrEmpty(view) )
+					args += "&view=" + view;
+
+				content = Utils.MakeMap(id, args, "10", where, settings);
+				content = content.Replace("__HUB__", id);
+				content = content.Replace("__WHERE__", where);
+
+				var tags_json = HttpUtils.FetchUrl("http://elmcity.cloudapp.net/" + id + "/tag_cloud").DataAsString();
+				var list_dict = JsonConvert.DeserializeObject<List<Dictionary<string, int>>>(tags_json);
+				var tags = list_dict.Select(x => x.Keys.First()).ToList();
+				tags.Sort(String.CompareOrdinal);
+				var options = tags.Select(x => "<option>" + x + "</option>");
+				var tags_html = String.Join("\n", options);
+
+				content = content.Replace("__TAGS__", tags_html);
+
+			}
+
+			catch (Exception e)
+			{
+				content = e.Message;
+			}
+			return Content(content, "text/html");
+		}
+
         public ActionResult py(string arg1, string arg2, string arg3)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
