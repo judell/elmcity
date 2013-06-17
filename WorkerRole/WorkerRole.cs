@@ -511,7 +511,7 @@ namespace WorkerRole
 			var fr = new FeedRegistry(id);
 			fr.LoadFeedsFromAzure(FeedLoadOption.all);
 
-			if (calinfo.hub_enum == CalendarAggregator.HubType.where)
+			if (calinfo.hub_enum != HubType.region)
 			{
 				SaveWhereStats(fr, calinfo);
 				Utils.SaveMeetupLocations(calinfo, settings);
