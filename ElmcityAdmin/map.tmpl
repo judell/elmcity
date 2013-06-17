@@ -1,0 +1,118 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+   <head>
+      <title></title>
+      <style>
+       body { font-family:calibri,verdana,arial }
+      </style>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+      <script type="text/javascript" src="http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0"></script>
+      <script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
+      <script type="text/javascript">
+
+      var map = null;
+
+      function GetMap()
+      {  
+         Microsoft.Maps.loadModule('Microsoft.Maps.Themes.BingTheme', { callback: themesModuleLoaded });
+      }
+
+      
+
+      function themesModuleLoaded() 
+      {
+
+         map = new Microsoft.Maps.Map(document.getElementById('mapDiv') ,
+			{ 
+			credentials: 'AlvGi_kIClsXD0htBJk8hvk40Vo4d-EIOchf0iLfR8HJnDiTM8dfILfur1L9YQDn', 
+			theme: new Microsoft.Maps.Themes.BingTheme(),
+            center: __CENTER__,
+			zoom: __ZOOM__
+			}); 
+
+        pinLayer = new Microsoft.Maps.EntityCollection();
+        map.entities.push(pinLayer);
+
+        var infoboxLayer = new Microsoft.Maps.EntityCollection();
+        map.entities.push(infoboxLayer);
+
+
+        __PINS__
+
+       set_controls();
+
+       }
+
+      </script>
+   </head>
+<body onload="GetMap();">
+
+<div id='mapDiv' style="position:relative; width:800px; height:800px"></div> 
+
+<div id="controls" style="position:absolute;margin-left:810px;top:0">
+<p>
+hub <input id="hub" value="__HUB__">
+</p>
+<p>
+center <input id="where" value="__WHERE__"">
+</p>
+<p>
+view <select id="view"">
+<option selected>all</option>
+__TAGS__
+</select>
+</p>
+<p>
+when <select id="when">
+<option selected value="7">next 7 days</option>
+<option value="14">next 2 weeks</option>
+<option value="30">next month</option>
+<option value="90">all</option>
+</select>
+</p>
+<input type="submit" value="update" onclick="reload()">
+</div>
+
+<script>
+function reload()
+  {
+  var url = "http://localhost:8080/" + $('#hub').val() + "/map?days=" + $('#when option:selected').val() + "&where=" + $('#where').val();
+  var view = $('#view option:selected').val()
+  if ( view != 'all' )
+     url = url + '&view=' + view;
+  location = url;
+  }
+
+function gup( name )
+  {  
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");  
+  var regexS = "[\\?&]"+name+"=([^&#]*)";  
+  var regex = new RegExp( regexS );  
+  var results = regex.exec( window.location.href );   
+  if( results == null )    
+    return "";  
+  else    
+    return results[1].replace(/%20/,' ');
+  }
+
+function set_controls()
+  {
+  var view = gup('view');
+  if ( view != '' )
+    $('#view').val(view);
+
+  var where = gup('where').replace('%20', ' ');
+  $('#where').val(where);
+
+  var when = gup('when');
+  if ( when != 7 || when != 14 || when != 30 )
+    when = 90;
+  $('#when').val(when);
+
+  }
+
+</script>
+
+</body>
+</html>
