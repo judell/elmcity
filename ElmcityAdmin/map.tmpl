@@ -71,7 +71,7 @@ when <select id="when">
 <option value="90">all</option>
 </select>
 </p>
-<input type="submit" value="update" onclick="reload()">
+<input type="submit" value="update" onclick="reload()"></input>
 </div>
 
 <script>
@@ -105,10 +105,10 @@ function set_controls()
   var where = gup('where').replace('%20', ' ');
   $('#where').val(where);
 
-  var when = gup('when');
-  if ( when != 7 || when != 14 || when != 30 )
-    when = 90;
-  $('#when').val(when);
+  var days = gup('days');
+  if ( days != "7" && days != "14" && days != "30" )
+    days = "90";
+  $('#when').val(days);
 
   }
 
