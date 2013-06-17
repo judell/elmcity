@@ -3810,7 +3810,141 @@ END:VTIMEZONE");
 				);
 		}
 
-		public static void SaveMeetupLocations(Calinfo calinfo, Dictionary<string,string> settings)
+		public static void PurgeFeedCacheForRegion(string region)
+		{
+			var ids = Utils.GetIdsForRegion(region);
+			foreach (var id in ids)
+				PurgeFeedCacheForHub(id);
+		}
+
+		public static void PurgeFeedCacheForHub(string id)
+		{
+			var fr = new FeedRegistry(id);
+			fr.LoadFeedsFromAzure(FeedLoadOption.all);
+
+			Parallel.ForEach(source: fr.feeds.Keys, body: (feedurl) =>
+			{
+				var blob_name_ics = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
+				bs.DeleteBlob("feedcache", blob_name_ics);
+				var blob_name_obj = Utils.MakeCachedFeedObjName(id, feedurl);
+				bs.DeleteBlob("feedcache", blob_name_obj);
+			});
+		}
+		#endregion
+
+		#region location
+
+		public static string MakeMap(string id, string args, string zoom, string center_name, Dictionary<string,string> settings)
+		{
+			var page_tmpl = BlobStorage.GetAzureBlobAsString("admin", "map.tmpl");
+
+			var ids = new List<string>();
+			if (Utils.IsRegion(id))
+				ids.AddRange(Utils.GetIdsForRegion(id));
+			else
+				ids.Add(id);
+
+			var all_infoboxes = new List<Dictionary<string, string>>();
+
+			BuildInfoboxes(ids, all_infoboxes, args);
+
+			var sb = new StringBuilder();
+			var css = " background-color : white; font-family:calibri,verdana,arial; line-height:1.2";
+			// c# squigglies doubled below to work in format string
+			string js_tmpl = @"var place = new Microsoft.Maps.Location({0},{1});
+var pin = new Microsoft.Maps.Pushpin(place, null); 
+pinLayer.push(pin);
+infoboxLayer.push(new Microsoft.Maps.Infobox(place, 
+   {{  
+   htmlContent: '<span style=""{2}""><a href=""{3}"">{4}</a><br>{5}<br>{6}</span>', 
+   pushpin: pin}}));";
+			foreach (var infobox in all_infoboxes)
+			{
+				var s = String.Format(js_tmpl,
+					infobox["lat"],
+					infobox["lon"],
+					css,
+					infobox["url"].Replace("'", "\\'"),
+					infobox["title"].Replace("'", "\\'"),
+					DateTime.Parse(infobox["dtstart"]).ToString("ddd, MMM d, h:mm tt"),
+					infobox["source"].Replace("'", "\\'")
+					);
+
+				sb.AppendLine(s);
+			}
+
+			var html = page_tmpl.Replace("__PINS__", sb.ToString());
+			var latlon = Utils.LookupLatLon(settings["bing_maps_key"], center_name);
+			var center = string.Format("new Microsoft.Maps.Location({0},{1})", latlon[0], latlon[1]);
+			html = html.Replace("__CENTER__", center);
+			html = html.Replace("__ZOOM__", zoom);
+			return html;
+		}
+
+		private static void BuildInfoboxes(List<string> ids, List<Dictionary<string, string>> all_infoboxes, string args)
+		{
+			var places = new ConcurrentDictionary<string, int>();
+			var places2 = new ConcurrentDictionary<string, int>();
+			Parallel.ForEach(source: ids, body: (hub_or_region) =>
+			//foreach (var hub_or_region in ids)
+			{
+				var r = HttpUtils.FetchUrl("http://elmcity.cloudapp.net/" + hub_or_region + "/xml" + args);
+				var doc = XmlUtils.XmlDocumentFromHttpResponse(r);
+				var events = doc.SelectNodes("//event");
+				var infoboxes = new List<Dictionary<string, string>>();
+				XNamespace xns = "";
+				foreach (XmlNode evt in events)
+				{
+					var dict = new Dictionary<string, string>();
+					try
+					{
+						var lat = XmlUtils.NodeValue(evt, "./lat");
+						var lon = XmlUtils.NodeValue(evt, "./lon");
+
+						if (String.IsNullOrEmpty(lat) || String.IsNullOrEmpty(lon))
+							continue;
+
+						places.IncrementOrAdd(lat + lon);
+
+						if (places[lat + lon] > 1)
+							continue;
+
+						/*
+						if (places2.Keys.ToList().Contains(lat + lon))
+						{
+							lat = new Randomness(lat).altered_string;
+							lon = new Randomness(lon).altered_string;
+						}*/
+
+						places2.IncrementOrAdd(lat + lon);
+
+						dict["title"] = XmlUtils.NodeValue(evt, "./title");
+						dict["source"] = XmlUtils.NodeValue(evt, "./source");
+						dict["url"] = XmlUtils.NodeValue(evt, "./url");
+						dict["dtstart"] = XmlUtils.NodeValue(evt, "./dtstart");
+						dict["lat"] = lat;
+						dict["lon"] = lon;
+
+						infoboxes.Add(dict);
+					}
+					catch (Exception e)
+					{
+						var s = e.Message;
+					}
+
+				}
+
+
+				all_infoboxes.AddRange(infoboxes);
+
+			});
+			//}
+
+			Console.WriteLine(places.Count + " places");
+
+		}
+
+		public static void SaveMeetupLocations(Calinfo calinfo, Dictionary<string, string> settings)
 		{
 			try
 			{
@@ -3850,27 +3984,9 @@ END:VTIMEZONE");
 			}
 		}
 
-		public static void PurgeFeedCacheForRegion(string region)
-		{
-			var ids = Utils.GetIdsForRegion(region);
-			foreach (var id in ids)
-				PurgeFeedCacheForHub(id);
-		}
 
-		public static void PurgeFeedCacheForHub(string id)
-		{
-			var fr = new FeedRegistry(id);
-			fr.LoadFeedsFromAzure(FeedLoadOption.all);
-
-			Parallel.ForEach(source: fr.feeds.Keys, body: (feedurl) =>
-			{
-				var blob_name_ics = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
-				bs.DeleteBlob("feedcache", blob_name_ics);
-				var blob_name_obj = Utils.MakeCachedFeedObjName(id, feedurl);
-				bs.DeleteBlob("feedcache", blob_name_obj);
-			});
-		}
 		#endregion
+
 
 	}
 

@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2509";
+        public static string version = "2513";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -427,6 +427,13 @@ namespace WebRole
                 "live_auth",
                 new { controller = "Home", action = "live_auth" }
                 );
+
+			routes.MapRoute(
+				"map",
+				"{id}/map",
+				new { controller = "Home", action = "map" },
+				new { id = wrd.str_ready_ids }
+				);
 
 
             // visualize changes between two json snapshots (flavor feeds is list of dicts, flavor metadata is single dict)
