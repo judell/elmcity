@@ -86,6 +86,7 @@ var metadata_include_fields = {
   'where'         : 'Location name if hub is a location hub (Ithaca, NY) (read only)'
   }
 
+
 var metadata_readonly_fields = {
 //  'feed_count'    : null,
   'twitter'       : null,
@@ -105,19 +106,29 @@ var feeds_include_fields = {
   'feedurl'       : 'REQUIRED. The iCalendar (ICS) feed (e.g.: http://westsidesoccer.org/events.ics)',
   'source'        : 'REQUIRED. Name for the feed (e.g.: West Side Youth Soccer)',
   'category'      : 'RECOMMENDED. One or more tags for the feed (e.g.: sports,soccer) (comma-delimited if more than one)',
+//  'address'       : 'A postal address that can be used to geocode events in the feed',
   'catmap'        : 'Map feed categories to hub categories (rarely used, see http://blog.jonudell.net/elmcityazure-project-status/#2012-08-08 for explanation)',
   'approved'    : 'Include this feed in the hub (default: yes)',
   'comments'    : 'Comments about the provenance/status/evolution of this feed'
   }
 
+if ( gup('test') )
+  feeds_include_fields['address'] = 'A postal address that can be used to geocode events in the feed';
+
+
 var feeds_defaults = {
   'url'           : '',
   'feedurl'       : '',
   'source'        : '',
+//  'address'       : '',
   'category'      : '',
   'approved'      : 'yes',
   'comments'      : ''
   }
+
+if ( gup('test') )
+  feeds_defaults['address'] = '';
+
 
 var feeds_required = {
   'url'           : '',
@@ -224,7 +235,12 @@ function show_metadict(index, metadict)
   var record_keys;
 
   if ( flavor == 'feeds' ) // control the order to put required fields first
+    {
     record_keys = [ 'source', 'feedurl', 'url', 'category', 'approved', 'comments', 'catmap']; 
+    if ( gup('test') )
+      record_keys.push('address'); 
+
+    }
   else
     record_keys = $.keys(include_fields).sort();
 
@@ -549,6 +565,7 @@ function save_category_edits()
       }
     }
   update_json_blob();
+  location.href = location.href;
   }
 
 
