@@ -3967,12 +3967,14 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 						if (string.IsNullOrEmpty(addr))
 							continue;
 						var latlon = Utils.LookupLatLon(settings["bing_maps_key"], addr).ToList();
+						if ( String.IsNullOrEmpty(latlon[0]) || String.IsNullOrEmpty(latlon[1]) )
+							continue;
 						var start = TimeZoneInfo.ConvertTimeFromUtc(dtstart, calinfo.tzinfo);
 						dict.Add(title + start.ToString(), latlon);
 					}
 					catch (Exception e)
 					{
-						var m = e.Message;
+						GenUtils.LogMsg("warning", "SaveMeetupLocations", e.Message);
 					}
 					l.Add(location);
 				}
