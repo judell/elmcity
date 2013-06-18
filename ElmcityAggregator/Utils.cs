@@ -3830,6 +3830,14 @@ END:VTIMEZONE");
 				bs.DeleteBlob("feedcache", blob_name_obj);
 			});
 		}
+
+		public static List<Dictionary<string, object>> GetFeedJsonForIdAsListDict(string id)
+		{
+			var json = BlobStorage.GetAzureBlobAsString(id, id + ".feeds.json");
+			var list = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(json);
+			return list;
+		}
+
 		#endregion
 
 		#region location
@@ -3949,9 +3957,7 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 			try
 			{
 				var id = calinfo.id;
-				var json = HttpUtils.FetchUrl("http://elmcity.cloudapp.net/" + id + "/json").DataAsString();
-				var list = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(json);
-				var l = new List<string>();
+				var list = GetEventsJsonForIdAsListDict(id);
 				var dict = new Dictionary<string, List<string>>();
 				foreach (var obj in list)
 				{
@@ -3976,7 +3982,6 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 					{
 						GenUtils.LogMsg("warning", "SaveMeetupLocations", e.Message);
 					}
-					l.Add(location);
 				}
 				bs.SerializeObjectToAzureBlob(dict, id, "meetup_locations.obj");
 			}
@@ -3984,6 +3989,13 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 			{
 				GenUtils.LogMsg("exception", "SaveMeetupLocations: " + calinfo.id, e.Message);
 			}
+		}
+
+		public static List<Dictionary<string, object>> GetEventsJsonForIdAsListDict(string id)
+		{
+			var json = HttpUtils.FetchUrl("http://elmcity.cloudapp.net/" + id + "/json").DataAsString();
+			var list = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(json);
+			return list;
 		}
 
 
