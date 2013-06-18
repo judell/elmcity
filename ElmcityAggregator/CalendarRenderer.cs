@@ -192,8 +192,8 @@ namespace CalendarAggregator
 			xml.Append(string.Format("<description>{0}</description>\n", HttpUtility.HtmlEncode(evt.description)));
 			xml.Append(string.Format("<location>{0}</location>\n", HttpUtility.HtmlEncode(evt.location)));
 
-			var lat = evt.lat != null ? evt.lat : "";
-			var lon = evt.lon != null ? evt.lon : "";
+			var lat = ! String.IsNullOrEmpty(evt.lat) ? evt.lat : "";
+			var lon = ! String.IsNullOrEmpty(evt.lon) ? evt.lon : "";
 			xml.Append(string.Format("<lat>{0}</lat>\n", lat));
 			xml.Append(string.Format("<lon>{0}</lon>\n", lon));
 

@@ -983,12 +983,12 @@ namespace CalendarAggregator
 
 				MaybeAdjustLatLonForMeetup(evt.Summary + evt.DTStart.ToString(), ref lat, ref lon);
 
-				MaybeUpdateGeo(this.calinfo, evt, lat, lon);
+				MaybeUpdateGeo(evt, lat, lon);
 
 				if (evt.GeographicLocation != null)
 				{
 					lat = evt.GeographicLocation.Latitude.ToString();
-					lat = evt.GeographicLocation.Longitude.ToString();
+					lon = evt.GeographicLocation.Longitude.ToString();
 				}
 
 				string categories = null;
@@ -1031,32 +1031,14 @@ namespace CalendarAggregator
 			}
 		}
 
-		public static void MaybeUpdateGeo(Calinfo calinfo, DDay.iCal.Event evt, string lat, string lon)
-		{
-				try
-				{
-					if (evt.GeographicLocation == null)                    // if no geo (normally happens)
-					{
-						if (lat == null && lon == null && calinfo.hub_enum == HubType.where )          // and no lat/lon (often happens)
-							UpdateGeo(evt, calinfo.lat, calinfo.lon);     // default to hub location
-						else
-							UpdateGeo(evt, lat, lon);
-					}
-				}
-
-				catch (Exception e)
-				{
-					GenUtils.PriorityLogMsg("exception", "AddIcalEvent: " + calinfo.id + " cannot make evt.Geo", e.Message + evt.Summary.ToString());
-				}
-		}
-
-
-		public static void UpdateGeo(DDay.iCal.Event evt, string lat, string lon)
+		public static void MaybeUpdateGeo(DDay.iCal.Event evt, string lat, string lon)
 		{
 			if (String.IsNullOrEmpty(lat) || string.IsNullOrEmpty(lon))
 				return;
 
-			evt.GeographicLocation = new GeographicLocation();
+			if ( evt.GeographicLocation == null )
+				evt.GeographicLocation = new GeographicLocation();
+
 			try
 				{
 				evt.GeographicLocation.Latitude = Double.Parse(lat);
@@ -1916,7 +1898,7 @@ namespace CalendarAggregator
 			else
 				evt.Description = url;
 
-			MaybeUpdateGeo(calinfo, evt, lat, lon);
+			MaybeUpdateGeo(evt, lat, lon);
 
 			evt.Start = new iCalDateTime(dtstart.LocalTime);               // always local because the final ics file will use vtimezone
 			evt.Start.TZID = calinfo.tzinfo.Id;
