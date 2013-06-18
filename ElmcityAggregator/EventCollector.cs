@@ -57,6 +57,9 @@ namespace CalendarAggregator
 
 		private Dictionary<string, List<string>> meetup_locations = null;
 
+		private Dictionary<string, List<string>> ical_per_feed_locations = null;
+
+
 		private TableStorage ts = TableStorage.MakeDefaultTableStorage();
 
 		// one for each non-ical source
@@ -200,6 +203,19 @@ namespace CalendarAggregator
 			}
 		}
 
+		public void LoadIcalPerFeedLocations()
+		{
+			try
+			{
+				this.ical_per_feed_locations = ObjectUtils.GetTypedObj<Dictionary<string, List<string>>>(id, "ical_locations.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("warning", "LoadIcalPerFeedLocations: " + this.id, e.Message);
+				this.ical_per_feed_locations = new Dictionary<string, List<string>>();
+			}
+		}
+
 		#region ical
 
 		public void CollectIcal(FeedRegistry fr, ZonedEventStore es)
@@ -212,6 +228,8 @@ namespace CalendarAggregator
 			this.LoadTags();
 
 			this.LoadMeetupLocations();
+
+			this.LoadIcalPerFeedLocations();
 
 			using (ical_ical)
 			 {
@@ -981,7 +999,9 @@ namespace CalendarAggregator
 				string lat = null;
 				string lon = null;
 
-				MaybeAdjustLatLonForMeetup(evt.Summary + evt.DTStart.ToString(), ref lat, ref lon);
+				MaybeUseLatLonForThisMeetupEvent(evt.Summary + evt.DTStart.ToString(), ref lat, ref lon);
+
+				MaybeInheritLatLonForThisFeed(feedurl, ref lat, ref lon);
 
 				MaybeUpdateGeo(evt, lat, lon);
 
@@ -1014,7 +1034,7 @@ namespace CalendarAggregator
 			}
 		}
 
-		private void MaybeAdjustLatLonForMeetup(string title_plus_dtstart, ref string lat, ref string lon)
+		private void MaybeUseLatLonForThisMeetupEvent(string title_plus_dtstart, ref string lat, ref string lon)
 		{
 			if (meetup_locations.Keys.Contains(title_plus_dtstart))
 			{
@@ -1027,6 +1047,25 @@ namespace CalendarAggregator
 				catch (Exception e)
 				{
 					GenUtils.LogMsg("exception", "MaybeAdjustLatLonForMeetup", e.Message);
+				}
+			}
+		}
+
+		private void MaybeInheritLatLonForThisFeed(string feedurl, ref string lat, ref string lon)
+		{
+			if (lat != null && lon != null)              // the event has its own latlon
+				return;
+			if (ical_per_feed_locations.ContainsKey(feedurl))
+			{
+				try
+				{
+					var per_feed_location = ical_per_feed_locations[feedurl];
+					lat = per_feed_location[0];
+					lon = per_feed_location[1];
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", "MaybeInheritLatLonForThisFeed", e.Message);
 				}
 			}
 		}
