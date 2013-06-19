@@ -1,16 +1,11 @@
 <!DOCTYPE html>
-
-<!-- a2chron -->
 <!--[if IEMobile 7 ]><html class="no-js iem7" manifest="default.appcache?v=1"><![endif]-->
 <!--[if lt IE 7 ]><html class="no-js ie6" lang="en"><![endif]-->
 <!--[if IE 7 ]><html class="no-js ie7" lang="en"><![endif]-->
 <!--[if IE 8 ]><html class="no-js ie8" lang="en"><![endif]-->
 <!--[if (gte IE 9)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
-<!-- /a2chron -->
 
 <head>
-
-<!-- a2chron -->
 	<meta charset="UTF-8" />
 	<title>Events in Ann Arbor | The Ann Arbor Chronicle Event Listing</title>
 	
@@ -18,33 +13,7 @@
 	<meta name="HandheldFriendly" content="True">
 	<meta name="MobileOptimized" content="320">
 	<meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1">
-<!-- /a2chron -->
-
-
-<meta name="description" content="__META__">
-<link type="text/css" rel="stylesheet" href="__CSSURL__"/>
-
-<!-- JQUERY_UI_CSS -->
-<link type="text/css" href="http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/themes/smoothness/jquery-ui.css" rel="stylesheet" />
-<!-- /JQUERY_UI_CSS -->
-
-<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
-
-<!-- JQUERY_UI -->
-<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/jquery-ui.min.js'></script>
-<!-- /JQUERY_UI -->
-
-<script type="text/javascript" src="http://elmcity.blob.core.windows.net/admin/elmcity-1.7-test.js"></script>
-
-<script>
-var top_element = 'intro-para';
-var top_offset = 140;
-</script>
-
-<!-- __CUSTOM_STYLE __ -->
-
-<!-- a2chron -->
-
+	
 	<!-- For all browsers -->
 	<link rel="stylesheet" media="all" href="http://annarborchronicle.com/wp-content/themes/chronicle/css/master.css" />
 	<link rel="stylesheet" media="print" href="http://annarborchronicle.com/wp-content/themes/chronicle/css/print.css">
@@ -62,9 +31,9 @@ var top_offset = 140;
 		
 	<!-- JavaScript at bottom except for Modernizr -->
 
-<!-- omit, already included
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
--->
+<!-- Elm City -->
+<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script> -->
+<!-- /Elm City -->
 
 	<script src="http://annarborchronicle.com/wp-content/themes/chronicle/js/libs/modernizr-1.7.min.js"></script>
 
@@ -98,18 +67,38 @@ var top_offset = 140;
 			<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://annarborchronicle.com/wp-includes/wlwmanifest.xml" /> 
 			<link rel='prev' title='Recent Comments' href='http://annarborchronicle.com/recent-comments/' />
 			<link rel='next' title='Chronicle Comments Policy' href='http://annarborchronicle.com/comments/' />
-	
 
-<!-- /a2chron -->
+
+<!-- Elm City -->
+<meta name="description" content="__META__">
+
+<!-- JQUERY_UI_CSS -->
+<link type="text/css" href="http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/themes/smoothness/jquery-ui.css" rel="stylesheet" />
+<!-- /JQUERY_UI_CSS -->
+
+<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
+
+<!-- JQUERY_UI -->
+<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/jquery-ui.min.js'></script>
+<!-- /JQUERY_UI -->
+
+<script type="text/javascript" src="http://elmcity.blob.core.windows.net/admin/elmcity-1.7.js"></script> 
+
+<script>
+var top_element = 'intro-para';
+var top_offset = 140;
+</script>
 
 <style>
 p.sidebar { line-height: 2 }
 </style>
 
-</head>
 
+<!-- /Elm City -->
 
-<!-- a2chron -->
+	
+			</head>
+
 <body class="page_about-us template_page">
 
 <header role="banner" id="masthead">
@@ -153,64 +142,70 @@ p.sidebar { line-height: 2 }
 							
 						<div class="entry page">
 
-<!-- elmcity: anchor for controls -->
+<!-- Elm City: anchor for controls -->
 
 <p id="intro-para" style="width:70%">
 
-<!-- /elmcity -->
+<!-- /Elm City -->
 
-Looking for an event in Ann Arbor? Browse through our calendar below. Chronicle even listings tap directly into the calendar's of local organizations and establishments, making it the most up-to-date, accurate, and extensive listing in Ann Arbor. <a href="http://annarborchronicle.com/add-events-to-the-chronicles-listing/">It's easy to add your organization's calendar</a>.</p>
-					
-						</div>
-<!-- /a2chron -->
+<!-- <p> -->
+
+Looking for an event in Ann Arbor? Browse through our calendar below. Chronicle even listings tap directly into the calendar's of local organizations and establishments, making it the most up-to-date, accurate, and extensive listing in Ann Arbor. <a href="http://annarborchronicle.com/add-events-to-the-chronicles-listing/">It's easy to add your organization's calendar</a>.
+</p>
+					</div>
+
+<!-- Elm City -->
 
 <div id="body">
 
 <div id="top_element"></div>
+
+<div id="elmcity_id" style="display:none">
+__ID__
+</div>
+
+<div id="mobile_detected" style="display:none">
+__MOBILE_NOT_DETECTED__
+</div>
 
 <!-- SIDEBAR -->
 
 <div id="sidebar" style="visibility:hidden;text-align:center;position:absolute;left:80%;width:150px;">
 
 <!-- DATEPICKER -->
+
 <div style="visibility:hidden" id="datepicker"></div>
+
 <!-- /DATEPICKER -->
 
 <!-- TAGS -->
-<div id="tags" style="visibility:hidden"></div>
+<p style="margin-top:30px" id="tags">
+<!--__CATEGORIES__-->
+<!--__TAGS__-->
+</p>
 <!-- /TAGS -->
 
 
-<p class="sidebar" style="font-style:italic">sources</p>
+<p class="sidebar" style="font-style:italic;margin-top:30px">sources</p>
 
 <p class="sidebar" style="font-weight:bold"><a title="These are iCalendar feeds from organizations, clubs, and groups. Got one to contribute? Contact the curator!" target="_new" href="http://__APPDOMAIN__/services/__ID__/stats">__FEEDCOUNT__ iCalendar feeds</a></p>
 
-<table style="border-spacing:8px;margin:auto">
-<tr>
-<td align="center" valign="middle">
-<a title="eventful" href="http://eventful.com"><img alt="Local Events, Concerts, Tickets" src="http://elmcity.blob.core.windows.net/admin/eventful_logo.gif"></a>
-</td>
-<td align="center" valign="middle">
-<a title="eventbrite" href="http://eventbrite.com"><img src="http://elmcity.blob.core.windows.net/admin/eventbrite_logo.jpg" style="width:60px"></a>
-</td>
-</tr>
 
-<tr>
-<td align="center" valign="middle">
-<a title="facebook" href="http://facebook.com"><img width="60px" src="http://elmcity.blob.core.windows.net/admin/facebook.png"></a>
-</td>
-<td align="center" valign="middle">
-<a title="meetup" href="http://meetup.com"><img width="50px" src="http://elmcity.blob.core.windows.net/admin/meetup.png"></a>
-</td>
-</tr>
+<p class="sidebar" id="logos" style="width:150px;text-align:center">
 
-<tr>
-<td align="center" valign="middle" colspan="2">
-<a title="last.fm" href="http://last.fm"><img width="70px" src="http://elmcity.blob.core.windows.net/admin/lastfm.gif"></a>
-</td>
-</tr>
-
-</table>
+<span id="eventful_logo" style="display:__EVENTFUL_LOGO_DISPLAY__">
+<a title="eventful" href="http://eventful.com"><img style="margin:4px" alt="Local Events, Concerts, Tickets" src="http://elmcity.blob.core.windows.net/admin/eventful_logo.gif"></a>
+</span>
+<span id="eventbrite_logo" style="display:__EVENTBRITE_LOGO_DISPLAY__">
+<a title="eventbrite" href="http://eventbrite.com"><img style="margin:4px" src="http://elmcity.blob.core.windows.net/admin/eventbrite_logo.jpg"></a>
+</span>
+<span id="facebook_logo" style="display:__FACEBOOK_LOGO_DISPLAY__">
+<a title="facebook" href="http://facebook.com"><img style="margin:4px" src="http://elmcity.blob.core.windows.net/admin/facebook.png"></a>
+</span>
+<span id="meetup_logo" style="display:__MEETUP_LOGO_DISPLAY__">
+<a title="meetup" href="http://meetup.com"><img style="margin:4px" src="http://elmcity.blob.core.windows.net/admin/meetup.png"></a>
+</span>
+</p>
 
 <hr>
 
@@ -230,39 +225,16 @@ Looking for an event in Ann Arbor? Browse through our calendar below. Chronicle 
 <a id="subscribe" title="subscribe your calendar to this view" href="http://__APPDOMAIN__/__ID__/ics?view=__VIEW__"></a>
 </p>
 
-<p class="sidebar">
-<a id="switcher" title="switch view" href=""></a>
-</p>
-
 
 <hr>
 
-<p>
-<a title="powered by windows azure" id="windows azure" href="http://windowsazure.com"><img style="width:150px;margin-top:10px" src="http://elmcity.blob.core.windows.net/admin/pbwa.png"></a>
+<p class="sidebar">
+<a target="azure" title="powered by windows azure" id="windows azure" href="http://windowsazure.com"><img style="width:150px;margin-top:10px" src="http://elmcity.blob.core.windows.net/admin/pbwa.png"></a>
 </p>
 
 </div>
 
 <!-- /SIDEBAR -->
-
-
-<div id="elmcity_id" style="display:none">
-__ID__
-</div>
-
-<!--
-<div id="mobile" style="display:none">
-__MOBILE__
-</div>
-
-<div id="mobile_long" style="display:none">
-__MOBILE_LONG__
-</div>
-
-<div id="mobile_short" style="display:none">
-__MOBILE_SHORT__
-</div>
--->
 
 
 <!-- begin events -->
@@ -281,7 +253,7 @@ __EVENTS__
 __GENERATED__
 -->
 
-<!-- a2chron -->
+<!-- /Elm City -->
 
 					</article>
 		
@@ -372,12 +344,12 @@ __GENERATED__
 
 <!-- Scripts -->
 
-<!-- elmcity: these were not being found found -->
+<!-- Elm City: never found so omitted
 
-<!-- <script src="http://annarborchronicle.com/js/plugins.js"></script> -->
-<!-- <script src="http://annarborchronicle.com/js/script.js"></script> -->
+<script src="http://annarborchronicle.com/js/plugins.js"></script>
+<script src="http://annarborchronicle.com/js/script.js"></script>
+--> 
 
-<!-- /elmcity>
 <script src="http://annarborchronicle.com/wp-content/themes/chronicle/js/styleswitcher.js"></script>
 <script src="http://annarborchronicle.com/wp-content/themes/chronicle/js/annarborchronicle.js"></script>
 <script src="http://advertisements.heroku.com/javascripts/api/base.js"></script>
@@ -388,6 +360,7 @@ __GENERATED__
 </script>
 
 
+
 <!--[if (lt IE 9) & (!IEMobile)]>
 <script src="http://annarborchronicle.com/js/libs/DOMAssistantCompressed-2.8.js"></script>
 <script src="http://annarborchronicle.com/js/libs/selectivizr-1.0.1.js"></script>
@@ -395,20 +368,12 @@ __GENERATED__
 <![endif]-->
 
 
-<!--stats_footer_test-->
-<script src="http://stats.wordpress.com/e-201314.js" type="text/javascript"></script>
-
+<!--stats_footer_test--><script src="http://stats.wordpress.com/e-201314.js" type="text/javascript"></script>
 <script type="text/javascript">
 st_go({blog:'4623190',v:'ext',post:'9'});
 var load_cmc = function(){linktracker_init(4623190,9,2);};
 if ( typeof addLoadEvent != 'undefined' ) addLoadEvent(load_cmc);
 else load_cmc();
 </script>
-
-
-<!-- /a2chron -->
-
-
-
 </body>
 </html>
