@@ -315,7 +315,7 @@ $(document).ready(function(){
     }
 
   if ( is_theme )  // invoke it
-    $('link')[0].href = 'http://elmcity.cloudapp.net/get_css_theme?theme_name=' + gup('theme');
+    $('link').append('<link type="text/css" rel="stylesheet" href="http://elmcity.cloudapp.net/get_css_theme?theme_name=' + gup('theme') + '">');
 
   if ( gup('datestyle') != '' )
     apply_json_css('.ed', 'datestyle');
