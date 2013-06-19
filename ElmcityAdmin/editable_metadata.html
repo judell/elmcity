@@ -30,7 +30,6 @@
 
 <script type="text/javascript">
 
-//var host = 'http://127.0.0.1';
 var host = 'http://elmcity.cloudapp.net';
 
 var flavor = '__FLAVOR__';
@@ -106,28 +105,22 @@ var feeds_include_fields = {
   'feedurl'       : 'REQUIRED. The iCalendar (ICS) feed (e.g.: http://westsidesoccer.org/events.ics)',
   'source'        : 'REQUIRED. Name for the feed (e.g.: West Side Youth Soccer)',
   'category'      : 'RECOMMENDED. One or more tags for the feed (e.g.: sports,soccer) (comma-delimited if more than one)',
-//  'address'       : 'A postal address that can be used to geocode events in the feed',
+  'address'       : 'A postal address that can be used to geocode events in the feed',
   'catmap'        : 'Map feed categories to hub categories (rarely used, see http://blog.jonudell.net/elmcityazure-project-status/#2012-08-08 for explanation)',
   'approved'    : 'Include this feed in the hub (default: yes)',
   'comments'    : 'Comments about the provenance/status/evolution of this feed'
   }
-
-if ( gup('test') )
-  feeds_include_fields['address'] = 'A postal address that can be used to geocode events in the feed';
 
 
 var feeds_defaults = {
   'url'           : '',
   'feedurl'       : '',
   'source'        : '',
-//  'address'       : '',
+  'address'       : '',
   'category'      : '',
   'approved'      : 'yes',
   'comments'      : ''
   }
-
-if ( gup('test') )
-  feeds_defaults['address'] = '';
 
 
 var feeds_required = {
@@ -236,10 +229,7 @@ function show_metadict(index, metadict)
 
   if ( flavor == 'feeds' ) // control the order to put required fields first
     {
-    record_keys = [ 'source', 'feedurl', 'url', 'category', 'approved', 'comments', 'catmap']; 
-    if ( gup('test') )
-      record_keys.push('address'); 
-
+    record_keys = [ 'source', 'feedurl', 'url', 'category', 'approved', 'address', 'comments', 'catmap']; 
     }
   else
     record_keys = $.keys(include_fields).sort();
