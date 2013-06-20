@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 <html>
    <head>
       <title></title>
@@ -52,13 +52,13 @@
 
 <div id="controls" style="position:absolute;margin-left:810px;top:0">
 <p>
-hub <input id="hub" value="__HUB__">
+hub <input id="hub" value="__HUB__" />
 </p>
 <p>
-center <input id="where" value="__WHERE__"">
+center <input id="where" value="__WHERE__" />
 </p>
 <p>
-view <select id="view"">
+view <select id="view">
 <option selected>all</option>
 __TAGS__
 </select>
@@ -71,7 +71,9 @@ when <select id="when">
 <option value="90">all</option>
 </select>
 </p>
-<input type="submit" value="update" onclick="reload()"></input>
+<p>
+<a href="javascript:reload()">update</a>
+</p>
 </div>
 
 <script>
