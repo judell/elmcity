@@ -315,7 +315,7 @@ $(document).ready(function(){
     }
 
   if ( is_theme )  // invoke it
-    $('link').append('<link type="text/css" rel="stylesheet" href="http://elmcity.cloudapp.net/get_css_theme?theme_name=' + gup('theme') + '">');
+    invoke_theme( gup('theme') );
 
   if ( gup('datestyle') != '' )
     apply_json_css('.ed', 'datestyle');
@@ -363,6 +363,20 @@ $(document).ready(function(){
     setup_datepicker();                            
 
   });
+
+function invoke_theme(theme)
+  {
+  var existing = $('link[href^="' + host + 'get_css"]').length;
+  if ( existing > 0 ) // replace existing Elm City theme
+    {
+    var override = host + 'get_css_theme?theme_name=' + theme;
+    $('link[href^="' + host + 'get_css"]')[0].setAttribute('href',override)
+    }
+  else              // append  
+    {
+    $('link').append('<link type="text/css" rel="stylesheet" href="' + host + 'get_css_theme?theme_name=' + theme + '">');
+    }
+  }
 
 function apply_json_css(element,style)
   {
