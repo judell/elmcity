@@ -1011,6 +1011,13 @@ Future events {0}
 
 			Utils.MakeWhatSummary();  // refresh http://elmcity.blob.core.windows.net/admin/what_summary.html
 
+			var ids = Metadata.LoadWhatWhereIdsFromAzureTable();
+			Parallel.ForEach(source: ids, body: (id) =>
+			{
+				var calinfo = Utils.AcquireCalinfo(id);
+				Utils.SaveIcalPerFeedLocations(calinfo, settings);
+			});
+
 			//Utils.MakeFeaturedHubs(); // idle for now
 
 		}
