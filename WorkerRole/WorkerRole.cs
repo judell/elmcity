@@ -1005,18 +1005,25 @@ Future events {0}
 
 		public void GeneralAdmin(object o, ElapsedEventArgs args)
 		{
-			GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
-
-			Utils.MakeWhereSummary();  // refresh http://elmcity.blob.core.windows.net/admin/where_summary.html
-
-			Utils.MakeWhatSummary();  // refresh http://elmcity.blob.core.windows.net/admin/what_summary.html
-
-			var ids = Metadata.LoadWhatWhereIdsFromAzureTable();
-			Parallel.ForEach(source: ids, body: (id) =>
+			try
 			{
-				var calinfo = Utils.AcquireCalinfo(id);
-				Utils.SaveIcalPerFeedLocations(calinfo, settings);
-			});
+				GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
+
+				Utils.MakeWhereSummary();  // refresh http://elmcity.blob.core.windows.net/admin/where_summary.html
+
+				Utils.MakeWhatSummary();  // refresh http://elmcity.blob.core.windows.net/admin/what_summary.html
+
+				var ids = Metadata.LoadWhatWhereIdsFromAzureTable();
+				Parallel.ForEach(source: ids, body: (id) =>
+				{
+					var calinfo = Utils.AcquireCalinfo(id);
+					Utils.SaveIcalPerFeedLocations(calinfo, settings);
+				});
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "GeneralAdmin", e.Message + e.StackTrace);
+			}
 
 			//Utils.MakeFeaturedHubs(); // idle for now
 
