@@ -2175,12 +2175,21 @@ END:VCALENDAR",
 			{
 				List<string> hubs = tags_by_hub[tag];
 
-				var links = hubs.Select(x => "<a href=\"" + ElmcityUtils.Configurator.azure_blobhost + "/" + x.ToLower() + "/tag_sources.html#" + tag + "\">" + x + "</a>");
+				var links = new List<string>();
+
+				foreach (var hub in hubs)
+				{
+					var view_url = ElmcityUtils.Configurator.azure_blobhost + "/" + hub.ToLower() + "/tag_sources.html#" + tag;
+					var view_link = String.Format(@"<a href=""{0}"">view</a>", view_url);
+					var edit_url = "http://" + ElmcityUtils.Configurator.appdomain + "/services/" + hub + "/edit?flavor=feeds";
+					var edit_link = String.Format(@"<a href=""{0}"">edit</a>", edit_url);
+					links.Add(hub + String.Format(@" <span style=""font-size:smaller""> [{0}, {1}]</span>", view_link, edit_link));
+				}
 
 				html.AppendLine(@"<p>" + "<b>" + tag + "</b>: " + String.Join(", ", links) + "</p>");
 			}
 
-			html.AppendLine("</html>");
+			html.AppendLine("</body></html>");
 
 			bs.PutBlob(region, "tags_by_hub.html", html.ToString(), "text/html");
 
