@@ -249,6 +249,13 @@ namespace CalendarAggregator
 			return ids;
 		}
 
+		public static List<string> LoadWhatWhereIdsFromAzureTable()
+		{
+			var q = string.Format("$filter=type eq 'what' or type eq 'where'");
+			var ids = QueryIds(q);
+			return ids;
+		}
+
 		public static List<string> LoadHubIdsFromAzureTableByType(HubType hub_type)
 		{
 			var type = hub_type.ToString();
