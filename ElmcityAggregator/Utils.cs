@@ -4007,6 +4007,8 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 				var dict = new Dictionary<string, List<string>>();
 				foreach (var obj in list)
 				{
+					if (!obj.ContainsKey("address"))
+						continue;
 					var feedurl = (string)obj["feedurl"];
 					var address = (string)obj["address"];
 					try
