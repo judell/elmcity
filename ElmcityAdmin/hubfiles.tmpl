@@ -3,128 +3,6 @@
 <head>
 <title>about the __ID__ hub</title>
 <script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
-<script>
-var tags_json;
-
-var curated_tags = [];
-
-var sections = ['everyone', 'webmasters', 'curators', 'documentation', 'urls', 'press'];
-
-$(document).ready(function() {
- });
-
-function get_fragment()
-  {  
-  var pattern = "#(.+)";  
-  var re = new RegExp( pattern );  
-  var result = re.exec( window.location.href );   
-  if( result == null )    
-    return "";  
-  else    
-    return result[1];
-  }
-
-function do_fragment()
-  {
-  var fragment_id = get_fragment();
-  if ( fragment_id != '' )
-    {
-    fragment_id = fragment_id.replace('_','');
-    show (fragment_id);
-    var parent_id = $('#' + fragment_id).parent().attr('id');
-    show (parent_id);
-    var fragtop = $('#_' + fragment_id).offset().top;
-    window.scrollTo(0, fragtop);
-    }
-  }  
-
-function onload()
-  { 
-  append_permalinks('h2');
-  append_permalinks('h3');
-  window.setTimeout(do_fragment, 200);
-  populate_tags();
-  }
-
-function append_permalinks(h)
-  {
-  var hlist = $(h);
-  for (i = 0; i < hlist.length; i++)
-    {
-    var id = hlist[i].getAttribute('id');
-    var perma = ' <a style="color:gray;text-decoration:none" href="#_' + id.replace('_','') + '" title="permalink">#</a>';
-    $('#' + id).append(perma);
-    }
-  }
-
-
-
-function populate_tags()
-  {
-  $.ajax({
-        url: 'http://elmcity.cloudapp.net/__ID__/tag_cloud',
-        complete: function(xhr, status) {
-         tags_json = JSON.parse(xhr.responseText);
-         _populate_tags();
-         }
-       });
-  }
-
-// tags_json = [{"university":431},{"vt":431},{"sports":166}];
-
-function _populate_tags()
-  {
-  var tag_indices = $.keys(tags_json).filter(function(i) { return $.keys(tags_json[i])[0] });
-
-  for ( i in tag_indices )
-    {
-    var o = tags_json[i];
-    for ( p in o )
-       {
-       if ( p.indexOf('{') == -1 )
-          curated_tags.push(p);
-       }
-    }
-  $('#curated_tags').text(curated_tags.sort().join(', '));
-  var first_tag = curated_tags[0];
-  $('#first_tag_html_href').attr('href', 'http://elmcity.cloudapp.net/__ID__/html?view=' + first_tag);
-  $('#first_tag_ics_href').attr('href', 'http://elmcity.cloudapp.net/__ID__/ics?view=' + first_tag);
-  $('#first_tag_json_href').attr('href', 'http://elmcity.cloudapp.net/__ID__/json?view=' + first_tag);
-  $('.first_tag_name').text(first_tag);
-  }
-
-function show(id)
-  {
-//  var tag_indices = $.keys(tags_json).filter(function(i) { return $.keys(tags_json[i])[0] });
-
-//  if ( sections.indexOf(id) != -1 )
-//    sections.map( function(x) { hide(x); } );
-  $('#' + id).css('display','block');
-  if ( $('#_' + id).children().length > 0 )
-    {
-    $('#_' + id + ' a').first()[0].innerHTML = '-';
-    $('#_' + id + ' a').first()[0].href = "javascript:hide('" + id + "')";
-    $('#_' + id + ' a').first()[0].title = 'close';
-    }
-  }
-
-function hide(id)
-  {
-  $('#' + id).css('display','none');
-  $('#_' + id + ' a').first()[0].innerHTML = '+';
-  $('#_' + id + ' a').first()[0].href = "javascript:show('" + id + "')";
-  $('#_' + id + ' a').first()[0].title = 'open';
-  }
-
-
-$.extend({
-    keys:  function(obj){
-        var a = [];
-        $.each(obj, function(k){ a.push(k) });
-        return a;
-    }
-});
-</script>
 
 <style>
 a { color : blue; text-decoration:none }
@@ -1139,6 +1017,129 @@ Ann Arbor Chronicle, 07/02/2012: <a href="http://annarborchronicle.com/2012/07/0
 
 </pre>
 
+
+<script>
+var tags_json;
+
+var curated_tags = [];
+
+var sections = ['everyone', 'webmasters', 'curators', 'documentation', 'urls', 'press'];
+
+$(document).ready(function() {
+ });
+
+function get_fragment()
+  {  
+  var pattern = "#(.+)";  
+  var re = new RegExp( pattern );  
+  var result = re.exec( window.location.href );   
+  if( result == null )    
+    return "";  
+  else    
+    return result[1];
+  }
+
+function do_fragment()
+  {
+  var fragment_id = get_fragment();
+  if ( fragment_id != '' )
+    {
+    fragment_id = fragment_id.replace('_','');
+    show (fragment_id);
+    var parent_id = $('#' + fragment_id).parent().attr('id');
+    show (parent_id);
+    var fragtop = $('#_' + fragment_id).offset().top;
+    window.scrollTo(0, fragtop);
+    }
+  }  
+
+function onload()
+  { 
+  append_permalinks('h2');
+  append_permalinks('h3');
+  window.setTimeout(do_fragment, 200);
+  populate_tags();
+  }
+
+function append_permalinks(h)
+  {
+  var hlist = $(h);
+  for (i = 0; i < hlist.length; i++)
+    {
+    var id = hlist[i].getAttribute('id');
+    var perma = ' <a style="color:gray;text-decoration:none" href="#_' + id.replace('_','') + '" title="permalink">#</a>';
+    $('#' + id).append(perma);
+    }
+  }
+
+
+
+function populate_tags()
+  {
+  $.ajax({
+        url: 'http://elmcity.cloudapp.net/__ID__/tag_cloud',
+        complete: function(xhr, status) {
+         tags_json = JSON.parse(xhr.responseText);
+         _populate_tags();
+         }
+       });
+  }
+
+// tags_json = [{"university":431},{"vt":431},{"sports":166}];
+
+function _populate_tags()
+  {
+  var tag_indices = $.keys(tags_json).filter(function(i) { return $.keys(tags_json[i])[0] });
+
+  for ( i in tag_indices )
+    {
+    var o = tags_json[i];
+    for ( p in o )
+       {
+       if ( p.indexOf('{') == -1 )
+          curated_tags.push(p);
+       }
+    }
+  $('#curated_tags').text(curated_tags.sort().join(', '));
+  var first_tag = curated_tags[0];
+  $('#first_tag_html_href').attr('href', 'http://elmcity.cloudapp.net/__ID__/html?view=' + first_tag);
+  $('#first_tag_ics_href').attr('href', 'http://elmcity.cloudapp.net/__ID__/ics?view=' + first_tag);
+  $('#first_tag_json_href').attr('href', 'http://elmcity.cloudapp.net/__ID__/json?view=' + first_tag);
+  $('.first_tag_name').text(first_tag);
+  }
+
+function show(id)
+  {
+//  var tag_indices = $.keys(tags_json).filter(function(i) { return $.keys(tags_json[i])[0] });
+
+//  if ( sections.indexOf(id) != -1 )
+//    sections.map( function(x) { hide(x); } );
+  $('#' + id).css('display','block');
+  if ( $('#_' + id).children().length > 0 )
+    {
+    $('#_' + id + ' a').first()[0].innerHTML = '-';
+    $('#_' + id + ' a').first()[0].href = "javascript:hide('" + id + "')";
+    $('#_' + id + ' a').first()[0].title = 'close';
+    }
+  }
+
+function hide(id)
+  {
+  $('#' + id).css('display','none');
+  $('#_' + id + ' a').first()[0].innerHTML = '+';
+  $('#_' + id + ' a').first()[0].href = "javascript:show('" + id + "')";
+  $('#_' + id + ' a').first()[0].title = 'open';
+  }
+
+
+$.extend({
+    keys:  function(obj){
+        var a = [];
+        $.each(obj, function(k){ a.push(k) });
+        return a;
+    }
+});
+</script>
 
 
 </body>
