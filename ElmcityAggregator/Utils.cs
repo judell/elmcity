@@ -3998,6 +3998,38 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 			return list;
 		}
 
+		public static void SaveIcalPerFeedLocations(Calinfo calinfo, Dictionary<string, string> settings)
+		{
+			try
+			{
+				var id = calinfo.id;
+				var list = Utils.GetFeedJsonForIdAsListDict(id);
+				var dict = new Dictionary<string, List<string>>();
+				foreach (var obj in list)
+				{
+					var feedurl = (string)obj["feedurl"];
+					var address = (string)obj["address"];
+					try
+					{
+						if (string.IsNullOrEmpty(address))
+							continue;
+						var latlon = Utils.LookupLatLon(settings["bing_maps_key"], address).ToList();
+						if (String.IsNullOrEmpty(latlon[0]) || String.IsNullOrEmpty(latlon[1]))
+							continue;
+						dict.Add(feedurl, latlon);
+					}
+					catch (Exception e)
+					{
+						GenUtils.LogMsg("warning", "SaveIcalPerFeedLocations", e.Message);
+					}
+				}
+				bs.SerializeObjectToAzureBlob(dict, id, "ical_locations.obj");
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "SaveMeetupLocationSaveIcalPerFeedLocation: " + calinfo.id, e.Message);
+			}
+		}
 
 		#endregion
 
