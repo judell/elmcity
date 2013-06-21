@@ -369,8 +369,9 @@ namespace CalendarAggregator
 			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
 
 			html = html.Replace("__ID__", this.id);
-			html = html.Replace("__CSSURL__", this.calinfo.css);
-			html = MaybeOverrideTheme(args, html);
+
+			var css_url = this.GetCssUrl(args);  // default to calinfo.css, maybe override with args["theme"]
+			html = html.Replace("__CSSURL__", css_url);
 
 			//html = html.Replace("__TITLE__", this.calinfo.title);
 			html = html.Replace("__TITLE__", MakeTitle(view));
@@ -428,34 +429,34 @@ namespace CalendarAggregator
 			return _title + _view + "events";
 		}
 
-	public  static string MaybeOverrideTheme(Dictionary<string,object> args, string html)
+	public string GetCssUrl(Dictionary<string,object> args)
 	{
 		if (args == null)
-			return html;
+			return this.calinfo.css;
 
-		bool mobile = args.ContainsKey("mobile") ? (bool)args["mobile"] : false;
+		string mobile;
+		if ( args.ContainsKey("mobile") )
+			mobile = (bool) args["mobile"] ? "yes" : "no";
+		else
+			mobile = "no";
 		string mobile_long = args.ContainsKey("mobile_long") ? (string) args["mobile_long"] : "";
 		string ua = args.ContainsKey("ua") ? (string) args["ua"] : "";
+
+		string css_url = this.calinfo.css;
 
 		if (args.ContainsKey("theme") && args["theme"] != null )
 		{
 			var theme_name = args["theme"].ToString();
-			try
-			{
-				var themes = Utils.GetThemesDict();
-				var theme_css = Utils.GetCssTheme(themes, theme_name, mobile, mobile_long, ua);
-				html = html.Replace("<!-- __CUSTOM_STYLE __ -->", string.Format("<style>\n{0}\n{1}</style>\n", 
-					IsDefaultThemeDict(themes) ? "/* this is the fallback theme, if used something went wrong */" : "",
-					theme_css
-					)
-				);
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "MaybeOverrideTheme", e.Message + e.StackTrace);
-			}
+			css_url = String.Format("http://{0}/get_css_theme?theme_name={1}&mobile={2}&mobile_long={3}&ua={4}",
+				ElmcityUtils.Configurator.appdomain,
+				theme_name,
+				mobile,
+				mobile_long,
+				ua);
 		}
-	return html;
+
+		return css_url;
+
 	}
 
 		private static bool IsDefaultThemeDict(Dictionary<string,Dictionary<string,string>> theme_dict)
@@ -484,8 +485,9 @@ namespace CalendarAggregator
 			html = html.Replace("__ID__", this.id);
 			html = html.Replace("__TITLE__", MakeTitle(view));
 			html = html.Replace("__META__", MakeTitle(view) + " calendars happenings schedules");
-			html = html.Replace("__CSSURL__", this.calinfo.css);
-			html = MaybeOverrideTheme(args, html);
+
+			var css_url = GetCssUrl(args);
+			html = html.Replace("__CSSURL__", css_url);
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
 
 			html = Utils.RemoveCommentSection(html, "SIDEBAR");

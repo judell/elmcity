@@ -314,8 +314,8 @@ $(document).ready(function(){
     $('div.bl').css('margin','1em 0 0 1em');
     }
 
-  if ( is_theme )  // invoke it
-    invoke_theme( gup('theme') );
+//  if ( is_theme )  // invoke it
+//    invoke_theme( gup('theme') );
 
   if ( gup('datestyle') != '' )
     apply_json_css('.ed', 'datestyle');
