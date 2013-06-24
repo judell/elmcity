@@ -354,8 +354,6 @@ namespace CalendarAggregator
 			args["AdvanceToAnHourAgo"] = true;
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
-			var original_template = this.template_html;
-
 			MaybeUseTestTemplate(args);
 
 			var builder = new StringBuilder();
@@ -392,10 +390,14 @@ namespace CalendarAggregator
 
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
 
-			if (args.Keys.Contains("test") && (bool)args["test"] == true)  // restore original template
-				this.template_html = original_template;
-
 			return html;
+		}
+
+		private void MaybeUseTestTemplate(Dictionary<string, object> args)
+		{
+			var original_template = this.template_html;
+			if (!UseTestTemplate(args))
+				this.template_html = original_template;
 		}
 
 		private string RenderBadges(string html)
@@ -593,16 +595,27 @@ namespace CalendarAggregator
 			return html;
 		}
 
-		private void MaybeUseTestTemplate(Dictionary<string, object> args)
+		private bool UseTestTemplate(Dictionary<string, object> args)
 		{
-			if (args == null)
-				return;
-
-			if (args.Keys.Contains("test") && (bool)args["test"] == true)  // maybe use the test template, which invokes the test js
+			try
 			{
-				var settings = GenUtils.GetSettingsFromAzureTable();
-				var template_uri = new Uri(settings["test_template"]);
-				this.template_html = HttpUtils.FetchUrl(template_uri).DataAsString();
+				if (args == null)
+					return false;
+
+				if (args.Keys.Contains("test") && (bool)args["test"] == true)  // maybe use the test template, which invokes the test js
+				{
+					var settings = GenUtils.GetSettingsFromAzureTable();
+					var template_uri = new Uri(settings["test_template"]);
+					this.template_html = HttpUtils.FetchUrl(template_uri).DataAsString();
+					return true;
+				}
+				else
+					return false;
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "UseTestTemplate", e.Message + e.StackTrace);
+				return false;
 			}
 		}
 
