@@ -33,6 +33,7 @@
 
 <!-- Elm City -->
 <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script> -->
+<link type="text/css" rel="stylesheet" href="__CSSURL__"/>
 <!-- /Elm City -->
 
 	<script src="http://annarborchronicle.com/wp-content/themes/chronicle/js/libs/modernizr-1.7.min.js"></script>
@@ -47,22 +48,7 @@
 	<link rel="alternate" type="application/rss+xml" title="The Ann Arbor Chronicle RSS Feed" href="http://annarborchronicle.com/feed/" />
 	<link rel="pingback" href="http://annarborchronicle.com/xmlrpc.php" />
 	 
-            <script type="text/javascript">//<![CDATA[
-            // Google Analytics for WordPress by Yoast v4.3.2 | http://yoast.com/wordpress/google-analytics/
-            var _gaq = _gaq || [];
-            _gaq.push(['_setAccount', 'UA-31219728-1']);
-				            _gaq.push(['_trackPageview']);
-            (function () {
-                var ga = document.createElement('script');
-                ga.type = 'text/javascript';
-                ga.async = true;
-                ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
 
-                var s = document.getElementsByTagName('script')[0];
-                s.parentNode.insertBefore(ga, s);
-            })();
-            //]]></script>
-		
 			<link rel="EditURI" type="application/rsd+xml" title="RSD" href="http://annarborchronicle.com/xmlrpc.php?rsd" />
 			<link rel="wlwmanifest" type="application/wlwmanifest+xml" href="http://annarborchronicle.com/wp-includes/wlwmanifest.xml" /> 
 			<link rel='prev' title='Recent Comments' href='http://annarborchronicle.com/recent-comments/' />
@@ -109,7 +95,7 @@ p.sidebar { line-height: 2 }
     <div id="banner">
     	<div id="location">Ann Arbor, Michigan</div>
 		<div id="sizeSubscribe">
-    		<a href="/tip-jar/" class="tip-jar">Subscribe</a>
+    		<a href="http://annarborchronicle.com/tip-jar/" class="tip-jar">Subscribe</a>
 			<span id="styleswitcher">
 				<p>Text size:</p>
 
@@ -354,6 +340,7 @@ __GENERATED__
 
 <script src="http://annarborchronicle.com/wp-content/themes/chronicle/js/styleswitcher.js"></script>
 <script src="http://annarborchronicle.com/wp-content/themes/chronicle/js/annarborchronicle.js"></script>
+
 <script src="http://advertisements.heroku.com/javascripts/api/base.js"></script>
 <script>
    window.onload = function (){
@@ -369,13 +356,37 @@ __GENERATED__
 <script src="http://annarborchronicle.com/js/libs/respond.min.js"></script>
 <![endif]-->
 
+<!--stats_footer_test-->
 
-<!--stats_footer_test--><script src="http://stats.wordpress.com/e-201314.js" type="text/javascript"></script>
+<script src="http://stats.wordpress.com/e-201314.js" type="text/javascript"></script>
 <script type="text/javascript">
-st_go({blog:'4623190',v:'ext',post:'9'});
-var load_cmc = function(){linktracker_init(4623190,9,2);};
-if ( typeof addLoadEvent != 'undefined' ) addLoadEvent(load_cmc);
-else load_cmc();
+function wpstats()
+  {
+  st_go({blog:'4623190',v:'ext',post:'9'});
+  var load_cmc = function(){linktracker_init(4623190,9,2);};
+  if ( typeof addLoadEvent != 'undefined' ) addLoadEvent(load_cmc);
+  else load_cmc();
+  }
+wpstats();
 </script>
+
+
+            <script type="text/javascript">//<![CDATA[
+            // Google Analytics for WordPress by Yoast v4.3.2 | http://yoast.com/wordpress/google-analytics/
+            var _gaq = _gaq || [];
+            _gaq.push(['_setAccount', 'UA-31219728-1']);
+				            _gaq.push(['_trackPageview']);
+            (function () {
+                var ga = document.createElement('script');
+                ga.type = 'text/javascript';
+                ga.async = true;
+                ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+
+                var s = document.getElementsByTagName('script')[0];
+                s.parentNode.insertBefore(ga, s);
+            })();
+            //]]></script>
+
+		
 </body>
 </html>
