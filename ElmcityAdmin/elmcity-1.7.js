@@ -505,6 +505,67 @@ function case_insensitive_sort(a, b)
   return ((x < y) ? -1 : ((x > y) ? 1 : 0));
   }
 
+function show_view(view)
+  {
+  var elmcity_id = get_elmcity_id();
+
+  var path;
+
+  if ( view == undefined )
+    {
+    var selected = $('#tag_select option:selected').val();
+    view = selected.replace(/\s*\((\d+)\)/,'');
+    path = make_view_path_from_picklist(view, elmcity_id);
+    }
+  else
+    {
+    path = make_view_path_from_view(view, elmcity_id);
+    }
+
+  if ( gup('test') != '')
+    path = add_href_arg(path,'test',gup('test') );
+
+  if ( gup('theme') != '')
+    path = add_href_arg(path,'theme',gup('theme') );
+
+  if ( gup('count') != '')
+    path = add_href_arg(path,'count',gup('count') );
+
+  location.href = path;
+  }
+
+function make_view_path_from_view(view, elmcity_id)
+  {
+  var path;
+  if ( redirected_hubs.indexOf(elmcity_id) == -1 )
+    path = '/' + elmcity_id + '/?view=' + encodeURIComponent(view);
+  else
+    path = '/html?view=' + encodeURIComponent(view);
+  return path;
+  }
+
+function make_view_path_from_picklist(view, elmcity_id)
+  {
+  var path;
+  if ( redirected_hubs.indexOf(elmcity_id) == -1 )
+    {
+    if ( view == 'all' )
+      path = '/' + elmcity_id + '/';
+    else
+      path = '/' + elmcity_id + '/?view=' + encodeURIComponent(view);
+    }
+  else
+    {
+    if ( view == 'all' )
+      path = '/html' + '/';
+    else
+      path = '/html?view=' + encodeURIComponent(view);
+    }
+  return path;
+  }
+
+/*
+
 function show_view()
   {
 //  var selected = $('#tag_select option:selected').text();
@@ -524,6 +585,8 @@ function show_view()
     href = add_href_arg(href,'count',gup('count') );
   location.href = href;
   }
+
+*/
 
 function remove_href_arg(href, name)
   {
