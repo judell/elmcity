@@ -820,7 +820,7 @@ namespace CalendarAggregator
 				List<string> catlist = evt.categories.Split(',').ToList();
 				foreach (var cat in catlist)
 				{
-					var category_url = string.Format("/{0}/html?view={1}", this.id, cat);
+					var category_url = string.Format("javascript:show_view('{0}')", cat);
 					catlist_links.Add(string.Format(@"<a title=""open the {1} view"" href=""{0}"">{1}</a>", category_url, cat));
 				}
 				categories = string.Format(@" <span class=""cat"">{0}</span>", string.Join(", ", catlist_links.ToArray()));
