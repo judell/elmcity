@@ -366,7 +366,12 @@ $(document).ready(function(){
 
 function invoke_theme(theme)
   {
+/*
   var existing = $('link[href^="' + host + 'get_css"]').length;
+  var mobile = gup('mobile');
+  var mobile_long = gup('mobile_long');
+  var ua = gup('ua');
+  var args = '&mobile=' + mobile + '&mobile_long=' + mobile_long + '&ua=' + ua'
   if ( existing > 0 ) // replace existing Elm City theme
     {
     var override = host + 'get_css_theme?theme_name=' + theme;
@@ -376,6 +381,7 @@ function invoke_theme(theme)
     {
     $('link').append('<link type="text/css" rel="stylesheet" href="' + host + 'get_css_theme?theme_name=' + theme + '">');
     }
+*/
   }
 
 function apply_json_css(element,style)
