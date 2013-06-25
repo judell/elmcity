@@ -11,6 +11,8 @@ var is_theme = false;
 var is_view = false;
 var is_sidebar = true;
 
+var redirected_hubs = [ 'AnnArborChronicle' ];
+
 /*
 text-align:center;
 position:fixed;
@@ -564,29 +566,6 @@ function make_view_path_from_picklist(view, elmcity_id)
   return path;
   }
 
-/*
-
-function show_view()
-  {
-//  var selected = $('#tag_select option:selected').text();
-  var selected = $('#tag_select option:selected').val();
-  selected = selected.replace(/\s*\((\d+)\)/,'');
-  var elmcity_id = get_elmcity_id();
-  var href;
-  if ( selected == 'all' )
-    href = '/' + elmcity_id + '/';
-  else
-    href = '/' + elmcity_id + '/?view=' + encodeURIComponent(selected);
-  if ( gup('test') != '')
-    href = add_href_arg(href,'test',gup('test') );
-  if ( gup('theme') != '')
-    href = add_href_arg(href,'theme',gup('theme') );
-  if ( gup('count') != '')
-    href = add_href_arg(href,'count',gup('count') );
-  location.href = href;
-  }
-
-*/
 
 function remove_href_arg(href, name)
   {
