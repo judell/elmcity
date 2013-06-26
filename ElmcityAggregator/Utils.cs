@@ -2257,7 +2257,7 @@ END:VCALENDAR",
 			return csv_ical_url;
 		}
 
-		public static string get_fb_ical_url(string fb_page_url)
+		public static string get_fb_ical_url(string fb_page_url, string elmcity_id)
 		{
 			var fb_ical_url = "";
 			try
