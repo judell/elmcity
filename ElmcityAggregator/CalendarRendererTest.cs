@@ -141,6 +141,45 @@ namespace CalendarAggregator
 			Assert.AreEqual(response, view_contents);
 		}
 
+		[Test]
+		public void MaybeUseTestTemplateAltersTemplateWhenTesting()
+		{
+			this.cr = new CalendarRenderer(Configurator.testid);
+			var orig = this.cr.template_html;
+			var args = new Dictionary<string,object>();
+			args.Add("test", true);
+			this.cr.MaybeUseTestTemplate(args);
+			Assert.AreNotEqual(this.cr.template_html, orig);
+		}
+
+		[Test]
+		public void MaybeUseTestTemplateDoeNsotAlterTemplateWhenNotTesting()
+		{
+			this.cr = new CalendarRenderer(Configurator.testid);
+			var orig = this.cr.template_html;
+			var args = new Dictionary<string, object>();
+			args.Add("test", false);
+
+			this.cr.MaybeUseTestTemplate(args);
+			Assert.AreEqual(this.cr.template_html, orig);
+		}
+
+		[Test]
+		public void MaybeUseTestTemplateRestoresOriginalWhenNotTesting()
+		{
+			this.cr = new CalendarRenderer(Configurator.testid);
+			var orig = this.cr.template_html;
+			var args = new Dictionary<string, object>();
+			args.Add("test", true);
+			this.cr.MaybeUseTestTemplate(args);
+			args["test"] = false;
+			this.cr.MaybeUseTestTemplate(args);
+			Assert.AreEqual(this.cr.template_html, orig);
+		}
+
+
+
+
 
 	}
 }

@@ -393,9 +393,9 @@ namespace CalendarAggregator
 			return html;
 		}
 
-		private void MaybeUseTestTemplate(Dictionary<string, object> args)
+		public void MaybeUseTestTemplate(Dictionary<string, object> args)
 		{
-			var original_template = this.template_html;
+			var original_template = String.Copy(this.template_html);
 			if (!UseTestTemplate(args))
 				this.template_html = original_template;
 		}
