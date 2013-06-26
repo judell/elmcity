@@ -1221,6 +1221,16 @@ namespace CalendarAggregator
 			return ics_text;
 		}
 
+		public static string IcsViaFormPost(string fp_feed_url)
+		{
+			var uri = new Uri(fp_feed_url);
+			var original_string = uri.OriginalString;
+			var path = original_string.Replace(uri.Query, "");
+			var query = uri.Query.TrimStart('?');
+			var response = HttpUtils.PostUrl(uri, query);
+			return response.DataAsString();
+		}
+
 		public static string IcsFromJson(string json, string source, string tzname)
 		{
 			var tzinfo = Utils.TzinfoFromName(tzname);
@@ -2247,7 +2257,7 @@ END:VCALENDAR",
 			return csv_ical_url;
 		}
 
-		public static string get_fb_ical_url(string fb_page_url, string elmcity_id)
+		public static string get_fb_ical_url(string fb_page_url)
 		{
 			var fb_ical_url = "";
 			try
@@ -2264,6 +2274,8 @@ END:VCALENDAR",
 			}
 			return fb_ical_url;
 		}
+
+
 
 		public static string id_from_fb_fanpage_or_group(string url)
 		{

@@ -44,6 +44,16 @@ function ec_id()
 alert("Your Elm City ID is the ID of your hub. For example: BostonMA, CTNEXT, seattleopencalendar");
 }
 
+function get_form_post_ical_url()
+{
+var fp_feed_url = $('#fp_feed_url').val();
+fp_feed_url = encodeURIComponent(fp_feed_url);
+var ical_url = 'http://elmcity.cloudapp.net/get_form_post_ical_url' +
+                '?fp_feed_url=' +
+                fp_feed_url;
+location.href = ical_url;
+}
+
 function get_fb_ical_url()
 {
 var fb_page_url = $('#fb_page_url').val();
@@ -424,6 +434,32 @@ This helper accepts the URL of an EventBrite event page and an <a href="javascri
 
 
 </table>
+
+<a name="form_post"></a>
+
+<h2>POST instead of GET</h2>
+
+<p>
+Some sites, like <a href="http://www.jewishmother.com/VB/calender">The Jewish Mother</a> in Virginia Beach, offer feeds that require the Elm City service to use an HTTP POST request rather than an HTTP GET request. This helper accepts an URL formulated like a GET request, and produces an URL that will fetch the feed by POSTing the corresponding form.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right">Feed URL, GET-style: </td>
+
+<td><input style="width:8in" id="fp_feed_url" value="http://www.jewishmother.com/VB/content/calendar/calendar_download.php?from_calendar=1&from_category=&downloadType=2&calendar_criteria=1&category_criteria=0&fromdatemonth_criteria=1&fromdateday_criteria=1&fromdateyear_criteria=2013&todatemonth_criteria=7&todateday_criteria=21&todateyear_criteria=2020"></td>
+</tr>
+
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_form_post_ical_url()"></td>
+<td></td>
+</tr>
+
+
+</table>
+
 
 
 <a name="csv"></a>

@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2515";
+        public static string version = "2520";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -245,6 +245,12 @@ namespace WebRole
                 "get_fb_ical_url",
                 new { controller = "Home", action = "get_fb_ical_url" }
             );
+
+			routes.MapRoute(
+				"get_form_post_ical_url",
+				"get_form_post_ical_url",
+				new { controller = "Home", action = "get_form_post_ical_url" }
+			);
 
             routes.MapRoute(
                 "get_csv_ical_url",
@@ -414,6 +420,13 @@ namespace WebRole
 				"ics_to_json",
 				"ics_to_json",
 				new { controller = "Home", action = "ics_to_json" }
+			);
+
+			// convert ics to json
+			routes.MapRoute(
+				"ics_via_form_post",
+				"ics_via_form_post",
+				new { controller = "Home", action = "ics_via_form_post" }
 			);
 
             routes.MapRoute(

@@ -230,6 +230,15 @@ if unsure please check http://{1}/{2}/stats",
             return Content(result);
         }
 
+		public ActionResult get_form_post_ical_url(string fp_feed_url)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var url = String.Format("http://{0}/ics_via_form_post?fp_feed_url={1}",
+				ElmcityUtils.Configurator.appdomain,
+				HttpUtility.UrlEncode(fp_feed_url));
+			return Content(url);
+		}
+
         public ActionResult get_csv_ical_url(string feed_url, string home_url, string skip_first_row, string title_col, string date_col, string time_col, string tzname)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -505,6 +514,22 @@ if unsure please check http://{1}/{2}/stats",
 			catch (Exception e)
 			{
 				GenUtils.LogMsg("exception", "IcsFromJson", e.Message + e.StackTrace);
+			}
+			return Content(ics, "text/calendar");
+		}
+
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult ics_via_form_post(string fp_feed_url)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string ics = "";
+			try
+			{
+				ics = Utils.IcsViaFormPost(fp_feed_url);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "IcsViaFormPost", e.Message + e.StackTrace);
 			}
 			return Content(ics, "text/calendar");
 		}

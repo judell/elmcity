@@ -86,6 +86,16 @@ namespace ElmcityUtils
 			return DoHttpWebRequest(request, UTf8ByteArray);
 		}
 
+		public static HttpResponse PostUrl(Uri uri, string query)
+		{
+			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+			request.Method = "POST";
+			request.ContentType = "application/x-www-form-urlencoded";
+			request.ContentLength = query.Length;
+			var bytes = Encoding.UTF8.GetBytes(query);
+			return DoHttpWebRequest(request, bytes);
+		}
+
 		// return header if it appears in the request context 
 		public static String MaybeExtractHeaderFromRequestContext(string header_name, ControllerContext context)
 		{
