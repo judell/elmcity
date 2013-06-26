@@ -159,7 +159,6 @@ namespace CalendarAggregator
 			var orig = this.cr.template_html;
 			var args = new Dictionary<string, object>();
 			args.Add("test", false);
-
 			this.cr.MaybeUseTestTemplate(args);
 			Assert.AreEqual(this.cr.template_html, orig);
 		}

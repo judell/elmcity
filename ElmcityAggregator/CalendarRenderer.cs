@@ -35,6 +35,7 @@ namespace CalendarAggregator
 		public Calinfo calinfo;
 		
 		public string template_html;
+		public string default_template_html;
 
 		public string xmlfile
 		{
@@ -105,6 +106,7 @@ namespace CalendarAggregator
 				try
 				{
 					this.template_html = HttpUtils.FetchUrl(calinfo.template_url).DataAsString();
+					this.default_template_html = this.template_html;
 				}
 				catch (Exception e)
 				{
@@ -393,13 +395,6 @@ namespace CalendarAggregator
 			return html;
 		}
 
-		public void MaybeUseTestTemplate(Dictionary<string, object> args)
-		{
-			var original_template = String.Copy(this.template_html);
-			if (!UseTestTemplate(args))
-				this.template_html = original_template;
-		}
-
 		private string RenderBadges(string html)
 		{
 			html = html.Replace("__EVENTFUL_LOGO_DISPLAY__",	this.calinfo.show_eventful_badge	? "inline" : "none");
@@ -595,27 +590,28 @@ namespace CalendarAggregator
 			return html;
 		}
 
-		private bool UseTestTemplate(Dictionary<string, object> args)
+		public void MaybeUseTestTemplate(Dictionary<string, object> args)
 		{
 			try
 			{
 				if (args == null)
-					return false;
+					return;
 
 				if (args.Keys.Contains("test") && (bool)args["test"] == true)  // maybe use the test template, which invokes the test js
 				{
 					var settings = GenUtils.GetSettingsFromAzureTable();
 					var template_uri = new Uri(settings["test_template"]);
 					this.template_html = HttpUtils.FetchUrl(template_uri).DataAsString();
-					return true;
 				}
 				else
-					return false;
+				{
+					this.template_html = this.default_template_html;
+				}
 			}
 			catch (Exception e)
 			{
 				GenUtils.LogMsg("exception", "UseTestTemplate", e.Message + e.StackTrace);
-				return false;
+				return;
 			}
 		}
 
