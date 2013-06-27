@@ -153,7 +153,7 @@ namespace CalendarAggregator
 		}
 
 		[Test]
-		public void MaybeUseTestTemplateDoeNsotAlterTemplateWhenNotTesting()
+		public void MaybeUseTestTemplateDoeNotAlterTemplateWhenNotTesting()
 		{
 			this.cr = new CalendarRenderer(Configurator.testid);
 			var orig = this.cr.template_html;
