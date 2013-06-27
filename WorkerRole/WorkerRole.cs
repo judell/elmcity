@@ -523,8 +523,8 @@ namespace WorkerRole
 			if (calinfo.hub_enum == CalendarAggregator.HubType.region)
 				SaveRegionStats(id);
 
-			if (!Utils.IsRegion(id))
-				MergeIcs(calinfo);
+			//if (!Utils.IsRegion(id))
+			//	MergeIcs(calinfo);
 			// else  
 			// todo: create MergeRegionIcs
 
