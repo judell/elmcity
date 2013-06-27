@@ -275,9 +275,12 @@ There are many ways to publish iCalendar-compliant web calendars. Here are some 
 <div><b>iCal producer</b>: <a href="http://www.keepandshare.com/">Share Calendars, Files, Addresses, To Dos & Photos Online for Free</a></div><div><b>cms</b>: keepandshare</div>
 </p>
 </p>
+
+<!--
 <p>
 For interactive views of this data see <a href="https://pinboard.in/u:judell/t:ical-example/">calendars</a> and <a href="https://pinboard.in/u:judell/t:ical-producer/">producers</a>. 
 </p>
+-->
 
 
 </div> <!-- /feed_publishing -->
@@ -336,7 +339,7 @@ If you're part of the music scene, or a fan of the scene, you might want to decl
 
 <iframe style="display:block;margin:auto" width="330"
 height="400"
-src="http://elmcity.cloudapp.net/__ID__/html?eventsonly=yes&view=music&theme=a2chron&width=350"
+src="http://elmcity.cloudapp.net/__ID__/html?eventsonly=yes&view=music&taglist=no&theme=a2chron&width=350"
 style="border-width:thin;border-style:solid">
 </iframe> 
 
@@ -367,7 +370,7 @@ You can use the <a href="http://jonudell.net/elmcity/exploratorium.html?hub=__ID
 
 
 <p>
-The curator of the __ID__ hub finds machine-readable calendar feeds, categorizes them, and adds them to the list of sources flowing into the hub. For a pictorial view of how curators interact with contributors and with the hub, please see <a href="http://jonudell.net/elmcity/curator-flow.html">What elmcity curators do</a>.
+The curator of the __ID__ hub finds machine-readable calendar feeds, categorizes them, and adds them to the list of sources flowing into the hub. For a pictorial view of how curators interact with contributors and with the hub, please see <a href="http://jonudell.net/elmcity/curator-flow.html">What Elm City curators do</a>.
 </p>
 
 </div> <!-- /about_curators -->
@@ -380,11 +383,11 @@ The curator of the __ID__ hub finds machine-readable calendar feeds, categorizes
 <div class="chunk" id="bootstrapping" style="display:none">
 
 <p>
-A hub starts when somebody who wants to gather calendars for a community asks the <a href="mailto:jonu@microsoft.com">elmcity adminstrator</a> to start a hub for that purpose.
+A hub starts when somebody who wants to gather calendars for a community asks the <a href="mailto:jonu@microsoft.com">Elm City administrator</a> to start a hub for that purpose.
 </p>
 
 <p>
-When the hub starts, the elmcity service (the software engine that powers hubs for many communities) looks for feeds that the curator might want to include and categorize. This process is automatic and yields two outputs. First, an <a href="http://elmcity.blob.core.windows.net/__LOWERID__/taggable_sources.html">HTML report</a> for the curator to review. (In this report the highlighted items, if any, are already included in the hub.) Second, a corresponding <a href="http://elmcity.blob.core.windows.net/__LOWERID__/taggable_sources.json">data file</a> in a format compatible with the hub's feed-editing tool.
+When the hub starts, the Elm City service (the software engine that powers hubs for many communities) looks for feeds that the curator might want to include and categorize. This process is automatic and yields two outputs. First, an <a href="http://elmcity.blob.core.windows.net/__LOWERID__/taggable_sources.html">HTML report</a> for the curator to review. (In this report the highlighted items, if any, are already included in the hub.) Second, a corresponding <a href="http://elmcity.blob.core.windows.net/__LOWERID__/taggable_sources.json">data file</a> in a format compatible with the hub's feed-editing tool.
 </p>
 
 <p>
@@ -401,7 +404,7 @@ The process of deciding which feeds to include, how best to categorize them, and
 <div class="chunk" id="authenticating" style="display:none">
 
 <p>
-If you're the curator of the __ID__ hub, you gave one the elmcity administrator one of four ways to log in when you started the hub:
+If you're the curator of the __ID__ hub, you gave one the Elm City administrator one of four ways to log in when you started the hub:
 </p>
 
 <ol>
@@ -446,7 +449,7 @@ __HUBSTATS__
 <div class="_chunk" id="edit_feeds" style="display:none">
 
 <p>
-You define a feed using these four fields:
+You define a feed using these fields:
 </p>
 
 <ol>
@@ -466,6 +469,11 @@ You define a feed using these four fields:
 <li><p>
 <b>category</b>: STRONGLY RECOMMENDED. One or more tags for the feed (e.g.: sports,soccer) (comma-delimited if more than one)
 </p></li> 
+
+<li><p>
+<b>address</b>: RECOMMENDED. A postal address that can be used to geolocate events. Use this only if the address will work for nearly all (or nearly all) the events in the feed.
+</p></li> 
+
 
 
 </ol>
@@ -501,7 +509,7 @@ There are also some optional extra fields.
 <div class="_chunk" id="edit_hub" style="display:none">
 
 <p>
-You probably won't need to touch these. If they ever do need to change, the elmcity administrator will explain why and how.
+You probably won't need to touch these. If they ever do need to change, the Elm City administrator will explain why and how.
 </p>
 
 </div> <!-- /edit_hub -->
@@ -646,7 +654,7 @@ The <a href="http://jonudell.net/elmcity/nrv-bright-lights.html">NRV bright ligh
 <div class="_chunk" id="curator_presentations" style="display:none">
 
 <p>
-A presentation given in Ann Arbor on Sept 26 2012 explains and demonstrates the elmcity model.
+A presentation given in Ann Arbor on Sept 26 2012 explains and demonstrates the Elm City model.
 </p>
 
 <p>
@@ -702,8 +710,9 @@ The person who manages this hub is a <i>curator</i>. The people whose calendars 
 
 </div> <!-- /roles -->
 
+<!--
 
-<!-- projectstatus -->
+<!-- projectstatus 
 
 <h3 class="_chunk" id="_projectstatus"> Project Status</h3>
 
@@ -711,7 +720,8 @@ The person who manages this hub is a <i>curator</i>. The people whose calendars 
 
 <p><a href="http://blog.jonudell.net/elmcityazure-project-status/">http://blog.jonudell.net/elmcityazure-project-status/</a></p>
 
-</div> <!-- /projectstatus -->
+</div> /projectstatus -->
+
 
 <!-- forum -->
 
@@ -853,9 +863,9 @@ The person who manages this hub is a <i>curator</i>. The people whose calendars 
 
 <tr><td colspan="2"><b>Configuration</b></td>
 
-<tr><td>Add/edit/delete feeds (requires authentication)</td><td>http://elmcity.cloudapp.net/services/__ID__/get_editable_metadata?flavor=feeds</td></tr>
+<tr><td>Add/edit/delete feeds (requires authentication)</td><td>http://elmcity.cloudapp.net/services/__ID__/edit?flavor=feeds</td></tr>
 
-<tr><td>Configure hub (requires authentication)</td><td>http://elmcity.cloudapp.net/services/__ID__/get_editable_metadata?flavor=metadata</td></tr>
+<tr><td>Configure hub (requires authentication)</td><td>http://elmcity.cloudapp.net/services/__ID__/edit?flavor=metadata</td></tr>
 
 <tr><td>Hub and feed settings and version history</td><td>http://elmcity.cloudapp.net/__ID__/metadata</td></tr>
 
