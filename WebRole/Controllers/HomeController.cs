@@ -105,6 +105,12 @@ namespace WebRole
             }
         }
 
+		public ActionResult AnnArborChronicle()
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			return new RedirectResult("http://events.annarborchronicle.com/html");
+		}
+
         public ActionResult add_to_cal(string elmcity_id, string flavor, string start, string end, string summary, string description, string url, string location)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
