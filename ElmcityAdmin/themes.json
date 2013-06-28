@@ -71,7 +71,7 @@
     ".desc"        :  " { } "
     },
 
-  "unframed2" : {
+  "a2chron2" : {
     "body"         :  " { } ",
     "div"          :  " { 'line-height' : '1.2' } ",
     ".hubtitle"    :  " { 'font-weight':'bold', 'font-size' : '13pt' } ",
