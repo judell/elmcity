@@ -466,7 +466,8 @@ namespace WorkerRole
 
 				RenderTags(region);
 
-				Utils.TagsByHub(region);
+				Utils.TagsByHub(region, authorized: true);
+				Utils.TagsByHub(region, authorized: false);
 
 				SaveRegionStats(region);
 
