@@ -451,7 +451,9 @@ function goDay(date_str)
 function goMonth(year, month)
   {
   month = maybeZeroPad(month.toString());
-  location.href = '#ym' + year + month;
+  var id = $('h1[id^="d' + year + month + '"]').attr('id')
+  scrollToElement(id);
+//  location.href = '#ym' + year + month;
 //  setDate(year, parseInt(month), 1);
   }
 
