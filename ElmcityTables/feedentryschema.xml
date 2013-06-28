@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<feed xml:base="http://elmcity.table.core.windows.net/" xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns="http://www.w3.org/2005/Atom">
+  <title type="text">feedentryschema</title>
+  <id>http://elmcity.table.core.windows.net/feedentryschema</id>
+  <updated>2013-06-03T14:19:43Z</updated>
+  <link rel="self" title="feedentryschema" href="feedentryschema" />
+  <entry m:etag="W/&quot;datetime'2012-08-14T20%3A35%3A09.0499869Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/feedentryschema(PartitionKey='feedentryschema',RowKey='feedentryschema')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:43Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="feedentryschema" href="feedentryschema(PartitionKey='feedentryschema',RowKey='feedentryschema')" />
+    <category term="elmcity.feedentryschema" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>feedentryschema</d:PartitionKey>
+        <d:RowKey>feedentryschema</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-14T20:35:09.0499869Z</d:Timestamp>
+        <d:fields>source,category,feedurl,url,catmap,approved,comments</d:fields>
+      </m:properties>
+    </content>
+  </entry>
+</feed>

@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<feed xml:base="http://elmcity.table.core.windows.net/" xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns="http://www.w3.org/2005/Atom">
+  <title type="text">usersettings</title>
+  <id>http://elmcity.table.core.windows.net/usersettings</id>
+  <updated>2013-06-03T14:20:20Z</updated>
+  <link rel="self" title="usersettings" href="usersettings" />
+  <entry m:etag="W/&quot;datetime'2012-01-04T14%3A57%3A41.0942991Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='contact')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='contact')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>contact</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-01-04T14:57:41.0942991Z</d:Timestamp>
+        <d:value>jonu@microsoft.com</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2013-04-12T16%3A54%3A40.008867Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='css')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='css')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>css</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2013-04-12T16:54:40.008867Z</d:Timestamp>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+        <d:value>http://elmcity.cloudapp.net/get_css_theme?theme_name=a2chron</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T20%3A54%3A01.7513525Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='default_img_html')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='default_img_html')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>default_img_html</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T20:54:01.7513525Z</d:Timestamp>
+        <d:value>&lt;p style="text-align:center"&gt;&lt;img align="center" src="__IMGURL__"/&gt;&lt;/p&gt;</d:value>
+        <d:user_editable m:type="Edm.Boolean">false</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T21%3A01%3A53.9455796Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='descriptions')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='descriptions')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>descriptions</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T21:01:53.9455796Z</d:Timestamp>
+        <d:value>no</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T21%3A01%3A54.0604715Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='display_width')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='display_width')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>display_width</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T21:01:54.0604715Z</d:Timestamp>
+        <d:value>470</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T22%3A37%3A47.9092343Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='eventbrite')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='eventbrite')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>eventbrite</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T22:37:47.9092343Z</d:Timestamp>
+        <d:value>yes</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T22%3A37%3A47.7366257Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='eventful')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='eventful')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>eventful</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T22:37:47.7366257Z</d:Timestamp>
+        <d:value>yes</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T22%3A37%3A47.7059638Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='facebook')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='facebook')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>facebook</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T22:37:47.7059638Z</d:Timestamp>
+        <d:value>no</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T23%3A51%3A23.9931859Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='feed_count')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='feed_count')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>feed_count</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T23:51:23.9931859Z</d:Timestamp>
+        <d:value>0</d:value>
+        <d:user_editable m:type="Edm.Boolean">false</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T23%3A24%3A36.9133166Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='header_image')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='header_image')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>header_image</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T23:24:36.9133166Z</d:Timestamp>
+        <d:value>no</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T21%3A08%3A31.4252958Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='hubtype')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='hubtype')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>hubtype</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T21:08:31.4252958Z</d:Timestamp>
+        <d:value>where</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-10-05T11%3A54%3A26.6235291Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='icalendar_horizon_days')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='icalendar_horizon_days')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>icalendar_horizon_days</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-10-05T11:54:26.6235291Z</d:Timestamp>
+        <d:value>90</d:value>
+        <d:user_editable m:type="Edm.Boolean">false</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T22%3A37%3A47.6582092Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='img')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='img')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>img</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T22:37:47.6582092Z</d:Timestamp>
+        <d:value>keene-night-360.jpg</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-01-09T17%3A22%3A45.722176Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='locations')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='locations')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>locations</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-01-09T17:22:45.722176Z</d:Timestamp>
+        <d:value>no</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T21%3A01%3A53.1863841Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='population')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='population')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>population</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T21:01:53.1863841Z</d:Timestamp>
+        <d:value>0</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T21%3A01%3A52.668139Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='radius')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='radius')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>radius</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T21:01:52.668139Z</d:Timestamp>
+        <d:value>5</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2013-05-22T13%3A35%3A45.0442689Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='template')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='template')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>template</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2013-05-22T13:35:45.0442689Z</d:Timestamp>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+        <d:value>http://elmcity.blob.core.windows.net/admin/events-1.8.tmpl</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T23%3A03%3A47.890944Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='tz')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='tz')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>tz</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T23:03:47.890944Z</d:Timestamp>
+        <d:value>eastern</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T22%3A37%3A47.2548721Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='upcoming')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='upcoming')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>upcoming</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T22:37:47.2548721Z</d:Timestamp>
+        <d:value>yes</d:value>
+        <d:user_editable m:type="Edm.Boolean">true</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-08-15T23%3A15%3A33.7403593Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='use_rdfa')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='use_rdfa')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>use_rdfa</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-08-15T23:15:33.7403593Z</d:Timestamp>
+        <d:value>yes</d:value>
+        <d:user_editable m:type="Edm.Boolean">false</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-10-12T14%3A14%3A25.8799813Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/usersettings(PartitionKey='usersettings',RowKey='use_x_wr_timezone')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:20Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="usersettings" href="usersettings(PartitionKey='usersettings',RowKey='use_x_wr_timezone')" />
+    <category term="elmcity.usersettings" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>usersettings</d:PartitionKey>
+        <d:RowKey>use_x_wr_timezone</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-10-12T14:14:25.8799813Z</d:Timestamp>
+        <d:value>no</d:value>
+        <d:user_editable m:type="Edm.Boolean">false</d:user_editable>
+      </m:properties>
+    </content>
+  </entry>
+</feed>

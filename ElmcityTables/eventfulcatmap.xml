@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<feed xml:base="http://elmcity.table.core.windows.net/" xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns="http://www.w3.org/2005/Atom">
+  <title type="text">eventfulcatmap</title>
+  <id>http://elmcity.table.core.windows.net/eventfulcatmap</id>
+  <updated>2013-06-03T14:19:42Z</updated>
+  <link rel="self" title="eventfulcatmap" href="eventfulcatmap" />
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A36%3A17.0626225Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='animals')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='animals')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>animals</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:36:17.0626225Z</d:Timestamp>
+        <d:value>animals</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A33%3A26.7596968Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='art')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='art')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>art</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:33:26.7596968Z</d:Timestamp>
+        <d:value>art</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A36%3A16.707587Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='books')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='books')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>books</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:36:16.707587Z</d:Timestamp>
+        <d:value>books</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A36%3A18.331234Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='business')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='business')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>business</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:36:18.331234Z</d:Timestamp>
+        <d:value>business</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A33%3A25.651373Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='conferences')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='conferences')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>conferences</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:33:25.651373Z</d:Timestamp>
+        <d:value>conference</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-02-01T20%3A43%3A47.1063223Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='education')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='education')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>education</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-02-01T20:43:47.1063223Z</d:Timestamp>
+        <d:value>learning_education</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-02-01T23%3A34%3A25.6992378Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='family')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='family')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>family</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-02-01T23:34:25.6992378Z</d:Timestamp>
+        <d:value>family_fun_kids</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A37%3A27.3406496Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='festivals')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='festivals')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>festivals</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:37:27.3406496Z</d:Timestamp>
+        <d:value>festivals_parades</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-02-01T20%3A43%3A47.4152857Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='film')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='film')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>film</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-02-01T20:43:47.4152857Z</d:Timestamp>
+        <d:value>movies_film</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A33%3A26.5746783Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='food')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='food')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>food</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:33:26.5746783Z</d:Timestamp>
+        <d:value>food</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A36%3A16.8926055Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='performing-arts')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='performing-arts')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>performing-arts</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:36:16.8926055Z</d:Timestamp>
+        <d:value>performing_arts</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-02-01T20%3A43%3A48.9134355Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='politics')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='politics')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>politics</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-02-01T20:43:48.9134355Z</d:Timestamp>
+        <d:value>politics_activism</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-02-01T20%3A43%3A47.8173934Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='recreation')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='recreation')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>recreation</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-02-01T20:43:47.8173934Z</d:Timestamp>
+        <d:value>outdoors_recreation</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A36%3A18.5222722Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='science')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='science')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>science</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:36:18.5222722Z</d:Timestamp>
+        <d:value>science</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-02-01T20%3A43%3A48.0694186Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='spirituality')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='spirituality')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>spirituality</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-02-01T20:43:48.0694186Z</d:Timestamp>
+        <d:value>religion_spirituality</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A36%3A17.2346397Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='sports')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='sports')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>sports</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:36:17.2346397Z</d:Timestamp>
+        <d:value>sports</d:value>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2012-08-06T15%3A36%3A18.7143106Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='technology')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:19:42Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="eventfulcatmap" href="eventfulcatmap(PartitionKey='eventfulcatmap',RowKey='technology')" />
+    <category term="elmcity.eventfulcatmap" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>eventfulcatmap</d:PartitionKey>
+        <d:RowKey>technology</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2012-08-06T15:36:18.7143106Z</d:Timestamp>
+        <d:value>technology</d:value>
+      </m:properties>
+    </content>
+  </entry>
+</feed>

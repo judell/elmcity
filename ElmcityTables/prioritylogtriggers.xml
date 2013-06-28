@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<feed xml:base="http://elmcity.table.core.windows.net/" xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices" xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" xmlns="http://www.w3.org/2005/Atom">
+  <title type="text">prioritylogtriggers</title>
+  <id>http://elmcity.table.core.windows.net/prioritylogtriggers</id>
+  <updated>2013-06-03T14:20:11Z</updated>
+  <link rel="self" title="prioritylogtriggers" href="prioritylogtriggers" />
+  <entry m:etag="W/&quot;datetime'2011-04-29T22%3A38%3A02.959083Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/prioritylogtriggers(PartitionKey='prioritylogtriggers',RowKey='ThreadCount')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:11Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="prioritylogtriggers" href="prioritylogtriggers(PartitionKey='prioritylogtriggers',RowKey='ThreadCount')" />
+    <category term="elmcity.prioritylogtriggers" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>prioritylogtriggers</d:PartitionKey>
+        <d:RowKey>ThreadCount</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-04-29T22:38:02.959083Z</d:Timestamp>
+        <d:max>140</d:max>
+        <d:type>int</d:type>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-01-09T06%3A00%3A07.5973543Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/prioritylogtriggers(PartitionKey='prioritylogtriggers',RowKey='mem_available_mbytes')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:11Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="prioritylogtriggers" href="prioritylogtriggers(PartitionKey='prioritylogtriggers',RowKey='mem_available_mbytes')" />
+    <category term="elmcity.prioritylogtriggers" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>prioritylogtriggers</d:PartitionKey>
+        <d:RowKey>mem_available_mbytes</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-01-09T06:00:07.5973543Z</d:Timestamp>
+        <d:type>int</d:type>
+        <d:min>20</d:min>
+      </m:properties>
+    </content>
+  </entry>
+  <entry m:etag="W/&quot;datetime'2011-01-09T06%3A00%3A07.5985387Z'&quot;">
+    <id>http://elmcity.table.core.windows.net/prioritylogtriggers(PartitionKey='prioritylogtriggers',RowKey='processor_pct_proctime')</id>
+    <title type="text"></title>
+    <updated>2013-06-03T14:20:11Z</updated>
+    <author>
+      <name />
+    </author>
+    <link rel="edit" title="prioritylogtriggers" href="prioritylogtriggers(PartitionKey='prioritylogtriggers',RowKey='processor_pct_proctime')" />
+    <category term="elmcity.prioritylogtriggers" scheme="http://schemas.microsoft.com/ado/2007/08/dataservices/scheme" />
+    <content type="application/xml">
+      <m:properties>
+        <d:PartitionKey>prioritylogtriggers</d:PartitionKey>
+        <d:RowKey>processor_pct_proctime</d:RowKey>
+        <d:Timestamp m:type="Edm.DateTime">2011-01-09T06:00:07.5985387Z</d:Timestamp>
+        <d:max>99.9</d:max>
+        <d:type>float</d:type>
+      </m:properties>
+    </content>
+  </entry>
+</feed>
