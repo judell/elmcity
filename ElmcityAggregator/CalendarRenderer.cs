@@ -224,7 +224,6 @@ namespace CalendarAggregator
 
 		#endregion
 
-
 		#region json
 
 		public string RenderJson()
