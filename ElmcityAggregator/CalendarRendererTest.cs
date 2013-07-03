@@ -148,7 +148,7 @@ namespace CalendarAggregator
 			var orig = this.cr.template_html;
 			var args = new Dictionary<string,object>();
 			args.Add("test", true);
-			this.cr.MaybeUseTestTemplate(args);
+			this.cr.MaybeUseAlternateTemplate(args);
 			Assert.AreNotEqual(this.cr.template_html, orig);
 		}
 
@@ -159,7 +159,7 @@ namespace CalendarAggregator
 			var orig = this.cr.template_html;
 			var args = new Dictionary<string, object>();
 			args.Add("test", false);
-			this.cr.MaybeUseTestTemplate(args);
+			this.cr.MaybeUseAlternateTemplate(args);
 			Assert.AreEqual(this.cr.template_html, orig);
 		}
 
@@ -170,9 +170,9 @@ namespace CalendarAggregator
 			var orig = this.cr.template_html;
 			var args = new Dictionary<string, object>();
 			args.Add("test", true);
-			this.cr.MaybeUseTestTemplate(args);
+			this.cr.MaybeUseAlternateTemplate(args);
 			args["test"] = false;
-			this.cr.MaybeUseTestTemplate(args);
+			this.cr.MaybeUseAlternateTemplate(args);
 			Assert.AreEqual(this.cr.template_html, orig);
 		}
 

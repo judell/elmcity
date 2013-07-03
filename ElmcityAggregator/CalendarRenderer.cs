@@ -37,6 +37,9 @@ namespace CalendarAggregator
 		public string template_html;
 		public string default_template_html;
 
+		public string default_js_url;
+		public string test_js_url;
+
 		public string xmlfile
 		{
 			get { return _xmlfile; }
@@ -89,9 +92,6 @@ namespace CalendarAggregator
 
 		public DateTime timestamp;
 
-		// used by the service in both WorkerRole and WebRole
-		// in WorkerRole: when saving renderings
-		// in WebRole: when serving renderings
 		public CalendarRenderer(string id)
 		{
 			this.timestamp = DateTime.UtcNow;
@@ -102,6 +102,20 @@ namespace CalendarAggregator
 			try
 			{
 				this.id = id;
+
+				try
+				{
+					var settings = GenUtils.GetSettingsFromAzureTable();
+					this.default_js_url =	BlobStorage.MakeAzureBlobUri("admin", settings["elmcity_js"]).ToString();
+					this.test_js_url =		BlobStorage.MakeAzureBlobUri("admin", settings["elmcity_js_test"]).ToString();
+					settings = null;
+				}
+				catch (Exception e)
+				{
+					this.default_js_url =	BlobStorage.MakeAzureBlobUri("admin", "elmcity-1.7.js").ToString();
+					this.test_js_url =		BlobStorage.MakeAzureBlobUri("admin", "elmcity-1.7-test.js").ToString();
+					GenUtils.LogMsg("exception", "CalendarRenderer: setting js urls", e.Message);
+				}
 
 				try
 				{
@@ -356,7 +370,7 @@ namespace CalendarAggregator
 			args["AdvanceToAnHourAgo"] = true;
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
-			MaybeUseTestTemplate(args);
+			MaybeUseAlternateTemplate(args);
 
 			var builder = new StringBuilder();
 			RenderEventsAsHtml(eventstore, builder, args);
@@ -372,6 +386,8 @@ namespace CalendarAggregator
 
 			var css_url = this.GetCssUrl(args);  // default to calinfo.css, maybe override with args["theme"]
 			html = html.Replace("__CSSURL__", css_url);
+
+			html = HandleJsUrl(html, args);
 
 			//html = html.Replace("__TITLE__", this.calinfo.title);
 			html = html.Replace("__TITLE__", MakeTitle(view));
@@ -401,6 +417,27 @@ namespace CalendarAggregator
 			html = html.Replace("__EVENTBRITE_LOGO_DISPLAY__",	this.calinfo.show_eventbrite_badge	? "inline" : "none");
 			html = html.Replace("__MEETUP_LOGO_DISPLAY__",		this.calinfo.show_meetup_badge		? "inline" : "none");
 			html = html.Replace("__FACEBOOK_LOGO_DISPLAY__",	this.calinfo.show_facebook_badge	? "inline" : "none");
+			return html;
+		}
+
+		private string HandleJsUrl(string html, Dictionary<string,object> args)
+		{
+			var test = args.ContainsKey("test") && (bool)args["test"];
+
+			if (html.Contains("http://elmcity.blob.core.windows.net/admin/elmcity-1.7.js"))
+				html = html.Replace("http://elmcity.blob.core.windows.net/admin/elmcity-1.7.js", "__JSURL__"); // only until new templates deployed
+
+			if (this.default_js_url == null)                                                              // only until new renderers deployed
+				this.default_js_url = "http://elmcity.blob.core.windows.net/admin/elmcity-1.7.js";
+
+			if ( this.test_js_url == null )
+				this.test_js_url = "http://elmcity.blob.core.windows.net/admin/elmcity-1.7.js";
+
+			if (test)
+				html = html.Replace("__JSURL__", this.test_js_url);
+			else
+				html = html.Replace("__JSURL__", this.default_js_url);
+
 			return html;
 		}
 
@@ -463,12 +500,12 @@ namespace CalendarAggregator
 
 		public string RenderHtmlEventsOnly(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
 		{
-			MaybeUseTestTemplate(args);
-
 			args["AdvanceToAnHourAgo"] = true;
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
 			var builder = new StringBuilder();
+
+			MaybeUseAlternateTemplate(args);
 
 			RenderEventsAsHtml(eventstore, builder, args);
 
@@ -485,6 +522,9 @@ namespace CalendarAggregator
 
 			var css_url = GetCssUrl(args);
 			html = html.Replace("__CSSURL__", css_url);
+
+			html = HandleJsUrl(html, args);
+
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
 
 			html = Utils.RemoveCommentSection(html, "SIDEBAR");
@@ -510,19 +550,9 @@ namespace CalendarAggregator
 			//GenUtils.LogMsg("info", "RenderForMobile", JsonConvert.SerializeObject(args));
 			this.ResetCounters();
 
-			MaybeUseTestTemplate(args);
-
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 			count = (int) args["mobile_event_count"];                        // maybe apply further reduction
 			eventstore.events = eventstore.events.Take(count).ToList();
-
-
-			// assume a css link like this:
-			// <link type="text/css" rel="stylesheet" href="http://elmcity.cloudapp.net/get_css_theme?theme_name=a2chron"/>
-
-			var css = (string) args["css"];
-			var theme = css.Replace("http://elmcity.cloudapp.net/get_css_theme?theme_name=", "");
-			args["theme"] = theme;
 
 			var html = RenderHtmlEventsOnly(eventstore, view, count, from, to, args);
 
@@ -542,11 +572,12 @@ namespace CalendarAggregator
 			return html;
 		}
 
+		/*
 		public string RenderHtmlEventsOnlyRaw(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
 		{
 			this.ResetCounters();
 
-			MaybeUseTestTemplate(args);
+			MaybeUseAlternateTemplate(args);
 
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 			string title = null;
@@ -589,19 +620,32 @@ namespace CalendarAggregator
 			var html = builder.ToString();
 			return html;
 		}
+		 */
 
-		public void MaybeUseTestTemplate(Dictionary<string, object> args)
+		public void MaybeUseAlternateTemplate(Dictionary<string, object> args)
 		{
 			try
 			{
 				if (args == null)
 					return;
 
-				if (args.Keys.Contains("test") && (bool)args["test"] == true)  // maybe use the test template, which invokes the test js
+				string template = null;
+
+				if (args.Keys.Contains("template") )
+					template = (string) args["template"];
+
+				if ( ! String.IsNullOrEmpty(template) )
 				{
-					var settings = GenUtils.GetSettingsFromAzureTable();
-					var template_uri = new Uri(settings["test_template"]);
-					this.template_html = HttpUtils.FetchUrl(template_uri).DataAsString();
+					try
+					{
+						var template_uri = BlobStorage.MakeAzureBlobUri("admin", (string) args["template"]);
+						this.template_html = HttpUtils.FetchUrl(template_uri).DataAsString();
+					}
+					catch (Exception e)
+					{
+						GenUtils.LogMsg("exception", "MaybeUseAlternateTemplate", e.Message);
+						this.template_html = this.default_template_html;
+					}
 				}
 				else
 				{
