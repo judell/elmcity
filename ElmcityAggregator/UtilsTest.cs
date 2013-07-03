@@ -19,6 +19,8 @@ using ElmcityUtils;
 using System.Linq;
 using NUnit.Framework;
 using DDay.iCal;
+using Newtonsoft.Json;
+using System.Text;
 
 namespace CalendarAggregator
 {
@@ -500,6 +502,76 @@ END:VCALENDAR";
 		public void IcsFilterExcludeShouldRemoveEvtIfAllExcludedKeywordsInLocation()       // exclude removes LOCATION:Downtown Library
 		{
 			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event, "Downtown, Library", false, false, false, true));
+		}
+
+		#endregion
+
+		#region themes
+
+		[Test]
+		public void ThemesAreValid()
+		{
+			var themes_json_uri = BlobStorage.MakeAzureBlobUri("admin", "themes.json");
+			var themes_json = HttpUtils.FetchUrl(themes_json_uri).DataAsString();
+			Dictionary<string,Dictionary<string,string>> themes;
+			try
+			{
+			themes = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(themes_json);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidDataException(e.Message);
+			}
+			foreach (var theme_name in themes.Keys)
+			{
+				var theme = themes[theme_name];
+				foreach (var selector in theme.Keys)
+					{
+						try
+						{
+							var css_text = new StringBuilder();
+							Utils.WriteCssDeclaration(theme, css_text, selector);
+						}
+						catch (Exception e)
+						{
+							throw new InvalidDataException(e.Message);
+						}
+					}
+			}
+		}
+
+		[Test]
+		public void BogusThemeFailsAsExpected()
+		{
+			var themes_json_uri = BlobStorage.MakeAzureBlobUri("admin", "themes-test.json");
+			var themes_json = HttpUtils.FetchUrl(themes_json_uri).DataAsString();
+			Dictionary<string, Dictionary<string, string>> themes;
+			int errors = 0;
+			try
+			{
+				themes = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(themes_json);
+			}
+			catch (Exception e)
+			{
+				throw new InvalidDataException(e.Message);
+			}
+			foreach (var theme_name in themes.Keys)
+			{
+				var theme = themes[theme_name];
+				foreach (var selector in theme.Keys)
+				{
+					try
+					{
+						var css_text = new StringBuilder();
+						Utils.WriteCssDeclaration(theme, css_text, selector);
+					}
+					catch (Exception e)
+					{
+						errors++;
+					}
+				}
+			}
+			Assert.That(errors > 0);
 		}
 
 		#endregion
