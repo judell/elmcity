@@ -40,27 +40,6 @@ namespace CalendarAggregator
 		public string default_js_url;
 		public string test_js_url;
 
-		public string xmlfile
-		{
-			get { return _xmlfile; }
-			set { _xmlfile = value; }
-		}
-		private string _xmlfile;
-
-		public string jsonfile
-		{
-			get { return _jsonfile; }
-			set { _jsonfile = value; }
-		}
-		private string _jsonfile;
-
-		public string htmlfile
-		{
-			get { return _htmlfile; }
-			set { _htmlfile = value; }
-		}
-		private string _htmlfile;
-
 		// data might be available in cache,
 		// this interface abstracts the cache so its logic can be tested
 		public ICache cache
@@ -128,10 +107,6 @@ namespace CalendarAggregator
 					throw (e);
 				}
 
-				this.xmlfile = this.id + ".xml";
-				this.jsonfile = this.id + ".json";
-				this.htmlfile = this.id + ".html";
-
 				//  this.ical_sources = Collector.GetIcalSources(this.id);
 			}
 			catch (Exception e)
@@ -142,18 +117,6 @@ namespace CalendarAggregator
 		}
 
 		#region xml
-
-		// used by WorkerRole to save current xml rendering to azure blob
-		public string SaveAsXml()
-		{
-			var bs = BlobStorage.MakeDefaultBlobStorage();
-			string xml = "";
-			xml = this.RenderXml(0);
-			byte[] bytes = Encoding.UTF8.GetBytes(xml.ToString());
-			//BlobStorage.WriteToAzureBlob(this.bs, this.id, this.xmlfile, "text/xml", bytes);
-			bs.PutBlob(this.id, this.xmlfile, xml.ToString(), "text/xml");
-			return xml.ToString();
-		}
 
 		public string RenderXml()
 		{
@@ -264,13 +227,6 @@ namespace CalendarAggregator
 
 		#region json
 
-		public BlobStorageResponse SaveAsJson()
-		{
-			var es = new ZonelessEventStore(this.calinfo).Deserialize();
-			var json = JsonConvert.SerializeObject(es.events);
-			return Utils.SerializeObjectToJson(es.events, this.id, this.jsonfile);
-		}
-
 		public string RenderJson()
 		{
 			return RenderJson(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
@@ -339,16 +295,6 @@ namespace CalendarAggregator
 		#endregion json
 
 		#region html
-
-		public string SaveAsHtml()
-		{
-			string html = this.RenderHtml();
-			byte[] bytes = Encoding.UTF8.GetBytes(html);
-			//BlobStorage.WriteToAzureBlob(this.bs, this.id, this.htmlfile, "text/html", bytes);
-			var bs = BlobStorage.MakeDefaultBlobStorage();
-			bs.PutBlob(this.id, this.htmlfile, html, "text/html");
-			return html;
-		}
 
 		public string RenderHtml()
 		{
