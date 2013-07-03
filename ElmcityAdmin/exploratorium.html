@@ -13,104 +13,7 @@ var css_selector_to_friendly_name_map = {
   ".src" : "sourcestyle"
   }
 
-var themes = {
-  "default" : {
-    "body"         :  " { 'font-family':'verdana,arial,sans-serif', 'font-size':'10pt' } ",
-    ".hubtitle"    :  " { 'font-size' : '10pt', 'font-weight':'bold' } ",
-    ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
-    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'320px', 'top':'30px' } ",
-    "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'320px', 'top':'280px', 'width':'150px' } ",
-    "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'330px', 'top':'200px', 'width':'150px' } ",
-    ".bl"          :  " { 'margin-right':'40%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
-    ".st"          :  " { 'font-size':'smaller', 'color':'#333333'} ",
-    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
-    ".ed"          :  " { 'font-size':'9pt', 'font-weight':'bold' }",
-    "a"            :  " { 'color' : 'black', 'text-decoration' : 'none' }",
-    "a:hover"      :  " { 'color' : 'gray', 'text-decoration' : 'underline' }",
-    ".ttl"         :  " {  }",
-    ".src"         :  " { 'font-size':'smaller' } ",
-    ".cat"         :  " { 'font-size':'smaller' } ",
-    ".sd"          :  " { } ",
-    ".sd a"        :  " { } ",
-    ".atc"         :  " { } ",
-    ".atc a"       :  " { } ",
-    ".desc"        :  " { } "
-    },
-
-  "a2chron" : {
-    "body"         :  " { 'font-family':'Constantia,LucidaBright', 'font-size':'11pt' } ",
-    "div"          :  " { 'line-height' : '1.2' } ",
-    ".hubtitle"    :  " { 'font-weight':'bold', 'font-size' : '13pt' } ",
-    ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
-    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'320px', 'top':'30px' } ",
-    "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'320px', 'top':'280px', 'width':'150px' } ",
-    "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'330px', 'top':'200px', 'width':'150px' } ",
-    ".bl"          :  " { 'line-height' :'1.5', 'margin-right':'40%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
-    ".st"          :  " { 'border-bottom' : '1px dotted', 'color':'#333'} ",
-    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
-    ".ed"          :  " { 'font-size':'12pt' }",
-    "a"            :  " { 'color' : 'black', 'text-decoration' : 'none' }",
-    "a:hover"      :  " { 'color' : 'gray' }",
-    ".ttl"         :  " {  }",
-    ".src"         :  " { 'font-size':'smaller', 'text-transform': 'uppercase' } ",
-    ".cat"         :  " { 'font-size':'smaller' } ",
-    ".sd"          :  " { } ",
-    ".sd a"        :  " { } ",
-    ".atc"         :  " { } ",
-    ".atc a"       :  " { } ",
-    ".desc"        :  " { } "
-    },
-
-  "roanoke" : {
-    "body"         :  " { 'font-family':'verdana,arial,sans-serif', 'font-size':'10pt' } ",
-    ".hubtitle"    :  " { 'font-size' : '10pt', 'font-weight':'bold' } ",
-    ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
-    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'320px', 'top':'30px' } ",
-    "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'320px', 'top':'280px', 'width':'150px' } ",
-    "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'330px', 'top':'200px', 'width':'150px' } ",
-    ".bl"          :  " { 'margin-right':'40%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
-    ".st"          :  " { 'color':'#666666'} ",
-    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
-    ".ed"          :  " { 'font-size':'larger', 'font-family':'georgia', 'color' : '#666666' }",
-    "a"            :  " { 'color' : '#497399', 'text-decoration' : 'none' }",
-    "a:hover"      :  " { 'color' : '#497399', 'text-decoration' : 'underline' }",
-    ".ttl"         :  " { 'font-weight' : 'bold' }",
-    ".src"         :  " { 'font-size':'smaller', 'font-weight' : 'bold' } ",
-    ".cat"         :  " { 'font-size':'smaller' } ",
-    ".sd"          :  " { 'font-weight' : 'bold' } ",
-    ".sd a"        :  " { } ",
-    ".atc"         :  " { } ",
-    ".atc a"       :  " { } ",
-    ".desc"        :  " { } "
-    },
-
-
-  "test" : {
-    "body"         :  " { 'font-family':'verdana,arial,sans-serif', 'font-size':'10pt' } ",
-    ".hubtitle"    :  " { 'font-size' : '10pt', 'font-weight':'bold' } ",
-    ".timeofday"   :  " { 'font-size':'8pt', 'margin-left':'30%', 'margin-top':'0px', 'margin-bottom':'4pt' } ",
-    "#datepicker"  :  " { 'font-size':'6pt', 'position':'fixed', 'left':'320px', 'top':'30px' } ",
-    "#sidebar"     :  " { 'font-size':'smaller', 'position':'fixed', 'left':'320px', 'top':'280px', 'width':'150px' } ",
-    "#tags"        :  " { 'text-align':'center', 'position' : 'fixed', 'font-size':'smaller', 'left':'330px', 'top':'200px', 'width':'150px' } ",
-    ".bl"          :  " { 'margin-right':'40%', 'margin-top':'0px', 'margin-bottom':'10pt', 'text-indent':'-1em', 'margin-left':'1em' } ",
-    ".st"          :  " { 'font-size':'smaller', 'color':'#333333'} ",
-    ".menu li"     :  " { 'list-style-type':'none', 'font-size':'smaller', 'line-height':'1.5' } ",
-    ".ed"          :  " { 'font-size':'9pt', 'font-weight':'bold' }",
-    "a"            :  " { 'color' : 'black', 'text-decoration' : 'none' }",
-    "a:hover"      :  " { 'color' : 'gray', 'text-decoration' : 'underline' }",
-    ".ttl"         :  " {  }",
-    ".src"         :  " { 'font-size':'smaller' } ",
-    ".cat"         :  " { 'font-size':'smaller' } ",
-    ".sd"          :  " { } ",
-    ".sd a"        :  " { } ",
-    ".atc"         :  " { } ",
-    ".atc a"       :  " { } ",
-    ".desc"        :  " { } ",
-    ".test"        :  " { } "
-    }
-
-}
-
+var themes = {};
 
 function gup( name )
   {  
@@ -147,6 +50,19 @@ function change_theme()
   $('.theme')[0].textContent = selected_theme;
   $('#iframe')[0].src = href;
   }
+
+<!--
+function change_template()
+  {
+  var selected_template = $('#template_select option:selected').val();
+  var href = $('#iframe')[0].src;
+  href = remove_href_arg(href,"template");
+  href = add_href_arg(href, "template", selected_template);
+  $('.template')[0].textContent = selected_template;
+  $('#iframe')[0].src = href;
+  }
+-->
+
 
 
 function change_width()
@@ -220,6 +136,17 @@ function change_style(selector)
 
 function onload()
   {
+   var completion_result = $.ajax({
+     url: 'http://elmcity.blob.core.windows.net/admin/themes.json',
+     cache: false,
+     async: false
+   });
+
+  themes = JSON.parse(completion_result.responseText);
+
+  for  ( theme in themes )
+    $('#theme_select').append('<option value="' + theme + '">' + theme + '</option>');
+
   if ( gup('hub') != '' && gup('hubdesc') != '') 
     {
     var hub = gup('hub');
@@ -271,6 +198,20 @@ function onload()
       }
     }
 
+<!--
+  if ( gup('template') != '' ) 
+    {
+    var template = gup('template');
+    for ( i = 0; i < $('#template_select option').length; i++ )
+      {
+        if ( $('#template_select option')[i].value == template )
+            {
+            $('#template_select').val(template);
+            change_template();
+            }
+      }
+    }
+-->
 
   $('#itemstyle').val(themes['default']['body']);
   $('#datestyle').val(themes['default']['.ed']);
@@ -320,7 +261,7 @@ function add_href_arg(href, name, value)
 
 <h1 style="font-family:verdana;font-size:12pt" class="headlinestyle">Upcoming in <span class='hubdesc'>the New River Valley</span>: <span class="tag">MUSIC</span></h1>
 
-<iframe width="330" height="600" id="iframe" src="http://elmcity.cloudapp.net/NewRiverValleyVA/?eventsonly=yes&view=music&count=200&width=300&tags=no&taglist=no&itemstyle=&datestyle=&titlestyle=&linkstyle=&dtstartstyle=&sourcestyle=" style="border-width:thin;border-style:solid"></iframe>
+<iframe width="330" height="600" id="iframe" src="http://elmcity.cloudapp.net/NewRiverValleyVA/html?eventsonly=yes&view=music&count=200&width=300&tags=no&taglist=no&itemstyle=&datestyle=&titlestyle=&linkstyle=&dtstartstyle=&sourcestyle=&template=default.tmpl" style="border-width:thin;border-style:solid"></iframe>
 
 <p style="font-size:11pt" class="joinlabelstyle">
 <a class="joinlink" href="http://elmcity.cloudapp.net/welcome?id=NewRiverValleyVA&hubdesc=Virginia%27s%20New%20River%20Valley&category=music">Join the calendar network for <span class='hubdesc'>Virginia's New River Valley</span>!</a>
@@ -347,11 +288,19 @@ function add_href_arg(href, name, value)
 <p>change theme</p>
 <p>
 <select onchange="change_theme()" id="theme_select">
-<option selected value="default">default</option>
-<option value="a2chron">Ann Arbor Chronicle</option>
-<option value="roanoke">Roanoke Times</option>
 </select>
 </p>
+
+<!--
+<p>change template</p>
+<p>
+<select onchange="change_template()" id="template_select">
+<option selected value="default.tmpl">default.tmpl</option>
+<option value="a2chron.tmpl">a2chron.tmpl</option>
+</select>
+</p>
+-->
+
 
 <p>change itemstyle</p>
 <p>
@@ -417,7 +366,7 @@ function add_href_arg(href, name, value)
 <p>change hub</p>
 <p>
 <select onchange="change_hub()" id="hub_select">
-<option value="a2cal">Ann Arbor</option>
+<option value="AnnArborChronicle">Ann Arbor</option>
 <option value="berkeley">Berkeley</option>
 <option value="BostonMA">Boston</option>
 <option value="CentralVT">Central Vermont</option>
@@ -454,14 +403,14 @@ function add_href_arg(href, name, value)
 <p>
 &lt;iframe width="<span class='outside_width'>330</span>" 
 <br> height="800" 
-<br> src="http://elmcity.cloudapp.net/<span class='hubname'>NewRiverValleyVA</span>/html?eventsonly=yes&taglist=no&tags=no&view=<span class='tag'>music</span>&count=200&width=<span class='inside_width'></span>&sidebar=no&datepicker=no&timeofday=no&hubtitle=no&datestyle=<span class='datestyle'></span>&itemstyle=<span class='itemstyle'></span>&titlestyle=<span class='titlestyle'></span>&linkstyle=<span class='linkstyle'></span>&dtstartstyle=<span class='dtstartstyle'></span>&sourcestyle=<span class='sourcestyle'></span>&theme=<span class='theme'></span>"
+<br> src="http://elmcity.cloudapp.net/<span class='hubname'>NewRiverValleyVA</span>/html?eventsonly=yes&taglist=no&tags=no&view=<span class='tag'>music</span>&count=200&width=<span class='inside_width'></span>&sidebar=no&datepicker=no&timeofday=no&hubtitle=no&datestyle=<span class='datestyle'></span>&itemstyle=<span class='itemstyle'></span>&titlestyle=<span class='titlestyle'></span>&linkstyle=<span class='linkstyle'></span>&dtstartstyle=<span class='dtstartstyle'></span>&sourcestyle=<span class='sourcestyle'></span>&theme=<span class='theme'>&template=default.tmpl</span>"
 <br> style="border-width:thin;border-style:solid">
 <br>&lt;/iframe>
 </p>
 
 <p>
 &lt;p class="joinlabelstyle">
-&lt;a class="joinlink" href="http://elmcity.cloudapp.net/welcome?id=<span class='hubname'>NewRiverValleyVA</span>&hubdesc=<span class='hubdesc'>Virginia%27s%20New%20River%20Valley</span>&taglist=no&category=<span class='tag'>music</span>">Join the calendar network for <span class='hubdesc'>Virginia's New River Valley</span>!&lt;/a>
+&lt;a class="joinlink" href="http://elmcity.cloudapp.net/welcome?id=<span class='hubname'>NewRiverValleyVA</span>&hubdesc=<span class='hubdesc'>Virginia%27s%20New%20River%20Valley</span>&taglist=no&category=<span class='tag'>music</span>&template=default.tmpl">Join the calendar network for <span class='hubdesc'>Virginia's New River Valley</span>!&lt;/a>
 &lt;/p>
 </p>
 
