@@ -142,36 +142,25 @@ namespace CalendarAggregator
 		}
 
 		[Test]
-		public void MaybeUseTestTemplateAltersTemplateWhenTesting()
+		public void UsesAlternateTemplateWhenRequested()
 		{
 			this.cr = new CalendarRenderer(Configurator.testid);
 			var orig = this.cr.template_html;
 			var args = new Dictionary<string,object>();
-			args.Add("test", true);
+			args.Add("template", "a2chron.tmpl");
 			this.cr.MaybeUseAlternateTemplate(args);
 			Assert.AreNotEqual(this.cr.template_html, orig);
 		}
 
 		[Test]
-		public void MaybeUseTestTemplateDoeNotAlterTemplateWhenNotTesting()
+		public void RestoresOriginalTemplateWhenAlternateNotRequested()
 		{
 			this.cr = new CalendarRenderer(Configurator.testid);
 			var orig = this.cr.template_html;
 			var args = new Dictionary<string, object>();
-			args.Add("test", false);
+			args.Add("template", "a2chron.tmpl");
 			this.cr.MaybeUseAlternateTemplate(args);
-			Assert.AreEqual(this.cr.template_html, orig);
-		}
-
-		[Test]
-		public void MaybeUseTestTemplateRestoresOriginalWhenNotTesting()
-		{
-			this.cr = new CalendarRenderer(Configurator.testid);
-			var orig = this.cr.template_html;
-			var args = new Dictionary<string, object>();
-			args.Add("test", true);
-			this.cr.MaybeUseAlternateTemplate(args);
-			args["test"] = false;
+			args = new Dictionary<string, object>();
 			this.cr.MaybeUseAlternateTemplate(args);
 			Assert.AreEqual(this.cr.template_html, orig);
 		}
