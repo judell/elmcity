@@ -541,6 +541,22 @@ END:VCALENDAR";
 		}
 
 		[Test]
+		public void A2ChronThemeYieldsExpectedCss()
+		{
+			var themes_json_uri = BlobStorage.MakeAzureBlobUri("admin", "themes.json");
+			var themes_json = HttpUtils.FetchUrl(themes_json_uri).DataAsString();
+			Dictionary<string, Dictionary<string, string>> themes;
+			themes = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, string>>>(themes_json);
+
+			var expected_css_uri = BlobStorage.MakeAzureBlobUri("admin", "a2chron-for-testing.css");
+			var expected_css = HttpUtils.FetchUrl(expected_css_uri).DataAsString();
+
+			var actual_css = Utils.GetCssTheme(themes, "a2chron", false, null, null);
+
+			Assert.That(expected_css == actual_css);
+		}
+
+		[Test]
 		public void BogusThemeFailsAsExpected()
 		{
 			var themes_json_uri = BlobStorage.MakeAzureBlobUri("admin", "themes-test.json");
