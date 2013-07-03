@@ -292,8 +292,8 @@ $(document).ready(function(){
   if ( gup('tags').startsWith('n') )
     $('.cat').remove();
 
-  if ( gup('taglist').startsWith('n') )
-      $('#tag_select').remove();
+//  if ( gup('taglist').startsWith('n') )
+//      $('#tag_select').remove();
 
   if ( is_view && is_sidebar )
     try
@@ -534,6 +534,12 @@ function show_view(view)
 
   if ( gup('count') != '')
     path = add_href_arg(path,'count',gup('count') );
+
+  if ( gup('mobile') != '')
+    path = add_href_arg(path,'mobile',gup('mobile') );
+
+  if ( gup('eventsonly') != '')
+    path = add_href_arg(path,'eventsonly',gup('eventsonly') );
 
   location.href = path;
   }
