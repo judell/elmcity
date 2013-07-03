@@ -3567,6 +3567,35 @@ END:VTIMEZONE");
 					theme = themes["default"];
 			}
 
+			MaybeAdjustForMobile(mobile, mobile_long, theme);
+
+			var css_text = new StringBuilder();
+			foreach (var selector in theme.Keys)
+			{
+				try
+				{
+					WriteCssDeclaration(theme, css_text, selector);
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "GetCssTheme: " + theme + ", " + selector + ", " + theme[selector], e.Message);
+				}
+			}
+
+			return css_text.ToString();
+		}
+
+		public static void WriteCssDeclaration(Dictionary<string, string> theme, StringBuilder css_text, string selector)
+		{
+			var decl_dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(theme[selector]);
+			css_text.Append(string.Format("{0} {{\n", selector));
+			foreach (var key in decl_dict.Keys)
+				css_text.Append(string.Format(key + ":" + decl_dict[key] + ";\n"));
+			css_text.Append("}\n\n");
+		}
+
+		private static void MaybeAdjustForMobile(bool mobile, string mobile_long, Dictionary<string, string> theme)
+		{
 			if (mobile)
 			{
 				try
@@ -3576,11 +3605,11 @@ END:VTIMEZONE");
 					theme[".hubtitle"] = " { 'display':'none' } ";
 					theme[".ed"] = " { 'display':'none' } ";
 
-					if ( ! theme.ContainsKey("#tag_select") )
+					if (!theme.ContainsKey("#tag_select"))
 						theme["#tag_select"] = " {  } ";
 
 					var body_dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(theme["body"]);
-					var tag_select_dict = JsonConvert.DeserializeObject<Dictionary<string,string>>(theme["#tag_select"]);
+					var tag_select_dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(theme["#tag_select"]);
 					var m_long = Convert.ToInt16(mobile_long);
 					if (m_long <= 400)
 					{
@@ -3604,18 +3633,6 @@ END:VTIMEZONE");
 					GenUtils.PriorityLogMsg("exception", "GetCssTheme: tweaking mobile settings", e.Message);
 				}
 			}
-
-			var css_text = new StringBuilder();
-			foreach (var selector in theme.Keys)
-			{
-				var decl_dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(theme[selector]);
-				css_text.Append(string.Format("{0} {{\n", selector));
-				foreach (var key in decl_dict.Keys)
-					css_text.Append(string.Format(key + ":" + decl_dict[key] + ";\n"));
-				css_text.Append("}\n\n");
-			}
-
-			return css_text.ToString();
 		}
 
 		public static iCalendar iCalFromFeedUrl(string feedurl, Dictionary<string,string> settings)
