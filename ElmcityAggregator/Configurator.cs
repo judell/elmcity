@@ -754,10 +754,6 @@ namespace CalendarAggregator
 		{ get { return _eventful; } }
 		private bool _eventful;
 
-		public bool upcoming
-		{ get { return _upcoming; } }
-		private bool _upcoming;
-
 		public bool eventbrite
 		{ get { return _eventbrite; } }
 		private bool _eventbrite;
@@ -912,7 +908,6 @@ namespace CalendarAggregator
 
 					this._population = Configurator.GetPopSetting(this.id, metadict, Configurator.usersettings, "population");
 					this._eventful = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "eventful");
-					this._upcoming = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "upcoming");
 					this._eventbrite = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "eventbrite");
 					this._facebook = Configurator.GetBoolSetting(metadict, Configurator.usersettings, "facebook");
 
