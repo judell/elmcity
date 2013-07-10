@@ -581,7 +581,7 @@ END:VCALENDAR";
 						var css_text = new StringBuilder();
 						Utils.WriteCssDeclaration(theme, css_text, selector);
 					}
-					catch (Exception e)
+					catch 
 					{
 						errors++;
 					}
