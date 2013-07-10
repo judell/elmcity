@@ -725,39 +725,6 @@ namespace CalendarAggregator
 
 			es2.Serialize();
 
-			Assert.IsTrue(calinfo_keene.upcoming);
-
-			var es3 = new ZonedEventStore(calinfo_keene, SourceType.upcoming);
-			es3.AddEvent(
-				"event",
-				"http://3",
-				"source3",
-				dtstart,
-				dtend,
-				"3",
-				"3",
-				false,
-				"cat3,cat3a",
-				"third event",
-				"third location"
-				);
-
-			es3.AddEvent(
-				"another event",
-				"http://4",
-				"source4",
-				dtstart,
-				dtend,
-				"4",
-				"4",
-				false,
-				"cat4,cat4a",
-				"fourth event",
-				"fourth location"
-				);
-
-			es3.Serialize();
-
 			EventStore.CombineZonedEventStoresToZonelessEventStore(keene_test_hub, settings);
 			var es = new ZonelessEventStore(calinfo_keene).Deserialize();
 
@@ -775,63 +742,6 @@ namespace CalendarAggregator
 			//Assert.That(evt.list_of_urls_and_sources[0][0] == "http://1" && evt.list_of_urls_and_sources[0][1] == "source1");
 			//Assert.That(evt.list_of_urls_and_sources[1][0] == "http://2" && evt.list_of_urls_and_sources[1][1] == "source2");
 			//Assert.That(evt.list_of_urls_and_sources[2][0] == "http://3" && evt.list_of_urls_and_sources[2][1] == "source3");
-		}
-
-		[Test]
-		public void EventfulUrlsAreNormalized()
-		{
-			DeleteZonedObjects(keene_test_hub);
-
-			var dtstart = new DateTimeWithZone(DateTime.Now, calinfo_keene.tzinfo);
-			var dtend = new DateTimeWithZone(dtstart.LocalTime + TimeSpan.FromHours(1), calinfo_keene.tzinfo);
-
-
-			var es1 = new ZonedEventStore(calinfo_keene, SourceType.ical);
-			es1.AddEvent(
-				"event",
-				"http://eventful.com/E0-001-039987477-3",
-				"The Blind Pig",
-				dtstart,
-				dtend,
-				"1",
-				"1",
-				false,
-				"music",
-				"first event",
-				"first location"
-				);
-
-			es1.Serialize();
-
-			var es2 = new ZonedEventStore(calinfo_keene, SourceType.eventful);
-			es2.AddEvent(
-				"event",
-				"http://eventful.com/events/E0-001-039987477-3",
-				"Blind Pig",
-				dtstart,
-				dtend,
-				"1",
-				"1",
-				false,
-				"eventful",
-				"first event",
-				"first location"
-				);
-
-			es2.Serialize();
-
-			EventStore.CombineZonedEventStoresToZonelessEventStore(keene_test_hub, settings);
-
-			var es = new ZonelessEventStore(calinfo_keene).Deserialize();
-
-			Assert.That(es.events.Count == 1);
-
-			var evt = es.events.Find(e => e.title == "event");
-
-			var categories = evt.categories.Split(',').ToList();
-			categories.Sort();
-			Assert.That(categories.SequenceEqual(new List<string>() { "eventful", "music" }));
-			Assert.That(evt.urls_and_sources.Keys.Count == 1);
 		}
 
 		#endregion
