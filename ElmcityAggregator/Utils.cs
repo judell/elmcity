@@ -2543,9 +2543,6 @@ END:VCALENDAR",
 			if (type.ToString() == "eventful" && !calinfo.eventful)
 				return false;
 
-			if (type.ToString() == "upcoming" && !calinfo.upcoming)
-				return false;
-
 			if (type.ToString() == "eventbrite" && !calinfo.eventbrite)
 				return false;
 
@@ -2637,11 +2634,11 @@ END:VCALENDAR",
 				id);
 		}
 
-		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template)
+		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl)
 		{
 			var viewkey = string.Format("/services/{0}/{1}?view={2}&count={3}&from={4}&to={5}", id, type, view, count, from, to);
 			if (type == "html")
-				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template;
+				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template + "&jsurl=" + jsurl;
 			return viewkey;
 		}
 
@@ -3567,8 +3564,6 @@ END:VTIMEZONE");
 					theme = themes["default"];
 			}
 
-			MaybeAdjustForMobile(mobile, mobile_long, theme);
-
 			var css_text = new StringBuilder();
 			foreach (var selector in theme.Keys)
 			{
@@ -3592,47 +3587,6 @@ END:VTIMEZONE");
 			foreach (var key in decl_dict.Keys)
 				css_text.Append(string.Format(key + ":" + decl_dict[key] + ";\n"));
 			css_text.Append("}\n\n");
-		}
-
-		private static void MaybeAdjustForMobile(bool mobile, string mobile_long, Dictionary<string, string> theme)
-		{
-			if (mobile)
-			{
-				try
-				{
-					theme[".bl"] = " { 'margin-bottom':'3%' } ";
-					theme[".timeofday"] = " { 'display':'none' } ";
-					theme[".hubtitle"] = " { 'display':'none' } ";
-					theme[".ed"] = " { 'display':'none' } ";
-
-					if (!theme.ContainsKey("#tag_select"))
-						theme["#tag_select"] = " {  } ";
-
-					var body_dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(theme["body"]);
-					var tag_select_dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(theme["#tag_select"]);
-					var m_long = Convert.ToInt16(mobile_long);
-					if (m_long <= 400)
-					{
-						body_dict.AddOrUpdateDictionary("font-size", "300%");
-						tag_select_dict.AddOrUpdateDictionary("font-size", "200%");
-					}
-					else if (m_long > 400 && m_long < 1000)
-					{
-						body_dict.AddOrUpdateDictionary("font-size", "200%");
-						tag_select_dict.AddOrUpdateDictionary("font-size", "150%");
-					}
-					else
-					{
-						body_dict.AddOrUpdateDictionary("font-size", "100%");
-					}
-					theme["body"] = JsonConvert.SerializeObject(body_dict);
-					theme["#tag_select"] = JsonConvert.SerializeObject(tag_select_dict);
-				}
-				catch (Exception e)
-				{
-					GenUtils.PriorityLogMsg("exception", "GetCssTheme: tweaking mobile settings", e.Message);
-				}
-			}
 		}
 
 		public static iCalendar iCalFromFeedUrl(string feedurl, Dictionary<string,string> settings)
