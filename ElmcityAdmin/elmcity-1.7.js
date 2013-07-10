@@ -541,6 +541,12 @@ function show_view(view)
   if ( gup('eventsonly') != '')
     path = add_href_arg(path,'eventsonly',gup('eventsonly') );
 
+  if ( gup('template') != '')
+    path = add_href_arg(path,'template',gup('template') );
+
+  if ( gup('jsurl') != '')
+    path = add_href_arg(path,'jsurl',gup('jsurl') );
+
   location.href = path;
   }
 
