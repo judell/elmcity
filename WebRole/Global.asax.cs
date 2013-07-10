@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2522";
+        public static string version = "2524";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -703,12 +703,14 @@ namespace WebRole
                     }
                 }
 
-                foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's renderer change?
-                {
+				foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's renderer change?
+				{
 					var cached_renderer = ElmcityApp.wrd.renderers[id];
 					var current_renderer = Utils.AcquireRenderer(id);
-					if (cached_renderer.timestamp != current_renderer.timestamp ) // timestamp changed
+					if (cached_renderer.timestamp != current_renderer.timestamp) // timestamp changed
 					{
+						if (! Utils.RenderersAreEqual(cached_renderer, current_renderer, except_keys: new List<string>() { "timestamp" }) )
+						{
 							GenUtils.LogMsg("info", "Reload: new renderer for " + id, null);
 							lock (ElmcityApp.wrd)
 							{
@@ -724,6 +726,7 @@ namespace WebRole
 
 						}
 					}
+				}
   
                 }
 
