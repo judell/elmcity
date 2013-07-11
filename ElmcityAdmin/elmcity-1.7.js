@@ -75,7 +75,7 @@ function position_sidebar(top_element)
   if ( top_elt_bottom <= 0  )
      $('#sidebar').css('top', $(window).scrollTop() - top_offset + 'px');
    else
-     $('#sidebar').css('top', '0px');
+     $('#sidebar').css('top', 'auto');
   }
 
 
