@@ -377,17 +377,20 @@ namespace CalendarAggregator
 			if ( this.test_js_url == null )
 				this.test_js_url = "http://elmcity.blob.core.windows.net/admin/elmcity-1.7-test.js";
 
+			var test_js = this.test_js_url;
+			var default_js = this.default_js_url;
+
 			if (jsurl != null)  // override defaults if jsurl on url-line
 			{
 				var js = BlobStorage.MakeAzureBlobUri("admin", (string)args["jsurl"]).ToString(); ;
-				this.test_js_url = js;
-				this.default_js_url = js;
+				test_js = js;
+				default_js = js;
 			}
 
 			if (test)
-				html = html.Replace("__JSURL__", this.test_js_url);
+				html = html.Replace("__JSURL__", test_js);
 			else
-				html = html.Replace("__JSURL__", this.default_js_url);
+				html = html.Replace("__JSURL__", default_js);
 
 			return html;
 		}
