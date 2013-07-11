@@ -10,6 +10,7 @@ var is_eventsonly = false;
 var is_theme = false;
 var is_view = false;
 var is_sidebar = true;
+var top_method = 0; // for use in position_sidebar
 
 var redirected_hubs = [ 'AnnArborChronicle' ];
 
@@ -75,7 +76,7 @@ function position_sidebar(top_element)
   if ( top_elt_bottom <= 0  )
      $('#sidebar').css('top', $(window).scrollTop() - top_offset + 'px');
    else
-     $('#sidebar').css('top', 'auto');
+     $('#sidebar').css('top', top_method);
   }
 
 
