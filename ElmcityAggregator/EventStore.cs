@@ -153,11 +153,6 @@ namespace CalendarAggregator
 			return string.Format("{0}-{1}@{2}", Convert.ToBase64String(summary_bytes), evt.DTStart.Ticks, ElmcityUtils.Configurator.appdomain);
 		}
 
-		public void NormalizeTitle()
-		{
-			this.title = Regex.Replace(this.title, "[\"\']+", "");
-			this.title = Regex.Replace(this.title, @"[\s]+", " ");
-		}
 	}
 
 	// the aggregator saves all intermediate results as ZonedEvent objects, e.g.:
@@ -495,7 +490,6 @@ namespace CalendarAggregator
 		public void AddEvent(string title, string url, string source, string lat, string lon, DateTime dtstart, DateTime dtend, bool allday, string categories, string description, string location)
 		{
 			var evt = new ZonelessEvent(title: title, url: url, source: source, dtstart: dtstart, dtend: dtend, lat: lat, lon: lon, allday: allday, categories: categories, description: description, location: location);
-			evt.NormalizeTitle();
 			this.events.Add(evt);
 		}
 
