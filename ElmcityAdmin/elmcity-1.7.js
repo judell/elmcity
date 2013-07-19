@@ -12,7 +12,7 @@ var is_view = false;
 var is_sidebar = true;
 var top_method = 0; // for use in position_sidebar
 
-var redirected_hubs = [ 'AnnArborChronicle', 'HamptonRoadsVA' ];
+var redirected_hubs = [ 'AnnArborChronicle'];
 
 /*
 text-align:center;
