@@ -1848,6 +1848,15 @@ END:VCALENDAR",
 					);
 		}
 
+		public static void DumpCachedFeedsForId(string id)
+		{
+			var feeds = Metadata.LoadFeedsFromAzureTableForId(id, FeedLoadOption.all);
+			Parallel.ForEach(source: feeds.Keys, body: (feedurl) =>
+			{
+				Utils.DeleteCachedFeedObj(id, feedurl);
+			});
+		}
+
 
 		#endregion
 
