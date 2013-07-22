@@ -114,6 +114,8 @@ namespace CalendarAggregator
 					var metadata_url = string.Format("http://{0}/{1}/metadata", ElmcityUtils.Configurator.appdomain, id);
 					var args = new Dictionary<string, string>() { { "metadata_url", metadata_url } };
 					ThreadPool.QueueUserWorkItem(new WaitCallback(rebuild_metahistory_handler), args); // do this on another thread
+
+					Utils.DumpCachedFeedsForId(id);  // todo: isolate affected feeds
 				}
 				catch (Exception e)
 				{
