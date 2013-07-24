@@ -71,11 +71,19 @@ function add_fullsite_switcher()
 
 function position_sidebar(top_element)
   {
-  var top_elt_bottom = $('#' + top_element)[0].getClientRects()[0].bottom;
- 
+  try
+    {
+    var top_elt_bottom = $('#' + top_element)[0].getClientRects()[0].bottom;
+    }
+  catch (e)
+    {
+    console.log(e.description);
+    top_elt_bottom = 0;
+    }
+
   if ( top_elt_bottom <= 0  )
      $('#sidebar').css('top', $(window).scrollTop() - top_offset + 'px');
-   else
+  else
      $('#sidebar').css('top', top_method);
   }
 
