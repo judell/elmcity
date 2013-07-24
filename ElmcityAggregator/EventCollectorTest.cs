@@ -728,20 +728,15 @@ namespace CalendarAggregator
 			EventStore.CombineZonedEventStoresToZonelessEventStore(keene_test_hub, settings);
 			var es = new ZonelessEventStore(calinfo_keene).Deserialize();
 
-			Assert.That(es.events.Count == 2);
+			Assert.That(es.events.Count == 1);
 
 			var evt = es.events.Find(e => e.title == "event");
 
-			Assert.That(evt.categories == "cat1,cat2,cat2a,cat3,cat3a");
+			Assert.That(evt.categories == "cat1,cat2,cat2a");
 
-			Assert.That(evt.urls_and_sources.Keys.Count == 3);
+			Assert.That(evt.urls_and_sources.Keys.Count == 2);
 			Assert.That(evt.urls_and_sources["http://1"] == "source1");
 			Assert.That(evt.urls_and_sources["http://2"] == "source2");
-			Assert.That(evt.urls_and_sources["http://3"] == "source3");
-
-			//Assert.That(evt.list_of_urls_and_sources[0][0] == "http://1" && evt.list_of_urls_and_sources[0][1] == "source1");
-			//Assert.That(evt.list_of_urls_and_sources[1][0] == "http://2" && evt.list_of_urls_and_sources[1][1] == "source2");
-			//Assert.That(evt.list_of_urls_and_sources[2][0] == "http://3" && evt.list_of_urls_and_sources[2][1] == "source3");
 		}
 
 		#endregion
