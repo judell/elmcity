@@ -211,6 +211,20 @@ if unsure please check http://{1}/{2}/stats",
             }
         }
 
+		/* idle for now
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult get_blob(string id, string path)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+
+			var uri = BlobStorage.MakeAzureBlobUri(id, path);
+			var r = HttpUtils.FetchUrl(uri);
+			var content = r.DataAsString();
+			var content_type = r.headers["Content-Type"];
+
+			return Content(content, content_type);
+		}*/
+
         [OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
         public ActionResult get_css_theme(string theme_name, string mobile, string mobile_long, string ua)
         {

@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2525";
+        public static string version = "2527";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -251,6 +251,14 @@ namespace WebRole
                 "get_fb_ical_url",
                 new { controller = "Home", action = "get_fb_ical_url" }
             );
+
+			/* idle for now
+			// file getter for use with hosted templates
+			routes.MapRoute(
+				"get_blob",
+				"get_blob",
+				new { controller = "Home", action = "get_blob" }
+			); */
 
 			routes.MapRoute(
 				"get_form_post_ical_url",
@@ -659,7 +667,9 @@ namespace WebRole
 			Utils.ScheduleTimer(MakeTablesAndCharts, minutes: CalendarAggregator.Configurator.web_make_tables_and_charts_interval_minutes, name: "MakeTablesAndCharts", startnow: false);
             
 			ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
-        }
+
+
+       }
 
         // encapsulate _reload with the signature needed by Utils.ScheduleTimer
         public static void ReloadSettingsAndRoutes(Object o, ElapsedEventArgs e)
@@ -771,7 +781,6 @@ namespace WebRole
 						var route_count_new = RouteTable.Routes.Count;
 						if (route_count_new < route_count_old)
 							GenUtils.PriorityLogMsg("warning", "route count was " + route_count_old + ", is " + route_count_new, null);
-                        // RouteDebug.RouteDebugger.RewriteRoutesForTesting(RouteTable.Routes);
                     }
                 }
                 catch (Exception e3)
