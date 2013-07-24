@@ -234,6 +234,10 @@ namespace WebRole
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), render_args);
 
 						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, render_args);
+						
+						// let ajax pull events into pages directly
+						this.controller.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
+						
 						new ContentResult
 						{
 							ContentType = "text/html",
