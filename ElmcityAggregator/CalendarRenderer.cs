@@ -1239,7 +1239,7 @@ namespace CalendarAggregator
 			if ( from != DateTime.MinValue && to != DateTime.MinValue )
 				events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart <= to);  // reduce to time window
 
-			if (view != null) // reduce to matching categories
+			if (! String.IsNullOrEmpty(view) ) // reduce to matching categories
 			{
 				var view_list = view.Split(',').ToList();    // view=newportnewsva,sports,-soccer,-baseball
 				var remainder = new List<string>();
