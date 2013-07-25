@@ -55,7 +55,7 @@ function add_fullsite_switcher()
     }
   catch (e)
     {
-    console.log(e.description);
+    console.log(e.message);
     }
   }
 
@@ -67,7 +67,7 @@ function position_sidebar(top_element)
     }
   catch (e)
     {
-    console.log(e.description);
+    console.log(e.message);
     top_elt_bottom = 0;
     }
 
@@ -92,7 +92,7 @@ function add_mobile_switcher()
      }
   catch (e)
     {
-    console.log(e.description);
+    console.log(e.message);
     }
   }
 
@@ -204,7 +204,7 @@ function find_current_name()
     }
   catch (e)
     {
-     console.log("find_current_name: " + e.description);
+     console.log("find_current_name: " + e.message);
     }
   return ret;
   }
@@ -347,7 +347,7 @@ $(document).ready(function(){
   if ( gup('sourcestyle') != '' )
     apply_json_css('.src', 'sourcestyle');
 
-  remember_or_forget_from_to();
+//  remember_or_forget_from_to();
 
 //  if ( is_mobile )
 //    add_fullsite_switcher();
@@ -398,7 +398,7 @@ function apply_json_css(element,style)
     }
   catch (e)
     {
-    console.log(e.description);
+    console.log(e.message);
     }
   }
 
@@ -549,18 +549,26 @@ function show_view(view)
   if ( gup('jsurl') != '')
     path = add_href_arg(path,'jsurl',gup('jsurl') );
 
-   var from_cookie_name = make_cookie_name_from_view(view, 'from');
-   var to_cookie_name = make_cookie_name_from_view(view, 'to');
-   var from_cookie = $.cookie(from_cookie_name);
-   var to_cookie = $.cookie(to_cookie_name);
-   if ( typeof(from_cookie)!='undefined' && typeof(to_cookie)!='undefined' )
+/*
+   try
      {
-     var from_value = $.cookie(from_cookie_name);
-     var to_value = $.cookie(to_cookie_name);
-     path = add_href_arg( path, 'from', from_value );
-     path = add_href_arg( path, 'to', to_value );
+     var from_cookie_name = make_cookie_name_from_view(view, 'from');
+     var to_cookie_name = make_cookie_name_from_view(view, 'to');
+     var from_cookie = $.cookie(from_cookie_name);
+     var to_cookie = $.cookie(to_cookie_name);
+     if ( typeof(from_cookie)!='undefined' && typeof(to_cookie)!='undefined' )
+       {
+       var from_value = $.cookie(from_cookie_name);
+       var to_value = $.cookie(to_cookie_name);
+       path = add_href_arg( path, 'from', from_value );
+       path = add_href_arg( path, 'to', to_value );
+       }
      }
-   }
+   catch (e)
+     {
+     console.log(e.message);
+     }
+*/
 
   location.href = path;
   }
@@ -660,7 +668,7 @@ try
   }
 catch (e)
   {
-  console.log(e.description);
+  console.log(e.message);
   }
 }
 
@@ -754,6 +762,10 @@ current_id = id;
 $.getScript(url);
 }
 
+function on_load()
+  {
+  }
+
 function find_id_of_last_event()
   {
   var events = $('.bl');
@@ -802,16 +814,29 @@ function remember_or_forget_from_to()
 
 function remember_from_to(view, name, value)
   {
-  var cookie_name = make_cookie_name_from_view(view, name);
-  $.cookie(cookie_name, value);
+  try
+    {
+    var cookie_name = make_cookie_name_from_view(view, name);
+    $.cookie(cookie_name, value);
+    }
+  catch (e)
+    {
+    console.log(e.message);
+    }
   }
 
 function forget_from_to(view, name)
   {
-  var cookie_name = make_cookie_name_from_view(view, name);
-  $.removeCookie(cookie_name);
+  try
+    {
+    var cookie_name = make_cookie_name_from_view(view, name);
+    $.removeCookie(cookie_name);
+    }
+  catch (e)
+    {
+    console.log(e.message);
+    }
   }
-
 
 function make_cookie_name_from_view(view, name)
   {
