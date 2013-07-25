@@ -579,7 +579,7 @@ if unsure please check http://{1}/{2}/stats",
 			return Content(json, "application/json");
 		}
 
-        public ActionResult soon(string id, string type, string view, string count, string hours, string days)
+        public ActionResult soon(string id, string type, string view, string count, string hours, string days, string theme, string template, string jsurl)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
             int nearest_minute = 15;
@@ -609,13 +609,20 @@ if unsure please check http://{1}/{2}/stats",
             var fmt = "{0:yyyy-MM-ddTHH:mm}";
             var str_now = string.Format(fmt, now_in_tz);
             var str_then = string.Format(fmt, then_in_tz);
-            var url = string.Format("/{0}/{1}?view={2}&count={3}&from={4}&to={5}",
+			var _template = string.IsNullOrEmpty(template)	? "" : "&template="		+ template;
+			var _theme =	string.IsNullOrEmpty(theme)		? "" : "&theme="		+ theme;
+			var _jsurl =	string.IsNullOrEmpty(jsurl)		? "" : "&jsurl="		+ jsurl;
+            var url = string.Format("/{0}/{1}?view={2}&count={3}&from={4}&to={5}{6}{7}{8}",
                 id,
                 type,
                 view,
                 count,
                 str_now,
-                str_then);
+                str_then,
+				_template,
+				_theme,
+				_jsurl
+				);
 
             return new RedirectResult(url);
         }
