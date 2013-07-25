@@ -14,16 +14,6 @@ var top_method = 0; // for use in position_sidebar
 
 var redirected_hubs = [ 'AnnArborChronicle'];
 
-/*
-text-align:center;
-position:fixed;
-font-size:smaller;
-left:65%;
-top:200px;
-width:150px;
-*/
-
-
 function adjust_for_small_screen(max_height)
   {
   $('#datepicker').remove();
@@ -274,7 +264,9 @@ $(document).ready(function(){
 
   is_theme = gup('theme') != '';
 
-  is_view = gup('view') != '';
+  var view = gup('view');
+
+  is_view = view != '';
     
   is_eventsonly = gup('eventsonly').startsWith('y');
 
@@ -355,6 +347,7 @@ $(document).ready(function(){
   if ( gup('sourcestyle') != '' )
     apply_json_css('.src', 'sourcestyle');
 
+  remember_or_forget_from_to();
 
 //  if ( is_mobile )
 //    add_fullsite_switcher();
@@ -556,6 +549,19 @@ function show_view(view)
   if ( gup('jsurl') != '')
     path = add_href_arg(path,'jsurl',gup('jsurl') );
 
+   var from_cookie_name = make_cookie_name_from_view(view, 'from');
+   var to_cookie_name = make_cookie_name_from_view(view, 'to');
+   var from_cookie = $.cookie(from_cookie_name);
+   var to_cookie = $.cookie(to_cookie_name);
+   if ( typeof(from_cookie)!='undefined' && typeof(to_cookie)!='undefined' )
+     {
+     var from_value = $.cookie(from_cookie_name);
+     var to_value = $.cookie(to_cookie_name);
+     path = add_href_arg( path, 'from', from_value );
+     path = add_href_arg( path, 'to', to_value );
+     }
+   }
+
   location.href = path;
   }
 
@@ -745,7 +751,7 @@ var url = host + elmcity_id + '/description_from_title_and_dtstart?title=' + enc
 
 current_id = id;
 
-$.getScript(url, function(data, textStatus){});
+$.getScript(url);
 }
 
 function find_id_of_last_event()
@@ -776,6 +782,46 @@ $.extend({
         return a;
       }
    });
+
+function remember_or_forget_from_to()
+  {
+  var view = gup('view');
+  var from_value = gup('from');
+  var to_value = gup('to');
+
+  if ( from_value != '' )
+    remember_from_to(view, 'from', from_value );
+  else
+    forget_from_to(view, 'from');
+
+  if ( to_value != '' )
+    remember_from_to(view, 'to', to_value );
+  else
+    forget_from_to(view, 'to');
+  }
+
+function remember_from_to(view, name, value)
+  {
+  var cookie_name = make_cookie_name_from_view(view, name);
+  $.cookie(cookie_name, value);
+  }
+
+function forget_from_to(view, name)
+  {
+  var cookie_name = make_cookie_name_from_view(view, name);
+  $.removeCookie(cookie_name);
+  }
+
+
+function make_cookie_name_from_view(view, name)
+  {
+  if ( view == 'all' )
+     view = '';
+  view = view.replace(',' , '_');       
+  view = view.replace('-' , '_minus_'); 
+  var cookie_name = 'elmcity_' + view + '_' + name;
+  return cookie_name; 
+  }
 
 
 /*
