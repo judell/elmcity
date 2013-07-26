@@ -12,29 +12,31 @@ var is_view = false;
 var is_sidebar = true;
 var top_method = 0; // for use in position_sidebar
 
+var $j = jQuery.noConflict();
+
 var redirected_hubs = [ 'AnnArborChronicle'];
 
 function adjust_for_small_screen(max_height)
   {
-  $('#datepicker').remove();
-  $('#sidebar').remove();
-  $('.hubtitle').remove();
-  $('#tags div').remove();
-  $('#tags').css('position','static').css('top',0).css('left',0);
-  $('.ed').css('margin-top','4%');
-  $('.timeofday').remove();
+  $j('#datepicker').remove();
+  $j('#sidebar').remove();
+  $j('.hubtitle').remove();
+  $j('#tags div').remove();
+  $j('#tags').css('position','static').css('top',0).css('left',0);
+  $j('.ed').css('margin-top','4%');
+  $j('.timeofday').remove();
 
   if ( max_height <= 400 )
     {
-    $('body').css('font-size', '300%');
-    $('#tag_select').css('font-size','200%');
-    $('.ed').css('font-size','150%');
+    $j('body').css('font-size', '300%');
+    $j('#tag_select').css('font-size','200%');
+    $j('.ed').css('font-size','150%');
     }
   else if ( max_height > 400 && max_height < 1000 )
     {
-    $('body').css('font-size', '200%');
-    $('#tag_select').css('font-size','150%');
-    $('.ed').css('font-size','125%');
+    $j('body').css('font-size', '200%');
+    $j('#tag_select').css('font-size','150%');
+    $j('.ed').css('font-size','125%');
     }
   }
 
@@ -46,11 +48,11 @@ function add_fullsite_switcher()
     var href = location.href;
     remove_href_arg(href, 'mobile');
     href = add_href_arg(href, 'mobile', 'no');
-    var long = $('#mobile_long').text().trim();
+    var long = $j('#mobile_long').text().trim();
     var switcher = '<p class="sidebar" style="text-align:center"><a title="switch from full view to mobile" href="__HREF__">__OTHER__</a></p>';
     switcher = switcher.replace("__HREF__", href);
     switcher = switcher.replace("__OTHER__", "full site");
-    $('body').append(switcher);
+    $j('body').append(switcher);
     id_scale('switcher');
     }
   catch (e)
@@ -63,7 +65,7 @@ function position_sidebar(top_element)
   {
   try
     {
-    var top_elt_bottom = $('#' + top_element)[0].getClientRects()[0].bottom;
+    var top_elt_bottom = $j('#' + top_element)[0].getClientRects()[0].bottom;
     }
   catch (e)
     {
@@ -72,9 +74,9 @@ function position_sidebar(top_element)
     }
 
   if ( top_elt_bottom <= 0  )
-     $('#sidebar').css('top', $(window).scrollTop() - top_offset + 'px');
+     $j('#sidebar').css('top', $j(window).scrollTop() - top_offset + 'px');
   else
-     $('#sidebar').css('top', top_method);
+     $j('#sidebar').css('top', top_method);
   }
 
 
@@ -88,7 +90,7 @@ function add_mobile_switcher()
      href = add_href_arg(href, 'mobile', 'yes');
      switcher = switcher.replace("__HREF__", href);
      switcher = switcher.replace("__OTHER__", "mobile site");
-     $('#switcher').html(switcher);
+     $j('#switcher').html(switcher);
      }
   catch (e)
     {
@@ -103,7 +105,7 @@ function on_load()
 
 function get_elmcity_id()
   {
-  return $('#elmcity_id').text().trim();
+  return $j('#elmcity_id').text().trim();
   }
 
 
@@ -136,7 +138,7 @@ function scroll(event)
   if ( is_mobile || is_eventsonly )
     return;
 
-  if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
+  if ( $j('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
     position_sidebar(top_element);
 
   var date_str = find_current_name().replace('d','');
@@ -170,7 +172,7 @@ function get_anchor_names(anchors)
 
 function day_anchors()
   {
-  return $('a[name^="d"]');
+  return $j('a[name^="d"]');
   }
 
 
@@ -184,8 +186,8 @@ function find_current_name()
   try
     {
     var before = [];
-    var datepicker_top = $("#datepicker")[0].getClientRects()[0].top;
-    var datepicker_bottom = $("#datepicker")[0].getClientRects()[0].bottom;
+    var datepicker_top = $j("#datepicker")[0].getClientRects()[0].top;
+    var datepicker_bottom = $j("#datepicker")[0].getClientRects()[0].bottom;
     var datepicker_height = datepicker_bottom - datepicker_top;
     var datepicker_center = datepicker_top + ( datepicker_height / 2 );
     var anchors = day_anchors();
@@ -210,12 +212,12 @@ function find_current_name()
   }
 
 
-$(window).scroll(function(event) {
+$j(window).scroll(function(event) {
   scroll(event);
 });
 
 
-//$(window).load(function () {
+//$j(window).load(function () {
 //  window.scrollTo(0,0);
 //});
 
@@ -235,7 +237,7 @@ function setup_datepicker()
 
   prep_day_anchors_and_last_day();
   
-  $('#datepicker').datepicker({  
+  $j('#datepicker').datepicker({  
             onSelect: function(dateText, inst) { goDay(dateText); },
             onChangeMonthYear: function(year, month, inst) { goMonth(year, month); },
             minDate: today,
@@ -246,19 +248,19 @@ function setup_datepicker()
 
   setDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
-  if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
+  if ( $j('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
     {
     position_sidebar(top_element)
-    $('#sidebar').css('visibility','visible');
-    $('#datepicker').css('visibility','visible');
-    $('#tags').css('visibility','visible');
+    $j('#sidebar').css('visibility','visible');
+    $j('#datepicker').css('visibility','visible');
+    $j('#tags').css('visibility','visible');
     }
 
   datepicker = true;
   }
 
 
-$(document).ready(function(){
+$j(document).ready(function(){
 
   var elmcity_id = get_elmcity_id();
 
@@ -272,12 +274,12 @@ $(document).ready(function(){
 
   is_mobile_declared = gup('mobile').startsWith('y');
 
-  is_mobile_detected = $('#mobile_detected').text().trim() == "__MOBILE_DETECTED__";
+  is_mobile_detected = $j('#mobile_detected').text().trim() == "__MOBILE_DETECTED__";
 
   is_mobile = is_mobile_declared || is_mobile_detected;
 
   if ( is_eventsonly || is_mobile )                     
-    $('.bl').css('margin-right','3%');       // could overwrite theme-defined?
+    $j('.bl').css('margin-right','3%');       // could overwrite theme-defined?
 
   var max_height = Math.max(screen.height,screen.width);
 
@@ -291,30 +293,30 @@ $(document).ready(function(){
   is_sidebar = ( ! is_mobile ) && ( ! is_eventsonly );
 
   if ( gup('tags').startsWith('n') )
-    $('.cat').remove();
+    $j('.cat').remove();
 
 //  if ( gup('taglist').startsWith('n') )
-//      $('#tag_select').remove();
+//      $j('#tag_select').remove();
 
   if ( is_view && is_sidebar )
     try
       {
-      var href = $('#subscribe').attr('href');
+      var href = $j('#subscribe').attr('href');
       href = href.replace('__VIEW__', gup('view'));
-      $('#subscribe').attr('href',href);
-      $('#subscribe').text('subscribe');
+      $j('#subscribe').attr('href',href);
+      $j('#subscribe').text('subscribe');
       }
    catch (e)
       {
       }
 
   if ( gup('timeofday') == 'no' )
-    $('.timeofday').remove();
+    $j('.timeofday').remove();
 
   if ( gup('width') != '' )
     {
-    $('#body').css('width', gup('width') + 'px');
-    $('div.bl').css('margin','1em 0 0 1em');
+    $j('#body').css('width', gup('width') + 'px');
+    $j('div.bl').css('margin','1em 0 0 1em');
     }
 
 //  if ( is_theme )  // invoke it
@@ -361,7 +363,7 @@ $(document).ready(function(){
   if ( ! is_sidebar )
     return;
 
-  if ( $('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
+  if ( $j('#sidebar').css('position') != 'fixed' ) // unframed, no fixed elements
     setTimeout('setup_datepicker()', 200);
   else
     setup_datepicker();                            
@@ -371,7 +373,7 @@ $(document).ready(function(){
 function invoke_theme(theme)
   {
 /*
-  var existing = $('link[href^="' + host + 'get_css"]').length;
+  var existing = $j('link[href^="' + host + 'get_css"]').length;
   var mobile = gup('mobile');
   var mobile_long = gup('mobile_long');
   var ua = gup('ua');
@@ -379,11 +381,11 @@ function invoke_theme(theme)
   if ( existing > 0 ) // replace existing Elm City theme
     {
     var override = host + 'get_css_theme?theme_name=' + theme;
-    $('link[href^="' + host + 'get_css"]')[0].setAttribute('href',override)
+    $j('link[href^="' + host + 'get_css"]')[0].setAttribute('href',override)
     }
   else              // append  
     {
-    $('link').append('<link type="text/css" rel="stylesheet" href="' + host + 'get_css_theme?theme_name=' + theme + '">');
+    $j('link').append('<link type="text/css" rel="stylesheet" href="' + host + 'get_css_theme?theme_name=' + theme + '">');
     }
 */
   }
@@ -394,7 +396,7 @@ function apply_json_css(element,style)
     {
     var style = decodeURIComponent(gup(style));
     style = style.replace(/'/g,'"');
-    $(element).css(JSON.parse(style));
+    $j(element).css(JSON.parse(style));
     }
   catch (e)
     {
@@ -404,23 +406,23 @@ function apply_json_css(element,style)
 
 function scrollToElement(id) 
   {
-//  $("html, body").animate({
-//        scrollTop: $('#' + id).offset().top }, 0
+//  $j("html, body").animate({
+//        scrollTop: $j('#' + id).offset().top }, 0
 //    );
-  window.scrollTo(0, $('#' + id).offset().top);
+  window.scrollTo(0, $j('#' + id).offset().top);
   }
 
 
 function setDate(year,month,day)
   {
 //  console.log("set_date");
-  var date =  $('#datepicker').datepicker('getDate');
-  var current_date = $('td > a[class~=ui-state-active]');
+  var date =  $j('#datepicker').datepicker('getDate');
+  var current_date = $j('td > a[class~=ui-state-active]');
   current_date.css('font-weight', 'normal');
-  $('#datepicker').datepicker('setDate', new Date(year, month-1, day));
-  var td = $('td[class=ui-datepicker-current-day] > a[class~=ui-state-active]');
-  var td = $('td > a[class~=ui-state-active]');
-  current_date = $('td > a[class~=ui-state-active]');
+  $j('#datepicker').datepicker('setDate', new Date(year, month-1, day));
+  var td = $j('td[class=ui-datepicker-current-day] > a[class~=ui-state-active]');
+  var td = $j('td > a[class~=ui-state-active]');
+  current_date = $j('td > a[class~=ui-state-active]');
   current_date.css('font-weight', 'bold');
   }
 
@@ -433,7 +435,7 @@ function maybeShowDay(date)
   month = maybeZeroPad(month.toString());
   day = maybeZeroPad(day.toString());
   var date_str = "d" + year + month + day;
-  show = $.inArray( date_str, anchor_names ) == -1 ? false : true;
+  show = $j.inArray( date_str, anchor_names ) == -1 ? false : true;
   var style = ( show == false ) ? "ui-datepicker-unselectable ui-state-disabled" : "";
   return [show, style]
   }
@@ -453,7 +455,7 @@ function goDay(date_str)
 function goMonth(year, month)
   {
   month = maybeZeroPad(month.toString());
-  var id = $('h1[id^="d' + year + month + '"]').attr('id')
+  var id = $j('h1[id^="d' + year + month + '"]').attr('id')
   scrollToElement(id);
 //  location.href = '#ym' + year + month;
 //  setDate(year, parseInt(month), 1);
@@ -519,7 +521,7 @@ function show_view(view)
 
   if ( view == undefined )
     {
-    var selected = $('#tag_select option:selected').val();
+    var selected = $j('#tag_select option:selected').val();
     view = selected.replace(/\s*\((\d+)\)/,'');
     path = make_view_path_from_picklist(view, elmcity_id);
     }
@@ -554,12 +556,12 @@ function show_view(view)
      {
      var from_cookie_name = make_cookie_name_from_view(view, 'from');
      var to_cookie_name = make_cookie_name_from_view(view, 'to');
-     var from_cookie = $.cookie(from_cookie_name);
-     var to_cookie = $.cookie(to_cookie_name);
+     var from_cookie = $j.cookie(from_cookie_name);
+     var to_cookie = $j.cookie(to_cookie_name);
      if ( typeof(from_cookie)!='undefined' && typeof(to_cookie)!='undefined' )
        {
-       var from_value = $.cookie(from_cookie_name);
-       var to_value = $.cookie(to_cookie_name);
+       var from_value = $j.cookie(from_cookie_name);
+       var to_value = $j.cookie(to_cookie_name);
        path = add_href_arg( path, 'from', from_value );
        path = add_href_arg( path, 'to', to_value );
        }
@@ -628,13 +630,13 @@ function add_href_arg(href, name, value)
 
 function dismiss_menu(id)
 {
-var elt = $('#' + id);
+var elt = $j('#' + id);
 elt.find('.menu').remove();
 }
 
 function get_add_to_cal_url(id,flavor)
 {
-var elt = $('#' + id);
+var elt = $j('#' + id);
 var start = elt.find('.st').attr('content');
 var end = ''; // for now
 var url = elt.find('.ttl').find('a').attr('href');
@@ -661,7 +663,7 @@ function add_to_google(id)
 try
   {
   var service_url = get_add_to_cal_url(id, 'google');
-  $('.menu').remove();
+  $j('.menu').remove();
 //  console.log('redirecting to ' + service_url);
 //  location.href = service_url;
   window.open(service_url, "add to google");
@@ -675,28 +677,28 @@ catch (e)
 function add_to_hotmail(id)
 {
 var service_url = get_add_to_cal_url(id, 'hotmail');
-$('.menu').remove();
+$j('.menu').remove();
 location.href = service_url;
 }
 
 function add_to_ical(id)
 {
 var service_url = get_add_to_cal_url(id, 'ical');
-$('.menu').remove();
+$j('.menu').remove();
 location.href = service_url;
 }
 
 function add_to_facebook(id)
 {
 var service_url = get_add_to_cal_url(id, 'facebook');
-$('.menu').remove();
+$j('.menu').remove();
 location.href = service_url;
 }
 
 
 function add_to_cal(id)
 {
-elt = $('#' + id);
+elt = $j('#' + id);
 quoted_id = '\'' + id + '\'';
 elt.find('.menu').remove();
 elt.append(
@@ -719,7 +721,7 @@ var x = '<span><a title="hide description" href="javascript:hide_desc(' + quoted
 
 var s = '<div style="overflow:hidden;text-indent:0" id="' + current_id + '_desc' + '">' + description + ' ' + x + '</div>';
 
-elt = $('#' + current_id);
+elt = $j('#' + current_id);
 
 s = s.replace('<br><br>','<br>');
 
@@ -729,17 +731,17 @@ elt.append(s);
 
 function show_more(id)
   {
-  $('div.' + id).show();
-  $('span.' + id).remove();
+  $j('div.' + id).show();
+  $j('span.' + id).remove();
   }
 
 function hide_desc(id)
 {
 quoted_id = '\'' + id + '\'';
 
-$('#' + id + '_desc').remove();
-$('#' + id + ' .sd').css('display','inline');
-$('#' + id + ' .atc').css('display','inline');
+$j('#' + id + '_desc').remove();
+$j('#' + id + ' .sd').css('display','inline');
+$j('#' + id + ' .atc').css('display','inline');
 }
 
 
@@ -747,8 +749,8 @@ function show_desc(id)
 {
 quoted_id = '\'' + id + '\'';
 
-$('#' + id + ' .sd').css('display','none');
-$('#' + id + ' .atc').css('display','none');
+$j('#' + id + ' .sd').css('display','none');
+$j('#' + id + ' .atc').css('display','none');
 
 
 var _dtstart = get_dtstart(id);
@@ -759,7 +761,7 @@ var url = host + elmcity_id + '/description_from_title_and_dtstart?title=' + enc
 
 current_id = id;
 
-$.getScript(url);
+$j.getScript(url);
 }
 
 function on_load()
@@ -768,29 +770,29 @@ function on_load()
 
 function find_id_of_last_event()
   {
-  var events = $('.bl');
+  var events = $j('.bl');
   var last = events[events.length-1];
   return last.attributes['id'].value;
   }
 
 function get_summary(id)
   {
-  var elt = $('#' + id);
-  var summary = $('#' + id + ' .ttl span').text();
+  var elt = $j('#' + id);
+  var summary = $j('#' + id + ' .ttl span').text();
   if ( summary == '')
-    summary = $('#' + id + ' .ttl a').text();
+    summary = $j('#' + id + ' .ttl a').text();
   return summary;
   }
 
 function get_dtstart(id)
   {
-  return $('#' + id + ' .st').attr('content');
+  return $j('#' + id + ' .st').attr('content');
   }
 
-$.extend({
+$j.extend({
     keys:  function(obj){
         var a = [];
-        $.each(obj, function(k){ a.push(k) });
+        $j.each(obj, function(k){ a.push(k) });
         return a;
       }
    });
@@ -817,7 +819,7 @@ function remember_from_to(view, name, value)
   try
     {
     var cookie_name = make_cookie_name_from_view(view, name);
-    $.cookie(cookie_name, value);
+    $j.cookie(cookie_name, value);
     }
   catch (e)
     {
@@ -830,7 +832,7 @@ function forget_from_to(view, name)
   try
     {
     var cookie_name = make_cookie_name_from_view(view, name);
-    $.removeCookie(cookie_name);
+    $j.removeCookie(cookie_name);
     }
   catch (e)
     {
@@ -852,7 +854,7 @@ function make_cookie_name_from_view(view, name)
 /*
 function morelink()
   {
-  return '<a title="' + $('a[name^="d"]').length + ' days included, click to add 2 weeks" href="javascript:more()">more</a>';
+  return '<a title="' + $j('a[name^="d"]').length + ' days included, click to add 2 weeks" href="javascript:more()">more</a>';
   }
 
 function more()
@@ -863,10 +865,10 @@ function more()
 function extend_events(extend_days,show_progress)
   {
 //  console.log("extend_events");
-  $('#morelink').empty();
+  $j('#morelink').empty();
   
   if ( show_progress )
-    $('#morelink').append('<p><img src="http://elmcity.blob.core.windows.net/admin/ajax-loader.gif"></p>');
+    $j('#morelink').append('<p><img src="http://elmcity.blob.core.windows.net/admin/ajax-loader.gif"></p>');
 
   var from_day = last_day;
   var from = from_day.toISOString().substring(0,10) + "T00:00";
@@ -888,7 +890,7 @@ function extend_events(extend_days,show_progress)
 
 //  console.log("extend: " + href);
 
-  $.ajax({
+  $j.ajax({
        url: href,
        cache: false,
 
@@ -896,12 +898,12 @@ function extend_events(extend_days,show_progress)
          var events = xhr.responseText;
          if ( events.length )
            {
-           $('.events').append(events);
+           $j('.events').append(events);
            prep_day_anchors_and_last_day();
-           $('#datepicker').datepicker("option","maxDate", last_day);
-           $('#datepicker').datepicker("refresh");  
-           $('#morelink').empty();
-           $('#morelink').append(morelink());
+           $j('#datepicker').datepicker("option","maxDate", last_day);
+           $j('#datepicker').datepicker("refresh");  
+           $j('#morelink').empty();
+           $j('#morelink').append(morelink());
            show_id('morelink');
            }
          else
@@ -912,22 +914,22 @@ function extend_events(extend_days,show_progress)
 
   var more = '<div id="morelink" style="display:none;font-size:8pt;text-align:center">' + morelink() + '</div>';
 
-  $('#datepicker').append(more);
+  $j('#datepicker').append(more);
 
 function show_id (id)
   {
   var id = '#' + id;
-  var display = $(id).get(0).style.display;
+  var display = $j(id).get(0).style.display;
   if ( display == 'none' )
-    $(id).show();
+    $j(id).show();
   }
 
 function hide_id (id)
   {
   var id = '#' + id;
-  var display = $(id).get(0).style.display;
+  var display = $j(id).get(0).style.display;
   if ( display != 'none' )
-    $(id).hide();
+    $j(id).hide();
   }
 
   */
