@@ -349,7 +349,7 @@ $j(document).ready(function(){
   if ( gup('sourcestyle') != '' )
     apply_json_css('.src', 'sourcestyle');
 
-//  remember_or_forget_from_to();
+  remember_or_forget_days();
 
 //  if ( is_mobile )
 //    add_fullsite_switcher();
@@ -551,26 +551,20 @@ function show_view(view)
   if ( gup('jsurl') != '')
     path = add_href_arg(path,'jsurl',gup('jsurl') );
 
-/*
    try
      {
-     var from_cookie_name = make_cookie_name_from_view(view, 'from');
-     var to_cookie_name = make_cookie_name_from_view(view, 'to');
-     var from_cookie = $j.cookie(from_cookie_name);
-     var to_cookie = $j.cookie(to_cookie_name);
-     if ( typeof(from_cookie)!='undefined' && typeof(to_cookie)!='undefined' )
+     var days_cookie_name = make_cookie_name_from_view(view);
+     var days_cookie = $j.cookie(days_cookie_name);
+     if ( typeof(days_cookie)!='undefined'  )
        {
-       var from_value = $j.cookie(from_cookie_name);
-       var to_value = $j.cookie(to_cookie_name);
-       path = add_href_arg( path, 'from', from_value );
-       path = add_href_arg( path, 'to', to_value );
+       var days = $j.cookie(days_cookie_name);
+       path = add_href_arg( path, 'days', days );
        }
      }
    catch (e)
      {
      console.log(e.message);
-     }
-*/
+     }   
 
   location.href = path;
   }
@@ -797,29 +791,23 @@ $j.extend({
       }
    });
 
-function remember_or_forget_from_to()
+function remember_or_forget_days()
   {
   var view = gup('view');
-  var from_value = gup('from');
-  var to_value = gup('to');
+  var days = gup('days');
 
-  if ( from_value != '' )
-    remember_from_to(view, 'from', from_value );
+  if ( days != '' )
+    remember_days(view, days);
   else
-    forget_from_to(view, 'from');
-
-  if ( to_value != '' )
-    remember_from_to(view, 'to', to_value );
-  else
-    forget_from_to(view, 'to');
+    forget_days(view);
   }
 
-function remember_from_to(view, name, value)
+function remember_days(view, days)
   {
   try
     {
-    var cookie_name = make_cookie_name_from_view(view, name);
-    $j.cookie(cookie_name, value);
+    var cookie_name = make_cookie_name_from_view(view);
+    $j.cookie(cookie_name, days);
     }
   catch (e)
     {
@@ -827,11 +815,11 @@ function remember_from_to(view, name, value)
     }
   }
 
-function forget_from_to(view, name)
+function forget_days(view)
   {
   try
     {
-    var cookie_name = make_cookie_name_from_view(view, name);
+    var cookie_name = make_cookie_name_from_view(view);
     $j.removeCookie(cookie_name);
     }
   catch (e)
@@ -840,13 +828,13 @@ function forget_from_to(view, name)
     }
   }
 
-function make_cookie_name_from_view(view, name)
+function make_cookie_name_from_view(view)
   {
   if ( view == 'all' )
      view = '';
   view = view.replace(',' , '_');       
   view = view.replace('-' , '_minus_'); 
-  var cookie_name = 'elmcity_' + view + '_' + name;
+  var cookie_name = 'elmcity_' + view + '_days';
   return cookie_name; 
   }
 
