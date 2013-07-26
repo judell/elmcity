@@ -2643,9 +2643,9 @@ END:VCALENDAR",
 				id);
 		}
 
-		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl)
+		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl, int days)
 		{
-			var viewkey = string.Format("/services/{0}/{1}?view={2}&count={3}&from={4}&to={5}", id, type, view, count, from, to);
+			var viewkey = string.Format("/services/{0}/{1}?view={2}&count={3}&from={4}&to={5}&days={6}", id, type, view, count, from, to, days);
 			if (type == "html")
 				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template + "&jsurl=" + jsurl;
 			return viewkey;
@@ -3856,6 +3856,23 @@ END:VTIMEZONE");
 			var json = BlobStorage.GetAzureBlobAsString(id, id + ".feeds.json");
 			var list = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(json);
 			return list;
+		}
+
+		public static Dictionary<string, string> ConvertDaysIntoFromTo(int days, Calinfo calinfo)
+		{
+			int nearest_minute = 15;
+			var now_in_tz = Utils.DateTimeSecsToZero(Utils.NowInTz(calinfo.tzinfo).LocalTime);
+			var from_in_tz = now_in_tz - TimeSpan.FromHours(1); // catch events that started less than an hour ago
+			from_in_tz = Utils.RoundDateTimeUpToNearest(from_in_tz, nearest_minute);
+			var to_in_tz = Utils.DateTimeSecsToZero(now_in_tz + TimeSpan.FromDays(days));
+			to_in_tz = Utils.RoundDateTimeUpToNearest(to_in_tz, nearest_minute);
+			var fmt = "{0:yyyy-MM-ddTHH:mm}";
+			var from_str = string.Format(fmt, from_in_tz);
+			var to_str = string.Format(fmt, to_in_tz);
+			var dict = new Dictionary<string, string>();
+			dict.Add("from", from_str);
+			dict.Add("to", to_str);
+			return dict;
 		}
 
 		#endregion
