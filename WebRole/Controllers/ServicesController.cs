@@ -43,7 +43,7 @@ namespace WebRole
 		#region events
 
 		//[OutputCache(Duration = ... // output cache not used here, iis cache is managed directly
-		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist, string tags, string template, string jsurl)
+		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist, string tags, string template, string jsurl, string days)
 		{
 			if (id == "a2cal")
 				id = "AnnArborChronicle";
@@ -57,7 +57,7 @@ namespace WebRole
 			try
 			{
 				var cr = ElmcityApp.wrd.renderers[id];
-				r = new EventsResult(this, cr, id, type, view, jsonp, count, from, to, eventsonly, mobile, test, raw, raw_sentinel, style, theme, taglist, tags, template, jsurl);
+				r = new EventsResult(this, cr, id, type, view, jsonp, count, from, to, eventsonly, mobile, test, raw, raw_sentinel, style, theme, taglist, tags, template, jsurl, days);
 			}
 			catch (Exception e)
 			{
@@ -91,12 +91,13 @@ namespace WebRole
 			bool tags;
 			string template;
 			string jsurl;
+			int days;
 
 			CalendarRenderer.ViewRenderer renderer = null;
 			string response_body = null;
 			byte[] response_bytes = new byte[0];
 
-			public EventsResult(ElmcityController controller, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist, string tags, string template, string jsurl)
+			public EventsResult(ElmcityController controller, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist, string tags, string template, string jsurl, string days)
 			{
 				this.controller = controller;
 				this.cr = cr;
@@ -134,6 +135,26 @@ namespace WebRole
 				}
 
 				this.count = (count == null) ? _count : Convert.ToInt32(count);
+
+				if (!String.IsNullOrEmpty(days))
+				{
+					try
+					{
+						this.days = Convert.ToInt32(days);
+						if (this.days > 0)
+						{
+							var calinfo = ElmcityApp.wrd.renderers[this.id].calinfo;
+							var from_to = Utils.ConvertDaysIntoFromTo(this.days, calinfo);
+							this.from = Utils.DateTimeFromISO8601DateStr(from_to["from"], DateTimeKind.Local);
+							this.to = Utils.DateTimeFromISO8601DateStr(from_to["to"], DateTimeKind.Local); 
+						}
+					}
+					catch (Exception e)
+					{
+						GenUtils.LogMsg("GetEvents", "days", e.Message);
+						this.days = 0;
+					}
+				}
 			}
 
 			public override void ExecuteResult(ControllerContext context)
@@ -178,7 +199,7 @@ namespace WebRole
 
 				var render_args = new Dictionary<string, object>();
 
-				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: this.eventsonly, mobile: this.mobile, test: this.test, raw: this.raw, style: this.style, theme: this.theme, taglist: this.taglist, tags: this.tags, template: this.template, jsurl: this.jsurl);
+				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: this.eventsonly, mobile: this.mobile, test: this.test, raw: this.raw, style: this.style, theme: this.theme, taglist: this.taglist, tags: this.tags, template: this.template, jsurl: this.jsurl, days: this.days);
 
 				switch (this.type)
 				{
@@ -229,7 +250,7 @@ namespace WebRole
 						}
 						
 						// update for mobile detection
-						view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: this.eventsonly, mobile: this.mobile, test: this.test, raw: this.raw, style: this.style, theme: this.theme, taglist: this.taglist, tags: this.tags, template: this.template, jsurl: this.jsurl);
+						view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: this.eventsonly, mobile: this.mobile, test: this.test, raw: this.raw, style: this.style, theme: this.theme, taglist: this.taglist, tags: this.tags, template: this.template, jsurl: this.jsurl, days: this.days);
 
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), render_args);
 
