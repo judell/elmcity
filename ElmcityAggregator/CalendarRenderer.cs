@@ -592,7 +592,12 @@ namespace CalendarAggregator
 				{
 					try
 					{
-						var template_uri = BlobStorage.MakeAzureBlobUri("admin", (string) args["template"]);
+						Uri template_uri;
+						if (template.StartsWith("http://"))
+							template_uri = new Uri(template);
+						else
+							template_uri = BlobStorage.MakeAzureBlobUri("admin", template);
+
 						this.template_html = HttpUtils.FetchUrl(template_uri).DataAsString();
 					}
 					catch (Exception e)
