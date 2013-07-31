@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2527";
+        public static string version = "2529";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -252,13 +252,11 @@ namespace WebRole
                 new { controller = "Home", action = "get_fb_ical_url" }
             );
 
-			/* idle for now
-			// file getter for use with hosted templates
 			routes.MapRoute(
 				"get_blob",
 				"get_blob",
 				new { controller = "Home", action = "get_blob" }
-			); */
+			); 
 
 			routes.MapRoute(
 				"get_form_post_ical_url",
