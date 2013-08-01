@@ -313,11 +313,13 @@ $j(document).ready(function(){
   if ( gup('timeofday') == 'no' )
     $j('.timeofday').remove();
 
+/*
   if ( gup('width') != '' )
     {
     $j('#body').css('width', gup('width') + 'px');
     $j('div.bl').css('margin','1em 0 0 1em');
     }
+*/
 
 //  if ( is_theme )  // invoke it
 //    invoke_theme( gup('theme') );
@@ -554,10 +556,10 @@ function show_view(view)
    try
      {
      var days_cookie_name = make_cookie_name_from_view(view);
-     var days_cookie = $j.cookie(days_cookie_name);
-     if ( typeof(days_cookie)!='undefined'  )
+     var days_cookie_value = $j.cookie(days_cookie_name);
+     if ( typeof(days_cookie_value)!='undefined'  )
        {
-       var days = $j.cookie(days_cookie_name);
+       var days = days_cookie_value;
        path = add_href_arg( path, 'days', days );
        }
      }
