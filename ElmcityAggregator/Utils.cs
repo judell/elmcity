@@ -811,10 +811,10 @@ namespace CalendarAggregator
 
 		public enum IcsFromIcsOperator { before, after };
 
-		static public string IcsFromIcs(string feedurl, Calinfo calinfo, string source, string after, string before, string include_keyword, string exclude_keyword, bool summary_only, bool description_only, bool url_only, bool location_only, Dictionary<string,string> settings)
+		static public string IcsFromIcs(string feedurl, Calinfo calinfo, string source, string after, string before, string include_keyword, string exclude_keyword, bool summary_only, bool description_only, bool url_only, bool location_only, bool categories_only, Dictionary<string, string> settings)
 		{
 			bool changed = false;
-			var feedtext = Collector.GetFeedTextFromFeedUrl(null, calinfo, source, feedurl, wait_secs:3, max_retries:3, timeout_secs:TimeSpan.FromSeconds(5), settings: settings, changed: ref changed);
+			var feedtext = Collector.GetFeedTextFromFeedUrl(null, calinfo, source, feedurl, wait_secs: 3, max_retries: 3, timeout_secs: TimeSpan.FromSeconds(5), settings: settings, changed: ref changed);
 			var sr = new StringReader(feedtext);
 			iCalendar ical = default(iCalendar);
 			try
@@ -832,15 +832,15 @@ namespace CalendarAggregator
 				var tzinfo = calinfo.tzinfo;
 				var dtstart = evt.DTStart.IsUniversalTime ? TimeZoneInfo.ConvertTimeFromUtc(evt.Start.UTC, tzinfo) : evt.Start.Local;
 				var evt_abs_minutes = dtstart.Hour * 60 + dtstart.Minute;
-				MaybeFilterHourMin(after,  ical, evt, evt_abs_minutes, IcsFromIcsOperator.after);
+				MaybeFilterHourMin(after, ical, evt, evt_abs_minutes, IcsFromIcsOperator.after);
 				MaybeFilterHourMin(before, ical, evt, evt_abs_minutes, IcsFromIcsOperator.before);
 			}
 
-			if ( ! String.IsNullOrEmpty(include_keyword) )
+			if (!String.IsNullOrEmpty(include_keyword))
 			{
 				foreach (DDay.iCal.Event evt in events)
 				{
-					if (ShouldRemoveEvt(ContainsKeywordOperator.include, evt, include_keyword, summary_only, description_only, url_only, location_only))
+					if (ShouldRemoveEvt(ContainsKeywordOperator.include, evt, include_keyword, summary_only, description_only, url_only, location_only, categories_only))
 					{
 						ical.RemoveChild(evt);
 						continue;
@@ -852,7 +852,7 @@ namespace CalendarAggregator
 			{
 				foreach (DDay.iCal.Event evt in events)
 				{
-					if (ShouldRemoveEvt(ContainsKeywordOperator.exclude, evt, exclude_keyword, summary_only, description_only, url_only, location_only))
+					if (ShouldRemoveEvt(ContainsKeywordOperator.exclude, evt, exclude_keyword, summary_only, description_only, url_only, location_only, categories_only))
 					{
 						ical.RemoveChild(evt);
 						continue;
@@ -863,9 +863,15 @@ namespace CalendarAggregator
 			return Utils.SerializeIcalToIcs(ical);
 		}
 
+
+		static public string IcsFromIcs(string feedurl, Calinfo calinfo, string source, string after, string before, string include_keyword, string exclude_keyword, bool summary_only, bool description_only, bool url_only, bool location_only, Dictionary<string,string> settings)
+		{
+			return IcsFromIcs(feedurl, calinfo, source, after, before, include_keyword, exclude_keyword, summary_only, description_only, url_only, location_only, categories_only:false, settings: settings);
+		}
+
 		static public string IcsFromIcs(string feedurl, Calinfo calinfo, string source, string after, string before, string include_keyword, string exclude_keyword, bool summary_only, bool url_only, bool location_only, Dictionary<string, string> settings)
 		{
-			return IcsFromIcs(feedurl, calinfo, source, after, before, include_keyword, exclude_keyword, summary_only, false, url_only, location_only, settings);
+			return IcsFromIcs(feedurl, calinfo, source, after, before, include_keyword, exclude_keyword, summary_only, description_only: false, url_only: url_only, location_only: false, categories_only: false, settings: settings);
 		}
 
 		private static void MaybeFilterHourMin(string str_hour_min, iCalendar ical, DDay.iCal.Event evt, int evt_abs_minutes, IcsFromIcsOperator op)
@@ -901,7 +907,7 @@ namespace CalendarAggregator
 
 		public enum ContainsKeywordOperator { include, exclude };
 
-		static public bool ShouldRemoveEvt(ContainsKeywordOperator op, DDay.iCal.Event evt, string keyword, bool summary_only, bool description_only, bool url_only, bool location_only)
+		static public bool ShouldRemoveEvt(ContainsKeywordOperator op, DDay.iCal.Event evt, string keyword, bool summary_only, bool description_only, bool url_only, bool location_only, bool categories_only)
 		{
 			keyword = keyword.ToLower();
 			var keywords = keyword.Split(',');
@@ -911,7 +917,7 @@ namespace CalendarAggregator
 				_keywords.Add(k.ToLower().Trim());
 			}
 
-			if (!summary_only && !description_only && !url_only && !location_only)  // if no property specified, default to summary + description
+			if (!summary_only && !description_only && !url_only && !location_only && !categories_only)  // if no property specified, default to summary + description
 			{
 				var summary = evt.Summary ?? "";
 				var description = evt.Description ?? "";
@@ -960,6 +966,23 @@ namespace CalendarAggregator
 				{
 					var input = evt.Description.ToString();
 					return ShouldRemoveEvtHelper(op, _keywords, input);
+				}
+			}
+
+			if (categories_only)
+			{
+				if (evt.Categories == null)
+					return true;
+				else
+				{
+					var cats = evt.Categories.ToList();
+					var responses = new List<Boolean>();
+					foreach (var cat in cats )
+						responses.Add(ShouldRemoveEvtHelper(op, _keywords, cat));
+					if ( responses.Exists(x => x == false) )
+						return false;
+					else
+						return true;
 				}
 			}
 

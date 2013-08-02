@@ -59,6 +59,7 @@ BEGIN:VEVENT
 DESCRIPTION:Fundraising for Dummies
 DTSTART:20120508T150000
 LOCATION:Downtown Library
+CATEGORIES:library
 SUMMARY:Neil Bernstein\, NLS Research & Development Officer
 END:VEVENT
 BEGIN:VEVENT
@@ -69,10 +70,16 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20120508T150000
 SUMMARY:Chapters Indigo at Bay and Bloor
+CATEGORIES:books,authors
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20130508T150000
+SUMMARY:Uncategorized Event
 END:VEVENT
 END:VCALENDAR";
 
-		static private DDay.iCal.Event test_filter_event;
+		static private DDay.iCal.Event test_filter_event_0;
+		static private DDay.iCal.Event test_filter_event_1;
 		static private DDay.iCal.Event test_filter_event_2;
 		static private DDay.iCal.Event test_filter_event_3;
 
@@ -81,10 +88,11 @@ END:VCALENDAR";
 		{
 			StringReader sr = new StringReader(ics_for_filter_tests);
 			var ical = (DDay.iCal.iCalendar)iCalendar.LoadFromStream(sr).FirstOrDefault().iCalendar;
-			Assert.That(ical.Events.Count == 3);
-			test_filter_event = (DDay.iCal.Event)ical.Events[0];
-			test_filter_event_2 = (DDay.iCal.Event)ical.Events[1];
-			test_filter_event_3 = (DDay.iCal.Event)ical.Events[2];
+			Assert.That(ical.Events.Count == 4);
+			test_filter_event_0 = (DDay.iCal.Event)ical.Events[0];
+			test_filter_event_1 = (DDay.iCal.Event)ical.Events[1];
+			test_filter_event_2 = (DDay.iCal.Event)ical.Events[2];
+			test_filter_event_3 = (DDay.iCal.Event)ical.Events[3];
 		}
 
 		#region datetime
@@ -441,67 +449,97 @@ END:VCALENDAR";
 		[Test]
 		public void IcsFilterIncludeShouldRemoveEvtIfExcludedKeywordNotInSummaryOrDescriptionAndNoPropSpecified()  // exclude removes target when no property specified, target not found in Summary or Description
 		{
-			Assert.IsTrue(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_3, "Borders", false, false, false, false));
+			Assert.IsTrue(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_2, "Borders", false, false, false, false, false));
 		}
 
 		[Test]
 		public void IcsFilterIncludeShouldRemoveEvtIfExcludedKeywordNotInSummary()  // exclude removes target when not found in Summary
 		{
-			Assert.IsTrue(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_3, "Borders", true, false, false, false));
+			Assert.IsTrue(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_2, "Borders", true, false, false, false, false));
 		}
 
 		[Test]
 		public void IcsFilterIncludeShouldNotRemoveEvtIfIncludedKeywordInSummaryAndNoPropSpecified()  // include keeps target when no property specified, target found in Summary 
 		{
-			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_3, "Bloor", false, false, false, false));
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_2, "Bloor", false, false, false, false, false));
 		}
 
 		[Test]                                     
 		public void IcsFilterIncludeShouldNotRemoveEvtIfIncludedKeywordInDescriptionAndNoPropSpecified()  // include keeps target when no property specified, target found in Description
 		{
-			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_2, "Bloor", false, false, false, false));
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_1, "Bloor", false, false, false, false, false));
 		}
 
 		[Test]
 		public void IcsFilterExcludeShouldRemoveEvtIfExcludedKeywordInLocation()     // exclude removes LOCATION:Downtown Library
 		{
-			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event, "Downtown", false, false, false, true));
+			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event_0, "Downtown", false, false, false, true, false));
 		}
 
 		[Test]
 		public void IcsFilterIncludeShouldRemoveEvtIfIncludedKeywordNotInLocation()   // include removes LOCATION:Downtown Library
 		{
-			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event, "Fifth Street", false, false, false, true));
+			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_0, "Fifth Street", false, false, false, true, false));
 		}
 
 		[Test]
 		public void IcsFilterExcludeShouldNotRemoveEvtIfExcludedKeywordNotInLocation()  // exclude keeps LOCATION:Downtown Library
 		{
-			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event, "Fifth Street", false, false, false, true));
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event_0, "Fifth Street", false, false, false, true, false));
 		}
 
 		[Test]
 		public void IcsFilterIncludeShouldNotRemoveEvtUnlessAllIncludedKeywordsInLocation()  // include keeps LOCATION:Downtown Library
 		{
-			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event, "Downtown, Fifth Street", false, false, false, true));
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_0, "Downtown, Fifth Street", false, false, false, true, false));
 		}
 
 		[Test]
 		public void IcsFilterExcludeShouldRemoveEvtIfAnyExcludedKeywordInLocation()       // exclude removes LOCATION:Downtown Library
 		{
-			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event, "Downtown, Fifth Street", false, false, false, true));
+			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event_0, "Downtown, Fifth Street", false, false, false, true, false));
 		}
 
 		[Test]
 		public void IcsFilterIncludeShouldNotRemoveEvtIfAllIncludedKeywordsInLocation()    // include keeps LOCATION:Downtown Library
 		{
-			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event, "Downtown, Library", false, false, false, true));
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_0, "Downtown, Library", false, false, false, true, false));
 		}
 
 		[Test]
 		public void IcsFilterExcludeShouldRemoveEvtIfAllExcludedKeywordsInLocation()       // exclude removes LOCATION:Downtown Library
 		{
-			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event, "Downtown, Library", false, false, false, true));
+			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.exclude, test_filter_event_0, "Downtown, Library", false, false, false, true, false));
+		}
+
+		[Test]
+		public void IcsFilterIncludeShouldNotRemoveEvtIfSingleIncludedKeywordInCategories()    // include keeps CATEGORIES:library
+		{
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_0, "library", false, false, false, false, true));
+		}
+
+		[Test]
+		public void IcsFilterIncludeShouldRemoveEvtIfSingleIncludedKeywordNotInCategories()    // exclude removes CATEGORIES:books
+		{
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_0, "books", false, false, false, false, true));
+		}
+
+		[Test]
+		public void IcsFilterIncludeShouldNotRemoveEvtIfAllIncludedKeywordsInCategories()    // include keeps CATEGORIES:books,authors
+		{
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_2, "books,authors", false, false, false, false, true));
+		}
+
+		[Test]
+		public void IcsFilterIncludeShouldNotRemoveEvtIfAnyIncludedKeywordInCategories()    // include keeps CATEGORIES:books,authors
+		{
+			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_2, "authors", false, false, false, false, true));
+		}
+
+		[Test]
+		public void IcsFilterIncludeShouldRemoveEvtIfCategoriesPropertyMissing()  
+		{
+			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_3, "authors", false, false, false, false, true));
 		}
 
 		#endregion
