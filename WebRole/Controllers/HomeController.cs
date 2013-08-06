@@ -265,10 +265,10 @@ if unsure please check http://{1}/{2}/stats",
             return Content(result);
         }
 
-        public ActionResult get_ics_to_ics_ical_url(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string url_only, string location_only)
+        public ActionResult get_ics_to_ics_ical_url(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string url_only, string location_only, string categories_only)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-            var result = Utils.get_ics_to_ics_ical_url(feedurl, elmcity_id, source, after, before, include_keyword, exclude_keyword, summary_only, url_only, location_only);
+            var result = Utils.get_ics_to_ics_ical_url(feedurl, elmcity_id, source, after, before, include_keyword, exclude_keyword, summary_only, url_only, location_only, categories_only);
             return Content(result);
         }
 

@@ -2412,15 +2412,20 @@ END:VCALENDAR",
 
 		public static string get_ics_to_ics_ical_url(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string url_only, string location_only)
 		{
-			return get_ics_to_ics_ical_url(feedurl, elmcity_id, source, after, before, include_keyword, exclude_keyword, summary_only, "", url_only, location_only);
+			return get_ics_to_ics_ical_url(feedurl, elmcity_id, source, after, before, include_keyword, exclude_keyword, summary_only, "", url_only, location_only, "");
 		}
 
 		public static string get_ics_to_ics_ical_url(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string description_only, string url_only, string location_only)
 		{
+			return get_ics_to_ics_ical_url(feedurl, elmcity_id, source, after, before, include_keyword, exclude_keyword, summary_only, description_only, url_only, location_only, "");
+		}
+
+		public static string get_ics_to_ics_ical_url(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string description_only, string url_only, string location_only, string categories_only)
+		{
 			var ics_to_ics_ical_url = "";
 			try
 			{
-				ics_to_ics_ical_url = string.Format("http://{0}/ics_from_ics?feedurl={1}&elmcity_id={2}&source={3}", // &after={4}&before={5}&include_keyword={6}&exclude_keyword={7}&summary_only={8}&description_only={9}&url_only={10}&location_only={11}",
+				ics_to_ics_ical_url = string.Format("http://{0}/ics_from_ics?feedurl={1}&elmcity_id={2}&source={3}", // &after={4}&before={5}&include_keyword={6}&exclude_keyword={7}&summary_only={8}&description_only={9}&url_only={10}&location_only={11}&categories_only={12}",
 					ElmcityUtils.Configurator.appdomain,	// 0
 					Uri.EscapeDataString(feedurl),			// 1
 					elmcity_id,								// 2
@@ -2449,6 +2454,9 @@ END:VCALENDAR",
 
 				if (!String.IsNullOrEmpty(location_only))
 					ics_to_ics_ical_url += "&location_only=" + location_only;
+
+				if (!String.IsNullOrEmpty(categories_only))
+					ics_to_ics_ical_url += "&categories_only=" + categories_only;
 			}
 			catch (Exception e)
 			{
