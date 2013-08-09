@@ -664,6 +664,8 @@ namespace CalendarAggregator
 			{
 				html = html.Replace("<!--__CATEGORIES__-->", "<div style=\"font-style:italic\">categories</div>"); // label the tags
 				html = html.Replace("<!--__TAGS__-->", sb.ToString());   // insert tags in sidebar
+				var tags2 = sb.ToString().Replace("id=\"tag_select\"", "id=\"tag_select2\""); // secondary for when main is gone
+				html = html.Replace("<!--__TAGS2__-->", tags2);  
 			}
 			return html;
 		}
