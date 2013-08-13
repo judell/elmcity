@@ -719,6 +719,7 @@ namespace CalendarAggregator
 			{
 				var _feedurl = Utils.MaybeChangeWebcalToHttp(feedurl);               // original is for feed registry and cache
 				request = (HttpWebRequest)WebRequest.Create(new Uri(_feedurl));      // only modify (if necessary) when actually fetching
+				request.UserAgent = "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; WOW64; Trident/6.0; Touch)";
 			}
 			catch (Exception e)
 			{
