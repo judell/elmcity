@@ -6,7 +6,7 @@
 <script>
 
 var css_selector_to_friendly_name_map = {
-  "body" : "itemstyle",
+  ".bl"  : "itemstyle",
   ".ed"  : "datestyle",
   ".ttl" : "titlestyle",
   ".st"  : "dtstartstyle",
@@ -49,20 +49,12 @@ function change_theme()
   href = add_href_arg(href, "theme", selected_theme);
   $('.theme')[0].textContent = selected_theme;
   $('#iframe')[0].src = href;
+  for ( selector in css_selector_to_friendly_name_map )
+    {
+    change_style(selector, false);
+    set_theme_style(selector);
+    }
   }
-
-<!--
-function change_template()
-  {
-  var selected_template = $('#template_select option:selected').val();
-  var href = $('#iframe')[0].src;
-  href = remove_href_arg(href,"template");
-  href = add_href_arg(href, "template", selected_template);
-  $('.template')[0].textContent = selected_template;
-  $('#iframe')[0].src = href;
-  }
--->
-
 
 
 function change_width()
@@ -120,7 +112,7 @@ function add_tag()
   }
 
 
-function change_style(selector)
+function change_style(selector, modify_href)
   {
   var newsrc = $('#iframe')[0].src
   var selected_theme = $('#theme_select option:selected').val();
@@ -130,8 +122,23 @@ function change_style(selector)
   var encoded_newstyle = encodeURIComponent(newstyle);
   newsrc = add_href_arg(newsrc, friendly_selector, encoded_newstyle);
   $('#' + friendly_selector).val(newstyle);
-  $('.'+ friendly_selector)[0].textContent = encoded_newstyle;
-  $('#iframe')[0].src = newsrc;
+  if ( themes[selected_theme][selector] != newstyle )
+    {
+    $('.'+ friendly_selector)[0].textContent = encoded_newstyle;
+    }
+
+  if ( modify_href )
+    $('#iframe')[0].src = newsrc;
+  }
+
+function set_theme_style(selector)
+  {  
+  var selected_theme = $('#theme_select option:selected').val();
+  var theme = themes[selected_theme];
+  var newstyle = theme[selector];
+  var encoded_newstyle = encodeURIComponent(newstyle);
+  var friendly_selector = css_selector_to_friendly_name_map[selector];
+  $('#' + friendly_selector).val(newstyle);
   }
 
 function onload()
@@ -198,27 +205,7 @@ function onload()
       }
     }
 
-<!--
-  if ( gup('template') != '' ) 
-    {
-    var template = gup('template');
-    for ( i = 0; i < $('#template_select option').length; i++ )
-      {
-        if ( $('#template_select option')[i].value == template )
-            {
-            $('#template_select').val(template);
-            change_template();
-            }
-      }
-    }
--->
-
-  $('#itemstyle').val(themes['default']['body']);
-  $('#datestyle').val(themes['default']['.ed']);
-  $('#titlestyle').val(themes['default']['.ttl']);
-  $('#linkstyle').val( " { } ");
-  $('#dtstartstyle').val(themes['default']['.st']);
-  $('#sourcestyle').val(themes['default']['.src']);
+  change_theme();
   }
 
 String.prototype.contains = function (str){
@@ -261,7 +248,7 @@ function add_href_arg(href, name, value)
 
 <h1 style="font-family:verdana;font-size:12pt" class="headlinestyle">Upcoming in <span class='hubdesc'>the New River Valley</span>: <span class="tag">MUSIC</span></h1>
 
-<iframe width="330" height="600" id="iframe" src="http://elmcity.cloudapp.net/NewRiverValleyVA/html?eventsonly=yes&view=music&count=200&width=300&tags=no&taglist=no&itemstyle=&datestyle=&titlestyle=&linkstyle=&dtstartstyle=&sourcestyle=&template=default.tmpl" style="border-width:thin;border-style:solid"></iframe>
+<iframe width="330" height="600" id="iframe" src="http://elmcity.cloudapp.net/NewRiverValleyVA/html?eventsonly=yes&view=music&count=200&width=300&tags=no&taglist=no&timeofday=no&itemstyle=&datestyle=&titlestyle=&linkstyle=&dtstartstyle=&sourcestyle=&template=eventsonly.tmpl&theme=default" style="border-width:thin;border-style:solid"></iframe>
 
 <p style="font-size:11pt" class="joinlabelstyle">
 <a class="joinlink" href="http://elmcity.cloudapp.net/welcome?id=NewRiverValleyVA&hubdesc=Virginia%27s%20New%20River%20Valley&category=music">Join the calendar network for <span class='hubdesc'>Virginia's New River Valley</span>!</a>
@@ -291,20 +278,10 @@ function add_href_arg(href, name, value)
 </select>
 </p>
 
-<!--
-<p>change template</p>
-<p>
-<select onchange="change_template()" id="template_select">
-<option selected value="default.tmpl">default.tmpl</option>
-<option value="a2chron.tmpl">a2chron.tmpl</option>
-</select>
-</p>
--->
-
 
 <p>change itemstyle</p>
 <p>
-<input type="text" onchange="change_style('body')" id="itemstyle" style="width:600px" value=''>
+<input type="text" onchange="change_style('.bl')" id="itemstyle" style="width:600px" value=''>
 </p>
 
 <p>change datestyle</p>
@@ -403,14 +380,14 @@ function add_href_arg(href, name, value)
 <p>
 &lt;iframe width="<span class='outside_width'>330</span>" 
 <br> height="800" 
-<br> src="http://elmcity.cloudapp.net/<span class='hubname'>NewRiverValleyVA</span>/html?eventsonly=yes&taglist=no&tags=no&view=<span class='tag'>music</span>&count=200&width=<span class='inside_width'></span>&sidebar=no&datepicker=no&timeofday=no&hubtitle=no&datestyle=<span class='datestyle'></span>&itemstyle=<span class='itemstyle'></span>&titlestyle=<span class='titlestyle'></span>&linkstyle=<span class='linkstyle'></span>&dtstartstyle=<span class='dtstartstyle'></span>&sourcestyle=<span class='sourcestyle'></span>&theme=<span class='theme'>&template=default.tmpl</span>"
+<br> src="http://elmcity.cloudapp.net/<span class='hubname'>NewRiverValleyVA</span>/html?eventsonly=yes&taglist=no&tags=no&view=<span class='tag'>music</span>&count=200&width=<span class='inside_width'></span>&sidebar=no&datepicker=no&timeofday=no&hubtitle=no&datestyle=<span class='datestyle'></span>&itemstyle=<span class='itemstyle'></span>&titlestyle=<span class='titlestyle'></span>&linkstyle=<span class='linkstyle'></span>&dtstartstyle=<span class='dtstartstyle'></span>&sourcestyle=<span class='sourcestyle'></span>&theme=<span class='theme'>&template=eventsonly.tmpl</span>"
 <br> style="border-width:thin;border-style:solid">
 <br>&lt;/iframe>
 </p>
 
 <p>
 &lt;p class="joinlabelstyle">
-&lt;a class="joinlink" href="http://elmcity.cloudapp.net/welcome?id=<span class='hubname'>NewRiverValleyVA</span>&hubdesc=<span class='hubdesc'>Virginia%27s%20New%20River%20Valley</span>&taglist=no&category=<span class='tag'>music</span>&template=default.tmpl">Join the calendar network for <span class='hubdesc'>Virginia's New River Valley</span>!&lt;/a>
+&lt;a class="joinlink" href="http://elmcity.cloudapp.net/welcome?id=<span class='hubname'>NewRiverValleyVA</span>&hubdesc=<span class='hubdesc'>Virginia%27s%20New%20River%20Valley</span>&taglist=no&category=<span class='tag'>music</span>&template=eventsonly.tmpl">Join the calendar network for <span class='hubdesc'>Virginia's New River Valley</span>!&lt;/a>
 &lt;/p>
 </p>
 
