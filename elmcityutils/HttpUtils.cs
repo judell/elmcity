@@ -195,7 +195,8 @@ namespace ElmcityUtils
 
 		public static HttpResponse DoHttpWebRequest(HttpWebRequest request, byte[] data)
 		{
-			request.UserAgent = HttpUtils.elmcity_user_agent;
+			if (request.UserAgent == null)
+				request.UserAgent = elmcity_user_agent;
 
 			try
 			{
