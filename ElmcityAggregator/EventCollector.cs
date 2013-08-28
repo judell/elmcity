@@ -950,6 +950,14 @@ namespace CalendarAggregator
 				idtend = new iCalDateTime(dtend);
 			}
 
+			// from the umich.edu feed:
+			// DTEND;TZID=Eastern Standard Time;VALUE=DATE:20130828
+			// DTSTART;TZID=Eastern Standard Time:20130828T190000
+			// this results in DTEND < DSTART so:
+
+			if (idtend.LessThan(idtstart))
+				idtend = new iCalDateTime(idtstart);
+
 			var instance = new DDay.iCal.Event();
 			instance.Start = idtstart;
 			instance.End = idtend;
