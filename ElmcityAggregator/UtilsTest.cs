@@ -519,9 +519,9 @@ END:VCALENDAR";
 		}
 
 		[Test]
-		public void IcsFilterIncludeShouldRemoveEvtIfSingleIncludedKeywordNotInCategories()    // exclude removes CATEGORIES:books
+		public void IcsFilterIncludeShouldRemoveEvtIfSingleIncludedKeywordNotInCategories()    // include removes CATEGORIES:books
 		{
-			Assert.IsFalse(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_0, "books", false, false, false, false, true));
+			Assert.That(Utils.ShouldRemoveEvt(Utils.ContainsKeywordOperator.include, test_filter_event_0, "books", false, false, false, false, true));
 		}
 
 		[Test]
