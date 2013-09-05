@@ -19,6 +19,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Xml.Linq;
+using System.Xml;
 
 namespace ElmcityUtils
 {
@@ -661,6 +662,65 @@ encoding=""utf-8"" standalone=""yes""?>
 			}
 			ret += "</m:properties>\n";
 			return ret;
+		}
+
+		public static List<Dictionary<string, object>> AzureTableAsXmlToListDictObj(string xmltext)
+		{
+			var list = new List<Dictionary<string, object>>();
+
+			XmlDocument doc = new XmlDocument();
+			doc.LoadXml(xmltext);
+
+			var nsmgr = new XmlNamespaceManager(doc.NameTable);
+			var atom_ns = "http://www.w3.org/2005/Atom";
+			var dataservices_ns = "http://schemas.microsoft.com/ado/2007/08/dataservices";
+			var metadata_ns = "http://schemas.microsoft.com/ado/2007/08/dataservices/metadata";
+			nsmgr.AddNamespace("atom", atom_ns);
+			nsmgr.AddNamespace("d", dataservices_ns);
+			nsmgr.AddNamespace("m", metadata_ns);
+
+			var entries = doc.SelectNodes("//atom:feed/atom:entry", nsmgr);
+
+			foreach (XmlNode entry in entries)
+			{
+				var propbag = entry.SelectSingleNode("//m:properties", nsmgr);
+				var dict_obj = new Dictionary<string, object>();
+				foreach (XmlNode prop in propbag.ChildNodes)
+				{
+					var propname = prop.Name.ToString().Replace("d:", "");
+					var propval = prop.FirstChild.Value;
+					var proptype = prop.Attributes["type", metadata_ns];
+					if (proptype == null)
+					{
+						dict_obj[propname] = propval;
+					}
+					else
+					{
+						switch (proptype.Value)
+						{
+							case "Edm.Boolean":
+								dict_obj[propname] = Boolean.Parse(propval);
+								break;
+							case "Edm.Int32":
+								dict_obj[propname] = Convert.ToInt32(propval);
+								break;
+							case "Edm.Int64":
+								dict_obj[propname] = Convert.ToInt64(propval);
+								break;
+							case "Edm.Double":
+								dict_obj[propname] = Convert.ToDouble(propval);
+								break;
+							case "Edm.DateTime":
+								dict_obj[propname] = DateTime.Parse(propval);
+								break;
+						}
+					}
+
+					list.Add(dict_obj);
+				}
+			}
+
+			return list;
 		}
 
 		// package azure table response as list of dict<str,obj>
