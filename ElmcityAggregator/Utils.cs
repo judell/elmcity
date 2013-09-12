@@ -1876,6 +1876,7 @@ END:VCALENDAR",
 			var feeds = Metadata.LoadFeedsFromAzureTableForId(id, FeedLoadOption.all);
 			Parallel.ForEach(source: feeds.Keys, body: (feedurl) =>
 			{
+				Utils.DeleteCachedFeedText(feedurl);
 				Utils.DeleteCachedFeedObj(id, feedurl);
 			});
 		}
@@ -3205,6 +3206,12 @@ END:VTIMEZONE");
 		{
 			var blob_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
 			bs.PutBlob("feedcache", blob_name, feedtext, "text/calendar");
+		}
+
+		public static void DeleteCachedFeedText(string feedurl)
+		{
+			var blob_name = BlobStorage.MakeSafeBlobnameFromUrl(feedurl);
+			bs.DeleteBlob("feedcache", blob_name);
 		}
 
 		public static void SaveFeedObjToCache(string id, string feedurl, ZonedEventStore es)
