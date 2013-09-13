@@ -299,18 +299,6 @@ namespace ElmcityUtils
 			return counts.Keys.ToList().FindAll(x => counts[x] > 1).ToList();  // return list of values occurring more than once
 		}
 
-		public static List<Dictionary<string, string>> FindDuplicatesForKey(List<Dictionary<string, string>> list_dict_str, string key)
-		{
-			var dupe_values = FindDuplicateValuesForKey(list_dict_str, key);
-			var dupes = new List<Dictionary<string, string>>();
-			foreach (var dupe_val in dupe_values)
-			{
-				var l = list_dict_str.FindAll(x => x[key] == dupe_val).ToList();
-				dupes.AddRange(l);
-			}
-			return dupes;
-		}
-
 		public static List<Dictionary<string, string>> FindExactDuplicates(List<Dictionary<string, string>> list_dict_str)
 		{
 			var distinct = new List<Dictionary<string, string>>();
@@ -326,6 +314,23 @@ namespace ElmcityUtils
 		{
 			var empty_dicts = list_dict_str.FindAll(x => x.Keys.Count == 0);
 			return empty_dicts.Count == 0;
+		}
+
+		public static Dictionary<string,string> SimpleMergeDictStrDictStr(Dictionary<string, string> d1, Dictionary<string, string> d2)  
+		{
+			var d1keys = d1.Keys.ToList(); d1keys.Sort();
+			var d2keys = d2.Keys.ToList(); d2keys.Sort();
+
+			var keys_equal = Enumerable.SequenceEqual(d1keys, d2keys);
+
+			if ( keys_equal == false )
+				throw new Exception("DictStrKeysNotEqual");
+
+			foreach (var key in d1keys)
+				if (String.IsNullOrEmpty(d1[key]) == true && String.IsNullOrEmpty(d2[key]) == false)  // update 1's slot if it is empty and 2's is not
+					d1[key] = d2[key];
+
+			return d1;
 		}
 
 	}
