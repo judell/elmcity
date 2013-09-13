@@ -798,9 +798,9 @@ namespace CalendarAggregator
 			// because of property-name-folding issue https://github.com/dougrday/icalvalid/issues/10
 			feedtext = Unfold(feedtext);
 
-			// strip html from summary, description
-			feedtext = Utils.StripTagsFromUnfoldedComponent(feedtext, "SUMMARY");
-			feedtext = Utils.StripTagsFromUnfoldedComponent(feedtext, "DESCRIPTION");
+			// strip html from summary, description 
+			//feedtext = Utils.StripTagsFromUnfoldedComponent(feedtext, "SUMMARY");
+			//feedtext = Utils.StripTagsFromUnfoldedComponent(feedtext, "DESCRIPTION");
 
 			// workaround https://github.com/dougrday/icalvalid/issues/7 and 8
 			feedtext = Utils.ChangeDateOnlyUntilToDateTime(feedtext); 
