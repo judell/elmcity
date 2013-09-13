@@ -104,6 +104,37 @@ namespace ElmcityUtils
 			);
 		}
 
+
+		[Test]
+		public void MergeDictStrDictStrYieldsExpectedDictStr()
+		{
+			var d1 = new Dictionary<string, string>() { { "a", "1" }, { "b", "" }, { "c", "3" } };
+			var d2 = new Dictionary<string, string>() { { "a", "" }, { "b", "2" }, { "c", "3" } };
+			var merged = ObjectUtils.SimpleMergeDictStrDictStr(d1, d2);
+			var expected = new Dictionary<string, string>() { { "a", "1" }, { "b", "2" }, { "c", "3" } };
+			Assert.That(ObjectUtils.DictStrEqualsDictStr(merged, expected));
+		}
+
+		[Test]
+		public void MergeDictStrDictStrFailsWhenKeysUnequal()
+		{
+			var d1 = new Dictionary<string, string>() { { "a", "1" }, { "b", "" }, { "c", "3" } };
+			var d2 = new Dictionary<string, string>() { { "a", "" }, { "b", "2" }, };
+			var result = true;
+			try
+			{
+				var merged = ObjectUtils.SimpleMergeDictStrDictStr(d1, d2);
+			}
+			catch (Exception e)
+			{
+				Assert.That(e.Message == "DictStrKeysNotEqual");
+				result = false;
+			}
+
+			Assert.That(result == false);
+
+		}
+
 	}
 
 	public class TestObject
