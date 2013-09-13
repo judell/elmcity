@@ -907,22 +907,18 @@ if unsure please check http://{1}/{2}/stats",
 			string content_type = "text/plain";
 			string content;
 
-			/*
 			var dupes = Metadata.FindDuplicateFeedsFromJson(json);
-            if ( dupes.Count > 0 )
-			{
-				var sb = new StringBuilder();
-				sb.AppendLine();
-				foreach (var dupe in dupes)
-					sb.AppendLine(dupe);
-				bs.PutBlob(id, "dupefeeds.txt", sb.ToString(), "text/plain");
-			}*/
 
-            if (auth_mode == null)
+			if (auth_mode == null)
             {
 				content = AuthFailMessage(id);
             }
- 			else
+			else if (dupes.Count > 0)
+			{
+				content = "<p>Found duplicate feed URLs, please coalesce them.</p>";
+				content += String.Join("<br>", dupes);
+			}
+			else
             {
 				content = json;
 				var args = new Dictionary<string, string>() { { "id", id }, { "json", json } };
