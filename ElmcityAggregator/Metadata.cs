@@ -112,16 +112,32 @@ namespace CalendarAggregator
 					Scheduler.InitTaskForId(id, TaskType.icaltasks);
 					bs.DeleteBlob(id, "metadata.html");        // dump the static page
 					var metadata_url = string.Format("http://{0}/{1}/metadata", ElmcityUtils.Configurator.appdomain, id);
-					var args = new Dictionary<string, string>() { { "metadata_url", metadata_url } };
-					ThreadPool.QueueUserWorkItem(new WaitCallback(rebuild_metahistory_handler), args); // do this on another thread
 
-					Utils.DumpCachedFeedsForId(id);  // todo: isolate affected feeds
+					var args = new Dictionary<string, string>() { { "metadata_url", metadata_url } };
+					ThreadPool.QueueUserWorkItem(new WaitCallback(rebuild_metahistory_handler), args); // rebuild metadata page on another thread
+
+					var args2 = new Dictionary<string, string>() { { "id", id } }; // dump feed cache on another thread
+					ThreadPool.QueueUserWorkItem(new WaitCallback(dump_feed_cache_handler), args2); 
 				}
 				catch (Exception e)
 				{
 					GenUtils.LogMsg("info", "UpdateFeedsForId", e.Message + e.StackTrace);
 				}
 
+			}
+		}
+
+		private static void dump_feed_cache_handler(Object args)
+		{
+			var dict = (Dictionary<string, string>)args;
+			try
+			{
+				var id = dict["id"];
+				Utils.DumpCachedFeedsForId(id);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "dump_feed_cache_handler", e.Message + e.StackTrace);
 			}
 		}
 
