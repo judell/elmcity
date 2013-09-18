@@ -195,6 +195,11 @@ namespace ElmcityUtils
 
 		public BlobStorageResponse ListBlobs(string containername)
 		{
+			return ListBlobs(containername, null);
+		}
+
+		public BlobStorageResponse ListBlobs(string containername, string prefix)
+		{
 			HttpResponse http_response;
 			String next_marker = null;
 			var dicts = new List<Dictionary<string, string>>();
@@ -204,6 +209,8 @@ namespace ElmcityUtils
 				//var qs = "?comp=list&restype=container";
 				if (!String.IsNullOrEmpty(next_marker))
 					qs += "&marker=" + next_marker;
+				if (!String.IsNullOrEmpty(prefix))
+					qs += "&prefix=" + prefix;
 				http_response = DoBlobStoreRequest(containername, blobname: null, method: "GET", headers: new Hashtable(), data: null, content_type: null, query_string: qs);
 				foreach (var dict in DictsFromBlobStorageResponse(http_response, "//Blobs/Blob", blob_elements, ref next_marker))
 					dicts.Add(dict);
