@@ -1,0 +1,66 @@
+<style>
+
+#elmcity_sidebar { margin-left:80%} 
+.bl { width:78% }
+.ed { width:74% }
+#tags2 { display: none }
+
+@media screen and (max-width:2000px) { 
+#elmcity_sidebar { margin-left:80%} 
+.bl { width:78% }
+.ed { width:74% }
+#tags2 { display: none }
+}
+
+
+@media screen and (max-width:900px) { 
+#elmcity_sidebar { margin-left:77.5%}
+.bl { width:74% }
+.ed { width:70% }
+#tags2 { display: none }
+}
+
+@media screen and (max-width:800px) { 
+#elmcity_sidebar { margin-left:75%} 
+.bl { width:72% }
+.ed { width:68% }
+#tags2 { display: none }
+}
+
+@media screen and (max-width:700px) { 
+#elmcity_sidebar { margin-left:70%} 
+.bl { width:68% }
+.ed { width:64% }
+#tags2 { display: none }
+}
+
+@media screen and (max-width:600px) { 
+#elmcity_sidebar { margin-left:65%;} 
+.bl { width:62% }
+.ed { width:58% }
+#tags2 { display: none }
+}
+
+@media screen and (max-width:500px) { 
+#elmcity_sidebar { margin-left:60%;} 
+.bl { width:58% }
+.ed { width:54% }
+#tags2 { display: none }
+}
+
+@media screen and (max-width:400px) { 
+#elmcity_sidebar { margin-left:55%;} 
+.bl { width:52% }
+.ed { width:48% }
+#tags2 { display: none }
+}
+
+@media screen and (max-width:320px) { 
+#elmcity_sidebar { display:none }
+.bl { width:100% }
+.ed { width:100% }
+#tags2 { display:block }
+}
+
+
+</style>
