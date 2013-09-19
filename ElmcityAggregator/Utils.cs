@@ -610,20 +610,26 @@ namespace CalendarAggregator
 
 		public static string[] LookupLatLon(string bing_api_key, string where)
 		{
-			var url = string.Format("http://dev.virtualearth.net/REST/v1/Locations?key={0}&query={1}", bing_api_key, where);
+			var user_location = "";
+			return LookupLatLon(bing_api_key, where, user_location);
+		}
+
+		public static string[] LookupLatLon(string bing_api_key, string where, string user_location)
+		{
+			var url = string.Format("http://dev.virtualearth.net/REST/v1/Locations?key={0}&query={1}&userLocation={2}", bing_api_key, where, user_location);
 
 			string lat = null;
 			string lon = null;
 
 			try
 			{
-			var json = HttpUtils.FetchUrl( new Uri(url)).DataAsString();
-			json = json.Replace("__type", "type"); // http://stackoverflow.com/questions/2005534/json-serialization-deserialization-mismatch-asp-net
-			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-			var dict = (Dictionary<string,object>) serializer.DeserializeObject(json);
+				var json = HttpUtils.FetchUrl(new Uri(url)).DataAsString();
+				json = json.Replace("__type", "type"); // http://stackoverflow.com/questions/2005534/json-serialization-deserialization-mismatch-asp-net
+				var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+				var dict = (Dictionary<string, object>)serializer.DeserializeObject(json);
 
-			lat = ((Object[])((Dictionary<string, object>)((Dictionary<string, object>)(((Object[])((Dictionary<string, object>)(((Object[])dict["resourceSets"])[0]))["resources"])[0]))["point"])["coordinates"])[0].ToString();
-			lon = ((Object[])((Dictionary<string, object>)((Dictionary<string, object>)(((Object[])((Dictionary<string, object>)(((Object[])dict["resourceSets"])[0]))["resources"])[0]))["point"])["coordinates"])[1].ToString();
+				lat = ((Object[])((Dictionary<string, object>)((Dictionary<string, object>)(((Object[])((Dictionary<string, object>)(((Object[])dict["resourceSets"])[0]))["resources"])[0]))["point"])["coordinates"])[0].ToString();
+				lon = ((Object[])((Dictionary<string, object>)((Dictionary<string, object>)(((Object[])((Dictionary<string, object>)(((Object[])dict["resourceSets"])[0]))["resources"])[0]))["point"])["coordinates"])[1].ToString();
 			}
 
 			catch (Exception e)
@@ -632,7 +638,7 @@ namespace CalendarAggregator
 			}
 
 			return new string[] { lat, lon };
-		}
+		}		
 
 		public static void UpdateLatLonToAzureForId(string id, string lat, string lon)
 		{
@@ -1876,9 +1882,14 @@ END:VCALENDAR",
 			var feeds = Metadata.LoadFeedsFromAzureTableForId(id, FeedLoadOption.all);
 			Parallel.ForEach(source: feeds.Keys, body: (feedurl) =>
 			{
-				Utils.DeleteCachedFeedText(feedurl);
-				Utils.DeleteCachedFeedObj(id, feedurl);
+				DumpCachedFeed(id, feedurl);
 			});
+		}
+
+		public static void DumpCachedFeed(string id, string feedurl)
+		{
+			Utils.DeleteCachedFeedText(feedurl);
+			Utils.DeleteCachedFeedObj(id, feedurl);
 		}
 
 
@@ -2786,37 +2797,6 @@ td {{ text-align: center }}
 			return cr;
 		}
 
-		public static string StripTagsFromUnfoldedComponent(string calendar_text, string target)
-		{
-			var lines = calendar_text.Split('\n');
-			var sb = new StringBuilder();
-			bool in_component = false;
-			foreach (var line in lines)
-			{
-				var re = new Regex( "^([A-Z]+)[:;]" );
-				if ( re.Match(line).Success )
-				{
-					var propname = re.Match(line).Groups[1].ToString();
-					if ( propname == target )
-						in_component = true;
-					else
-						in_component = false;
-				}
-
-				if (in_component)
-				{
-					var tmp = line;
-					tmp = tmp.StripHtmlTags();
-					sb.Append(tmp + "\n");
-				}
-				else
-				{
-					sb.Append(line + "\n");
-				}
-			}
-			return sb.ToString();
-		}
-		
 		public static string RemoveLine(string calendar_text, string target)  
 		{
 			var lines = calendar_text.Split('\n');
@@ -2831,26 +2811,6 @@ td {{ text-align: center }}
 
 			return sb.ToString();
 		}
-
-		/*
-		public static string TrimLine(string calendar_text, string pattern)
-		{
-			var lines = calendar_text.Split('\n');
-			var sb = new StringBuilder();
-			foreach (var line in lines)
-			{
-				var s = line;
-				if (s.Contains(pattern))
-				{
-					string p = pattern.Replace("*", "\\*");
-					s = Regex.Replace(s, p + ".+", "");
-				}
-
-				sb.Append(s + "\n");
-			}
-
-			return sb.ToString();
-		} */
 
 		public static string ChangeDateOnlyUntilToDateTime(string calendar_text) // workaround for https://github.com/dougrday/icalvalid/issues/7 and 8
 		{
@@ -3823,25 +3783,19 @@ END:VTIMEZONE");
 			return calinfo.eventful;
 		}
 
-		public static bool ShowFacebookBadge(Calinfo calinfo)
+		public static bool ShowFacebookBadge(FeedRegistry fr)
 		{
-			var fr = new FeedRegistry(calinfo.id);
-			fr.LoadFeedsFromAzure(FeedLoadOption.all);
 			return fr.feeds.Keys.ToList().Exists(x => x.Contains("ics_from_fb_page"));
 		}
 
-		public static bool ShowMeetupBadge(Calinfo calinfo)
+		public static bool ShowMeetupBadge(Calinfo calinfo, FeedRegistry fr)
 		{
-			var fr = new FeedRegistry(calinfo.id);
-			fr.LoadFeedsFromAzure(FeedLoadOption.all);
 			return fr.feeds.Keys.ToList().Exists(x => x.Contains("www.meetup.com"));
 		}
 
-		public static bool ShowEventBriteBadge(Calinfo calinfo)
+		public static bool ShowEventBriteBadge(Calinfo calinfo, FeedRegistry fr)
 		{
 			var uses_eventbrite_service = calinfo.eventbrite;
-			var fr = new FeedRegistry(calinfo.id);
-			fr.LoadFeedsFromAzure(FeedLoadOption.all);
 			var uses_eventbrite_feeds =
 				fr.feeds.Keys.ToList().Exists(x => x.Contains("get_ical_url_from_eid_of_eventbrite_event_page")) ||
 				fr.feeds.Keys.ToList().Exists(x => x.Contains("ics_from_eventbrite_organizer_id"));
