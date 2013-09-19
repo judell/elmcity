@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html>
+
+<!--[if lte IE 8 ]>    <html class="ie_below_9"> <![endif]-->
+<!--[if (gt IE 8)|!(IE)]><!--> <html> <!--<![endif]-->
+
 <head>
 <title>__TITLE__</title>
 <meta name="description" content="__META__">
@@ -31,6 +34,19 @@ top_method = 'auto';
 </script>
 
 <style>
+
+.ie_below_9 #sidebar {
+margin-left:75%;
+}
+
+.ie_below_9 .bl {
+width:70%;
+}
+
+.ie_below_9 .ed {
+width:65%;
+}
+
 @media screen and (min-width:1100px) { 
 #sidebar { margin-left:85%} 
 .bl { width:82% }
