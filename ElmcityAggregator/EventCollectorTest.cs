@@ -47,7 +47,6 @@ namespace CalendarAggregator
 
 		private static List<string> ics_examples = new List<string>() { "hillside", "ucb", "berkeleyside", "chorale", "folklore", "graceworship", "cedarhill", "silkcity", "investment"};
 		private static List<string> eventful_examples = new List<string>() { "summitscience" };
-		private static List<string> upcoming_examples = new List<string>() { "philharmonia" };
 		private static List<string> eventbrite_examples = new List<string>() { "eventbrite" };
 
 		private static string keene_test_hub = "testKeene";
