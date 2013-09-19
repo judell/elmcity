@@ -969,12 +969,14 @@ namespace CalendarAggregator
 
 		private void SetShowBadgesForHub()
 		{
+			var fr = new FeedRegistry(this.id);
+			fr.LoadFeedsFromAzure(FeedLoadOption.all);
 			try
 			{
-				this.show_eventbrite_badge = Utils.ShowEventBriteBadge(this);
+				this.show_eventbrite_badge = Utils.ShowEventBriteBadge(this, fr);
 				this.show_eventful_badge = Utils.ShowEventfulBadge(this);
-				this.show_meetup_badge = Utils.ShowMeetupBadge(this);
-				this.show_facebook_badge = Utils.ShowFacebookBadge(this);
+				this.show_meetup_badge = Utils.ShowMeetupBadge(this, fr);
+				this.show_facebook_badge = Utils.ShowFacebookBadge(fr);
 			}
 			catch (Exception e)
 			{
