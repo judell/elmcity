@@ -13,7 +13,6 @@ var ElmCityParams = (function () {
     ElmCityParams.days = "";
     ElmCityParams.eventsonly = "";
     ElmCityParams.from = "";
-    ElmCityParams.iframe = "";
     ElmCityParams.jsurl = "";
     ElmCityParams.host_dom_element = "";
     ElmCityParams.mobile = "";
@@ -31,17 +30,16 @@ var ElmCity = (function () {
     function ElmCity() {
     }
     ElmCity.ready = function () {
-        console.log('ElmCity.ready: injecting ' + ElmCity.injecting + ', is_ready ' + ElmCity.is_ready + ', is_iframe ' + ElmCity.is_iframe);
+        console.log('ElmCity.ready: injecting ' + ElmCity.injecting + ', is_ready ' + ElmCity.is_ready);
 
-        if (ElmCity.is_iframe == true) {
+        if (ElmCity.injecting == false) {
             ElmCity.events_url = location.href;
             ElmCity.is_ready = true;
         }
 
-        if (ElmCity.is_ready == false)
-            return;
-
         ElmCity.elmcity_id = Utils.get_elmcity_id();
+
+        ElmCity.elmcity_sidebar = $j('#elmcity_sidebar').length == 1 ? $j('#elmcity_sidebar') : $j('#sidebar');
 
         Utils.get_url_params();
 
@@ -63,6 +61,15 @@ var ElmCity = (function () {
             return;
 
         ElmCity.setup_datepicker();
+
+        var sidebar_top = $j('#elmcity_sidebar_top').length == 0 ? $('#body') : $j('#elmcity_sidebar_top')[0];
+
+        ElmCity.sidebar_top = sidebar_top.getClientRects()[0].top;
+        ElmCity.sidebar_bottom = sidebar_top.getClientRects()[0].bottom;
+        ElmCity.sidebar_height = ElmCity.sidebar_bottom - ElmCity.sidebar_top;
+
+        ElmCity.event_count = $j('.bl').length;
+        ElmCity.last_event = $j('.bl')[ElmCity.event_count - 3];
 
         $j('body').attr('onload', '');
     };
@@ -91,19 +98,20 @@ var ElmCity = (function () {
         var jquery_cookie_js_uri = ElmCity.blobhost + '/admin/jquery.cookie.js';
         $j.cachedScript(jquery_cookie_js_uri);
 
-        var jquery_ui_min_js_uri = 'http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/jquery-ui.min.js';
+        var jquery_ui_min_js_uri = 'http://ajax.aspnetcdn.com/ajax/jquery.ui/1.10.3/jquery-ui.min.js';
         $j.cachedScript(jquery_ui_min_js_uri);
 
         console.log('loading themes');
 
-        var jquery_ui_theme_uri = "http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/themes/smoothness/jquery-ui.css";
-        $j('head').append('<link type="text/css" href="' + jquery_ui_theme_uri + '" rel="stylesheet" />');
+        var jquery_ui_theme_uri = "http://ajax.aspnetcdn.com/ajax/jquery.ui/1.10.3/themes/smoothness/jquery-ui.css";
+        if (Utils.css_exists(jquery_ui_theme_uri) == false)
+            $j('head').append('<link type="text/css" href="' + jquery_ui_theme_uri + '" rel="stylesheet" />');
 
         var theme_uri = ElmCity.host + '/get_css_theme?theme_name=' + ElmCityParams.theme;
         if (Utils.css_exists(theme_uri) == false)
             $j('head').append('<link type="text/css" href="' + theme_uri + '" rel="stylesheet" />');
 
-        var responsive_theme_uri = ElmCity.blobhost + '/admin/responsive.css';
+        var responsive_theme_uri = ElmCity.responsive_theme_uri;
         if (Utils.css_exists(responsive_theme_uri) == false && ElmCityParams.mobile.startsWith('y') == false)
             $j('head').append('<link type="text/css" href="' + responsive_theme_uri + '" rel="stylesheet" />');
 
@@ -123,24 +131,25 @@ var ElmCity = (function () {
     ElmCity.scroll = function (event) {
         if (ElmCity.is_mobile || ElmCity.is_eventsonly)
             return;
-        if ($j('#sidebar').css('position') != 'fixed')
+
+        if (ElmCity.elmcity_sidebar.css('position') != 'fixed')
             ElmCity.position_sidebar();
         var date_str = ElmCity.find_current_name().replace('d', '');
         var parsed = Utils.parse_yyyy_mm_dd(date_str);
-        ElmCity.highlight_date(parseInt(parsed['year']), parseInt(parsed['month']), parseInt(parsed['day']));
+        ElmCity.highlight_date(parsed['year'], parsed['month'], parsed['day']);
     };
 
     ElmCity.position_sidebar = function () {
         try  {
             var top_elt_bottom = $j('#' + ElmCity.top_element)[0].getClientRects()[0].bottom;
         } catch (e) {
-            console.log(e.message);
+            console.log(e.description);
             top_elt_bottom = 0;
         }
 
         if (top_elt_bottom <= 0)
-            $j('#sidebar').css('top', $j(window).scrollTop() - ElmCity.top_offset + 'px'); else
-            $j('#sidebar').css('top', ElmCity.top_method);
+            ElmCity.elmcity_sidebar.css('top', $j(window).scrollTop() - ElmCity.top_offset + 'px'); else
+            ElmCity.elmcity_sidebar.css('top', ElmCity.top_method);
     };
 
     ElmCity.find_current_name = function () {
@@ -165,7 +174,7 @@ var ElmCity = (function () {
             if (typeof ret == 'undefined')
                 ret = anchors[0].name;
         } catch (e) {
-            console.log("find_current_name: " + e.message);
+            console.log("find_current_name: " + e.description);
         }
         return ret;
     };
@@ -174,7 +183,7 @@ var ElmCity = (function () {
         try  {
             var last_anchor = ElmCity.anchor_names[ElmCity.anchor_names.length - 1];
             var parsed = Utils.parse_yyyy_mm_dd(last_anchor.replace('d', ''));
-            return new Date(parseInt(parsed['year']), parseInt(parsed['month']) - 1, parseInt(parsed['day']));
+            return new Date(parsed['year'], parsed['month'] - 1, parsed['day']);
         } catch (e) {
             return new Date();
         }
@@ -218,12 +227,14 @@ var ElmCity = (function () {
 
         ElmCity.highlight_date(ElmCity.today.getFullYear(), ElmCity.today.getMonth() + 1, ElmCity.today.getDate());
 
-        if ($j('#sidebar').css('position') != 'fixed') {
-            ElmCity.position_sidebar();
-            $j('#sidebar').css('visibility', 'visible');
-            $j('#datepicker').css('visibility', 'visible');
-            $j('#tags').css('visibility', 'visible');
-        }
+        // if ($j('#elmcity_sidebar').css('position') != 'fixed') { // unframed, no fixed elements -> obsolete
+        ElmCity.position_sidebar();
+        $j('#elmcity_sidebar').css('visibility', 'visible');
+        $j('#datepicker').css('visibility', 'visible');
+        $j('#tags').css('visibility', 'visible');
+
+        // }
+        $j('#sidebar').css('visibility', 'visible');
     };
 
     ElmCity.prep_day_anchors_and_last_day = function () {
@@ -275,30 +286,35 @@ var ElmCity = (function () {
         var cookie_name = 'elmcity_' + view + '_days';
         return cookie_name;
     };
-    ElmCity.set_dollar = "";
-    ElmCity.is_iframe = false;
-    ElmCity.is_ready = false;
-    ElmCity.injecting = false;
-    ElmCity.host = 'http://elmcity.cloudapp.net';
-    ElmCity.blobhost = "http://elmcity.blob.core.windows.net";
     ElmCity.anchor_names = new Array();
-    ElmCity.today = new Date();
-    ElmCity.last_day = new Date();
+    ElmCity.blobhost = "http://elmcity.blob.core.windows.net";
+    ElmCity.current_event_id = "";
+    ElmCity.elmcity_id = "";
+
+    ElmCity.event_count = 0;
+    ElmCity.events_url = "";
+    ElmCity.host = 'http://elmcity.cloudapp.net';
+    ElmCity.host_dom_element = "";
+    ElmCity.injecting = false;
+    ElmCity.is_eventsonly = false;
+    ElmCity.is_iframe = false;
     ElmCity.is_mobile = false;
     ElmCity.is_mobile_declared = false;
     ElmCity.is_mobile_detected = false;
-    ElmCity.is_eventsonly = false;
+    ElmCity.is_ready = false;
+    ElmCity.is_sidebar = true;
     ElmCity.is_theme = false;
     ElmCity.is_view = false;
-    ElmCity.is_sidebar = true;
+    ElmCity.last_day = new Date();
+
+    ElmCity.redirected_hubs = ['AnnArborChronicle'];
+    ElmCity.responsive_theme_uri = ElmCity.blobhost + '/admin/responsive.css';
+
+    ElmCity.set_dollar = "";
+    ElmCity.today = new Date();
+    ElmCity.top_element = 'elmcity_sidebar_top';
     ElmCity.top_method = "auto";
     ElmCity.top_offset = 0;
-    ElmCity.top_element = 'elmcity_sidebar_top';
-    ElmCity.events_url = "";
-    ElmCity.elmcity_id = "";
-    ElmCity.host_dom_element = "";
-    ElmCity.redirected_hubs = ['AnnArborChronicle'];
-    ElmCity.current_event_id = "";
     return ElmCity;
 })();
 
@@ -408,9 +424,9 @@ var Utils = (function () {
     Utils.parse_yyyy_mm_dd = function (date_str) {
         var match = /(\d{4,4})(\d{2,2})(\d{2,2})/.exec(date_str);
         return {
-            year: match[1],
-            month: Utils.maybe_zero_pad(match[2], 2),
-            day: Utils.maybe_zero_pad(match[3], 2)
+            year: parseInt(match[1], 10),
+            month: parseInt(match[2], 10),
+            day: parseInt(match[3], 10)
         };
     };
 
@@ -492,7 +508,7 @@ var Utils = (function () {
             style = style.replace(/'/g, '"');
             jquery(element).css(JSON.parse(style));
         } catch (e) {
-            console.log(e.message);
+            console.log(e.description);
         }
     };
 
@@ -507,7 +523,7 @@ var Utils = (function () {
             var cookie_name = Utils.make_cookie_name_from_view(view);
             $j.cookie(cookie_name, days);
         } catch (e) {
-            console.log(e.message);
+            console.log(e.description);
         }
     };
 
@@ -516,7 +532,7 @@ var Utils = (function () {
             var cookie_name = Utils.make_cookie_name_from_view(view);
             $j.removeCookie(cookie_name);
         } catch (e) {
-            console.log(e.message);
+            console.log(e.description);
         }
     };
 
@@ -551,7 +567,7 @@ var Utils = (function () {
             //  location.href = service_url;
             window.open(service_url, "add to google");
         } catch (e) {
-            console.log(e.message);
+            console.log(e.description);
         }
     };
 
@@ -594,6 +610,28 @@ var Utils = (function () {
                 return true;
         return false;
     };
+
+    Utils.hide_sidebar = function () {
+        $j('#datepicker').css('visibility', 'hidden');
+        $j('#elmcity_sidebar').css('visibility', 'hidden');
+    };
+
+    Utils.show_sidebar = function () {
+        $j('#datepicker').css('visibility', 'visible');
+        $j('#elmcity_sidebar').css('visibility', 'visible');
+    };
+
+    Utils.maybe_hide_sidebar = function () {
+        try  {
+            var last_event_top = $j(ElmCity.last_event).offset().top;
+            var sidebar_middle = $j('#elmcity_sidebar').offset().top + (ElmCity.sidebar_height / 2);
+            if (sidebar_middle > last_event_top)
+                Utils.hide_sidebar(); else
+                Utils.show_sidebar();
+        } catch (e) {
+            console.log(e.description);
+        }
+    };
     return Utils;
 })();
 
@@ -632,7 +670,7 @@ function show_view(view) {
     if (view == undefined) {
         var selected;
 
-        if ($j('#sidebar').css('display') != 'none')
+        if ($j('#elmcity_sidebar').css('display') != 'none')
             selected = $j('#tag_select option:selected').val(); else
             selected = $j('#tag_select2 option:selected').val();
         ElmCityParams.view = selected.replace(/\s*\((\d+)\)/, '');
@@ -651,7 +689,7 @@ function show_view(view) {
             ElmCityParams.days = days_cookie_value;
         }
     } catch (e) {
-        console.log(e.message);
+        console.log(e.description);
     }
 
     ElmCity.events_url = Utils.propagate_internal_params(ElmCity.events_url);
@@ -686,10 +724,8 @@ $j.cachedScript = function (url, options) {
 if (ElmCity.set_dollar.startsWith('y'))
     $ = __jQuery__;
 
-ElmCity.is_iframe = Utils.gup('iframe').startsWith('y');
-
-if (ElmCity.is_iframe) {
-    ElmCityParams.iframe = 'y';
+if (ElmCity.injecting == false) {
+    ElmCity.is_ready = true;
     $j(document).ready(ElmCity.ready);
 }
 //@ sourceMappingURL=elmcity-2.js.map
