@@ -1,5 +1,6 @@
 declare var jQuery;
 declare var $;
+declare var top_offset; // handle case where ElmCity.top_offset is gotten from a <script> block in a template
 
 var __jQuery__ = jQuery;
 var $j;
@@ -56,14 +57,10 @@ class ElmCity {
     static is_view = false;
     static last_day = new Date();
     static last_event;
-    static redirected_hubs = ['AnnArborChronicle'];
     static responsive_theme_uri = ElmCity.blobhost + '/admin/responsive.css';
-    static sidebar_top: number;
-    static sidebar_bottom: number;
-    static sidebar_height: number;
     static set_dollar = "";
     static today = new Date();
-    static top_element = 'elmcity_sidebar_top';
+    static top_element_name = 'elmcity_sidebar_top';
     static top_method = "auto"; // for use in position_sidebar
     static top_offset = 0;
 
@@ -81,9 +78,12 @@ class ElmCity {
             ElmCity.is_ready = true;
         }
 
+        if ( typeof(top_offset) != 'undefined')
+            ElmCity.top_offset = top_offset;
+
         ElmCity.elmcity_id = Utils.get_elmcity_id();
 
-        ElmCity.elmcity_sidebar = $j('#elmcity_sidebar').length == 1 ? $j('#elmcity_sidebar') : $j('#sidebar');
+        ElmCity.elmcity_sidebar = $j('#elmcity_sidebar').length == 1 ? $j('#elmcity_sidebar') : $j('#sidebar'); // until templates converge
 
         Utils.get_url_params();
 
@@ -105,13 +105,9 @@ class ElmCity {
         if (!ElmCity.is_sidebar)
             return;
 
+        var sidebar_top_element = $j('#' + ElmCity.top_element_name)[0];
+
         ElmCity.setup_datepicker();
-
-        var sidebar_top = $j('#elmcity_sidebar_top').length == 0 ? $('#body') : $j('#elmcity_sidebar_top')[0]; // until all templates converge on #elmcity_body
-
-        ElmCity.sidebar_top = sidebar_top.getClientRects()[0].top;
-        ElmCity.sidebar_bottom = sidebar_top.getClientRects()[0].bottom;
-        ElmCity.sidebar_height = ElmCity.sidebar_bottom - ElmCity.sidebar_top;
 
         ElmCity.event_count = $j('.bl').length;
         ElmCity.last_event = $j('.bl')[ElmCity.event_count - 3];
@@ -188,8 +184,9 @@ class ElmCity {
 
         // Utils.maybe_hide_sidebar();
 
-        if (ElmCity.elmcity_sidebar.css('position') != 'fixed') // unframed, no fixed elements
-            ElmCity.position_sidebar();
+        // if (ElmCity.elmcity_sidebar.css('position') != 'fixed') // unframed, no fixed elements -> obsolete
+
+        ElmCity.position_sidebar();
         var date_str = ElmCity.find_current_name().replace('d', '');
         var parsed = Utils.parse_yyyy_mm_dd(date_str);
         ElmCity.highlight_date(parsed['year'], parsed['month'], parsed['day']);
@@ -198,18 +195,40 @@ class ElmCity {
     static position_sidebar() {
         try
         {
-            var top_elt_bottom = $j('#' + ElmCity.top_element)[0].getClientRects()[0].bottom;
+            var top_elt_bottom = $j('#' + ElmCity.top_element_name)[0].getClientRects()[0].bottom;
         }
         catch (e)
         {
-            console.log(e.description);
+            console.log(e.message);
             top_elt_bottom = 0;
         }
 
+        var new_top;
+
         if (top_elt_bottom <= 0)
-            ElmCity.elmcity_sidebar.css('top', $j(window).scrollTop() - ElmCity.top_offset + 'px');
+            new_top = $j(window).scrollTop() - ElmCity.top_offset + 'px'
         else
-            ElmCity.elmcity_sidebar.css('top', ElmCity.top_method);
+            new_top = ElmCity.top_method;
+
+        var sidebar_top = ElmCity.elmcity_sidebar[0].getClientRects()[0].top;
+        var sidebar_bottom = ElmCity.elmcity_sidebar[0].getClientRects()[0].bottom;
+        var sidebar_height = sidebar_bottom - sidebar_top;
+
+        ElmCity.elmcity_sidebar.css('top', new_top);      // reposition
+
+        var body_top = $j('#body')[0].getClientRects()[0].top;
+        var body_bottom = $j('#body')[0].getClientRects()[0].bottom;
+        var body_height = body_bottom - body_top;
+        
+        if (sidebar_bottom > body_bottom)                // past the end of events?
+            new_top -= (sidebar_bottom - body_bottom);  // adjust
+
+        ElmCity.elmcity_sidebar.css('top', new_top);
+
+        if (body_height < sidebar_height)         // for short categories, hide all but datepicker and tags
+            $j('.sidebar').css('visibility', 'hidden');
+        else
+            $j('.sidebar').css('visibility', 'visible');
     }
 
     static find_current_name(): string {
@@ -239,7 +258,7 @@ class ElmCity {
         }
         catch (e)
         {
-            console.log("find_current_name: " + e.description);
+            console.log("find_current_name: " + e.message);
         }
         return ret;
     }
@@ -275,8 +294,6 @@ class ElmCity {
     static setup_datepicker() {
 
         console.log("setup_datepicker");
-        // if ($j('#datepicker').datepicker == undefined)
-        //     return;
 
         ElmCity.prep_day_anchors_and_last_day();
 
@@ -441,7 +458,7 @@ class Utils {
             }
             catch (e)
             {
-                console.log(e.description);
+                console.log(e.message);
             }
 
         if (ElmCityParams.timeofday.startsWith('n'))
@@ -524,7 +541,7 @@ class Utils {
     static propagate_internal_params(path: string): string {
         for (var p in ElmCityParams)
         {
-            if (p != undefined && ElmCityParams[p] != '')
+            if ( typeof(p) != 'undefined' && ElmCityParams[p] != '')
                 path = Utils.add_href_arg(path, p, ElmCityParams[p]);
 
             path = Utils.add_href_arg(path, 'view', ElmCityParams.view); // special case, always needed
@@ -541,7 +558,7 @@ class Utils {
         }
         catch (e)
         {
-            console.log(e.description);
+            console.log(e.message);
         }
     }
 
@@ -560,7 +577,7 @@ class Utils {
         }
         catch (e)
         {
-            console.log(e.description);
+            console.log(e.message);
         }
     }
 
@@ -572,7 +589,7 @@ class Utils {
         }
         catch (e)
         {
-            console.log(e.description);
+            console.log(e.message);
         }
     }
 
@@ -616,7 +633,7 @@ class Utils {
         }
         catch (e)
         {
-            console.log(e.description);
+            console.log(e.message);
         }
     }
 
@@ -670,22 +687,6 @@ class Utils {
         $j('#elmcity_sidebar').css('visibility', 'visible');
     }
 
-    static maybe_hide_sidebar() {
-        try
-        {
-            var last_event_top = $j(ElmCity.last_event).offset().top;
-            var sidebar_middle = $j('#elmcity_sidebar').offset().top + (ElmCity.sidebar_height / 2);
-            if (sidebar_middle > last_event_top)
-                Utils.hide_sidebar();
-            else
-                Utils.show_sidebar();
-        }
-        catch (e)
-        {
-            console.log(e.description);
-        }
-    }
-
 }
 
 // todo: consider encapsulating these in the ElmCity namespace when the generator provides qualified names
@@ -730,7 +731,7 @@ function hide_desc(id) {
 
 function show_view(view) {
 
-    if (view == undefined)
+    if ( typeof(view) == 'undefined') // selection via picklist
     {
         var selected: string;
 
@@ -738,11 +739,11 @@ function show_view(view) {
             selected = $j('#tag_select option:selected').val();
         else
             selected = $j('#tag_select2 option:selected').val();
-        ElmCityParams.view = selected.replace(/\s*\((\d+)\)/, '');
+        ElmCityParams.view = selected;
         if (ElmCityParams.view == 'all')
             ElmCityParams.view = '';
     }
-    else
+    else                              // selection via per-event category link
     {
         ElmCityParams.view = view;
     }
@@ -753,7 +754,7 @@ function show_view(view) {
     {
         var days_cookie_name = ElmCity.make_cookie_name_from_view();
         var days_cookie_value = $j.cookie(days_cookie_name);
-        if (days_cookie_value != undefined)
+        if ( typeof(days_cookie_value) != 'undefined')
         {
             ElmCityParams.days = days_cookie_value;
         } /*
@@ -764,15 +765,18 @@ function show_view(view) {
     }
     catch (e)
     {
-        console.log(e.description);
+        console.log(e.message);
     }
 
     ElmCity.events_url = Utils.propagate_internal_params(ElmCity.events_url);
 
     // ElmCity.events_url = Utils.propagate_href_args(ElmCity.events_url);
 
-    if (ElmCity.redirected_hubs.indexOf(ElmCity.elmcity_id) != -1)
-        ElmCity.events_url = ElmCity.events_url.replace('/' + ElmCity.elmcity_id, '');
+    //if (ElmCity.redirected_hubs.indexOf(ElmCity.elmcity_id) != -1)
+    //    ElmCity.events_url = ElmCity.events_url.replace('/' + ElmCity.elmcity_id, '');
+
+    if (location.host != "elmcity.cloudapp.net") // redirected hub
+        ElmCity.events_url = ElmCity.events_url.replace('http://' + ElmCity.host + '/' + ElmCity.elmcity_id, location.host);
 
     if (ElmCity.injecting)
     {

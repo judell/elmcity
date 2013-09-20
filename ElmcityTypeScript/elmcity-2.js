@@ -37,6 +37,9 @@ var ElmCity = (function () {
             ElmCity.is_ready = true;
         }
 
+        if (typeof (top_offset) != 'undefined')
+            ElmCity.top_offset = top_offset;
+
         ElmCity.elmcity_id = Utils.get_elmcity_id();
 
         ElmCity.elmcity_sidebar = $j('#elmcity_sidebar').length == 1 ? $j('#elmcity_sidebar') : $j('#sidebar');
@@ -60,13 +63,9 @@ var ElmCity = (function () {
         if (!ElmCity.is_sidebar)
             return;
 
+        var sidebar_top_element = $j('#' + ElmCity.top_element_name)[0];
+
         ElmCity.setup_datepicker();
-
-        var sidebar_top = $j('#elmcity_sidebar_top').length == 0 ? $('#body') : $j('#elmcity_sidebar_top')[0];
-
-        ElmCity.sidebar_top = sidebar_top.getClientRects()[0].top;
-        ElmCity.sidebar_bottom = sidebar_top.getClientRects()[0].bottom;
-        ElmCity.sidebar_height = ElmCity.sidebar_bottom - ElmCity.sidebar_top;
 
         ElmCity.event_count = $j('.bl').length;
         ElmCity.last_event = $j('.bl')[ElmCity.event_count - 3];
@@ -132,8 +131,9 @@ var ElmCity = (function () {
         if (ElmCity.is_mobile || ElmCity.is_eventsonly)
             return;
 
-        if (ElmCity.elmcity_sidebar.css('position') != 'fixed')
-            ElmCity.position_sidebar();
+        // Utils.maybe_hide_sidebar();
+        // if (ElmCity.elmcity_sidebar.css('position') != 'fixed') // unframed, no fixed elements -> obsolete
+        ElmCity.position_sidebar();
         var date_str = ElmCity.find_current_name().replace('d', '');
         var parsed = Utils.parse_yyyy_mm_dd(date_str);
         ElmCity.highlight_date(parsed['year'], parsed['month'], parsed['day']);
@@ -141,15 +141,36 @@ var ElmCity = (function () {
 
     ElmCity.position_sidebar = function () {
         try  {
-            var top_elt_bottom = $j('#' + ElmCity.top_element)[0].getClientRects()[0].bottom;
+            var top_elt_bottom = $j('#' + ElmCity.top_element_name)[0].getClientRects()[0].bottom;
         } catch (e) {
-            console.log(e.description);
+            console.log(e.message);
             top_elt_bottom = 0;
         }
 
+        var new_top;
+
         if (top_elt_bottom <= 0)
-            ElmCity.elmcity_sidebar.css('top', $j(window).scrollTop() - ElmCity.top_offset + 'px'); else
-            ElmCity.elmcity_sidebar.css('top', ElmCity.top_method);
+            new_top = $j(window).scrollTop() - ElmCity.top_offset + 'px'; else
+            new_top = ElmCity.top_method;
+
+        var sidebar_top = ElmCity.elmcity_sidebar[0].getClientRects()[0].top;
+        var sidebar_bottom = ElmCity.elmcity_sidebar[0].getClientRects()[0].bottom;
+        var sidebar_height = sidebar_bottom - sidebar_top;
+
+        ElmCity.elmcity_sidebar.css('top', new_top);
+
+        var body_top = $j('#body')[0].getClientRects()[0].top;
+        var body_bottom = $j('#body')[0].getClientRects()[0].bottom;
+        var body_height = body_bottom - body_top;
+
+        if (sidebar_bottom > body_bottom)
+            new_top -= (sidebar_bottom - body_bottom);
+
+        ElmCity.elmcity_sidebar.css('top', new_top);
+
+        if (body_height < sidebar_height)
+            $j('.sidebar').css('visibility', 'hidden'); else
+            $j('.sidebar').css('visibility', 'visible');
     };
 
     ElmCity.find_current_name = function () {
@@ -174,7 +195,7 @@ var ElmCity = (function () {
             if (typeof ret == 'undefined')
                 ret = anchors[0].name;
         } catch (e) {
-            console.log("find_current_name: " + e.description);
+            console.log("find_current_name: " + e.message);
         }
         return ret;
     };
@@ -208,8 +229,6 @@ var ElmCity = (function () {
     ElmCity.setup_datepicker = function () {
         console.log("setup_datepicker");
 
-        // if ($j('#datepicker').datepicker == undefined)
-        //     return;
         ElmCity.prep_day_anchors_and_last_day();
 
         $j('#datepicker').datepicker({
@@ -307,12 +326,10 @@ var ElmCity = (function () {
     ElmCity.is_view = false;
     ElmCity.last_day = new Date();
 
-    ElmCity.redirected_hubs = ['AnnArborChronicle'];
     ElmCity.responsive_theme_uri = ElmCity.blobhost + '/admin/responsive.css';
-
     ElmCity.set_dollar = "";
     ElmCity.today = new Date();
-    ElmCity.top_element = 'elmcity_sidebar_top';
+    ElmCity.top_element_name = 'elmcity_sidebar_top';
     ElmCity.top_method = "auto";
     ElmCity.top_offset = 0;
     return ElmCity;
@@ -414,7 +431,7 @@ var Utils = (function () {
                 $j('#subscribe').attr('href', href);
                 $j('#subscribe').text('subscribe');
             } catch (e) {
-                console.log(e.description);
+                console.log(e.message);
             }
 
         if (ElmCityParams.timeofday.startsWith('n'))
@@ -494,7 +511,7 @@ var Utils = (function () {
 
     Utils.propagate_internal_params = function (path) {
         for (var p in ElmCityParams) {
-            if (p != undefined && ElmCityParams[p] != '')
+            if (typeof (p) != 'undefined' && ElmCityParams[p] != '')
                 path = Utils.add_href_arg(path, p, ElmCityParams[p]);
 
             path = Utils.add_href_arg(path, 'view', ElmCityParams.view);
@@ -508,7 +525,7 @@ var Utils = (function () {
             style = style.replace(/'/g, '"');
             jquery(element).css(JSON.parse(style));
         } catch (e) {
-            console.log(e.description);
+            console.log(e.message);
         }
     };
 
@@ -523,7 +540,7 @@ var Utils = (function () {
             var cookie_name = Utils.make_cookie_name_from_view(view);
             $j.cookie(cookie_name, days);
         } catch (e) {
-            console.log(e.description);
+            console.log(e.message);
         }
     };
 
@@ -532,7 +549,7 @@ var Utils = (function () {
             var cookie_name = Utils.make_cookie_name_from_view(view);
             $j.removeCookie(cookie_name);
         } catch (e) {
-            console.log(e.description);
+            console.log(e.message);
         }
     };
 
@@ -567,7 +584,7 @@ var Utils = (function () {
             //  location.href = service_url;
             window.open(service_url, "add to google");
         } catch (e) {
-            console.log(e.description);
+            console.log(e.message);
         }
     };
 
@@ -620,18 +637,6 @@ var Utils = (function () {
         $j('#datepicker').css('visibility', 'visible');
         $j('#elmcity_sidebar').css('visibility', 'visible');
     };
-
-    Utils.maybe_hide_sidebar = function () {
-        try  {
-            var last_event_top = $j(ElmCity.last_event).offset().top;
-            var sidebar_middle = $j('#elmcity_sidebar').offset().top + (ElmCity.sidebar_height / 2);
-            if (sidebar_middle > last_event_top)
-                Utils.hide_sidebar(); else
-                Utils.show_sidebar();
-        } catch (e) {
-            console.log(e.description);
-        }
-    };
     return Utils;
 })();
 
@@ -667,13 +672,13 @@ function hide_desc(id) {
 }
 
 function show_view(view) {
-    if (view == undefined) {
+    if (typeof (view) == 'undefined') {
         var selected;
 
         if ($j('#elmcity_sidebar').css('display') != 'none')
             selected = $j('#tag_select option:selected').val(); else
             selected = $j('#tag_select2 option:selected').val();
-        ElmCityParams.view = selected.replace(/\s*\((\d+)\)/, '');
+        ElmCityParams.view = selected;
         if (ElmCityParams.view == 'all')
             ElmCityParams.view = '';
     } else {
@@ -685,17 +690,17 @@ function show_view(view) {
     try  {
         var days_cookie_name = ElmCity.make_cookie_name_from_view();
         var days_cookie_value = $j.cookie(days_cookie_name);
-        if (days_cookie_value != undefined) {
+        if (typeof (days_cookie_value) != 'undefined') {
             ElmCityParams.days = days_cookie_value;
         }
     } catch (e) {
-        console.log(e.description);
+        console.log(e.message);
     }
 
     ElmCity.events_url = Utils.propagate_internal_params(ElmCity.events_url);
 
-    if (ElmCity.redirected_hubs.indexOf(ElmCity.elmcity_id) != -1)
-        ElmCity.events_url = ElmCity.events_url.replace('/' + ElmCity.elmcity_id, '');
+    if (location.host != "elmcity.cloudapp.net")
+        ElmCity.events_url = ElmCity.events_url.replace('http://' + ElmCity.host + '/' + ElmCity.elmcity_id, location.host);
 
     if (ElmCity.injecting) {
         ElmCity.inject();
@@ -728,4 +733,4 @@ if (ElmCity.injecting == false) {
     ElmCity.is_ready = true;
     $j(document).ready(ElmCity.ready);
 }
-//@ sourceMappingURL=elmcity-2.js.map
+
