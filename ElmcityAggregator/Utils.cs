@@ -2686,11 +2686,11 @@ END:VCALENDAR",
 				id);
 		}
 
-		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl, int days)
+		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl, int days, bool bare_events)
 		{
 			var viewkey = string.Format("/services/{0}/{1}?view={2}&count={3}&from={4}&to={5}&days={6}", id, type, view, count, from, to, days);
 			if (type == "html")
-				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template + "&jsurl=" + jsurl;
+				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template + "&jsurl=" + jsurl + "&bare_events=" + bare_events;
 			return viewkey;
 		}
 
