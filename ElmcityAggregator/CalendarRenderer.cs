@@ -21,7 +21,6 @@ using System.Web.Mvc;
 using ElmcityUtils;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace CalendarAggregator
 {
