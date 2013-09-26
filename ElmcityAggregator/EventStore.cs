@@ -476,8 +476,8 @@ namespace CalendarAggregator
 	{
 		public List<ZonelessEvent> events = new List<ZonelessEvent>();
 
-		// used to chunk the list by datekey (e.g. "d2010-07-04") for the convenience of renderers
 		public Dictionary<string, List<ZonelessEvent>> event_dict = new Dictionary<string, List<ZonelessEvent>>();
+
 		public List<string> datekeys = new List<string>();
 
 		public ZonelessEventStore(Calinfo calinfo)
@@ -572,10 +572,12 @@ namespace CalendarAggregator
 		}
 
 		// populate the dict of day chunks
+
 		public void GroupEventsByDatekey()
 		{
 			var dict = new Dictionary<string, List<ZonelessEvent>>();
-			foreach (ZonelessEvent evt in events)
+
+			foreach (ZonelessEvent evt in this.events) 
 			{
 				string datekey = Utils.DateKeyFromDateTime(evt.dtstart);
 
@@ -584,8 +586,10 @@ namespace CalendarAggregator
 
 				dict[datekey].Add(evt);
 			}
+
 			this.event_dict = dict;
-		 }
+		}
+
 
 	}
 
