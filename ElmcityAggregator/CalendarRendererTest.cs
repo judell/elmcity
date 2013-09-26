@@ -29,12 +29,14 @@ namespace CalendarAggregator
 		private CalendarRenderer cr;
 		private ZonelessEventStore es;
 		private string event_html_header = "class=\"bl";
-		private Calinfo calinfo = Utils.AcquireCalinfo(Configurator.testid);
+		private static Calinfo calinfo = Utils.AcquireCalinfo(Configurator.testid);
 
 		static Uri view_uri = new Uri("http://elmcity.cloudapp.net/services/elmcity/xml?view=government");
 		static byte[] view_contents = HttpUtils.FetchUrl(view_uri).bytes;
 		static string view_etag = HttpUtils.GetMd5Hash(view_contents);
 		static Uri cached_base_uri = new Uri(Utils.MakeBaseZonelessUrl(Configurator.testid));
+
+		private static ZonelessEventStore filterable = new ZonelessEventStore(calinfo);
 
 		public CalendarRendererTest()
 		{
@@ -45,6 +47,40 @@ namespace CalendarAggregator
 			this.es = new ZonelessEventStore(calinfo);
 			var uri = BlobStorage.MakeAzureBlobUri(EventStoreTest.test_container, this.es.objfile,false);
 			this.es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
+
+			filterable.AddEvent("e1", "", "", null, null, DateTime.Parse("2013/11/01 8 AM"), DateTime.MinValue, false, null, null, null);
+			filterable.AddEvent("e2", "", "", null, null, DateTime.Parse("2013/11/02 8 AM"), DateTime.MinValue, false, null, null, null);
+			filterable.AddEvent("e3", "", "", null, null, DateTime.Parse("2013/11/03 8 AM"), DateTime.MinValue, false, null, null, null);
+			filterable.AddEvent("e4", "", "", null, null, DateTime.Parse("2013/11/04 8 AM"), DateTime.MinValue, false, null, null, null);
+			filterable.AddEvent("e5", "", "", null, null, DateTime.Parse("2013/11/05 8 AM"), DateTime.MinValue, false, "music", null, null);
+		}
+
+		[Test]
+		public void ViewFilterReturnsOneEvent()
+		{
+			var events = cr.Filter("music", 0, DateTime.MinValue, DateTime.MinValue, filterable);
+			Assert.That(events.Count == 1);
+			Assert.That(events.First().title == "e5");
+		}
+
+		[Test]
+		public void TimeFilterReturnsNov4And5()
+		{
+			var events = cr.Filter(null, 0, DateTime.Parse("2013-11-04T00:00"), DateTime.Parse("2013-11-06T00:00"), filterable);
+			Assert.That(events.Count == 2);
+			var titles = events.Select(x => x.title).ToList();
+			titles.Sort();
+			Assert.That(titles.SequenceEqual( new List<string>() { "e4", "e5" } ) );
+		}
+
+		[Test]
+		public void CountFilterReturns2()
+		{
+			var events = cr.Filter(null, 2, DateTime.MinValue, DateTime.MinValue, filterable);
+			Assert.That(events.Count == 2);
+			var titles = events.Select(x => x.title).ToList();
+			titles.Sort();
+			Assert.That(titles.SequenceEqual(new List<string>() { "e1", "e2" }));
 		}
 
 		[Test]
