@@ -21,6 +21,7 @@ using System.Web.Mvc;
 using ElmcityUtils;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace CalendarAggregator
 {
@@ -312,6 +313,8 @@ namespace CalendarAggregator
 
 			this.ResetCounters();
 
+			var day_anchors = GetDayAnchorsAsJson(eventstore, view);
+
 			args["AdvanceToAnHourAgo"] = true;
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
@@ -319,6 +322,9 @@ namespace CalendarAggregator
 
 			var builder = new StringBuilder();
 			RenderEventsAsHtml(eventstore, builder, args);
+
+			if (args.ContainsKey("bare_events") && (bool)args["bare_events"] == true)
+				return builder.ToString();
 
 			var html = this.template_html.Replace("__EVENTS__", builder.ToString());
 
@@ -353,7 +359,40 @@ namespace CalendarAggregator
 
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
 
+			html = html.Replace("__METADATA__", day_anchors);
+
 			return html;
+		}
+
+		private List<string> GetDayAnchors(ZonelessEventStore es, string view)
+		{
+			if (es == null)  // if no eventstore passed in (e.g., for testing)
+				es = this.es_getter(this.cache); 
+
+			this.AdvanceToAnHourAgo(es);
+
+			var filtered_events = ViewFilter(view, es.events);
+			
+			var day_anchors = new List<string>();
+
+			foreach (ZonelessEvent evt in filtered_events)
+			{
+				string datekey = Utils.DateKeyFromDateTime(evt.dtstart);
+				if (!day_anchors.Exists(d => d == datekey))
+				{
+					day_anchors.Add(datekey);
+				}
+			}
+			return day_anchors;
+		}
+
+		public string GetDayAnchorsAsJson(ZonelessEventStore es, string view)
+		{
+			var events = this.GetDayAnchors(es, view);
+
+			var json = JsonConvert.SerializeObject(events);
+
+			return json;
 		}
 
 		private string RenderBadges(string html)
@@ -455,6 +494,9 @@ namespace CalendarAggregator
 		public string RenderHtmlEventsOnly(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
 		{
 			args["AdvanceToAnHourAgo"] = true;
+
+			var day_anchors = GetDayAnchorsAsJson(eventstore, view);
+
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
 			var builder = new StringBuilder();
@@ -480,6 +522,8 @@ namespace CalendarAggregator
 			html = HandleJsUrl(html, args);
 
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
+
+			html = html.Replace("__METADATA__", day_anchors);
 
 			html = Utils.RemoveCommentSection(html, "SIDEBAR");
 			html = Utils.RemoveCommentSection(html, "JQUERY_UI_CSS");
@@ -685,8 +729,11 @@ namespace CalendarAggregator
 		{
 			if (args == null)
 				args = new Dictionary<string, object>();
-			if ( args.ContainsKey("mobile") == false )
-				args["mobile"] = false;
+
+			bool bare_events = args.ContainsKey("bare_events") && (bool)args["bare_events"] == true;
+
+			bool mobile = args.ContainsKey("mobile") && (bool)args["mobile"] == true;
+
 			//OrganizeByDate(es);
 			var event_renderer = new EventRenderer(RenderEvtAsHtml);
 			var year_month_anchors = new List<string>(); // e.g. ym201201
@@ -707,24 +754,22 @@ namespace CalendarAggregator
 				var event_builder = new StringBuilder();
 				var year_month_anchor = datekey.Substring(1, 6);
 
-				if  ((bool)args["mobile"] == false)  // skip day anchors and headers in mobile view
-				{
-					if (!year_month_anchors.Exists(ym => ym == year_month_anchor))
+				if (! year_month_anchors.Exists(ym => ym == year_month_anchor) )
 					{
 						builder.Append(string.Format("\n<a name=\"ym{0}\"></a>\n", year_month_anchor));
 						year_month_anchors.Add(year_month_anchor);
 					}
-					if (!day_anchors.Exists(d => d == datekey))
-					{
-						event_builder.Append(string.Format("\n<a name=\"{0}\"></a>\n", datekey));
-						var date = Utils.DateFromDateKey(datekey);
-						event_builder.Append(string.Format("<h1 id=\"{0}\" class=\"ed\"><b>{1}</b></h1>\n", datekey, date));
-						day_anchors.Add(datekey);
-						sequence_at_zero = true;
-					}
+
+				if (! day_anchors.Exists(d => d == datekey))
+				{
+					event_builder.Append(string.Format("\n<a name=\"{0}\"></a>\n", datekey));
+					var date = Utils.DateFromDateKey(datekey);
+					event_builder.Append(string.Format("<h1 id=\"{0}\" class=\"ed\"><b>{1}</b></h1>\n", datekey, date));
+					day_anchors.Add(datekey);
+					sequence_at_zero = true;
 				}
 
-				if (announce_time_of_day && (bool) args["mobile"] == false) // skip time-of-day markers in mobile view
+				if (announce_time_of_day && mobile == false && bare_events == false) // skip time-of-day markers in mobile view
 				{
 					var time_of_day = Utils.ClassifyTime(evt.dtstart);
 
@@ -827,7 +872,13 @@ namespace CalendarAggregator
 				categories = string.Format(@" <span class=""cat"">{0}</span>", string.Join(", ", catlist_links.ToArray()));
 			}
 
-			string label = "e" + this.event_counter.ToString();
+			string label;
+
+			if (args.ContainsKey("bare_events") && (bool)args["bare_events"] == true) // injecting, need to decorate the id
+				label = "e_" + month_day.Replace("/", "_") + "_" + this.event_counter.ToString();
+			else
+				label = "e" + this.event_counter.ToString();
+
 			String description = ( String.IsNullOrEmpty(evt.description) || evt.description.Length < 10 ) ? "" : evt.description.UrlsToLinks();
 			string show_desc = ( ! String.IsNullOrEmpty(description) ) ? String.Format(@"<span class=""sd""><a title=""show description ({0} chars)"" href=""javascript:show_desc('{1}')"">...</a></span>", description.Length, label) : "";
 
@@ -1193,6 +1244,53 @@ namespace CalendarAggregator
 			return es;
 		}
 
+		private ZonelessEventStore GetEventStore(ZonelessEventStore es, string view, Dictionary<string, object> args)
+		{
+			return GetEventStore(es, view, 0, DateTime.MinValue, DateTime.MinValue, args);
+		}
+
+		private ZonelessEventStore GetEventStore(ZonelessEventStore es, int count, Dictionary<string,object> args)
+		{
+			return GetEventStore(es, null, count, DateTime.MinValue, DateTime.MinValue, args);
+		}
+
+		private ZonelessEventStore GetEventStore(ZonelessEventStore es, DateTime from, DateTime to, Dictionary<string, object> args)
+		{
+			return GetEventStore(es, null, 0, from, to, args);
+		}
+
+		public ZonelessEventStore GetEventStoreRoundedUpToLastFullDay(int max, ZonelessEventStore es, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
+		{
+			if (args == null)
+				args = new Dictionary<string, object>();
+
+			if (es == null) 
+				es = this.es_getter(this.cache);
+
+			if ( es.events.Count <= max )
+				return GetEventStore(es, from, to, args);
+
+			var rounded_list = MakeRoundedList(max, es);
+
+			es.events = rounded_list;
+
+			return es;
+		}
+
+		public static List<ZonelessEvent> MakeRoundedList(int max, ZonelessEventStore es)
+		{
+			var rounded_list = new List<ZonelessEvent>();
+
+			foreach (var datekey in es.event_dict.Keys)
+			{
+				var sublist = es.event_dict[datekey];
+				rounded_list.AddRange(sublist);
+				if (rounded_list.Count > max)
+					break;
+			}
+			return rounded_list;
+		}
+
 		// take a string representation of a set of events, in some format
 		// take a per-event renderer for that format
 		// take an event object
@@ -1243,37 +1341,55 @@ namespace CalendarAggregator
 		{
 			var events = es.events;
 
-			if ( from != DateTime.MinValue && to != DateTime.MinValue )
-				events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart <= to);  // reduce to time window
+			if (!String.IsNullOrEmpty(view))
+				events = ViewFilter(view, events);                        
 
-			if (! String.IsNullOrEmpty(view) ) // reduce to matching categories
-			{
-				var view_list = view.Split(',').ToList();    // view=newportnewsva,sports,-soccer,-baseball
-				var remainder = new List<string>();
+			if (from != DateTime.MinValue && to != DateTime.MinValue)
+				events = TimeFilter(from, to, events);                    
 
-				foreach (var view_item in view_list)
-				{
-					if (view_item.StartsWith("-"))      // do exclusions first
-					{
-						var item = view_item.TrimStart('-');
-						events = events.FindAll(evt => evt.categories != null && !evt.categories.Split(',').ToList().Contains(item));
-					}
-					else
-						remainder.Add(view_item);
-				}
-
-				foreach (var view_item in remainder)    // then inclusions
-				{
-					events = events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Contains(view_item));
-				}
-
-			}
-
-			if (count != 0)   // reduce to first count events
-				events = events.Take(count).ToList();
-			
+			if (count != 0)
+				events = CountFilter(count, events);                     
+		
 			return events;
 		}
+
+		private static List<ZonelessEvent> ViewFilter(string view, List<ZonelessEvent> events)
+		{
+			var view_list = view.Split(',').ToList();    // view=newportnewsva,sports,-soccer,-baseball
+			var remainder = new List<string>();
+
+			foreach (var view_item in view_list)
+			{
+				if (view_item.StartsWith("-"))      // do exclusions first
+				{
+					var item = view_item.TrimStart('-');
+					events = events.FindAll(evt => evt.categories != null && !evt.categories.Split(',').ToList().Contains(item));
+				}
+				else
+					remainder.Add(view_item);
+			}
+
+			foreach (var view_item in remainder)    // then inclusions
+			{
+				events = events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Contains(view_item));
+			}
+
+
+			return events;
+		}
+
+		private static List<ZonelessEvent> CountFilter(int count, List<ZonelessEvent> events)
+		{
+			events = events.Take(count).ToList();
+			return events;
+		}
+
+		private static List<ZonelessEvent> TimeFilter(DateTime from, DateTime to, List<ZonelessEvent> events)
+		{
+			events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart <= to);  // reduce to time window
+			return events;
+		}
+
 
 		// the CalendarRenderer object uses this to get the pickled object that contains an eventstore,
 		// from the CalendarRender's cache if available, else fetching bytes
