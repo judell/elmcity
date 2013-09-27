@@ -51,7 +51,7 @@ title = 'WebCurrentRequestsAndThreads'
 query = template % ( fields, 'w3wp' )
 make_chart(local_storage, bin, 'xml', 'Line', in_spec, title, query)
 
-fields = 'd:processor_pct_proctime, d:ThreadCount'
+fields = 'd:HostName, d:processor_pct_proctime, d:ThreadCount'
 
 title = 'WebProcessorAndThreads'
 query = template % ( fields, 'w3wp' )
@@ -61,7 +61,7 @@ title = 'WorkerProcessorAndThreads'
 query = template % ( fields, 'WaWorkerHost')
 make_chart(local_storage, bin, 'xml', 'Line', in_spec, title, query)
 
-fields = 'd:mem_available_mbytes'
+fields = 'd:HostName, d:mem_available_mbytes'
 
 title = 'WebMemAvailable'
 query = template % ( fields, 'w3wp' )
