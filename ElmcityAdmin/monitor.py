@@ -17,8 +17,16 @@ python_lib = local_storage + '/Lib'
 sys.path.append(python_lib)
 import traceback, os 
 
-def make_fname(title, type):
-  return 'worker_%s_%s.%s' % (System.Net.Dns.GetHostName(), title, type )
+hostname = System.Net.Dns.GetHostName()
+
+def make_worker_fname(title, type):
+  return 'worker_%s_%s.%s' % (hostname, title, type )
+
+def make_web_fname(title, type):
+  return 'worker_%s_%s.%s' % ('ALLWEBROLES', title, type )
+
+def make_xml_blobname():
+  return 'worker_%s.xml' % System.Net.Dns.GetHostName()
 
 monitor = '%s/%s' % ( local_storage, 'monitor.xml')
 
@@ -32,7 +40,10 @@ try:
   f.write(s)
   f.close()
   GenUtils.LogMsg('info', 'worker saving %s' % monitor, None)
+  GenUtils.LogMsg('info', 'worker saving %s' % monitor, None)
+  bs.PutBlob('charts', 'monitor.xml', s)
 except:
+  print format_traceback()
   GenUtils.PriorityLogMsg('exception', 'MakeChart', format_traceback() )
 
 # charts
@@ -41,7 +52,9 @@ bin = "e:\\approot"
 
 in_spec = '%s#/feed/entry/content' % monitor
 
-#template = "select to_string(to_timestamp(d:TimeStamp, 'yyyy-MM-ddThh:mm:ss.???????Z'), 'dd hh:mm') as when, %s into __OUT__ from __IN__ where d:ProcName = '%s' order by when"
+# web queries (worker doesn't know web hostnames so these include all webroles)
+
+make_fname = make_web_fname
 
 template = "select to_timestamp(d:TimeStamp, 'yyyy-MM-ddThh:mm:ss.???????Z') as when, %s into __OUT__ from __IN__ where d:ProcName = '%s' order by when"
 
@@ -51,17 +64,13 @@ title = 'WebCurrentRequestsAndThreads'
 query = template % ( fields, 'w3wp' )
 make_chart(local_storage, bin, 'xml', 'Line', in_spec, title, query)
 
-fields = 'd:HostName, d:processor_pct_proctime, d:ThreadCount'
+fields = 'd:processor_pct_proctime, d:ThreadCount'
 
 title = 'WebProcessorAndThreads'
 query = template % ( fields, 'w3wp' )
 make_chart(local_storage, bin, 'xml', 'Line', in_spec, title, query)
 
-title = 'WorkerProcessorAndThreads'
-query = template % ( fields, 'WaWorkerHost')
-make_chart(local_storage, bin, 'xml', 'Line', in_spec, title, query)
-
-fields = 'd:HostName, d:mem_available_mbytes'
+fields = 'd:mem_available_mbytes'
 
 title = 'WebMemAvailable'
 query = template % ( fields, 'w3wp' )
@@ -118,6 +127,25 @@ title = 'AspNetReqsSucceededAndFailed'
 query = template % ( fields, 'w3wp', 1000)
 make_chart(local_storage, bin, 'xml', 'Line', in_spec, title, query)
 
+# worker queries
+
+make_fname = make_worker_fname
+
+template = "select to_timestamp(d:TimeStamp, 'yyyy-MM-ddThh:mm:ss.???????Z') as when, %s into __OUT__ from __IN__ where d:HostName = '%s' and d:ProcName = '%s' order by when"
+
+fields = 'd:mem_available_mbytes'
+
+title = 'WorkerMemAvailable'
+query = template % ( fields, hostname, 'WaWorkerHost')
+make_chart(local_storage, bin, 'xml', 'Line', in_spec, title, query)
+
+fields = 'd:processor_pct_proctime, d:ThreadCount'
+
+title = 'WorkerProcessorAndThreads'
+query = template % ( fields, hostname, 'WaWorkerHost')
+make_chart(local_storage, bin, 'xml', 'Line', in_spec, title, query)
+
+
 try:
   args = System.Collections.Generic.List[str]()
   args.Add('')
@@ -134,4 +162,6 @@ GenUtils.LogMsg("info", "monitor.py stopping", None)
 # run logparser queries against the file
 # output charts (gifs) and/or tables (htmls) to charts container in azure storage
 # run dashboard to update pages that include charts and tables
+
+
 

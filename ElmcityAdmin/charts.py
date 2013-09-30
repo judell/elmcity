@@ -18,8 +18,10 @@ python_lib = local_storage + '/Lib'
 sys.path.append(python_lib)
 import traceback, os   
 
+hostname = System.Net.Dns.GetHostName()
+
 def make_fname(title, type):
-  return 'web_%s_%s.%s' % (System.Net.Dns.GetHostName(), title, type )
+  return 'web_%s_%s.%s' % (hostname, title, type )
 
 def make_html(local_storage, bin, type, in_spec, title, query):
   try:
@@ -75,7 +77,6 @@ h1 { font-size:smaller }
     for row in d.DocumentElement.ChildNodes:
       html += '<tr>%s</tr>\n' % get_xml_value_row(row)
     html += '</table>\n</body>\n</html>'
-    bs = BlobStorage.MakeDefaultBlobStorage()
     data = System.Text.Encoding.UTF8.GetBytes(html)
     r = bs.PutBlob('charts', fname, System.Collections.Hashtable(), data, 'text/html' )
     print r.HttpResponse.status.ToString()

@@ -46,7 +46,7 @@ def get_process_owner():
 def format_traceback():    
   exc_type, exc_value, exc_traceback = sys.exc_info()
   tb = traceback.format_exception(exc_type, exc_value, exc_traceback)  
-  return repr(tb) 
+  return repr(tb )
 
 def make_chart(local_storage, bin, source_type, chart_type, in_spec, title, query):
   try:
@@ -70,3 +70,5 @@ def make_out_spec(local_storage, fname):
   
 def expand_title( title ):
   return '%s - %s - %s' % ( title, System.DateTime.UtcNow.ToString(), System.Net.Dns.GetHostName() )  
+
+bs = BlobStorage.MakeDefaultBlobStorage()
