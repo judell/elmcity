@@ -64,6 +64,13 @@ namespace CalendarAggregator
 		}
 
 		[Test]
+		public void ViewFilterHandlesNullViewAndNullishDateTimes()
+		{
+			var events = cr.Filter(null, 0, DateTime.MinValue, DateTime.MinValue, filterable);
+			Assert.That(events.Count == filterable.events.Count());
+		}
+
+		[Test]
 		public void TimeFilterReturnsNov4And5()
 		{
 			var events = cr.Filter(null, 0, DateTime.Parse("2013-11-04T00:00"), DateTime.Parse("2013-11-06T00:00"), filterable);
