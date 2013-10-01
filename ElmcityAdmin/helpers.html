@@ -135,21 +135,23 @@ var ical_url = 'http://elmcity.cloudapp.net/get_csv_ical_url' +
 location.href = ical_url;
 }
 
+// string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string description_only, string url_only, string location_only
+
+var ics_template = 'http://elmcity.cloudapp.net/ics_from_ics?feedurl=&elmcity_id=&source=&after=&before=&include_keyword=&exclude_keyword=&summary_only=&description_only=&url_only=&location_only=';
+
+
 function get_ics_to_ics_ical_url_1()
 {
 var filter_feed_url   = $('#filter_feed_url').val();
 var include_keyword   = $('#filter_include_keyword').val();
 var elmcity_id        = $('#filter_elmcity_id').val();
 
-var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
-                '?feedurl=' +
-                encodeURIComponent(filter_feed_url) +
-                '&include_keyword=' +
-                include_keyword +
-                '&elmcity_id=' +
-                elmcity_id;
+var ical_url = ics_template.replace('feedurl=','feedurl=' + filter_feed_url);
+ical_url = ical_url.replace('elmcity_id=','elmcity_id=' + elmcity_id);
+ical_url = ical_url.replace('include_keyword=', 'include_keyword=' + include_keyword);
 
-location.href = ical_url;
+$('#ics_to_ics_ical_url_1').html('<p>' + ical_url + '</p>');
+
 }
 
 function get_ics_to_ics_ical_url_2()
@@ -158,15 +160,12 @@ var filter_feed_url   = $('#filter_feed_url2').val();
 var filter_after      = $('#filter_after').val();
 var elmcity_id        = $('#filter_elmcity_id').val();
 
-var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
-                '?feedurl=' +
-                encodeURIComponent(filter_feed_url) +
-                '&after=' +
-                filter_after +
-                '&elmcity_id=' +
-                elmcity_id;
+var ical_url = ics_template.replace('feedurl=','feedurl=' + filter_feed_url);
+ical_url = ical_url.replace('elmcity_id=','elmcity_id=' + elmcity_id);
+ical_url = ical_url.replace('after=', 'after=' + filter_after);
 
-location.href = ical_url;
+$('#ics_to_ics_ical_url_2').html(ical_url);
+
 }
 
 function get_ics_to_ics_ical_url_3()
@@ -175,17 +174,13 @@ var filter_feed_url   = $('#bampfa_feed_url').val();
 var url_keyword       = $('#url_include').val();
 var elmcity_id        = $('#bampfa_elmcity_id').val();
 
-var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
-                '?feedurl=' +
-                encodeURIComponent(filter_feed_url) +
-                '&include_keyword=' +
-                url_keyword +
-                '&url_only=' + 
-                'yes'  +
-                '&elmcity_id=' +
-                elmcity_id;
+var ical_url = ics_template.replace('feedurl=','feedurl=' + filter_feed_url);
+ical_url = ical_url.replace('elmcity_id=','elmcity_id=' + elmcity_id);
+ical_url = ical_url.replace('include_keyword', 'include_keyword=' + url_keyword);
+ical_url = ical_url.replace('url_only=', 'url_only=yes');
 
-location.href = ical_url;
+$('#ics_to_ics_ical_url_3').html(ical_url);
+
 }
 
 function get_ics_to_ics_ical_url_4()
@@ -194,18 +189,12 @@ var filter_feed_url   = $('#trinity_feed_url_away').val();
 var include_keyword       = $('#location_include_away').val();
 var elmcity_id        = $('#hartford_elmcity_id_away').val();
 
-var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
-                '?feedurl=' +
-                encodeURIComponent(filter_feed_url) +
-                '&include_keyword=' +
-                include_keyword +
-                '&location_only=' + 
-                'yes'  +
-                '&elmcity_id=' +
-                elmcity_id;
+var ical_url = ics_template.replace('feedurl=','feedurl=' + filter_feed_url);
+ical_url = ical_url.replace('elmcity_id=','elmcity_id=' + elmcity_id);
+ical_url = ical_url.replace('include_keyword=', 'include_keyword=' + include_keyword);
+ical_url = ical_url.replace('location_only=', 'location_only=yes');
 
-
-location.href = ical_url;
+$('#ics_to_ics_ical_url_4').html(ical_url);
 }
 
 function get_ics_to_ics_ical_url_5()
@@ -214,18 +203,13 @@ var filter_feed_url   = $('#trinity_feed_url_away').val();
 var exclude_keyword       = $('#location_exclude_away').val();
 var elmcity_id        = $('#hartford_elmcity_id_home').val();
 
-var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
-                '?feedurl=' +
-                encodeURIComponent(filter_feed_url) +
-                '&exclude_keyword=' +
-                exclude_keyword +
-                '&location_only=' + 
-                'yes'  +
-                '&elmcity_id=' +
-                elmcity_id;
+var ical_url = ics_template.replace('feedurl=','feedurl=' + filter_feed_url);
+ical_url = ical_url.replace('elmcity_id=','elmcity_id=' + elmcity_id);
+ical_url = ical_url.replace('exclude_keyword=', 'exclude_keyword=' + exclude_keyword);
+ical_url = ical_url.replace('location_only=', 'location_only=yes');
 
+$('#ics_to_ics_ical_url_5').html(ical_url);
 
-location.href = ical_url;
 }
 
 
@@ -235,17 +219,13 @@ var filter_feed_url   = $('#crazy_wisdom_feed_url').val();
 var include_keyword       = $('#include_crazywisdom').val();
 var elmcity_id        = $('#crazy_wisdom_elmcity_id').val();
 
-var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
-                '?feedurl=' +
-                encodeURIComponent(filter_feed_url) +
-                '&include_keyword=' +
-                include_keyword +
-                '&summary_only=' + 
-                'yes'  +
-                '&elmcity_id=' +
-                elmcity_id;
+var ical_url = ics_template.replace('feedurl=','feedurl=' + filter_feed_url);
+ical_url = ical_url.replace('elmcity_id=','elmcity_id=' + elmcity_id);
+ical_url = ical_url.replace('include_keyword=', 'include_keyword=' + include_keyword);
+ical_url = ical_url.replace('summary_only=', 'summary_only=yes');
 
-location.href = ical_url;
+$('#ics_to_ics_ical_url_6').html(ical_url);
+
 }
 
 
@@ -255,17 +235,13 @@ var filter_feed_url   = $('#lets_dance_feed_url').val();
 var exclude_keyword       = $('#exclude_lets_dance').val();
 var elmcity_id        = $('#lets_dance_elmcity_id').val();
 
-var ical_url = 'http://elmcity.cloudapp.net/get_ics_to_ics_ical_url' +
-                '?feedurl=' +
-                encodeURIComponent(filter_feed_url) +
-                '&exclude_keyword=' +
-                exclude_keyword +
-                '&summary_only=' + 
-                'yes'  +
-                '&elmcity_id=' +
-                elmcity_id;
+var ical_url = ics_template.replace('feedurl=','feedurl=' + filter_feed_url);
+ical_url = ical_url.replace('elmcity_id=','elmcity_id=' + elmcity_id);
+ical_url = ical_url.replace('exclude_keyword=', 'exclude_keyword=' + exclude_keyword);
+ical_url = ical_url.replace('summary_only=', 'summary_only=yes');
 
-location.href = ical_url;
+$('#ics_to_ics_ical_url_7').html(ical_url);
+
 }
 
 
@@ -309,6 +285,11 @@ var url = 'http://elmcity.cloudapp.net/view_calendar' +
 
 location.href = url;
 }
+
+ 
+String.prototype.contains = function (str){
+    return this.indexOf(str) != -1;
+};
 
 
 
@@ -736,6 +717,8 @@ One way to produce a jazz feed for Vinology is to restrict the feed to only even
 
 </table>
 
+<p id="ics_to_ics_ical_url_1"></p>
+
 <h2>Filtering by time</h2>
 
 <p>
@@ -766,6 +749,8 @@ Another way produce a jazz feed for Vinology is to restrict the feed to only eve
 
 </table>
 
+<p id="ics_to_ics_ical_url_2"></p>
+
 <h2>Filtering by URL</h2>
 
 <p>
@@ -790,7 +775,7 @@ Here's how the Berkeley hub uses iCalendar filtering to construct the BAM/PFA fi
 
 <tr>
 <td style="text-align:right">URL only: </td>
-<td><input style="width:1.5in" value="yes"></td>
+<td>yes</td>
 </tr>
 
 <tr>
@@ -804,6 +789,8 @@ Here's how the Berkeley hub uses iCalendar filtering to construct the BAM/PFA fi
 </tr>
 
 </table>
+
+<p id="ics_to_ics_ical_url_3"></p>
 
 <h2>Filtering by Location</h2>
 
@@ -833,7 +820,7 @@ Here's how the socialhartford hub uses iCalendar filtering to construct feeds fo
 
 <tr>
 <td style="text-align:right">LOCATION only: </td>
-<td><input style="width:1.5in" value="yes"></td>
+<td>yes</td>
 </tr>
 
 <tr>
@@ -847,6 +834,8 @@ Here's how the socialhartford hub uses iCalendar filtering to construct feeds fo
 </tr>
 
 </table>
+
+<p id="ics_to_ics_ical_url_4"></p>
 
 <p>
 And for home games:
@@ -866,7 +855,7 @@ And for home games:
 
 <tr>
 <td style="text-align:right">LOCATION only: </td>
-<td><input style="width:1.5in" value="yes"></td>
+<td>yes</td>
 </tr>
 
 <tr>
@@ -880,6 +869,8 @@ And for home games:
 </tr>
 
 </table>
+
+<p id="ics_to_ics_ical_url_5"></p>
 
 <h3>Filtering by multiple included and/or excluded keywords</h3>
 
@@ -901,7 +892,7 @@ If you include or exclude a comma-separated list of keywords, they'll OR togethe
 
 <tr>
 <td style="text-align:right">SUMMARY only: </td>
-<td><input style="width:1.5in" value="yes"></td>
+<td>yes</td>
 </tr>
 
 <tr>
@@ -915,6 +906,8 @@ If you include or exclude a comma-separated list of keywords, they'll OR togethe
 </tr>
 
 </table>
+
+<p id="ics_to_ics_ical_url_6"></p>
 
 <p>
 Here's an excluder for Let's Dance Southern Vermont, a feed of dance events with occasional Zumba, Tai Chi, and Yoga events that wouldn't belong in a Dance category.
@@ -934,7 +927,7 @@ Here's an excluder for Let's Dance Southern Vermont, a feed of dance events with
 
 <tr>
 <td style="text-align:right">SUMMARY only: </td>
-<td><input style="width:1.5in" value="yes"></td>
+<td>yes</td>
 </tr>
 
 <tr>
@@ -949,7 +942,7 @@ Here's an excluder for Let's Dance Southern Vermont, a feed of dance events with
 
 </table>
 
-
+<p id="ics_to_ics_ical_url_7"></p>
 
 <a name="viewers">
 <h1>feed viewers</h1>
