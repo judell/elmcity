@@ -312,7 +312,15 @@ namespace CalendarAggregator
 
 			this.ResetCounters();
 
-			var day_anchors = GetDayAnchorsAsJson(eventstore, view);
+			string day_anchors = "";
+			try
+			{
+				day_anchors = GetDayAnchorsAsJson(eventstore, view);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "GetDayAnchors", e.Message + e.StackTrace);
+			}
 
 			args["AdvanceToAnHourAgo"] = true;
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
@@ -1354,38 +1362,63 @@ namespace CalendarAggregator
 
 		private static List<ZonelessEvent> ViewFilter(string view, List<ZonelessEvent> events)
 		{
-			var view_list = view.Split(',').ToList();    // view=newportnewsva,sports,-soccer,-baseball
-			var remainder = new List<string>();
-
-			foreach (var view_item in view_list)
+			try
 			{
-				if (view_item.StartsWith("-"))      // do exclusions first
+				if (view == null)
+					return events;
+
+				var view_list = view.Split(',').ToList();    // view=newportnewsva,sports,-soccer,-baseball
+				var remainder = new List<string>();
+
+				foreach (var view_item in view_list)
 				{
-					var item = view_item.TrimStart('-');
-					events = events.FindAll(evt => evt.categories != null && !evt.categories.Split(',').ToList().Contains(item));
+					if (view_item.StartsWith("-"))      // do exclusions first
+					{
+						var item = view_item.TrimStart('-');
+						events = events.FindAll(evt => evt.categories != null && !evt.categories.Split(',').ToList().Contains(item));
+					}
+					else
+						remainder.Add(view_item);
 				}
-				else
-					remainder.Add(view_item);
-			}
 
-			foreach (var view_item in remainder)    // then inclusions
+				foreach (var view_item in remainder)    // then inclusions
+				{
+					events = events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Contains(view_item));
+				}
+			}
+			catch (Exception e)
 			{
-				events = events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Contains(view_item));
+				GenUtils.PriorityLogMsg("exception", "ViewFilter", e.Message + e.StackTrace);
 			}
-
 
 			return events;
 		}
 
 		private static List<ZonelessEvent> CountFilter(int count, List<ZonelessEvent> events)
 		{
-			events = events.Take(count).ToList();
+			try
+			{
+				events = events.Take(count).ToList();
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ViewFilter", e.Message + e.StackTrace);
+			}
+
 			return events;
 		}
 
 		private static List<ZonelessEvent> TimeFilter(DateTime from, DateTime to, List<ZonelessEvent> events)
 		{
-			events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart <= to);  // reduce to time window
+			try
+			{
+				events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart <= to);  // reduce to time window
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "ViewFilter", e.Message + e.StackTrace);
+			}
+
 			return events;
 		}
 
