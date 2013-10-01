@@ -175,7 +175,15 @@ namespace WorkerRole
 
 					var icals_and_nonicals = ids.Except(regions).ToList();
 
-					BuildTodo(todo, icals_and_nonicals);
+					try
+					{
+						BuildTodo(todo, icals_and_nonicals);
+					}
+					catch (Exception e)
+					{
+						GenUtils.PriorityLogMsg("exception", "BuildTodo", e.Message);
+						continue;
+					}
 
 					//HandleTwitterMessages(todo, ids);
 
@@ -194,18 +202,34 @@ namespace WorkerRole
 					Parallel.ForEach(source: todo.icaltasks, body: (id) =>
 					//foreach (var id in todo.icaltasks)              // this can be parallelized because there are many separate/unique endpoints
 					{
-						Scheduler.UpdateStartTaskForId(id, TaskType.icaltasks);
-						ProcessIcal(id);
-						StopTask(id, TaskType.icaltasks);
+						try
+						{
+							Scheduler.UpdateStartTaskForId(id, TaskType.icaltasks);
+							ProcessIcal(id);
+							StopTask(id, TaskType.icaltasks);
+						}
+						catch (Exception e)
+						{
+							GenUtils.PriorityLogMsg("exception", "Worker icaltasks", e.Message);
+							return;
+						}
 					});
 					sw_ical.Stop();
 
 					sw_nonical.Start();
 					foreach (var id in todo.nonicaltasks)           // this won't be parallelized because of api rate throttling in nonical service endpoints
 					{
-						Scheduler.UpdateStartTaskForId(id, TaskType.nonicaltasks);  // the todo list has a general start time, now update it to actual start
-						ProcessNonIcal(id);
-						StopTask(id, TaskType.nonicaltasks);
+						try
+						{
+							Scheduler.UpdateStartTaskForId(id, TaskType.nonicaltasks);  // the todo list has a general start time, now update it to actual start
+							ProcessNonIcal(id);
+							StopTask(id, TaskType.nonicaltasks);
+						}
+						catch (Exception e)
+						{
+							GenUtils.PriorityLogMsg("exception", "Worker nonicaltasks", e.Message);
+							return;
+						}
 					}
 					sw_nonical.Stop();
 
@@ -213,21 +237,38 @@ namespace WorkerRole
 					var finalizers = todo.nonicaltasks.Union(todo.icaltasks);  // finalize ical and/or nonical updates
 					Parallel.ForEach(source: finalizers, body: (id) =>
 					{
-						FinalizeHub(id);
+						try
+						{
+							FinalizeHub(id);
+						}
+						catch (Exception e)
+						{
+							GenUtils.PriorityLogMsg("exception", "Worker finalize", e.Message);
+							return;
+						}
 					}
 					);
 					sw_finalize.Stop();
 
 					sw_region.Start();
-					foreach (var id in Utils.GetRegionIds())            // now update regions, this can be also be parallelized as needed
+					try
 					{
-						if (RegionIsStale(id))
+						foreach (var id in regions )            // now update regions, this can also be parallelized as needed
 						{
-							Scheduler.UpdateStartTaskForId(id, TaskType.regiontasks);
-							ProcessRegion(id);
-							StopTask(id, TaskType.regiontasks);
+							if (RegionIsStale(id))
+							{
+								Scheduler.UpdateStartTaskForId(id, TaskType.regiontasks);
+								ProcessRegion(id);
+								StopTask(id, TaskType.regiontasks);
+							}
 						}
 					}
+					catch (Exception e)
+					{
+						GenUtils.PriorityLogMsg("exception", "Worker regiontasks", e.Message);
+						return;
+					}
+
 					sw_region.Stop();
 
 					sw_total.Stop();
