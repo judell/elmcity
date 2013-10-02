@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2529";
+        public static string version = "2536";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -159,6 +159,8 @@ namespace WebRole
 		public static WebRoleData wrd;
 
         public static string get_events_param_types = "html|xml|json|ics|rss|text|tags_json|stats|tags_html|jswidget|today_as_html";
+
+		public static bool debugging = false;
 
         public ElmcityApp()
         {
@@ -691,6 +693,25 @@ namespace WebRole
                 GenUtils.PriorityLogMsg("exception", msg, e0.Message);
             }
 
+
+			try
+			{
+				var themes = Utils.GetThemesDict();
+				if (ObjectUtils.DictOfDictStrEqualsDictOfDictStr(themes, ElmcityController.themes) == false)
+				{
+					GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes", "reloading themes");
+					lock (ElmcityController.themes)
+					{
+						ElmcityController.themes = themes;
+					}
+				}
+			}
+			catch (Exception e2)
+			{
+				var msg = "_ReloadSettingsAndRoutes: themes";
+				GenUtils.PriorityLogMsg("exception", msg, e2.Message);
+			}
+
             try
             {
                 var new_wrd = WebRoleData.GetWrd();
@@ -743,23 +764,6 @@ namespace WebRole
 				GenUtils.PriorityLogMsg("exception", "_ReloadSettingsAndRoutes: cannot check/update wrd", e1.Message + e1.StackTrace);
             }
 
-            try
-            {
-                var themes = Utils.GetThemesDict();
-                if (ObjectUtils.DictOfDictStrEqualsDictOfDictStr(themes, ElmcityController.themes) == false)
-                {
-					GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes", "reloading themes");
-                    lock (ElmcityController.themes)
-                    {
-                        ElmcityController.themes = themes;
-                    }
-                }
-            }
-            catch (Exception e2)
-            {
-                var msg = "_ReloadSettingsAndRoutes: themes";
-                GenUtils.PriorityLogMsg("exception", msg, e2.Message);
-            }
 
             if (new_routes)
             {
