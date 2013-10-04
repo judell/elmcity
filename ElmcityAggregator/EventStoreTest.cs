@@ -84,34 +84,21 @@ namespace CalendarAggregator
 
 			var evt1 = es.events.Find(e => e.title == title1);
 			evt1.urls_and_sources = new Dictionary<string, string>() { { "http://foo", source1 } };
-			//var item1 = new List<string>() { "http://foo", source1 };
-			//evt1.list_of_urls_and_sources = new List<List<string>>() { item1 };
 
 			es.AddEvent(title:title2, url:"http://bar", source:source2, lat: null, lon: null, dtstart: dt2, dtend: min, allday: false, categories:null, description: test_description, location: test_location);
 
 			var evt2 = es.events.Find(e => e.title == title2);
 			evt2.urls_and_sources = new Dictionary<string, string>() { { "http://bar", source2 } };
-			//var item2 = new List<string>() { "http://foo", source2 };
-			//evt2.list_of_urls_and_sources = new List<List<string>>() { item2 };
+
 			es.Serialize();
 
-			var es2 = new ZonelessEventStore(calinfo).Deserialize(); 
+			var es2 = new ZonelessEventStore(calinfo).Deserialize();
 
-			CalendarRenderer.OrganizeByDate(es2);
+			es2.SortEventList();
 
-			Assert.That(es2.event_dict.Keys.Count == 2);
-			var list1 = es2.event_dict[es2.event_dict.Keys.First()];
-			var list2 = es2.event_dict[es2.event_dict.Keys.Last()];
-			evt1 = list1.First();
-			evt2 = list2.First();
-
-			Assert.AreEqual(evt1.dtstart, dt1);
-			Assert.AreEqual(evt2.dtstart, dt2);
-			Assert.AreEqual(evt1.title, title1);
-			Assert.AreEqual(evt2.title, title2);
-
-			evt1 = es2.events.First();
-			evt2 = es2.events.Last();
+			Assert.That(es2.events.Count == 2);
+			evt1 = es2.events[0];
+			evt2 = es2.events[1];
 
 			Assert.AreEqual(evt1.dtstart, dt1);
 			Assert.AreEqual(evt2.dtstart, dt2);
