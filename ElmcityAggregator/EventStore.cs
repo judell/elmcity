@@ -519,7 +519,7 @@ namespace CalendarAggregator
 
 		public void SortEventList()
 		{
-			this.events = this.events.OrderBy(evt => evt.dtstart).ToList();
+			this.events = this.events.OrderBy(a => a.dtstart).ThenBy(a => a.source).ThenBy(a => a.title).ToList();
 		}
 
 		public void ExcludePastEvents()
@@ -539,36 +539,6 @@ namespace CalendarAggregator
 		public static bool IsZeroHourMinSec(ZonelessEvent evt)
 		{
 			return (evt.dtstart.Hour == 0 && evt.dtstart.Minute == 0 && evt.dtstart.Second == 0);
-		}
-
-		// order the events within each day chunk, for convenience of renderers.
-		// put times like 00:00:00 at the end, so they land in the All Day bucket.
-		// note: it is not necessarily true that a time of midnight means an event is all-day, 
-		// and it really shouldn't mean that, but sources often use that convention.
-		public void SortEventSublists()
-		{
-			var sorted_dict = new Dictionary<string, List<ZonelessEvent>>();
-
-			foreach (string datekey in event_dict.Keys)
-			{
-				List<ZonelessEvent> list = event_dict[datekey];
-
-				IEnumerable<ZonelessEvent> sorted =
-					from evt in list
-					orderby evt.dtstart.TimeOfDay ascending, evt.title ascending
-					select evt;
-
-				list = sorted.ToList();
-
-				var events_having_dt = list.FindAll(evt => IsZeroHourMinSec(evt) == false);
-				var events_not_having_dt = list.FindAll(evt => IsZeroHourMinSec(evt) == true);
-				sorted_dict[datekey] = events_having_dt;
-
-				foreach (var evt in events_not_having_dt)
-					sorted_dict[datekey].Add(evt);
-			}
-	
-			this.event_dict = sorted_dict;
 		}
 
 		// populate the dict of day chunks

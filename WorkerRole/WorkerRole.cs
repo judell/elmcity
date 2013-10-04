@@ -531,7 +531,7 @@ namespace WorkerRole
 
 			var calinfo = Utils.AcquireCalinfo(id);
 
-			EventStore.CombineZonedEventStoresToZonelessEventStore(id, settings); // todo: lease the blog
+			EventStore.CombineZonedEventStoresToZonelessEventStore(id, settings); 
 
 			// Create or update an entry in the cacheurls table for the base object. 
 			// key is http://elmcity.blob.core.windows.net/ID/ID.zoneless.obj
