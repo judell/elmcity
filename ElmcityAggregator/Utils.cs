@@ -3986,16 +3986,18 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 			try
 			{
 				var id = calinfo.id;
-				var list = GetEventsJsonForIdAsListDict(id);
+				var es = ObjectUtils.GetTypedObj<ZonelessEventStore>(id, id + ".zoneless.obj");
+				var list = es.events;
 				var dict = new Dictionary<string, List<string>>();
-				foreach (var obj in list)
+				var dict2 = new Dictionary<string, List<string>>(); // for the js consumer wanting a different title+start format
+				foreach (var evt in list)
 				{
-					var url = (string)obj["url"];
+					var url = evt.url;
 					if (!url.Contains("meetup"))
 						continue;
-					var location = (string)obj["location"];
-					var title = (string)obj["title"];
-					var dtstart = (DateTime)obj["dtstart"];
+					var location = evt.location;
+					var title = evt.title;
+					var dtstart = evt.dtstart;
 					try
 					{
 						var addr = Regex.Match(location, @"\((.+)\)").Groups[1].Value;
@@ -4004,8 +4006,11 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 						var latlon = Utils.LookupLatLon(settings["bing_maps_key"], addr).ToList();
 						if ( String.IsNullOrEmpty(latlon[0]) || String.IsNullOrEmpty(latlon[1]) )
 							continue;
-						var start = TimeZoneInfo.ConvertTimeFromUtc(dtstart, calinfo.tzinfo);
-						dict.Add(title + start.ToString(), latlon);
+
+						dict.Add(title + dtstart.ToString(), latlon);
+
+						var start2 = dtstart.ToString("yyyy-MM-**THH:mm"); // ** to wildcard the day for recurring events
+						dict2.Add(title + start2, latlon);
 					}
 					catch (Exception e)
 					{
@@ -4013,18 +4018,13 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 					}
 				}
 				bs.SerializeObjectToAzureBlob(dict, id, "meetup_locations.obj");
+				var json = JsonConvert.SerializeObject(dict2);
+				bs.PutBlob(id, "meetup_locations.json", json);
 			}
 			catch (Exception e)
 			{
 				GenUtils.LogMsg("exception", "SaveMeetupLocations: " + calinfo.id, e.Message);
 			}
-		}
-
-		public static List<Dictionary<string, object>> GetEventsJsonForIdAsListDict(string id)
-		{
-			var json = HttpUtils.FetchUrl("http://elmcity.cloudapp.net/" + id + "/json").DataAsString();
-			var list = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(json);
-			return list;
 		}
 
 		public static void SaveIcalPerFeedLocations(Calinfo calinfo, Dictionary<string, string> settings)
