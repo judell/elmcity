@@ -721,17 +721,6 @@ namespace CalendarAggregator
 			return html;
 		}
 
-		// the default html rendering chunks by day, this method processes the raw list of events into
-		// the ZonelessEventStore's event_dict like so:
-		// key: d20100710
-		// value: [ <ZonelessEvent>, <ZonelessEvent> ... ]
-		public static void OrganizeByDate(ZonelessEventStore es)
-		{
-			es.GroupEventsByDatekey();
-			es.SortEventSublists();
-			es.SortDatekeys();
-		}
-
 		public void RenderEventsAsHtml(ZonelessEventStore es, StringBuilder builder, Dictionary<string,object> args)
 		{
 			if (args == null)
@@ -741,7 +730,6 @@ namespace CalendarAggregator
 
 			bool mobile = args.ContainsKey("mobile") && (bool)args["mobile"] == true;
 
-			//OrganizeByDate(es);
 			var event_renderer = new EventRenderer(RenderEvtAsHtml);
 			var year_month_anchors = new List<string>(); // e.g. ym201201
 			var day_anchors = new List<string>(); // e.g. d20120119
