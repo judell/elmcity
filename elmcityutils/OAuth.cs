@@ -495,41 +495,48 @@ namespace ElmcityUtils
 		public string OAuthWebRequestHelper(Method method, string url, string post_data)
 		{
 			HttpWebRequest request = null;
-
-			request = System.Net.WebRequest.Create(url) as HttpWebRequest;
-			request.Method = method.ToString();
-			request.ServicePoint.Expect100Continue = false;
-
-			if (method == Method.POST || method == Method.DELETE)
+			try
 			{
-				request.ContentType = "application/x-www-form-urlencoded";
+				request = System.Net.WebRequest.Create(url) as HttpWebRequest;
+				request.Method = method.ToString();
+				request.ServicePoint.Expect100Continue = false;
 
-				/*
-				//POST the data.
-				requestWriter = new StreamWriter(webRequest.GetRequestStream());
-				try
+				if (method == Method.POST || method == Method.DELETE)
 				{
-						requestWriter.Write(postData);
-				}
-				catch
-				{
-						throw;
-				}
-				finally
-				{
-						requestWriter.Close();
-						requestWriter = null;
-				}*/
+					request.ContentType = "application/x-www-form-urlencoded";
 
+					/*
+					//POST the data.
+					requestWriter = new StreamWriter(webRequest.GetRequestStream());
+					try
+					{
+							requestWriter.Write(postData);
+					}
+					catch
+					{
+							throw;
+					}
+					finally
+					{
+							requestWriter.Close();
+							requestWriter = null;
+					}*/
+
+				}
+
+				//responseData = WebResponseGet(webRequest);
+
+				var response = HttpUtils.DoHttpWebRequest(request, Encoding.UTF8.GetBytes(post_data));
+
+				request = null;
+
+				return response.DataAsString();
 			}
-
-			//responseData = WebResponseGet(webRequest);
-
-			var response = HttpUtils.DoHttpWebRequest(request, Encoding.UTF8.GetBytes(post_data));
-
-			request = null;
-
-			return response.DataAsString();
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("OAuthWebRequestHelper", method + " " + url, e.Message + e.StackTrace);
+				return null;
+			}
 
 		}
 
