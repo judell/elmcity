@@ -21,6 +21,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ElmcityUtils
 {
@@ -293,33 +294,26 @@ namespace ElmcityUtils
 		// see http://msdn.microsoft.com/en-us/library/dd179428.aspx for authentication details
 		public HttpResponse DoBlobStoreRequest(string containername, string blobname, string method, Hashtable headers, byte[] data, string content_type, string query_string)
 		{
-			try
+			string path = "/";
+
+			if (containername != null)
 			{
-				string path = "/";
-
-				if (containername != null)
-				{
-					containername = LegalizeContainerName(containername);
-					path = path + containername;
-					if (blobname != null)
-						path = path + "/" + blobname;
-				}
-
-				StorageUtils.AddDateHeader(headers);
-				StorageUtils.AddVersionHeader(headers);
-
-				string auth_header = StorageUtils.MakeSharedKeyLiteHeader(StorageUtils.services.blob, this.azure_storage_account, this.azure_b64_secret, method, path, query_string, content_type, headers);
-				headers["Authorization"] = "SharedKeyLite " + this.azure_storage_account + ":" + auth_header;
-
-				Uri uri = new Uri(string.Format("http://{0}{1}{2}", this.azure_blob_host, path, query_string));
-
-				return StorageUtils.DoStorageRequest(method, headers, data, content_type, uri);
+				containername = LegalizeContainerName(containername);
+				path = path + containername;
+				if (blobname != null)
+					path = path + "/" + blobname;
 			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "DoBlobStoreRequest", e.Message + e.StackTrace);
-				return default(HttpResponse);
-			}
+
+			StorageUtils.AddDateHeader(headers);
+			StorageUtils.AddVersionHeader(headers);
+
+			string auth_header = StorageUtils.MakeSharedKeyLiteHeader(StorageUtils.services.blob, this.azure_storage_account, this.azure_b64_secret, method, path, query_string, content_type, headers);
+			headers["Authorization"] = "SharedKeyLite " + this.azure_storage_account + ":" + auth_header;
+
+			Uri uri = new Uri(string.Format("http://{0}{1}{2}", this.azure_blob_host, path, query_string));
+
+			//return StorageUtils.DoStorageRequest(method, headers, data, content_type, uri);
+			return HttpUtils.RetryStorageRequestExpectingServiceAvailable(method, headers, data, content_type, uri);
 		}
 
 		// read atom response, select desired elements, return enum of dict<str,str>
@@ -428,6 +422,21 @@ namespace ElmcityUtils
 				return HttpUtils.GetMd5Hash(Encoding.UTF8.GetBytes(name));
 			else
 				return name;
+		}
+
+		public  void PurgeBlobs(string container, TimeSpan keep)
+		{
+			var l = (List<Dictionary<string, string>>)this.ListBlobs(container).response;
+
+			Parallel.ForEach(source: l, body: (blob) =>
+			{
+				var name = blob["Name"];
+				var props = this.GetBlobProperties(container, name).HttpResponse;
+				var mod = DateTime.Parse(props.headers["Last-Modified"]);
+				var sentinel = DateTime.UtcNow - keep;
+				if (mod < sentinel)
+					this.DeleteBlob(container, name);
+			});
 		}
 
 	}

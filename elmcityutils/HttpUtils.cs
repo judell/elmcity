@@ -13,6 +13,7 @@
  * *******************************************************************************/
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -214,7 +215,7 @@ namespace ElmcityUtils
 			catch (Exception ex_write)
 			{
 				GenUtils.PriorityLogMsg("exception", "DoHttpWebRequest: writing data", ex_write.Message + ex_write.InnerException.Message + ex_write.StackTrace);
-				throw (ex_write);
+				return new HttpResponse(HttpStatusCode.ServiceUnavailable, "DoHttpWebRequest cannot write", null, new Dictionary<string, string>());
 			}
 
 			try
@@ -235,7 +236,7 @@ namespace ElmcityUtils
 			catch (Exception ex_read)
 			{
 				GenUtils.PriorityLogMsg("exception", "DoHttpWebRequest: reading data", ex_read.Message + ex_read.InnerException.Message + ex_read.StackTrace);
-				throw (ex_read);
+				return new HttpResponse(HttpStatusCode.ServiceUnavailable, "DoHttpWebRequest cannot read", null, new Dictionary<string, string>());
 			}
 		}
 
@@ -358,6 +359,11 @@ namespace ElmcityUtils
 			return r.status == (HttpStatusCode) o;
 		}
 
+		public static bool CompletedIfStatusNotServiceUnavailable(HttpResponse r, Object o)
+		{
+			return r.status != HttpStatusCode.ServiceUnavailable;
+		}
+
 		public static HttpResponse RetryHttpRequestExpectingStatus(HttpWebRequest request, HttpStatusCode expected_status, byte[] data, int wait_secs, int max_tries, TimeSpan timeout_secs)
 		{
 			try
@@ -400,6 +406,50 @@ namespace ElmcityUtils
 		{
 			var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
 			return HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, null, 1, 3, TimeSpan.FromSeconds(10));
+		}
+
+		public static HttpResponse RetryStorageRequestExpectingServiceAvailable(string method, Hashtable headers, byte[] data, string content_type, Uri uri, int wait_secs, int max_tries, TimeSpan timeout_secs)
+		{
+			try
+			{
+				return GenUtils.Actions.Retry<HttpResponse>(
+					delegate()
+					{
+						try
+						{
+							return StorageUtils.DoStorageRequest(method, headers, data, content_type, uri);
+						}
+						catch (Exception e)
+						{
+							GenUtils.PriorityLogMsg("exception", "RetryStorageRequest: " + uri, e.Message + e.StackTrace);
+							throw new Exception("RetryStorageRequestException");
+						}
+					},
+					CompletedIfStatusNotServiceUnavailable,
+					completed_delegate_object: null,
+					wait_secs: wait_secs,
+					max_tries: max_tries,
+					timeout_secs: timeout_secs);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "RetryStorageRequest: " + uri, e.Message + e.StackTrace);
+				return new HttpResponse(HttpStatusCode.ServiceUnavailable, uri.ToString(), null, new Dictionary<string, string>());
+			}
+		}
+
+		public static HttpResponse RetryStorageRequestExpectingServiceAvailable(string method, Hashtable headers, byte[] data, string content_type, Uri uri)
+		{
+			try
+			{
+				return RetryStorageRequestExpectingServiceAvailable(method, headers, data, content_type, uri, 30, 3, TimeSpan.FromSeconds(100));
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "RetryStorageRequest: " + uri, e.Message + e.StackTrace);
+				return new HttpResponse(HttpStatusCode.ServiceUnavailable, uri.ToString(), null, new Dictionary<string, string>());
+			}			
+
 		}
 
 	}

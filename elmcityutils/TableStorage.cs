@@ -319,8 +319,13 @@ namespace ElmcityUtils
 		{
 			var request_path = "Tables()";
 			var http_response = DoTableStoreRequest(request_path, query_string: null, method: "GET", headers: new Hashtable(), data: null);
-			var response = GetTsDicts(http_response);
-			return new TableStorageListDictResponse (http_response, response);
+			if (http_response.status == HttpStatusCode.ServiceUnavailable)
+				throw new Exception("TableServiceUnavailable");
+			else
+			{
+				var response = GetTsDicts(http_response);
+				return new TableStorageListDictResponse(http_response, response);
+			}
 		}
 
 		public TableStorageIntResponse CountTables()
@@ -364,14 +369,20 @@ namespace ElmcityUtils
 			var content = MakeAppContent(d);
 			var data = MakeAppPayload(content, "");
 			var http_response = DoTableStoreRequest(inpath, query_string: null, method: "POST", headers: new Hashtable(), data: data);
-			return new TableStorageHttpResponse(http_response, null_bytes: true);
+			if (http_response.status == HttpStatusCode.ServiceUnavailable)
+				throw new Exception("TableServiceUnavailable");
+			else
+				return new TableStorageHttpResponse(http_response, null_bytes: true);
 		}
 
 		public TableStorageHttpResponse DeleteTable(string tablename)
 		{
 			var inpath = string.Format("Tables('{0}')", tablename);
 			var http_response = DoTableStoreRequest(inpath, query_string: null, method: "DELETE", headers: new Hashtable(), data: null);
-			return new TableStorageHttpResponse(http_response, null_bytes: true);
+			if (http_response.status == HttpStatusCode.ServiceUnavailable)
+				throw new Exception("TableServiceUnavailable");
+			else
+				return new TableStorageHttpResponse(http_response, null_bytes: true);
 		}
 
 		public TableStorageListDictResponse DoEntity(string inpath, Dictionary<string, object> entity, string id, string method, bool force_unconditional)
@@ -388,8 +399,11 @@ namespace ElmcityUtils
 				headers["If-Match"] = "*"; // http://msdn.microsoft.com/en-us/library/dd179427.aspx
 
 			var http_response = DoTableStoreRequest(inpath, query_string: null, method: method, headers: headers, data: data);
-			//Console.WriteLine("DoTableStoreRequest http_response null? " + (http_response == null).ToString());
-			return new TableStorageListDictResponse (http_response, GetTsDicts(http_response));
+
+			if (http_response.status == HttpStatusCode.ServiceUnavailable)
+				throw new Exception("TableServiceUnavailable");
+			else
+				return new TableStorageListDictResponse (http_response, GetTsDicts(http_response));
 		}
 
 		public TableStorageListDictResponse InsertEntity(string tablename, Dictionary<string, object> entity)
@@ -443,19 +457,39 @@ namespace ElmcityUtils
 		public TableStorageListDictResponse QueryEntities(string tablename, string query)
 		{
 			var http_response = DoTableStoreRequest(tablename, query_string: query, method: "GET", headers: new Hashtable(), data: null);
-			return new TableStorageListDictResponse(http_response, GetTsDicts(http_response));
+			if (http_response.status == HttpStatusCode.ServiceUnavailable)
+				throw new Exception("TableServiceUnavailable");
+			else
+			{
+				var response = GetTsDicts(http_response);
+				return new TableStorageListDictResponse(http_response, GetTsDicts(http_response));
+			}
+
 		}
 
 		public static TableStorageListDictResponse QueryEntities(string tablename, string query, TableStorage ts)
 		{
 			var http_response = ts.DoTableStoreRequest(tablename, query_string: query, method: "GET", headers: new Hashtable(), data: null);
-			return new TableStorageListDictResponse(http_response, GetTsDicts(http_response));
+			if (http_response.status == HttpStatusCode.ServiceUnavailable)
+				throw new Exception("TableServiceUnavailable");
+			else
+			{
+				var response = GetTsDicts(http_response);
+				return new TableStorageListDictResponse(http_response, GetTsDicts(http_response));
+			}
 		}
 
 		public string QueryEntitiesAsFeed(string tablename, string query)
 		{
 			var http_response = DoTableStoreRequest(tablename, query_string: query, method: "GET", headers: new Hashtable(), data: null);
-			return http_response.DataAsString();
+			if (http_response.status == HttpStatusCode.ServiceUnavailable)
+				throw new Exception("TableServiceUnavailable");
+			else
+			{
+				var response = GetTsDicts(http_response);
+				return http_response.DataAsString();
+			}
+			
 		}
 
 		public string QueryEntitiesAsHtml(string tablename, string query, List<string> attrs)
@@ -589,8 +623,8 @@ namespace ElmcityUtils
 
 			Uri uri = new Uri(string.Format("{0}://{1}{2}", this.scheme, this.azure_table_host, path));
 
-			return StorageUtils.DoStorageRequest(method, headers, data: data, content_type: TABLE_STORAGE_CONTENT_TYPE, uri: uri);
-
+			// return StorageUtils.DoStorageRequest(method, headers, data: data, content_type: TABLE_STORAGE_CONTENT_TYPE, uri: uri);
+			return HttpUtils.RetryStorageRequestExpectingServiceAvailable(method, headers, data: data, content_type: TABLE_STORAGE_CONTENT_TYPE, uri: uri);
 		}
 
 		// package content as an atom feed

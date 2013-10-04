@@ -119,7 +119,7 @@ namespace ElmcityUtils
 				if (content_type != null)
 					request.ContentType = content_type;
 
-				if (data == null || data.Length == 0 )
+				if (data == null || data.Length == 0 )  
 					request.ContentLength = 0;
 
 				foreach (string key in headers.Keys)
@@ -131,8 +131,8 @@ namespace ElmcityUtils
 			}
 			catch (Exception e)
 			{
-				 GenUtils.PriorityLogMsg("exception", "DoStorageRequest", e.Message + e.InnerException.Message + e.StackTrace);
-				return default(HttpResponse);
+				 GenUtils.PriorityLogMsg("exception", "DoStorageRequest: " +  uri.ToString() , e.Message + e.InnerException.Message + e.StackTrace);
+				 return new HttpResponse(HttpStatusCode.ServiceUnavailable, "PossibleAzureTimeout", null, new Dictionary<string, string>());
 			}
 		}
 
