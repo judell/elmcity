@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <title></title>
+      <style>
+       body { font-family:calibri,verdana,arial }
+      </style>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+      <script type="text/javascript" src="http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0"></script>
+      <script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
+
+      <script type="text/javascript">
+
+      var map = null;
+
+      var lat = null;
+      var lon = null;
+      var title = null;
+
+      function GetMap()
+      {  
+         Microsoft.Maps.loadModule('Microsoft.Maps.Themes.BingTheme', { callback: themesModuleLoaded });
+      }
+
+      
+
+      function themesModuleLoaded() 
+      {
+
+         map = new Microsoft.Maps.Map(document.getElementById('mapDiv') ,
+			{ 
+			credentials: 'AlvGi_kIClsXD0htBJk8hvk40Vo4d-EIOchf0iLfR8HJnDiTM8dfILfur1L9YQDn', 
+			theme: new Microsoft.Maps.Themes.BingTheme(),
+            center: new Microsoft.Maps.Location(lat, lon),
+			zoom: 14
+			}); 
+
+        pinLayer = new Microsoft.Maps.EntityCollection();
+        map.entities.push(pinLayer);
+
+        var infoboxLayer = new Microsoft.Maps.EntityCollection();
+        map.entities.push(infoboxLayer);
+
+
+		var place = new Microsoft.Maps.Location(lat,lon);
+		var pin = new Microsoft.Maps.Pushpin(place, null); 
+		pinLayer.push(pin);
+		infoboxLayer.push(new Microsoft.Maps.Infobox(place, 
+		   {  
+		   htmlContent: '<span style=" background-color : white; font-family:calibri,verdana,arial; line-height:1.2">' + title + '<br>' + date + '</span>', 
+		   pushpin: pin}));
+
+
+       }
+
+      </script>
+   </head>
+<body onload="GetMap();">
+
+<div id='mapDiv' style="position:relative; width:500px; height:600px"></div> 
+
+<script>
+
+function gup( name )
+  {  
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");  
+  var regexS = "[\\?&]"+name+"=([^&#]*)";  
+  var regex = new RegExp( regexS );  
+  var results = regex.exec( window.location.href );   
+  if( results == null )    
+    return "";  
+  else    
+    return results[1].replace(/%20/,' ');
+  }
+
+lat = gup('lat');
+lon = gup('lon');
+date = decodeURIComponent(gup('date'));
+title = decodeURIComponent(gup('title'));
+$('head title').html(title);
+
+
+</script>
+
+
+</body>
+</html>
