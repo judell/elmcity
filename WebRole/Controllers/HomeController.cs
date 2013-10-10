@@ -648,7 +648,7 @@ if unsure please check http://{1}/{2}/stats",
         }
 
         [OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
-        public ActionResult ics_from_ics(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string description_only, string url_only, string location_only)
+        public ActionResult ics_from_ics(string feedurl, string elmcity_id, string source, string after, string before, string include_keyword, string exclude_keyword, string summary_only, string description_only, string url_only, string location_only, string categories_only)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
             string ics = "";
@@ -656,11 +656,11 @@ if unsure please check http://{1}/{2}/stats",
             bool t_description_only = Utils.UrlParameterIsTrue(description_only);
             bool t_url_only = Utils.UrlParameterIsTrue(url_only);
             bool t_location_only = Utils.UrlParameterIsTrue(location_only);
+			bool t_categories_only = Utils.UrlParameterIsTrue(categories_only);
             try
             {
-
                 var calinfo = Utils.AcquireCalinfo(elmcity_id);
-                ics = Utils.IcsFromIcs(feedurl, calinfo, source, after, before, include_keyword, exclude_keyword, t_summary_only, t_summary_only, t_url_only, t_location_only, ElmcityController.settings);
+                ics = Utils.IcsFromIcs(feedurl, calinfo, source, after, before, include_keyword, exclude_keyword, t_summary_only, t_summary_only, t_url_only, t_location_only, t_categories_only, ElmcityController.settings);
             }
             catch (Exception e)
             {
@@ -987,36 +987,49 @@ if unsure please check http://{1}/{2}/stats",
         public ActionResult twitter_auth(string oauth_token, string oauth_verifier)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-			var oauth_twitter = new OAuthTwitter(consumer_key: settings["twitter_auth_consumer_key"], consumer_secret: settings["twitter_auth_consumer_secret"]);
 
-			var auth = Authentications.AuthenticationList.Find(x => x.mode == Authentication.Mode.twitter);
+			try
+			{
+				var oauth_twitter = new OAuthTwitter(consumer_key: settings["twitter_auth_consumer_key"], consumer_secret: settings["twitter_auth_consumer_secret"]);
 
-            if (Request.Cookies[auth.cookie_name.ToString()] == null)
-            {
-                var cookie = new HttpCookie(auth.cookie_name.ToString(), DateTime.UtcNow.Ticks.ToString());
-                Response.SetCookie(cookie);
-            }
+				var auth = Authentications.AuthenticationList.Find(x => x.mode == Authentication.Mode.twitter);
 
-            if (oauth_token == null)
-            {
-                var link = oauth_twitter.AuthorizationLinkGet();
-                return new RedirectResult(link);
-            }
+				if (Request.Cookies[auth.cookie_name.ToString()] == null)
+				{
+					var cookie = new HttpCookie(auth.cookie_name.ToString(), DateTime.UtcNow.Ticks.ToString());
+					Response.SetCookie(cookie);
+				}
 
-            if (oauth_token != null)
-            {
-                var session_id = Request.Cookies[auth.cookie_name.ToString()].Value;
-                oauth_twitter.token = oauth_token;
-                string response = oauth_twitter.oAuthWebRequest(OAuthTwitter.Method.GET, OAuthTwitter.ACCESS_TOKEN, oauth_verifier, String.Empty);
-                if (response.Length > 0)
-                {
-                    System.Collections.Specialized.NameValueCollection qs = HttpUtility.ParseQueryString(response);
-                    var user_id = qs[auth.trusted_field.ToString()];
-                    Authentication.RememberUser(Request.UserHostAddress, Request.UserHostName, session_id, auth.mode.ToString(), auth.trusted_field.ToString(), user_id);
-                }
-            }
+				if (oauth_token == null)
+				{
+					var link = oauth_twitter.AuthorizationLinkGet();
+					System.Diagnostics.Debug.Assert(link != null);
+					return new RedirectResult(link);
+				}
 
-            return new RedirectResult("/");
+				if (oauth_token != null)
+				{
+					var session_id = Request.Cookies[auth.cookie_name.ToString()].Value;
+					oauth_twitter.token = oauth_token;
+					string response = oauth_twitter.oAuthWebRequest(OAuthTwitter.Method.GET, OAuthTwitter.ACCESS_TOKEN, oauth_verifier, String.Empty);
+					if (response.Length > 0)
+					{
+						System.Collections.Specialized.NameValueCollection qs = HttpUtility.ParseQueryString(response);
+						var user_id = qs[auth.trusted_field.ToString()];
+						Authentication.RememberUser(Request.UserHostAddress, Request.UserHostName, session_id, auth.mode.ToString(), auth.trusted_field.ToString(), user_id);
+					}
+				}
+				return new RedirectResult("/");
+
+			}
+			catch ( Exception e )
+			{
+				GenUtils.PriorityLogMsg("exception", "twitter_auth", e.Message + e.StackTrace);
+				var cr = new ContentResult();
+				cr.Content = "Sorry, cannot authorize using Twitter now";
+				cr.ContentType = "text/plain";
+				return cr;
+			}
         }
 
         public ActionResult facebook_auth(string code)
