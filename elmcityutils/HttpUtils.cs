@@ -42,6 +42,12 @@ namespace ElmcityUtils
 			{
 				response = ex.Response as HttpWebResponse;
 			}
+			catch (Exception e)
+			{
+				var msg = "GetResponse2" + " " + e.Message;
+				GenUtils.PriorityLogMsg("exception", msg, e.StackTrace);
+				throw new Exception(msg);
+			}
 
 			return response;
 		}
@@ -201,8 +207,6 @@ namespace ElmcityUtils
 
 			try
 			{
-				//request.ContentLength = 0;
-
 				if (data != null && data.Length > 0)
 				{
 					request.ContentLength = data.Length;
@@ -221,8 +225,11 @@ namespace ElmcityUtils
 			try
 			{
 				var response = (HttpWebResponse)request.GetResponse2();
+
 				var status = response.StatusCode;
-				string message = response.StatusDescription;
+
+				var message = response.StatusDescription;
+
 				var headers = new Dictionary<string, string>();
 				foreach (string key in response.Headers.Keys)
 					headers[key] = response.Headers[key];
@@ -230,7 +237,7 @@ namespace ElmcityUtils
 				byte[] return_data = GetResponseData(response);
 
 				response.Close();
-
+	
 				return new HttpResponse(status, message, return_data, headers);
 			}
 			catch (Exception ex_read)
