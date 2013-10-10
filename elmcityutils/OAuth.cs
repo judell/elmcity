@@ -419,77 +419,90 @@ namespace ElmcityUtils
 			string querystring = "";
 			string ret = "";
 
-			//Setup postData for signing.
-			//Add the postData to the querystring.
-			if (method == Method.POST || method == Method.DELETE)
+			GenUtils.LogMsg("info", "oAuthWebRequest", url + ", (" + post_data + ")");
+
+			try
 			{
-				if (post_data.Length > 0)
+
+				//Setup postData for signing.
+				//Add the postData to the querystring.
+				if (method == Method.POST || method == Method.DELETE)
 				{
-					//Decode the parameters and re-encode using the oAuth UrlEncode method.
-					NameValueCollection qs = HttpUtility.ParseQueryString(post_data);
-					post_data = "";
-					foreach (string key in qs.AllKeys)
+					if (post_data.Length > 0)
 					{
-						if (post_data.Length > 0)
+						//Decode the parameters and re-encode using the oAuth UrlEncode method.
+						NameValueCollection qs = HttpUtility.ParseQueryString(post_data);
+						post_data = "";
+						foreach (string key in qs.AllKeys)
 						{
-							post_data += "&";
+							if (post_data.Length > 0)
+							{
+								post_data += "&";
+							}
+							qs[key] = HttpUtility.UrlDecode(qs[key]);
+							qs[key] = this.UrlEncode(qs[key]);
+							post_data += key + "=" + qs[key];
+
 						}
-						qs[key] = HttpUtility.UrlDecode(qs[key]);
-						qs[key] = this.UrlEncode(qs[key]);
-						post_data += key + "=" + qs[key];
-
+						if (url.IndexOf("?") > 0)
+						{
+							url += "&";
+						}
+						else
+						{
+							url += "?";
+						}
+						url += post_data;
 					}
-					if (url.IndexOf("?") > 0)
-					{
-						url += "&";
-					}
-					else
-					{
-						url += "?";
-					}
-					url += post_data;
 				}
+
+				Uri uri = new Uri(url);
+
+				string nonce = this.GenerateNonce();
+				string timeStamp = this.GenerateTimeStamp();
+
+				//Generate Signature
+				string sig = this.GenerateSignature(
+						uri,
+						this.consumer_key,
+						this.consumer_secret,
+						this.token,
+						this.token_secret,
+						method.ToString(),
+						timeStamp,
+						nonce,
+						SignatureTypes.HMACSHA1,
+						out outUrl,
+						out querystring);
+
+				querystring += "&oauth_signature=" + this.UrlEncode(sig);
+
+				if (oauth_verifier != null)
+					querystring += "&oauth_verifier=" + oauth_verifier;
+
+				//Convert the querystring to postData
+				if (method == Method.POST || method == Method.DELETE)
+				{
+					post_data = querystring;
+					querystring = "";
+				}
+
+				if (querystring.Length > 0)
+				{
+					outUrl += "?";
+				}
+
+				GenUtils.LogMsg("info", "oAuthWebRequest calling helper with ", outUrl + ", " + querystring + ", (" + post_data + ")");
+				ret = OAuthWebRequestHelper(method, outUrl + querystring, post_data);
+				GenUtils.LogMsg("info", "oAuthWebRequestHelper got ", ret);
+
+				return ret;
 			}
-
-			Uri uri = new Uri(url);
-
-			string nonce = this.GenerateNonce();
-			string timeStamp = this.GenerateTimeStamp();
-
-			//Generate Signature
-			string sig = this.GenerateSignature(
-					uri,
-					this.consumer_key,
-					this.consumer_secret,
-					this.token,
-					this.token_secret,
-					method.ToString(),
-					timeStamp,
-					nonce,
-					SignatureTypes.HMACSHA1,
-					out outUrl,
-					out querystring);
-
-			querystring += "&oauth_signature=" + this.UrlEncode(sig);
-
-			if ( oauth_verifier != null )
-				querystring += "&oauth_verifier=" + oauth_verifier;
-
-			//Convert the querystring to postData
-			if (method == Method.POST || method == Method.DELETE)
+			catch (Exception e)
 			{
-				post_data = querystring;
-				querystring = "";
+				GenUtils.PriorityLogMsg("exception", "oAuthWebRequest", e.Message + e.StackTrace);
+				return String.Empty;
 			}
-
-			if (querystring.Length > 0)
-			{
-				outUrl += "?";
-			}
-
-			ret = OAuthWebRequestHelper(method, outUrl + querystring, post_data);
-
-			return ret;
 		}
 
 		public string OAuthWebRequestHelper(Method method, string url, string post_data)
@@ -497,9 +510,19 @@ namespace ElmcityUtils
 			HttpWebRequest request = null;
 			try
 			{
-				request = System.Net.WebRequest.Create(url) as HttpWebRequest;
-				request.Method = method.ToString();
-				request.ServicePoint.Expect100Continue = false;
+
+				try
+				{
+					request = System.Net.WebRequest.Create(url) as HttpWebRequest;
+					System.Diagnostics.Debug.Assert(request != null);
+					request.Method = method.ToString();
+					request.ServicePoint.Expect100Continue = false;
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "OAuthWebRequestHelper", e.Message + e.StackTrace);
+					throw new Exception("OAuthWebRequestHelperNoUrl");
+				}
 
 				if (method == Method.POST || method == Method.DELETE)
 				{
@@ -523,8 +546,6 @@ namespace ElmcityUtils
 					}*/
 
 				}
-
-				//responseData = WebResponseGet(webRequest);
 
 				var response = HttpUtils.DoHttpWebRequest(request, Encoding.UTF8.GetBytes(post_data));
 
@@ -567,26 +588,48 @@ namespace ElmcityUtils
 		public string AuthorizationLinkGet()
 		{
 			string ret = null;
+			string response;
 
-			string response = this.oAuthWebRequest(Method.GET, REQUEST_TOKEN, null, String.Empty);
-			if (response.Length > 0)
+			try
 			{
-				//response contains token and token secret.  We only need the token.
-				NameValueCollection qs = HttpUtility.ParseQueryString(response);
-
-
-				if (qs["oauth_callback_confirmed"] != null)
+				response = this.oAuthWebRequest(Method.GET, REQUEST_TOKEN, null, String.Empty);
+				if (response.Length > 0)
 				{
-					if (qs["oauth_callback_confirmed"] != "true")
+					//response contains token and token secret.  We only need the token.
+					NameValueCollection qs = HttpUtility.ParseQueryString(response);
+
+					string oauth_verifier = qs["oauth_verifier"];
+					 
+					if (oauth_verifier == null)
 					{
-						throw new Exception("OAuth callback not confirmed.");
+						var msg =  REQUEST_TOKEN + " sent back null oauth_verifier";
+						GenUtils.PriorityLogMsg("AuthorizationLinkGet", msg, null);
+						// throw new Exception(msg); is it optional
 					}
-				}
+					
+					if (qs["oauth_callback_confirmed"] != null && qs["oauth_callback_confirmed"] != "true")
+						{
+							var msg = REQUEST_TOKEN + " auth_callback_confirmed not true";
+							GenUtils.PriorityLogMsg("AuthorizationLinkGet", msg, null);
+							throw new Exception(msg);
+						}
 
-				if (qs["oauth_token"] != null)
-				{
-					ret = AUTHORIZE + "?oauth_token=" + qs["oauth_token"] + "&oauth_verifier=" + qs["oauth_verifier"];
+					if (qs["oauth_token"] != null)
+					{
+						ret = AUTHORIZE + "?oauth_token=" + qs["oauth_token"] + "&oauth_verifier=" + qs["oauth_verifier"];
+					}
+					else
+					{
+						var msg = REQUEST_TOKEN + " oauth_token_is_null";
+						GenUtils.PriorityLogMsg("AuthorizationLinkGet", msg, null);
+						throw new Exception(msg);
+					}
+
 				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "AuthorizationLinkGet", e.Message);
 			}
 			return ret;
 		}
