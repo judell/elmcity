@@ -23,7 +23,7 @@ namespace ElmcityUtils
 	{
 		private TableStorage ts { get; set; }
 
-		private int wait_milliseconds = 50;
+		private int wait_milliseconds = 500;
 
 		private int max_messages = 100;
 
