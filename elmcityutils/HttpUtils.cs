@@ -426,9 +426,9 @@ namespace ElmcityUtils
 						{
 							return StorageUtils.DoStorageRequest(method, headers, data, content_type, uri);
 						}
-						catch (Exception e)
+						catch // (Exception e)
 						{
-							GenUtils.PriorityLogMsg("exception", "RetryStorageRequest: " + uri, e.Message + e.StackTrace);
+							//GenUtils.PriorityLogMsg("exception", "RetryStorageRequest: " + uri, e.Message + e.StackTrace);
 							throw new Exception("RetryStorageRequestException");
 						}
 					},
@@ -449,7 +449,7 @@ namespace ElmcityUtils
 		{
 			try
 			{
-				return RetryStorageRequestExpectingServiceAvailable(method, headers, data, content_type, uri, 30, 3, TimeSpan.FromSeconds(100));
+				return RetryStorageRequestExpectingServiceAvailable(method, headers, data, content_type, uri, 60, 3, TimeSpan.FromSeconds(500));
 			}
 			catch (Exception e)
 			{
