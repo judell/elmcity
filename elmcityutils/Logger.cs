@@ -23,17 +23,28 @@ namespace ElmcityUtils
 	{
 		private TableStorage ts { get; set; }
 
-		private int wait_milliseconds = 500;
+		private int wait_milliseconds = 100;
 
-		private int max_messages = 100;
+		//private int max_messages = 1000;
 
 		private static string hostname = Dns.GetHostName(); // for status/error reporting
 
 		private Queue<LogMsg> log_queue = new Queue<LogMsg>();
 
+		private Dictionary<string, string> settings;
+
+		private int loglevel { get; set; }
+
+		private int level_info = 0;
+		private int level_status = 1;
+		private int level_warning = 2;
+		//private int level_exception = 3;
+
 		public Logger()
 		{
 			this.ts = TableStorage.MakeDefaultTableStorage();
+			this.settings = GenUtils.GetSettingsFromAzureTable();
+			this.loglevel = Convert.ToInt32(settings["loglevel"]);
 			this.Start();
 		}
 
@@ -41,7 +52,7 @@ namespace ElmcityUtils
 		{
 			this.ts = TableStorage.MakeDefaultTableStorage();
 			this.wait_milliseconds = milliseconds;
-			this.max_messages = max_messages;
+			//this.max_messages = max_messages;
 			this.Start();
 		}
 
@@ -49,7 +60,7 @@ namespace ElmcityUtils
 		{
 			this.ts = ts;
 			this.wait_milliseconds = milliseconds;
-			this.max_messages = max_messages;
+			//this.max_messages = max_messages;
 			this.Start();
 		}
 
@@ -61,6 +72,21 @@ namespace ElmcityUtils
 
 		public void LogMsg(string type, string title, string blurb)
 		{
+			switch (type)
+			{
+				case "info":
+					if (this.loglevel > this.level_info)
+						return;
+					break;
+				case "warning":
+					if (this.loglevel > this.level_warning)
+						return;
+					break;
+				case "exception":
+					break;
+				default:
+					break;
+			}
 			var msg = new LogMsg(type: type, title: title, blurb: blurb);
 			log_queue.Enqueue(msg);
 		}
