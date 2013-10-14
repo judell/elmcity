@@ -706,13 +706,13 @@ namespace CalendarAggregator
 			object o = null;
 			ElapsedEventArgs e = null;
 
-			GenUtils.LogMsg("info", "ScheduleTimer", String.Format("handler {0}, name {1}, minutes {2}", handler.ToString(), name, minutes));
+			GenUtils.LogMsg("status", "ScheduleTimer", String.Format("handler {0}, name {1}, minutes {2}", handler.ToString(), name, minutes));
 
 			if (startnow)
 			{
 				try
 				{
-					GenUtils.LogMsg("info", "schedule_timer: startnow: " + name, null);
+					GenUtils.LogMsg("status", "schedule_timer: startnow: " + name, null);
 					handler(o, e);
 				}
 				catch (Exception ex)
@@ -2686,11 +2686,11 @@ END:VCALENDAR",
 				id);
 		}
 
-		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl, int days, bool bare_events)
+		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl, int days, bool bare_events, string town)
 		{
 			var viewkey = string.Format("/services/{0}/{1}?view={2}&count={3}&from={4}&to={5}&days={6}", id, type, view, count, from, to, days);
 			if (type == "html")
-				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template + "&jsurl=" + jsurl + "&bare_events=" + bare_events;
+				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template + "&jsurl=" + jsurl + "&bare_events=" + bare_events + "&town=" + town;
 			return viewkey;
 		}
 
@@ -3051,6 +3051,12 @@ END:VTIMEZONE");
 			return ics_text;
 		}
 
+		public static List<Dictionary<string, object>> GetRegions()
+		{
+			var regions = ts.QueryEntities("regions", "").list_dict_obj;
+			return regions;
+		}
+
 		public static List<string> GetRegionIds()
 		{
 			var dicts = ts.QueryAllEntitiesAsListDict("regions", "", 0).list_dict_obj;
@@ -3058,9 +3064,19 @@ END:VTIMEZONE");
 			return ids;
 		}
 
+		public static List<string> GetRegionIds(List<Dictionary<string,object>> regions)
+		{
+			return regions.Select(x => (string)x["PartitionKey"]).ToList();
+		}
+
 		public static bool IsRegion(string id)
 		{
-			return GetRegionIds().HasItem(id);
+			return GetRegionIds().Contains(id);
+		}
+
+		public static bool IsRegion(string id, List<Dictionary<string, object>> regions)
+		{
+			return GetRegionIds(regions).Contains(id);
 		}
 
 		public static List<string> GetIdsForRegion(string region)
@@ -3068,6 +3084,14 @@ END:VTIMEZONE");
 			var q = string.Format("$filter=PartitionKey eq '{0}'", region);
 			var dict = TableStorage.QueryForSingleEntityAsDictStr(ts, "regions", q);
 			var ids = dict["ids"].Split(',').ToList();
+			ids.Sort();
+			return ids;
+		}
+
+		public static List<string> GetIdsForRegion(string region, List<Dictionary<string, object>> regions)
+		{
+			var dict = regions.Find(x => (string)x["PartitionKey"] == region);
+			var ids = ((string)dict["ids"]).Split(',').ToList();
 			ids.Sort();
 			return ids;
 		}
@@ -3865,6 +3889,31 @@ END:VTIMEZONE");
 			dict.Add("from", from_str);
 			dict.Add("to", to_str);
 			return dict;
+		}
+
+		public static string RemoveItemFromTagString(string tagstring, string tag)
+		{
+			var list = tagstring.Split(',').ToList();
+			list = list.Select(x => x.Trim()).ToList();
+			if (list.Contains(tag))
+				list.Remove(tag);
+			return String.Join(",", list);
+		}
+
+		public static List<string> GetTagListFromTagString(string tagstring)
+		{
+			var list = tagstring.Split(',').ToList();
+			return list.Select(x => x.Trim()).ToList();
+		}
+
+
+		public static string AddItemToTagString(string tagstring, string tag)
+		{
+			if (String.IsNullOrEmpty(tagstring))
+				return tag;
+			var list = GetTagListFromTagString(tagstring);
+			list.Add(tag);
+			return String.Join(",", list);
 		}
 
 		#endregion
