@@ -98,6 +98,7 @@ namespace CalendarAggregator
 
 		public static void StoreTaskForId(Task task, string id, TaskType type)
 		{
+			task.hostname = System.Net.Dns.GetHostName();
 			var dict_obj = ObjectUtils.ObjToDictObj(task);
 			var tasktable = type.ToString();
 			var ts_response = TableStorage.UpmergeDictToTableStore(dict_obj, table: tasktable, partkey: master_pk, rowkey: id);
@@ -135,6 +136,7 @@ namespace CalendarAggregator
 			task["id"] = id;
 			task["start"] = DateTime.UtcNow;
 			task["status"] = TaskStatus.running.ToString();
+			task["hostname"] = System.Net.Dns.GetHostName();
 			var tasktable = type.ToString();
 			var ts_response = TableStorage.UpmergeDictToTableStore(task, tasktable, partkey: master_pk, rowkey: id);
 			var http_response = ts_response.http_response;
