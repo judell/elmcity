@@ -36,7 +36,7 @@ namespace CalendarAggregator
 		static string view_etag = HttpUtils.GetMd5Hash(view_contents);
 		static Uri cached_base_uri = new Uri(Utils.MakeBaseZonelessUrl(Configurator.testid));
 
-		private static ZonelessEventStore filterable = new ZonelessEventStore(calinfo);
+
 
 		public CalendarRendererTest()
 		{
@@ -44,21 +44,19 @@ namespace CalendarAggregator
 			this.cr.cache = new MockCache();
 			var est = new EventStoreTest();
 			est.SerializeAndDeserializeZonelessEventStoreYieldsExpectedEvents();
+			Utils.Wait(3);
 			this.es = new ZonelessEventStore(calinfo);
 			var uri = BlobStorage.MakeAzureBlobUri(EventStoreTest.test_container, this.es.objfile,false);
 			this.es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
-
-			filterable.AddEvent("e1", "", "", null, null, DateTime.Parse("2013/11/01 8 AM"), DateTime.MinValue, false, null, null, null);
-			filterable.AddEvent("e2", "", "", null, null, DateTime.Parse("2013/11/02 8 AM"), DateTime.MinValue, false, null, null, null);
-			filterable.AddEvent("e3", "", "", null, null, DateTime.Parse("2013/11/03 8 AM"), DateTime.MinValue, false, null, null, null);
-			filterable.AddEvent("e4", "", "", null, null, DateTime.Parse("2013/11/04 8 AM"), DateTime.MinValue, false, null, null, null);
-			filterable.AddEvent("e5", "", "", null, null, DateTime.Parse("2013/11/05 8 AM"), DateTime.MinValue, false, "music", null, null);
 		}
 
 		[Test]
 		public void ViewFilterReturnsOneEvent()
 		{
+			var filterable = this.CreateFilterable(calinfo);
+			GenUtils.LogMsg("status", "ViewFilterReturnsOneEvent before", ShowEventStore(filterable.events));
 			var events = cr.Filter("music", 0, DateTime.MinValue, DateTime.MinValue, filterable);
+			GenUtils.LogMsg("status", "ViewFilterReturnsOneEvent after", ShowEventStore(events));
 			Assert.That(events.Count == 1);
 			Assert.That(events.First().title == "e5");
 		}
@@ -66,6 +64,7 @@ namespace CalendarAggregator
 		[Test]
 		public void ViewFilterHandlesNullViewAndNullishDateTimes()
 		{
+			var filterable = this.CreateFilterable(calinfo);
 			var events = cr.Filter(null, 0, DateTime.MinValue, DateTime.MinValue, filterable);
 			Assert.That(events.Count == filterable.events.Count());
 		}
@@ -73,6 +72,7 @@ namespace CalendarAggregator
 		[Test]
 		public void TimeFilterReturnsNov4And5()
 		{
+			var filterable = this.CreateFilterable(calinfo);
 			var events = cr.Filter(null, 0, DateTime.Parse("2013-11-04T00:00"), DateTime.Parse("2013-11-06T00:00"), filterable);
 			Assert.That(events.Count == 2);
 			var titles = events.Select(x => x.title).ToList();
@@ -83,6 +83,7 @@ namespace CalendarAggregator
 		[Test]
 		public void CountFilterReturns2()
 		{
+			var filterable = this.CreateFilterable(calinfo);
 			var events = cr.Filter(null, 2, DateTime.MinValue, DateTime.MinValue, filterable);
 			Assert.That(events.Count == 2);
 			var titles = events.Select(x => x.title).ToList();
@@ -208,9 +209,23 @@ namespace CalendarAggregator
 			Assert.AreEqual(this.cr.template_html, orig);
 		}
 
+		private ZonelessEventStore CreateFilterable(Calinfo calinfo)
+		{
+        var filterable = new ZonelessEventStore(calinfo);
+		filterable.AddEvent("e1", "", "", null, null, DateTime.Parse("2013/11/01 8 AM"), DateTime.MinValue, false, null, null, null);
+		filterable.AddEvent("e2", "", "", null, null, DateTime.Parse("2013/11/02 8 AM"), DateTime.MinValue, false, null, null, null);
+		filterable.AddEvent("e3", "", "", null, null, DateTime.Parse("2013/11/03 8 AM"), DateTime.MinValue, false, null, null, null);
+		filterable.AddEvent("e4", "", "", null, null, DateTime.Parse("2013/11/04 8 AM"), DateTime.MinValue, false, null, null, null);
+		filterable.AddEvent("e5", "", "", null, null, DateTime.Parse("2013/11/05 8 AM"), DateTime.MinValue, false, "music", null, null);
+		Assert.That(filterable.events.Count == 5);
+		return filterable;
+		}
 
-
-
+		private string ShowEventStore(List<ZonelessEvent> events)
+		{
+		var titles = events.Select(x => x.title).ToList();
+		return String.Join(",", titles);
+		}
 
 	}
 }
