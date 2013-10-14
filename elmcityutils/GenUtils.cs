@@ -34,6 +34,8 @@ namespace ElmcityUtils
 		static private XNamespace odata_metadata_namespace = "http://schemas.microsoft.com/ado/2007/08/dataservices/metadata";
 		static private XNamespace data_namespace = "http://schemas.microsoft.com/ado/2007/08/dataservices";
 
+		static private Logger logger = new Logger();
+
 		public static void LogMsg(string type, string title, string blurb)
 		{
 			LogMsg(type, title, blurb, default_ts);
@@ -42,7 +44,7 @@ namespace ElmcityUtils
 		public static void LogMsg(string type, string title, string blurb, TableStorage ts)
 		{
 			title = MakeLogMsgTitle(title);
-			ts.WriteLogMessage(type, title, blurb);
+			logger.LogMsg(type, title, blurb);
 		}
 
 		public static void PriorityLogMsg(string type, string title, string blurb)
@@ -54,7 +56,7 @@ namespace ElmcityUtils
 		{
 			GenUtils.LogMsg(title, title, blurb);
 			title = MakeLogMsgTitle(title);
-			ts.WritePriorityLogMessage(type, title, blurb);
+			logger.LogMsg(type, title, blurb);
 		}
 
 		public static string MakeLogMsgTitle(string title)
