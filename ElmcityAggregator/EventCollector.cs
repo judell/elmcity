@@ -257,7 +257,7 @@ namespace CalendarAggregator
 					GenUtils.PriorityLogMsg("exception", "hubs_to_skip_date_only_recurrence", e.Message);
 				}
 
-				GenUtils.LogMsg("info", id + " loading " + feedurls.Count() + " feeds", null);
+				GenUtils.LogMsg("status", id + " loading " + feedurls.Count() + " feeds", null);
 
 				var results_dict = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
 
@@ -326,7 +326,7 @@ namespace CalendarAggregator
 							var setting = "use_ics_cached_objects";
 							if (changed == false && Utils.CachedFeedObjExists(id, feedurl) && settings[setting].StartsWith("y") )
 							{
-								GenUtils.LogMsg("info", "CollectIcal: using cached obj for " + feedurl,  null); // the test UnchangedFeedUsesCachedObj checks for this entry
+								//GenUtils.LogMsg("info", "CollectIcal: using cached obj for " + feedurl,  null); // the test UnchangedFeedUsesCachedObj checks for this entry
 								AddEventsFromCachedIcalFeedObj(es, feedurl);  // get events for the feedurl from the cached obj
 								TransferCachedResults(this.id, results_dict, feedurl); // and result for this feedurl from the cached results
 								TransferCachedStats(this.id, fr, feedurl); // and stats for this feedurl from cached stats
@@ -470,7 +470,7 @@ namespace CalendarAggregator
 				sr = new StringReader(feedtext);
 				//feedtext = feedtext.Replace('\xa0', ' ');  // unicode nonbreaking space
 				ical = (DDay.iCal.iCalendar)iCalendar.LoadFromStream(sr).FirstOrDefault().iCalendar;
-				GenUtils.LogMsg("info", "ParseTheFeed", "succeeded with low ascii removed");
+				GenUtils.LogMsg("status", "ParseTheFeed", "succeeded with low ascii removed");
 			}
 			return ical;
 		}
@@ -1423,7 +1423,7 @@ namespace CalendarAggregator
 						continue;
 
 					var msg = string.Format("{0}: loading eventful events for {1} ", this.id, tag);
-					GenUtils.LogMsg("info", msg, null);
+					GenUtils.LogMsg("status", msg, null);
 
 					string args = MakeEventfulArgs(location, page_size, this.eventful_cat_map[tag]);
 					var xdoc = CallEventfulApi(method, args);
@@ -1616,7 +1616,7 @@ namespace CalendarAggregator
 				int page_count = GetEventBritePageCount(method, args);
 
 				var msg = string.Format("{0}: found about {1} pages of eventbrite events", this.id, page_count * eventbrite_page_size);
-				GenUtils.LogMsg("info", msg, null);
+				GenUtils.LogMsg("status", msg, null);
 
 				int event_num = 0;
 
@@ -1652,7 +1652,7 @@ namespace CalendarAggregator
 			}
 			catch
 			{
-				GenUtils.LogMsg("info", "CollectEventBrite", "resultcount unavailable");
+				GenUtils.LogMsg("status", "CollectEventBrite", "resultcount unavailable");
 				if (xdoc.ToString().Contains("API request quota"))
 				{
 					GenUtils.PriorityLogMsg("warning", "GetEventBritePageCount", "reached API limit");
@@ -1801,7 +1801,7 @@ namespace CalendarAggregator
 				var method = "search";
 
 				var msg = string.Format("{0}: loading facebook events", this.id);
-				GenUtils.LogMsg("info", msg, null);
+				GenUtils.LogMsg("status", msg, null);
 
 				var uniques = new Dictionary<string, FacebookEvent>();  // dedupe by title + start
 				foreach (var fb_event in FacebookIterator(method, args))
@@ -1859,7 +1859,7 @@ namespace CalendarAggregator
 				var key = this.apikeys.facebook_api_key;
 				string host = "https://graph.facebook.com";
 				string url = string.Format("{0}/{1}?access_token={2}&type=event&{3}", host, method, key, args);
-				GenUtils.LogMsg("info", url, null);
+				GenUtils.LogMsg("status", url, null);
 				var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
 				response = HttpUtils.RetryHttpRequestExpectingStatus(request, HttpStatusCode.OK, data: null, wait_secs: this.wait_secs, max_tries: this.max_retries, timeout_secs: this.timeout_secs);
 				return response.DataAsString();
@@ -1996,25 +1996,25 @@ namespace CalendarAggregator
 			if (type == SourceType.ical) // NonIcalStats is null in this case, and not used
 			{
 				bsr = fr.SerializeIcalStatsToJson();
-				GenUtils.LogMsg("info", this.id + ": SerializeIcalStatsToJson",  bsr.HttpResponse.status.ToString());
+				GenUtils.LogMsg("status", this.id + ": SerializeIcalStatsToJson",  bsr.HttpResponse.status.ToString());
 				tsr = fr.SaveStatsToAzure();
-				GenUtils.LogMsg("info", this.id + ": FeedRegistry.SaveStatsToAzure", tsr.status.ToString());
+				GenUtils.LogMsg("status", this.id + ": FeedRegistry.SaveStatsToAzure", tsr.status.ToString());
 			}
 			else
 			{
 
 				bsr = Utils.SerializeObjectToJson(stats, this.id, stats.blobname + ".json");
-				GenUtils.LogMsg("info", this.id + ": Collector: SerializeObjectToJson: " + stats.blobname + ".json", bsr.HttpResponse.status.ToString());
+				GenUtils.LogMsg("status", this.id + ": Collector: SerializeObjectToJson: " + stats.blobname + ".json", bsr.HttpResponse.status.ToString());
 				tsr = this.SaveStatsToAzure(type);
-				GenUtils.LogMsg("info", this.id + ": Collector: SaveStatsToAzure", tsr.status.ToString());
+				GenUtils.LogMsg("status", this.id + ": Collector: SaveStatsToAzure", tsr.status.ToString());
 
 			}
 
 			bsr = this.SerializeIcalEventsToIcs(ical, type);
-			GenUtils.LogMsg("info", this.id + ": SerializeIcalStatsToIcs: " + id + "_" + type.ToString() + ".ics", bsr.HttpResponse.status.ToString());
+			GenUtils.LogMsg("status", this.id + ": SerializeIcalStatsToIcs: " + id + "_" + type.ToString() + ".ics", bsr.HttpResponse.status.ToString());
 
 			bsr = es.Serialize();
-			GenUtils.LogMsg("info", this.id + ": EventStore.Serialize: " + es.objfile, bsr.HttpResponse.status.ToString());
+			GenUtils.LogMsg("status", this.id + ": EventStore.Serialize: " + es.objfile, bsr.HttpResponse.status.ToString());
 		}
 
 		private void SerializeStatsAndIntermediateOutputs(EventStore es, iCalendar ical, NonIcalStats stats, SourceType type)

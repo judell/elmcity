@@ -40,7 +40,7 @@ namespace ElmcityUtils
 				var args = new List<string> { "", "", "" };
 				var script_url = Configurator.python_test_script_url;
 				var result = RunIronPython(directory, script_url, args);
-				GenUtils.LogMsg("info", "result of python standard lib install test", result);
+				GenUtils.LogMsg("status", "result of python standard lib install test", result);
 			}
 			catch (Exception e)
 			{
@@ -52,7 +52,7 @@ namespace ElmcityUtils
 		public static void InstallPythonElmcityLibrary(string directory, TableStorage ts)
 		{
 			{
-				GenUtils.LogMsg("info", "installing python elmcity library", null);
+				GenUtils.LogMsg("status", "installing python elmcity library", null);
 				try
 				{
 					var zip_url = Configurator.elmcity_pylib_zip_url;
@@ -60,7 +60,7 @@ namespace ElmcityUtils
 					var args = new List<string> { "http://www.libraryinsight.com/calendar.asp?jx=ea", "", "eastern" };
 					var script_url = Configurator.elmcity_python_test_script_url;
 					var result = RunIronPython(directory, script_url, args);
-					GenUtils.LogMsg("info", "result of python elmcity install test", result, ts);
+					GenUtils.LogMsg("status", "result of python elmcity install test", result, ts);
 				}
 				catch (Exception e)
 				{
@@ -71,7 +71,7 @@ namespace ElmcityUtils
 
 		public static string RunIronPython(string directory, string str_script_url, List<string> args)
 		{
-			GenUtils.LogMsg("info", "Utils.run_ironpython: " + str_script_url, args[0] + "," + args[1] + "," + args[2]);
+			GenUtils.LogMsg("status", "Utils.run_ironpython: " + str_script_url, args[0] + "," + args[1] + "," + args[2]);
 			//var app_domain_name = "ironpython";
 			string result = "";
 			try
@@ -91,7 +91,7 @@ namespace ElmcityUtils
 				paths.Add(directory + "Lib\\site-packages");
 				paths.Add(directory + "ElmcityLib"); // Elmcity python lib
 
-				GenUtils.LogMsg("info", "Utils.run_ironpython", String.Join(":", paths.ToArray()));
+				GenUtils.LogMsg("status", "Utils.run_ironpython", String.Join(":", paths.ToArray()));
 
 				python.SetSearchPaths(paths);
 				var ipy_args = new IronPython.Runtime.List();

@@ -419,7 +419,7 @@ namespace ElmcityUtils
 			string querystring = "";
 			string ret = "";
 
-			GenUtils.LogMsg("info", "oAuthWebRequest", url + ", (" + post_data + ")");
+			GenUtils.LogMsg("status", "oAuthWebRequest", url + ", (" + post_data + ")");
 
 			try
 			{
@@ -492,9 +492,9 @@ namespace ElmcityUtils
 					outUrl += "?";
 				}
 
-				GenUtils.LogMsg("info", "oAuthWebRequest calling helper with ", outUrl + ", " + querystring + ", (" + post_data + ")");
+				GenUtils.LogMsg("status", "oAuthWebRequest calling helper with ", outUrl + ", " + querystring + ", (" + post_data + ")");
 				ret = OAuthWebRequestHelper(method, outUrl + querystring, post_data);
-				GenUtils.LogMsg("info", "oAuthWebRequestHelper got ", ret);
+				GenUtils.LogMsg("status", "oAuthWebRequestHelper got ", ret);
 
 				return ret;
 			}

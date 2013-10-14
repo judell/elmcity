@@ -88,11 +88,11 @@ namespace CalendarAggregator
 					var fesquery = string.Format("$filter=PartitionKey eq '{0}' and RowKey eq '{1}'", fes, fes);
 					var feed_entry_schema = TableStorage.QueryForSingleEntityAsDictStr(ts, fes, fesquery)["fields"];
 
-					GenUtils.LogMsg("info", "UpdateFeedsForId: processing changed snapshot", null);
+					GenUtils.LogMsg("status", "UpdateFeedsForId: processing changed snapshot", null);
 
 					var current_feed_urls = list_metadict_str.Select(feed => feed["feedurl"]).ToList();
 
-					GenUtils.LogMsg("info", "UpdateFeedsForId: find existing", null);
+					GenUtils.LogMsg("status", "UpdateFeedsForId: find existing", null);
 
 					// query existing feeds
 					var existing_query = string.Format("$filter=PartitionKey eq '{0}' and feedurl ne ''", id);
@@ -100,7 +100,7 @@ namespace CalendarAggregator
 					List<object> _existing_feed_urls = (List<object>) existing_feeds.Select(feed => feed["feedurl"]).ToList();
 					List<string> existing_feed_urls = (List<string>) _existing_feed_urls.Select(x => x.ToString()).ToList();
 
-					GenUtils.LogMsg("info", "UpdateFeedsForId: find new and add", null);
+					GenUtils.LogMsg("status", "UpdateFeedsForId: find new and add", null);
 
 					HandleFeedAdds(id, list_metadict_str, current_feed_urls, existing_feed_urls);
 
@@ -121,7 +121,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("info", "UpdateFeedsForId", e.Message + e.StackTrace);
+					GenUtils.LogMsg("status", "UpdateFeedsForId", e.Message + e.StackTrace);
 				}
 
 			}
@@ -217,7 +217,7 @@ namespace CalendarAggregator
 				ts.DeleteEntity("metadata", id, rowkey);
 			}
 
-			GenUtils.LogMsg("info", "UpdateFeedsForId: find updated and update", null);
+			GenUtils.LogMsg("status", "UpdateFeedsForId: find updated and update", null);
 			return deleted_feed_urls.ToList();
 		}
 
@@ -231,7 +231,7 @@ namespace CalendarAggregator
 				TableStorage.UpdateDictToTableStore(ObjectUtils.DictStrToDictObj(entity), "metadata", id, rowkey);
 			}
 
-			GenUtils.LogMsg("info", "UpdateFeedsForId: find deleted and delete", null);
+			GenUtils.LogMsg("status", "UpdateFeedsForId: find deleted and delete", null);
 		}
 
 		public static void UpmergeChangedMetadict(string id, string rowkey, Dictionary<string, string> metadict_str)

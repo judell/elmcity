@@ -614,7 +614,7 @@ namespace CalendarAggregator
 			}
 
 			if (setting_value == null)
-				GenUtils.LogMsg("info", "GetSettingValue: " + setting_name, " is null");
+				GenUtils.PriorityLogMsg("warning", "GetSettingValue: " + setting_name, " is null");
 
 			return setting_value;
 		}

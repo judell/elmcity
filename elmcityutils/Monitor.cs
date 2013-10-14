@@ -75,14 +75,14 @@ namespace ElmcityUtils
 
 		public void StartMonitor()
 		{
-			GenUtils.LogMsg("info", "StartMonitor", "starting");
+			GenUtils.LogMsg("status", "StartMonitor", "starting");
 			var ProcessMonitorThread = new Thread(new ThreadStart(ProcessMonitorThreadMethod));
 			ProcessMonitorThread.Start();
 		}
 
 		public void ReloadCounters()
 		{
-			GenUtils.LogMsg("info", "Monitor.ReloadCounters", null);
+			GenUtils.LogMsg("status", "Monitor.ReloadCounters", null);
 			this.counters = Counters.GetCounters();
 			this.priority_log_triggers = GetPriorityLogTriggers(this.ts);
 		}
@@ -93,7 +93,7 @@ namespace ElmcityUtils
 			{
 				try
 				{
-					GenUtils.LogMsg("info", "ProcessMonitorThreadMethod", "snapshot");
+					GenUtils.LogMsg("status", "ProcessMonitorThreadMethod", "snapshot");
 					this.ReloadCounters();
 					var snapshot = Counters.MakeSnapshot(counters);
 					this.StoreSnapshot(snapshot);
@@ -418,7 +418,7 @@ namespace ElmcityUtils
 
 		public static void TransferToSqlAzure()
 		{
-			GenUtils.LogMsg("info", "IIS_FailedRequestLogs.TransferToSqlAzure", null);
+			GenUtils.LogMsg("status", "IIS_FailedRequestLogs.TransferToSqlAzure", null);
 			var bs = BlobStorage.MakeDefaultBlobStorage();
 			var containername = "wad-iis-failedreqlogfiles";
 			var failed_req_dicts = (List<Dictionary<string, string>>)bs.ListBlobs(containername).response;
@@ -490,7 +490,7 @@ namespace ElmcityUtils
 
 		public static void TransferToSqlAzure()
 		{
-			GenUtils.LogMsg("info", "IIS_Logs.TransferToSqlAzure", null);
+			GenUtils.LogMsg("status", "IIS_Logs.TransferToSqlAzure", null);
 			var bs = BlobStorage.MakeDefaultBlobStorage();
 			var containername = "wad-iis-logfiles";
 			var req_dicts = (List<Dictionary<string, string>>)bs.ListBlobs(containername).response;
@@ -569,7 +569,7 @@ namespace ElmcityUtils
 
 		public static void PurgeAndMaybeTransferToSqlAzure(bool transfer, DateTime since, DateTime until)
 		{
-			GenUtils.LogMsg("info", "elmcity_logs.TransferToSqlAzure", null);
+			GenUtils.LogMsg("status", "elmcity_logs.TransferToSqlAzure", null);
 
 			var model_name = "elmcity_log_entry";
 			var conn_str = GenUtils.MakeEntityConnectionString(model_name);

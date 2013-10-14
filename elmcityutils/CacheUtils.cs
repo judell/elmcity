@@ -75,7 +75,7 @@ namespace ElmcityUtils
 			try
 			{
 				o = this.cache.Remove(key);
-				GenUtils.LogMsg("info", "AspNetCache.Remove", key);
+				GenUtils.LogMsg("status", "AspNetCache.Remove", key);
 			}
 			catch (Exception e)
 			{
@@ -86,7 +86,7 @@ namespace ElmcityUtils
 
 		public static void LogRemovedItemToAzure(String key, Object o, CacheItemRemovedReason r)
 		{
-			GenUtils.LogMsg("info", "LogRemovedItemToAzure: " + key, r.ToString());
+			GenUtils.LogMsg("status", "LogRemovedItemToAzure: " + key, r.ToString());
 		}
 
 		public static void LogRemovedItemToConsole(String key, Object o, CacheItemRemovedReason r)
@@ -257,13 +257,13 @@ namespace ElmcityUtils
 			try
 			{
 				var purgeable_entities = FetchPurgeableCacheDicts();
-				GenUtils.LogMsg("info", String.Format("MaybePurgeCache: {0} purgeable entities", purgeable_entities.Count), null);
+				GenUtils.LogMsg("status", String.Format("MaybePurgeCache: {0} purgeable entities", purgeable_entities.Count), null);
 				foreach (var purgeable_entity in purgeable_entities)
 				{
 					var purgeable_cache_url = (string)purgeable_entity["cached_uri"];
 					if (cache[purgeable_cache_url] != null)
 					{
-						GenUtils.LogMsg("info", "MaybePurgeCache", purgeable_cache_url);
+						GenUtils.LogMsg("status", "MaybePurgeCache", purgeable_cache_url);
 						cache.Remove(purgeable_cache_url);
 						var obj = HttpUtils.FetchUrl(new Uri(purgeable_cache_url)); // rewarm the cache
 						var count = (int)purgeable_entity["count"];

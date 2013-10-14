@@ -93,7 +93,7 @@ namespace CalendarAggregator
 			var tasktable = type.ToString();
 			var ts_response = TableStorage.UpdateDictToTableStore(dict_obj, table: tasktable, partkey: master_pk, rowkey: id);
 			var http_response = ts_response.http_response;
-			GenUtils.LogMsg("info", "Scheduler.InitTaskForId: " + id, http_response.status.ToString());
+			GenUtils.LogMsg("status", "Scheduler.InitTaskForId: " + id, http_response.status.ToString());
 		}
 
 		public static void StoreTaskForId(Task task, string id, TaskType type)
@@ -101,7 +101,7 @@ namespace CalendarAggregator
 			var dict_obj = ObjectUtils.ObjToDictObj(task);
 			var tasktable = type.ToString();
 			var ts_response = TableStorage.UpmergeDictToTableStore(dict_obj, table: tasktable, partkey: master_pk, rowkey: id);
-			GenUtils.LogMsg("info", "Scheduler.StoreTaskForId: " + id, null);
+			GenUtils.LogMsg("status", "Scheduler.StoreTaskForId: " + id, null);
 		}
 
 		public static Task FetchTaskForId(string id, TaskType type)
@@ -125,7 +125,7 @@ namespace CalendarAggregator
 			var tasktable = type.ToString();
 			var ts_response = TableStorage.UpmergeDictToTableStore(task, tasktable, partkey: master_pk, rowkey: id);
 			var http_response = ts_response.http_response;
-			GenUtils.LogMsg("info", "Scheduler.StartTaskForId: " + id, http_response.status.ToString());
+			GenUtils.LogMsg("status", "Scheduler.StartTaskForId: " + id, http_response.status.ToString());
 			return http_response;
 		}
 
@@ -138,7 +138,7 @@ namespace CalendarAggregator
 			var tasktable = type.ToString();
 			var ts_response = TableStorage.UpmergeDictToTableStore(task, tasktable, partkey: master_pk, rowkey: id);
 			var http_response = ts_response.http_response;
-			GenUtils.LogMsg("info", "Scheduler.UpdateStartTaskForId: " + id, http_response.status.ToString());
+			GenUtils.LogMsg("status", "Scheduler.UpdateStartTaskForId: " + id, http_response.status.ToString());
 			return http_response;
 		}
 
@@ -150,7 +150,7 @@ namespace CalendarAggregator
 			task["status"] = TaskStatus.stopped.ToString();
 			var tasktable = type.ToString();
 			var ts_response = TableStorage.UpmergeDictToTableStore(task, table: tasktable, partkey: master_pk, rowkey: id);
-			GenUtils.LogMsg("info", "Scheduler.StopTaskForId: " + id, ts_response.http_response.status.ToString());
+			GenUtils.LogMsg("status", "Scheduler.StopTaskForId: " + id, ts_response.http_response.status.ToString());
 		}
 
 		public static TaskType MaybeStartTaskForId(DateTime now, Calinfo calinfo, TaskType type)
@@ -222,7 +222,7 @@ namespace CalendarAggregator
 		{
 			if (Scheduler.ExistsTaskRecordForId(id, type) == false)
 			{
-				GenUtils.LogMsg("info", "MaybeCreateTaskRecord: creating task for " + id, null);
+				GenUtils.LogMsg("status", "MaybeCreateTaskRecord: creating task for " + id, null);
 				Scheduler.InitTaskForId(id, type);
 			}
 		}

@@ -227,7 +227,7 @@ namespace ElmcityUtils
 						response = ts.MergeEntity(table, partkey, rowkey, entity);
 						break;
 					default:
-						GenUtils.LogMsg("info", "DictToTableStore unexpected operation", operation.ToString());
+						GenUtils.LogMsg("warning", "DictToTableStore unexpected operation", operation.ToString());
 						break;
 				}
 				if (response.http_response.status != HttpStatusCode.NoContent)
@@ -250,7 +250,7 @@ namespace ElmcityUtils
 
 			if (dicts.Count > 1)
 				// should not happen, but...
-				GenUtils.LogMsg("info", "QueryForSingleEntity: " + table, q + ": more than one matching entity");
+				GenUtils.LogMsg("warning", "QueryForSingleEntity: " + table, q + ": more than one matching entity");
 
 			return dict;
 		}

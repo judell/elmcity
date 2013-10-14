@@ -62,7 +62,7 @@ namespace ElmcityUtils
 			{
 				value = this.cache[key];
 				this.cache.Remove(key);
-				GenUtils.LogMsg("info", "MockCache.Remove", key);
+				GenUtils.LogMsg("status", "MockCache.Remove", key);
 			}
 			return value;
 		}
