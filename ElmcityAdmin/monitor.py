@@ -33,7 +33,7 @@ monitor = '%s/%s' % ( local_storage, 'monitor.xml')
 try:
   GenUtils.LogMsg('info', 'worker querying into %s' % monitor, None)
   ts = TableStorage.MakeDefaultTableStorage()
-  dt = System.DateTime.UtcNow - System.TimeSpan.FromHours(24)
+  dt = System.DateTime.UtcNow - System.TimeSpan.FromHours(48)
   filter = "$filter=PartitionKey+eq+'monitor'+and+RowKey+gt+'%s'" % dt.Ticks
   s = ts.QueryEntitiesAsFeed('monitor', filter)
   f = open(monitor, 'w')
