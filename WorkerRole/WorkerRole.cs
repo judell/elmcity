@@ -90,7 +90,7 @@ namespace WorkerRole
 			{
 				var hostname = System.Net.Dns.GetHostName();
 				var msg = "Worker: OnStart: " + hostname;
-				GenUtils.PriorityLogMsg("info", msg, null);
+				GenUtils.PriorityLogMsg("status", msg, null);
 
 				HttpUtils.Wait(startup_delay);
 
@@ -98,7 +98,7 @@ namespace WorkerRole
 
 				RoleEnvironment.Changing += RoleEnvironmentChanging;
 
-				GenUtils.LogMsg("info", "LocalStorage1", local_storage_path);
+				GenUtils.LogMsg("status", "LocalStorage1", local_storage_path);
 
 				// PythonUtils.InstallPythonStandardLibrary(local_storage_path, ts);
 
@@ -127,8 +127,8 @@ namespace WorkerRole
 		public override void OnStop()
 		{
 			var msg = "Worker: OnStop";
-			logger.LogMsg("info", msg, null);
-			GenUtils.PriorityLogMsg("info", msg, null);
+			logger.LogMsg("status", msg, null);
+			GenUtils.PriorityLogMsg("status", msg, null);
 			var snapshot = Counters.MakeSnapshot(Counters.GetCounters());
 			monitor.StoreSnapshot(snapshot);
 
@@ -151,23 +151,23 @@ namespace WorkerRole
 			try
 			{
 				var message = "Worker: Run";
-				GenUtils.PriorityLogMsg("info", message, null);
+				GenUtils.PriorityLogMsg("status", message, null);
 
 				while (true)
 				{
-					logger.LogMsg("info", "worker waking", null);
+					logger.LogMsg("status", "worker waking", null);
 
 					settings = GenUtils.GetSettingsFromAzureTable();
-					logger.LogMsg("info", "worker updated " + settings.Count + " settings", null);
+					logger.LogMsg("status", "worker updated " + settings.Count + " settings", null);
 
 					ids = Metadata.LoadHubIdsFromAzureTable();
-					logger.LogMsg("info", "worker loaded " + ids.Count + " ids", null);
+					logger.LogMsg("status", "worker loaded " + ids.Count + " ids", null);
 
 					regions = Utils.GetRegionIds();
-					logger.LogMsg("info", "worker found " + regions.Count + " regions", null);
+					logger.LogMsg("status", "worker found " + regions.Count + " regions", null);
 
 					//twitter_direct_messages = TwitterApi.GetNewTwitterDirectMessages(); // get new control messages // disabled for now, twitter didn't like this
-					//logger.LogMsg("info", "worker got " + twitter_direct_messages.Count + " messages", null);
+					//logger.LogMsg("status", "worker got " + twitter_direct_messages.Count + " messages", null);
 
 					//ids = MaybeAdjustIdsForTesting(ids);
 
@@ -199,7 +199,19 @@ namespace WorkerRole
 
 					sw_ical.Start();
 
-					Parallel.ForEach(source: todo.icaltasks, body: (id) =>
+					var options = new ParallelOptions();
+					int max_ical_tasks;
+					try
+					{
+						max_ical_tasks = Convert.ToInt32(settings["max_concurrent_icaltasks"]);
+					}
+					catch (Exception e)
+					{
+						GenUtils.PriorityLogMsg("exception", "Run: getting max_concurrent_icaltasks", e.Message);
+						max_ical_tasks = 3;
+					}
+					options.MaxDegreeOfParallelism = max_ical_tasks;
+					Parallel.ForEach(source: todo.icaltasks, parallelOptions: options, body: (id) =>
 					//foreach (var id in todo.icaltasks)              // this can be parallelized because there are many separate/unique endpoints
 					{
 						try
@@ -273,7 +285,7 @@ namespace WorkerRole
 
 					sw_total.Stop();
 
-					logger.LogMsg("info", String.Format("worker: ical {0}, finalize {1}, nonical {2}, region {3}, total {4}",
+					logger.LogMsg("status", String.Format("worker: ical {0}, finalize {1}, nonical {2}, region {3}, total {4}",
 							sw_ical.Elapsed.ToString(),
 							sw_finalize.Elapsed.ToString(),
 							sw_nonical.Elapsed.ToString(),
@@ -283,7 +295,7 @@ namespace WorkerRole
 						null
 						);
 
-					logger.LogMsg("info", "worker sleeping", null);
+					logger.LogMsg("status", "worker sleeping", null);
 					Utils.WaitMinutes(Convert.ToInt32(settings["scheduler_check_interval_minutes"]));
 
 				}
@@ -300,7 +312,7 @@ namespace WorkerRole
 			if (BlobStorage.ExistsBlob(webrole_sentinel_uri))
 			{
 				var list = HttpUtils.FetchUrl(webrole_sentinel_uri).DataAsString();
-				GenUtils.LogMsg("info", "worker role remaking wrd for " + list, null);
+				GenUtils.LogMsg("status", "worker role remaking wrd for " + list, null);
 				var args = new Dictionary<string, string>();
 				WebRoleData.MakeWebRoleData();
 				bs.DeleteBlob("admin", CalendarAggregator.Configurator.webrole_sentinel);
@@ -407,7 +419,7 @@ namespace WorkerRole
                         {
                             case TwitterCommandName.meta_refresh:
                                 var calinfo = Utils.AcquireCalinfo(id);
-                                GenUtils.PriorityLogMsg("info", "Received meta_refresh message from " + id, null);
+                                GenUtils.PriorityLogMsg("status", "Received meta_refresh message from " + id, null);
                                 TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your meta_refresh message");
                                 Utils.MakeMetadataPage(id);
                                 TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity processed your meta_refresh message, you can verify the result at http://" + ElmcityUtils.Configurator.appdomain + "/services/" + id + "/metadata");
@@ -430,7 +442,7 @@ namespace WorkerRole
 
 		public static void ProcessNonIcal(string id)
 		{
-			logger.LogMsg("info", "worker starting on nonical tasks for " + id, null);
+			logger.LogMsg("status", "worker starting on nonical tasks for " + id, null);
 			var calinfo = Utils.AcquireCalinfo(id);
 
 			try
@@ -468,7 +480,7 @@ namespace WorkerRole
 		public static void ProcessIcal(string id)
 		{
 			var calinfo = Utils.AcquireCalinfo(id);
-			logger.LogMsg("info", "worker starting on ical tasks for " + id, null);
+			logger.LogMsg("status", "worker starting on ical tasks for " + id, null);
 			var fr = new FeedRegistry(id);
 			DoIcal(fr, calinfo);
 		}
@@ -476,7 +488,7 @@ namespace WorkerRole
 		public static void ProcessRegion(string region)
 		{
 			var calinfo = Utils.AcquireCalinfo(region);
-			logger.LogMsg("info", "worker starting on region tasks for " + region, null);
+			logger.LogMsg("status", "worker starting on region tasks for " + region, null);
 
 			try
 			{
@@ -520,12 +532,12 @@ namespace WorkerRole
 				var data = e.Message + e.StackTrace;
 				GenUtils.PriorityLogMsg("exception", msg, data);
 			}
-			logger.LogMsg("info", "worker done processing region " + region, null);
+			logger.LogMsg("status", "worker done processing region " + region, null);
 		}
 
 		public static void FinalizeHub(string id)
 		{
-			logger.LogMsg("info", "worker finalizing hub: " + id, null);
+			logger.LogMsg("status", "worker finalizing hub: " + id, null);
 
 			Utils.UpdateFeedCountForId(id);
 
@@ -572,7 +584,7 @@ namespace WorkerRole
 
 			Utils.VisualizeTagSources(id);
 
-			logger.LogMsg("info", "worker done finalizing hub " + id, null);
+			logger.LogMsg("status", "worker done finalizing hub " + id, null);
 		}
 
 		private static void StopTask(string id, TaskType type)
@@ -601,7 +613,7 @@ namespace WorkerRole
 			/*
 			if (todo.start_requests.HasItem(id))
 			{
-				logger.LogMsg("info", "Received start message from " + id, null);
+				logger.LogMsg("status", "Received start message from " + id, null);
 				//TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your start message");
 				started = type;
 			}
@@ -688,7 +700,7 @@ namespace WorkerRole
 			try
 			{
 
-				logger.LogMsg("info", "DoIcal: " + id, null);
+				logger.LogMsg("status", "DoIcal: " + id, null);
 				Collector coll = new Collector(calinfo, settings);
 				coll.CollectIcal(fr, ical, test: testing);
 			}
@@ -731,7 +743,7 @@ namespace WorkerRole
 		public static void SaveWhereStats(FeedRegistry fr, Calinfo calinfo)
 		{
 			var id = calinfo.id;
-			logger.LogMsg("info", "SaveWhereStats: " + id, null);
+			logger.LogMsg("status", "SaveWhereStats: " + id, null);
 			NonIcalStats estats = GetNonIcalStats(NonIcalType.eventful, id, calinfo, settings);
 			NonIcalStats ustats = GetNonIcalStats(NonIcalType.upcoming, id, calinfo, settings);
 			NonIcalStats ebstats = GetNonIcalStats(NonIcalType.eventbrite, id, calinfo, settings);
@@ -787,7 +799,7 @@ namespace WorkerRole
 		public static void SaveWhatStats(FeedRegistry fr, Calinfo calinfo)
 		{
 			var id = calinfo.id;
-			logger.LogMsg("info", "SaveWhatStats: " + id, null);
+			logger.LogMsg("status", "SaveWhatStats: " + id, null);
 			Dictionary<string, IcalStats> istats = GetIcalStats(id);
 			var sb_report = new StringBuilder();
 			sb_report.Append(MakeTableHeader());
@@ -810,7 +822,7 @@ namespace WorkerRole
 
 		public static void SaveRegionStats(string region)
 		{
-			logger.LogMsg("info", "SaveRegionStats: " + region, null);
+			logger.LogMsg("status", "SaveRegionStats: " + region, null);
 			var ids = Utils.GetIdsForRegion(region);
 			var region_report = new StringBuilder();
 
@@ -944,7 +956,7 @@ Future events {0}
 		public static void MergeIcs(Calinfo calinfo)
 		{
 			var id = calinfo.id;
-			logger.LogMsg("info", "MergeIcs: " + id, null);
+			logger.LogMsg("status", "MergeIcs: " + id, null);
 			List<string> suffixes = new List<string>() { "ical" };
 			if (calinfo.hub_enum == HubType.where)
 				foreach (NonIcalType type in Enum.GetValues(typeof(CalendarAggregator.NonIcalType)))
@@ -1034,7 +1046,7 @@ Future events {0}
 		*/
 		public static void MonitorAdmin(object o, ElapsedEventArgs args)
 		{
-			logger.LogMsg("info", "MonitorAdmin", null);
+			logger.LogMsg("status", "MonitorAdmin", null);
 			try
 			{
 				PythonUtils.RunIronPython(local_storage_path, CalendarAggregator.Configurator.monitor_script_url, new List<string>() { "", "", "" });
@@ -1049,7 +1061,7 @@ Future events {0}
 		{
 			try
 			{
-				GenUtils.PriorityLogMsg("info", "GeneralAdmin", null);
+				GenUtils.PriorityLogMsg("status", "GeneralAdmin", null);
 
 				Utils.MakeWhereSummary();  // refresh http://elmcity.blob.core.windows.net/admin/where_summary.html
 
@@ -1073,7 +1085,7 @@ Future events {0}
 
 		public static void TestRunnerAdmin(object o, ElapsedEventArgs args)
 		{
-			logger.LogMsg("info", "TestRunnerAdmin", null);
+			logger.LogMsg("status", "TestRunnerAdmin", null);
 			var calinfo = new Calinfo(ElmcityUtils.Configurator.azure_compute_account);
 			try
 			{
@@ -1098,7 +1110,7 @@ Future events {0}
 		{
 			try
 			{
-				logger.LogMsg("info", "IronPythonAdmin", null);
+				logger.LogMsg("status", "IronPythonAdmin", null);
 				PythonUtils.RunIronPython(local_storage_path, CalendarAggregator.Configurator.iron_python_admin_script_url, new List<string>() { "", "", "" });
 
 			}
