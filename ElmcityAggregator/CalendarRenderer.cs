@@ -1128,7 +1128,7 @@ namespace CalendarAggregator
 		private string MakeGeoForRDFa(ZonelessEvent evt)
 		{
 			string geo = "";
-			if (this.calinfo.hub_enum == HubType.where)
+			if (evt.lat != null && evt.lon != null)
 				geo = string.Format(
 @"<span rel=""v:location"">
     <span rel=""v:geo"">
@@ -1138,8 +1138,8 @@ namespace CalendarAggregator
        </span>
     </span>
   </span>",
-				evt.lat != null ? evt.lat : this.calinfo.lat,
-				evt.lon != null ? evt.lon : this.calinfo.lon
+				evt.lat,
+				evt.lon
 				);
 			return geo;
 		}
