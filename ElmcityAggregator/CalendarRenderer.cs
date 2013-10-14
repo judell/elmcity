@@ -323,6 +323,28 @@ namespace CalendarAggregator
 			}
 
 			args["AdvanceToAnHourAgo"] = true;
+
+			string town = null;
+			if (args.ContainsKey("town"))
+				town = (string)args["town"];
+
+			List<Dictionary<string,object>> regions = null;
+			if (args.ContainsKey("regions"))
+				regions = (List<Dictionary<string,object>>)args["regions"];
+
+			if (town != null && town != "all")  // will town added to view yield no events?
+			{
+				string tmp_view = Utils.AddItemToTagString(view, town.ToLower());
+				if (ViewFilter(tmp_view, eventstore.events).Count == 0)             // if so, set town to all
+				{
+					town = "all";
+					args["town"] = town;
+				}
+			}
+
+			if ( ViewFilter(view, eventstore.events).Count == 0)  // will view yield no events?
+				view = "";                                        // if so remove it
+
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
 			MaybeUseAlternateTemplate(args);
@@ -336,7 +358,16 @@ namespace CalendarAggregator
 			var html = this.template_html.Replace("__EVENTS__", builder.ToString());
 
 			if (args.ContainsKey("taglist") && (bool)args["taglist"] == true)
-				html = this.InsertTagSelector(html, view, eventsonly: false);
+			{
+				if (Utils.IsRegion(id, regions) == true && String.IsNullOrEmpty(town) == false )          
+					html = this.InsertRegionTagAndTownSelectors(html, view, town, eventsonly: false);
+				else
+					html = this.InsertTagSelector(html, view, eventsonly: false);
+			}
+
+			html = html.Replace("__VIEW__", view);     // propagate these to client so if changed here it can react
+			html = html.Replace("__TOWN__", town);
+
 
 			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
 
@@ -681,32 +712,17 @@ namespace CalendarAggregator
 			var list_of_dict = Utils.GetTagsAndCountsForHubAsListDict(this.id);
 			var tags = new List<string>();
 			var counts = new Dictionary<string,string>();
-			foreach (var dict in list_of_dict)
-			{
-				var tag = dict.Keys.First();
-				tags.Add(tag);
-				counts[tag] = dict[tag];
-			}
-			var cmp = StringComparer.OrdinalIgnoreCase;
-			tags.Sort(cmp);
+			MakeTagsAndCounts(list_of_dict, tags, counts, is_region: false);
+
 			var sb = new StringBuilder();
 			sb.Append("<select style=\"margin-bottom:10px; margin-top:10px;\" id=\"tag_select\" onchange=\"show_view()\">\n");
 			if (view == null)
 				sb.Append("<option selected>all</option>\n");
 			else
 				sb.Append("<option>all</option>\n");
-			foreach (var tag in tags)
-			{
-				string maybe_truncated_tag = tag;
-				if ( tag.Length > Configurator.max_tag_chars )
-					maybe_truncated_tag = tag.Substring(0, Configurator.max_tag_chars) + "&#8230;";
-				var option = "<option value=\"" + tag + "\">" + maybe_truncated_tag + " (" + counts[tag] + ")" + "</option>\n";
-				if (tag == view)
-					option = option.Replace("<option ", "<option selected ");
-				sb.Append(option);
-			}
-
+			AddTagOptions(view, tags, counts, sb, squigglies: true);
 			sb.Append("</select>\n");
+
 			if (eventsonly)
 			{
 				html = html.Replace("<!-- begin events -->", "<!-- begin events -->\n" + sb.ToString()); // insert tags at top of event list
@@ -719,6 +735,96 @@ namespace CalendarAggregator
 				html = html.Replace("<!--__TAGS2__-->", tags2);  
 			}
 			return html;
+		}
+
+		public string InsertRegionTagAndTownSelectors(string html, string view, string town, bool eventsonly)
+		{
+			var tag_source = !String.IsNullOrEmpty(town) && town != "all" ? town : this.id;
+			var region_list_of_dict = Utils.GetTagsAndCountsForHubAsListDict(tag_source);
+			var region_tags = new List<string>();
+			var region_counts = new Dictionary<string, string>();
+			MakeTagsAndCounts(region_list_of_dict, region_tags, region_counts, is_region: true);
+
+			var sb_tags = new StringBuilder();
+			sb_tags.Append("<select style=\"margin-bottom:10px; margin-top:10px;\" id=\"tag_select\" onchange=\"show_view()\">\n");
+			if (view == null)
+				sb_tags.Append("<option selected>all</option>\n");
+			else
+				sb_tags.Append("<option>all</option>\n");
+			AddTagOptions(view, region_tags, region_counts, sb_tags, squigglies: false);
+			sb_tags.Append("</select>\n");
+
+			var town_ids = Utils.GetIdsForRegion(this.id);
+			town_ids.Sort();
+
+			var sb_towns = new StringBuilder();
+			sb_towns.Append("<select style=\"margin-bottom:10px; margin-top:10px;\" id=\"town_select\" onchange=\"show_view()\">\n");
+			if (town == null)
+				sb_towns.Append("<option selected>all</option>\n");
+			else
+				sb_towns.Append("<option>all</option>\n");
+			foreach (var town_id in town_ids)
+			{
+				var option = "<option value=\"" + town_id + "\">" + town_id +  "</option>\n";
+				if (town_id == town)
+					option = option.Replace("<option ", "<option selected ");
+				sb_towns.Append(option);
+			}
+			sb_towns.Append("</select>\n");
+
+			if (eventsonly)
+			{
+				html = html.Replace("<!-- begin events -->", "<!-- begin events -->\n" + sb_tags.ToString()); // insert tags at top of event list
+			}
+			else
+			{
+				html = html.Replace("__TAGS__", sb_tags.ToString());
+				html = html.Replace("__TOWNS__", sb_towns.ToString());   
+			}
+			return html;
+		}
+
+		private void AddTagOptions(string view, List<string> tags, Dictionary<string, string> counts, StringBuilder sb, bool squigglies)
+		{
+			foreach (var tag in tags)
+			{
+				if (tag.Contains("{") && squigglies == false)
+					continue;
+				var option = MakeTagOption(view, counts, tag);
+				sb.Append(option);
+			}
+		}
+
+		private void MakeTagsAndCounts(List<Dictionary<string, string>> list_of_dict, List<string> tags, Dictionary<string, string> counts, bool is_region)
+		{
+			List<string> town_tags = new List<string>();
+			if (is_region)
+			{
+				town_tags = Utils.GetIdsForRegion(this.id);
+				town_tags = town_tags.Select(x => x.ToLower()).ToList();
+			}
+
+			foreach (var dict in list_of_dict)
+			{
+				var tag = dict.Keys.First();
+				if (is_region && town_tags.Contains(tag))
+					continue;
+				tags.Add(tag);
+				counts[tag] = dict[tag];
+			}
+			var cmp = StringComparer.OrdinalIgnoreCase;
+			tags.Sort(cmp);
+		}
+
+		private string MakeTagOption(string view, Dictionary<string, string> counts, string tag)
+		{
+			string maybe_truncated_tag = tag;
+			if (tag.Length > Configurator.max_tag_chars)
+				maybe_truncated_tag = tag.Substring(0, Configurator.max_tag_chars) + "&#8230;";
+			var option = "<option value=\"" + tag + "\">" + maybe_truncated_tag + " (" + counts[tag] + ")" + "</option>\n";
+			if (tag == view)
+				option = option.Replace("<option ", "<option selected ");
+			return option;
 		}
 
 		public void RenderEventsAsHtml(ZonelessEventStore es, StringBuilder builder, Dictionary<string,object> args)
@@ -1235,7 +1341,18 @@ namespace CalendarAggregator
 			// which gets from cache if it can, else fetches uri and loads cache
 			if (args.ContainsKey("AdvanceToAnHourAgo") && (bool)args["AdvanceToAnHourAgo"] == true)
 				AdvanceToAnHourAgo(es);
-			es.events = Filter(view, count, from, to, es); // then filter if requested
+			if (args.ContainsKey("town") && String.IsNullOrEmpty((string)args["town"]) == false)
+			{
+				var town = (string)args["town"];
+				town = town.ToLower();
+				if ( String.IsNullOrEmpty(view) && ! String.IsNullOrEmpty(town) && town != "all" )         // town, no view
+					view = town;
+				else if ( ! String.IsNullOrEmpty(view) && ! String.IsNullOrEmpty(town) && town != "all" )  // town plus view
+					view = view + "," + town.ToLower();
+			}
+
+			es.events = Filter(view, count, from, to, es); // apply all filters
+
 			return es;
 		}
 
@@ -1350,6 +1467,7 @@ namespace CalendarAggregator
 
 		private static List<ZonelessEvent> ViewFilter(string view, List<ZonelessEvent> events)
 		{
+			var filtered_events = events.CloneObject();
 			try
 			{
 				if (view == null)
@@ -1363,7 +1481,7 @@ namespace CalendarAggregator
 					if (view_item.StartsWith("-"))      // do exclusions first
 					{
 						var item = view_item.TrimStart('-');
-						events = events.FindAll(evt => evt.categories != null && !evt.categories.Split(',').ToList().Contains(item));
+						filtered_events = filtered_events.FindAll(evt => evt.categories != null && !evt.categories.Split(',').ToList().Contains(item));
 					}
 					else
 						remainder.Add(view_item);
@@ -1371,7 +1489,7 @@ namespace CalendarAggregator
 
 				foreach (var view_item in remainder)    // then inclusions
 				{
-					events = events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Contains(view_item));
+					filtered_events = filtered_events.FindAll(evt => evt.categories != null && evt.categories.Split(',').ToList().Contains(view_item));
 				}
 			}
 			catch (Exception e)
@@ -1379,35 +1497,37 @@ namespace CalendarAggregator
 				GenUtils.PriorityLogMsg("exception", "ViewFilter", e.Message + e.StackTrace);
 			}
 
-			return events;
+			return filtered_events;
 		}
 
 		private static List<ZonelessEvent> CountFilter(int count, List<ZonelessEvent> events)
 		{
+			var filtered_events = new List<ZonelessEvent>();
 			try
 			{
-				events = events.Take(count).ToList();
+				filtered_events = events.Take(count).ToList();
 			}
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "ViewFilter", e.Message + e.StackTrace);
 			}
 
-			return events;
+			return filtered_events;
 		}
 
 		private static List<ZonelessEvent> TimeFilter(DateTime from, DateTime to, List<ZonelessEvent> events)
 		{
+			var filtered_events = new List<ZonelessEvent>();
 			try
 			{
-				events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart <= to);  // reduce to time window
+				filtered_events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart <= to);  // reduce to time window
 			}
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "ViewFilter", e.Message + e.StackTrace);
 			}
 
-			return events;
+			return filtered_events;
 		}
 
 
