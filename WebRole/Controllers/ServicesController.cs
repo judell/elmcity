@@ -220,7 +220,6 @@ namespace WebRole
 						render_args["jsurl"] = this.jsurl;
 						render_args["bare_events"] = this.bare_events;
 						render_args["town"] = this.town;
-						render_args["regions"] = ElmcityApp.regions;
 
 						if (settings["use_mobile_detection"] == "yes")                      // detect or use declaration
 						{
