@@ -2278,6 +2278,36 @@ END:VCALENDAR",
 			}
 		}
 
+		public enum TagAndCountType { town, nontown }
+
+		public static Dictionary<string, string> MakeTagsAndCounts(string id, TagAndCountType tag_and_count_type)
+		{
+			var is_region = Utils.IsRegion(id);
+			var all_tags_and_counts = GetTagsAndCountsForHubAsListDict(id);
+			var tags_and_counts = new Dictionary<string, string>();
+			List<string> towns = new List<string>();
+			if (is_region)
+			{
+				towns = GetIdsForRegion(id);
+				towns = towns.Select(x => x.ToLower()).ToList();
+			}
+			foreach (var tag_and_count in all_tags_and_counts)
+			{
+				var key = tag_and_count.Keys.First();
+				if (tag_and_count_type == TagAndCountType.town)
+				{
+					if (towns.Contains(key))
+						tags_and_counts[key] = tag_and_count[key];
+				}
+				else
+				{
+					if (!towns.Contains(key))
+						tags_and_counts[key] = tag_and_count[key];
+				}
+			}
+			return tags_and_counts;
+		}
+
 		public static List<string> GetTagsForHub(string id)
 		{
 			var list_of_dict = GetTagsAndCountsForHubAsListDict(id);
@@ -3906,7 +3936,6 @@ END:VTIMEZONE");
 			return list.Select(x => x.Trim()).ToList();
 		}
 
-
 		public static string AddItemToTagString(string tagstring, string tag)
 		{
 			if (String.IsNullOrEmpty(tagstring))
@@ -3914,6 +3943,36 @@ END:VTIMEZONE");
 			var list = GetTagListFromTagString(tagstring);
 			list.Add(tag);
 			return String.Join(",", list);
+		}
+
+		public static Dictionary<string, List<string>> MakeCategoryTowns(string id)
+		{
+			var es = ObjectUtils.GetTypedObj<ZonelessEventStore>(id, id + ".zoneless.obj");
+			return MakeCategoryTowns(es, id);
+		}
+
+		public static Dictionary<string, List<string>> MakeCategoryTowns(ZonelessEventStore es, string id)
+		{
+
+			var events = es.events;
+			var towns = Utils.GetIdsForRegion(id);
+			towns = towns.Select(t => t.ToLower()).ToList();
+			var categories = Utils.GetTagsForHub(id);
+			categories = categories.FindAll(c => towns.Contains(c) == false); // exclude town names
+			categories = categories.FindAll(c => c.Contains("{") == false);   // exclude secondary categories
+			var category_towns = new Dictionary<string, List<string>>();
+			foreach (var category in categories)
+			{
+				foreach (var town in towns)
+				{
+					var has_town_category = events.FindAll(e => e.categories.Contains(town));
+					var has_town_and_category = has_town_category.FindAll(e => e.categories.Contains(category));
+					if (has_town_and_category.Count > 0)
+						category_towns.AddOrAppendDictOfListT(category, town);
+				}
+			}
+			bs.SerializeObjectToAzureBlob(category_towns, id, "category_towns.obj");
+			return category_towns;
 		}
 
 		#endregion
@@ -4058,8 +4117,8 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 
 						dict.Add(title + dtstart.ToString(), latlon);
 
-						var start2 = dtstart.ToString("yyyy-MM-**THH:mm"); // ** to wildcard the day for recurring events
-						dict2.Add(title + start2, latlon);
+						//var start2 = dtstart.ToString("yyyy-MM-**THH:mm"); // ** to wildcard the day for recurring events
+						//dict2.Add(title + start2, latlon);
 					}
 					catch (Exception e)
 					{
@@ -4067,8 +4126,9 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 					}
 				}
 				bs.SerializeObjectToAzureBlob(dict, id, "meetup_locations.obj");
-				var json = JsonConvert.SerializeObject(dict2);
-				bs.PutBlob(id, "meetup_locations.json", json);
+				
+				//var json = JsonConvert.SerializeObject(dict2);
+				//bs.PutBlob(id, "meetup_locations.json", json);
 			}
 			catch (Exception e)
 			{
@@ -4104,6 +4164,8 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 					}
 				}
 				bs.SerializeObjectToAzureBlob(dict, id, "ical_locations.obj");
+				//var json = JsonConvert.SerializeObject(dict);
+				//bs.PutBlob(id, "ical_locations.json", json);
 			}
 			catch (Exception e)
 			{
