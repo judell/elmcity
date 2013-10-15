@@ -39,7 +39,7 @@ namespace WebRole
         public override bool OnStart()
         {
             var local_resource = RoleEnvironment.GetLocalResource("LocalStorage1");
-            GenUtils.LogMsg("info", "LocalStorage1", local_resource.RootPath);
+            GenUtils.LogMsg("status", "LocalStorage1", local_resource.RootPath);
 
             RoleEnvironment.Changing += RoleEnvironmentChanging;
 

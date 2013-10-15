@@ -861,7 +861,7 @@ if unsure please check http://{1}/{2}/stats",
         public ActionResult put_json_metadata(string id, string json)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
-            GenUtils.LogMsg("info", "put_json_metadata", "id: " + id + " json: " + json);
+            GenUtils.LogMsg("status", "put_json_metadata", "id: " + id + " json: " + json);
 
             var auth_mode = this.Authenticated(id);
             string result = "";
@@ -900,7 +900,7 @@ if unsure please check http://{1}/{2}/stats",
         [HttpPost, ValidateInput(false)]
         public ActionResult put_json_feeds(string id, string json)
         {
-            GenUtils.LogMsg("info", "put_json_feeds", "id: " + id + " json: " + json);
+            GenUtils.LogMsg("status", "put_json_feeds", "id: " + id + " json: " + json);
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
             var auth_mode = this.Authenticated(id);
@@ -1050,7 +1050,7 @@ if unsure please check http://{1}/{2}/stats",
                 return new RedirectResult(redirect);
             }
 
-            GenUtils.LogMsg("info", "facebook_auth: code (" + code + ")", null);
+            GenUtils.LogMsg("status", "facebook_auth: code (" + code + ")", null);
 
             if (Request.Cookies[auth.cookie_name.ToString()] == null)
             {
@@ -1085,9 +1085,9 @@ if unsure please check http://{1}/{2}/stats",
                 secret,
                 code
                 );
-            GenUtils.LogMsg("info", "GetFacebookAccessToken", url);
+            GenUtils.LogMsg("status", "GetFacebookAccessToken", url);
             var r = HttpUtils.FetchUrl(new Uri(url));
-            GenUtils.LogMsg("info", "GetFacebookAccessToken", r.DataAsString());
+            GenUtils.LogMsg("status", "GetFacebookAccessToken", r.DataAsString());
             string result;
             try
             {
@@ -1294,7 +1294,7 @@ if unsure please check http://{1}/{2}/stats",
             }
 
             var final_redirect_uri = "https://www.facebook.com/events/" + eid;
-            GenUtils.LogMsg("info", "add_fb_event", "redirecting to " + final_redirect_uri);
+            GenUtils.LogMsg("status", "add_fb_event", "redirecting to " + final_redirect_uri);
             return new RedirectResult("https://www.facebook.com/events/" + eid);
         }
 
@@ -1311,12 +1311,12 @@ if unsure please check http://{1}/{2}/stats",
                     location,
                     start_time
                     );
-                GenUtils.LogMsg("info", url, data);
+                GenUtils.LogMsg("status", url, data);
                 var request = (HttpWebRequest)WebRequest.Create(new Uri(url));
                 request.Method = "POST";
                 var response = HttpUtils.DoHttpWebRequest(request, Encoding.UTF8.GetBytes(data));
                 var json = response.DataAsString();
-                GenUtils.LogMsg("info", "_add_fb_event", response.status.ToString() + ", " + json);
+                GenUtils.LogMsg("status", "_add_fb_event", response.status.ToString() + ", " + json);
                 var dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
                 eid = dict["id"];
             }
