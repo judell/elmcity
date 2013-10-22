@@ -35,7 +35,7 @@ try:
   ts = TableStorage.MakeDefaultTableStorage()
   dt = System.DateTime.UtcNow - System.TimeSpan.FromHours(48)
   filter = "$filter=PartitionKey+eq+'monitor'+and+RowKey+gt+'%s'" % dt.Ticks
-  s = ts.QueryEntitiesAsFeed('monitor', filter)
+  s = ts.QueryAllEntitiesAsODataFeed('monitor', filter)
   f = open(monitor, 'w')
   f.write(s)
   f.close()
