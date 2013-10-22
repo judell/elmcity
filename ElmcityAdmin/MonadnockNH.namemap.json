@@ -1,0 +1,19 @@
+{
+"elmcity": ["elmcity","Keene"],
+"benningtonnh" : ["BenningtonNH", "Bennington"],
+"dublinnh" : ["DublinNH", "Dublin"],
+"fitzwilliamnh" : ["FitzwilliamNH", "Fitzwilliam"],
+"gilsumnh" : ["GilsumNH", "Gilsum"],
+"hancocknh" : ["HancockNH", "Hancock"],
+"harrisvillenh" : ["HarrisvilleNH", "Harrisville"],
+"marlboroughnh" : ["MarlboroughNH", "Marlborough"],
+"nelsonnh" : ["NelsonNH", "Nelson"],
+"pboronhevents" : ["PboroNhEvents", "Peterborough"],
+"swanzeynh" : ["SwanzeyNH", "Swanzey"],
+"sullivannh" : ["SullivanNH", "Sullivan"],
+"troynh" : ["TroyNH", "Troy"],
+"winchesternh" : ["WinchesterNH", "Winchester"],
+"brattleborovt" : ["BrattleboroVT", "Brattleboro"],
+"walpolenh" : ["WalpoleNH", "Walpole"],
+"rindgenh" : ["RindgeNH", "Rindge"]
+}

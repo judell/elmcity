@@ -1,0 +1,23 @@
+{
+"norfolkva"		: [ "NorfolkVa" , "Norfolk"],
+"vbcal"			: [ "vbcal" , "Virginia Beach"],
+"portsmouthva"	: [ "PortsmouthVA" , "Portsmouth"],
+"hamptonva"		: [ "HamptonVA" , "Hampton"],
+"newportnewsva" : [ "NewportNewsVA" , "Newport News"],
+"suffolkva"		: [ "SuffolkVA" , "Suffolk"],
+"chesapeakeva"	: [ "ChesapeakeVA" , "Chesapeake"],
+"yorktownva"	: [ "YorktownVA" , "Yorktown"],
+"williamsburgva": [ "WilliamsburgVA" , "Williamsburg"],
+"charlescityva" : [ "CharlescityVA" , "Charles City"],
+"newkentva"		: [ "NewKentVA" , "New Kent"],
+"westpointva"	: [ "WestPointVA" , "West Point"],
+"kingwilliamva" : [ "KingWilliamVA" , "King William"],
+"kingqueenva"	: [ "KingQueenVA" , "King Queen"],
+"isleofwightva" : [ "IsleOfWightVA" , "Isle of Wight"],
+"jamescityva"	: [ "JamesCityVA" , "James City"],
+"norfolkghentva": [ "NorfolkGhentVA" , "Norfolk Ghent"],
+"gloucesterva"	: [ "GloucesterVA" , "Gloucester"],
+"mathewsva"		: [ "MathewsVA" , "Mathews"],
+"smithfieldva"	: [ "SmithfieldVA" , "Smithfield"],
+"dailypresshamptonroads" : [ "DailyPressHamptonRoads" , "Daily Press" ]
+}
