@@ -35,10 +35,11 @@ namespace ElmcityUtils
 
 		private int loglevel { get; set; }
 
-		private int level_info = 0;
-		private int level_status = 1;
-		private int level_warning = 2;
+		private int level_info = 1;
+		private int level_status_or_warning = 2;
 		//private int level_exception = 3;
+
+		private Thread dequeue_thread;
 
 		public Logger()
 		{
@@ -52,22 +53,27 @@ namespace ElmcityUtils
 		{
 			this.ts = TableStorage.MakeDefaultTableStorage();
 			this.wait_milliseconds = milliseconds;
-			//this.max_messages = max_messages;
 			this.Start();
+			//this.max_messages = max_messages;
 		}
 
 		public Logger(int milliseconds, int max_messages, TableStorage ts)
 		{
 			this.ts = ts;
 			this.wait_milliseconds = milliseconds;
-			//this.max_messages = max_messages;
 			this.Start();
+			//this.max_messages = max_messages;
 		}
 
-		private void Start()
+		~Logger()
 		{
-			var dequeue_thread = new Thread(new ThreadStart(LogThreadMethod));
-			dequeue_thread.Start();
+			this.dequeue_thread.Abort();
+		}
+
+		public void Start()
+		{
+			this.dequeue_thread = new Thread(new ThreadStart(LogThreadMethod));
+			this.dequeue_thread.Start();
 		}
 
 		public void LogMsg(string type, string title, string blurb)
@@ -75,18 +81,15 @@ namespace ElmcityUtils
 			switch (type)
 			{
 				case "info":
-					if (this.loglevel > this.level_info)
+					if (this.loglevel > this.level_info)  // skip if loglevel is status_or_warning
 						return;
 					break;
 				case "status":
-					if (this.loglevel > this.level_status)
-						return;
-					break;
 				case "warning":
-					if (this.loglevel > this.level_warning)
+					if (this.loglevel > this.level_status_or_warning)  // skip of loglevel is exception
 						return;
 					break;
-				case "exception":
+				case "exception":                           // other types: always log
 					break;
 				default:
 					break;
