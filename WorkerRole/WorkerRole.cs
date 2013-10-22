@@ -65,7 +65,7 @@ namespace WorkerRole
 
 		private static TableStorage ts = TableStorage.MakeDefaultTableStorage();
 		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
-		private static Logger logger = new Logger();
+		
 		private static Dictionary<string, string> settings = GenUtils.GetSettingsFromAzureTable();
 
 		private static string blobhost = ElmcityUtils.Configurator.azure_blobhost;
@@ -127,7 +127,7 @@ namespace WorkerRole
 		public override void OnStop()
 		{
 			var msg = "Worker: OnStop";
-			logger.LogMsg("status", msg, null);
+			GenUtils.LogMsg("status", msg, null);
 			GenUtils.PriorityLogMsg("status", msg, null);
 			var snapshot = Counters.MakeSnapshot(Counters.GetCounters());
 			monitor.StoreSnapshot(snapshot);
@@ -155,19 +155,37 @@ namespace WorkerRole
 
 				while (true)
 				{
-					logger.LogMsg("status", "worker waking", null);
+					GenUtils.LogMsg("status", "worker waking", null);
 
 					settings = GenUtils.GetSettingsFromAzureTable();
-					logger.LogMsg("status", "worker updated " + settings.Count + " settings", null);
+					GenUtils.LogMsg("status", "worker updated " + settings.Count + " settings", null);
+
+					int check_interval_minutes;
+					try
+					{
+						check_interval_minutes = Convert.ToInt32(settings["scheduler_check_interval_minutes"]);
+					}
+					catch 
+					{
+						check_interval_minutes = 5;
+					}
+
+					var pause_setting = "worker_is_paused";
+					if (settings.ContainsKey(pause_setting) && settings[pause_setting].ToLower().StartsWith("y"))
+					{
+						GenUtils.LogMsg("status", "worker is paused", null);
+						Utils.WaitMinutes(check_interval_minutes);
+						continue;
+					}
 
 					ids = Metadata.LoadHubIdsFromAzureTable();
-					logger.LogMsg("status", "worker loaded " + ids.Count + " ids", null);
+					GenUtils.LogMsg("status", "worker loaded " + ids.Count + " ids", null);
 
 					regions = Utils.GetRegionIds();
-					logger.LogMsg("status", "worker found " + regions.Count + " regions", null);
+					GenUtils.LogMsg("status", "worker found " + regions.Count + " regions", null);
 
 					//twitter_direct_messages = TwitterApi.GetNewTwitterDirectMessages(); // get new control messages // disabled for now, twitter didn't like this
-					//logger.LogMsg("status", "worker got " + twitter_direct_messages.Count + " messages", null);
+					//GenUtils.LogMsg("status", "worker got " + twitter_direct_messages.Count + " messages", null);
 
 					//ids = MaybeAdjustIdsForTesting(ids);
 
@@ -285,7 +303,7 @@ namespace WorkerRole
 
 					sw_total.Stop();
 
-					logger.LogMsg("status", String.Format("worker: ical {0}, finalize {1}, nonical {2}, region {3}, total {4}",
+					GenUtils.LogMsg("status", String.Format("worker: ical {0}, finalize {1}, nonical {2}, region {3}, total {4}",
 							sw_ical.Elapsed.ToString(),
 							sw_finalize.Elapsed.ToString(),
 							sw_nonical.Elapsed.ToString(),
@@ -295,7 +313,7 @@ namespace WorkerRole
 						null
 						);
 
-					logger.LogMsg("status", "worker sleeping", null);
+					GenUtils.LogMsg("status", "worker sleeping", null);
 					Utils.WaitMinutes(Convert.ToInt32(settings["scheduler_check_interval_minutes"]));
 
 				}
@@ -442,7 +460,7 @@ namespace WorkerRole
 
 		public static void ProcessNonIcal(string id)
 		{
-			logger.LogMsg("status", "worker starting on nonical tasks for " + id, null);
+			GenUtils.LogMsg("status", "worker starting on nonical tasks for " + id, null);
 			var calinfo = Utils.AcquireCalinfo(id);
 
 			try
@@ -480,7 +498,7 @@ namespace WorkerRole
 		public static void ProcessIcal(string id)
 		{
 			var calinfo = Utils.AcquireCalinfo(id);
-			logger.LogMsg("status", "worker starting on ical tasks for " + id, null);
+			GenUtils.LogMsg("status", "worker starting on ical tasks for " + id, null);
 			var fr = new FeedRegistry(id);
 			DoIcal(fr, calinfo);
 		}
@@ -488,7 +506,7 @@ namespace WorkerRole
 		public static void ProcessRegion(string region)
 		{
 			var calinfo = Utils.AcquireCalinfo(region);
-			logger.LogMsg("status", "worker starting on region tasks for " + region, null);
+			GenUtils.LogMsg("status", "worker starting on region tasks for " + region, null);
 
 			try
 			{
@@ -513,7 +531,7 @@ namespace WorkerRole
 
 				Utils.UpdateFeedCountForId(region);
 
-				EventStore.UniqueFilterSortSerialize(region, es_region);
+				EventStore.Finalize(calinfo, es_region);
 
 				CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(region), Convert.ToInt32(settings["webrole_instance_count"]));
 
@@ -532,12 +550,12 @@ namespace WorkerRole
 				var data = e.Message + e.StackTrace;
 				GenUtils.PriorityLogMsg("exception", msg, data);
 			}
-			logger.LogMsg("status", "worker done processing region " + region, null);
+			GenUtils.LogMsg("status", "worker done processing region " + region, null);
 		}
 
 		public static void FinalizeHub(string id)
 		{
-			logger.LogMsg("status", "worker finalizing hub: " + id, null);
+			GenUtils.LogMsg("status", "worker finalizing hub: " + id, null);
 
 			Utils.UpdateFeedCountForId(id);
 
@@ -584,7 +602,7 @@ namespace WorkerRole
 
 			Utils.VisualizeTagSources(id);
 
-			logger.LogMsg("status", "worker done finalizing hub " + id, null);
+			GenUtils.LogMsg("status", "worker done finalizing hub " + id, null);
 		}
 
 		private static void StopTask(string id, TaskType type)
@@ -613,7 +631,7 @@ namespace WorkerRole
 			/*
 			if (todo.start_requests.HasItem(id))
 			{
-				logger.LogMsg("status", "Received start message from " + id, null);
+				GenUtils.LogMsg("status", "Received start message from " + id, null);
 				//TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, "elmcity received your start message");
 				started = type;
 			}
@@ -633,7 +651,7 @@ namespace WorkerRole
 
 			if (lock_response.status != HttpStatusCode.Created)
 			{
-				logger.LogMsg("warning", "LockId", "expected to create lock but could not");
+				GenUtils.LogMsg("warning", "LockId", "expected to create lock but could not");
 				return false;
 			}
 			else
@@ -681,7 +699,7 @@ namespace WorkerRole
 			}
 			catch (Exception e)
 			{
-				logger.LogMsg("exception", "save tags_json: " + id, e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "save tags_json: " + id, e.Message + e.StackTrace);
 			}
 
 		}
@@ -700,13 +718,13 @@ namespace WorkerRole
 			try
 			{
 
-				logger.LogMsg("status", "DoIcal: " + id, null);
+				GenUtils.LogMsg("status", "DoIcal: " + id, null);
 				Collector coll = new Collector(calinfo, settings);
 				coll.CollectIcal(fr, ical, test: testing);
 			}
 			catch (Exception e)
 			{
-				logger.LogMsg("exception", "DoIcal: " + id, e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "DoIcal: " + id, e.Message + e.StackTrace);
 			}
 		}
 
@@ -743,7 +761,7 @@ namespace WorkerRole
 		public static void SaveWhereStats(FeedRegistry fr, Calinfo calinfo)
 		{
 			var id = calinfo.id;
-			logger.LogMsg("status", "SaveWhereStats: " + id, null);
+			GenUtils.LogMsg("status", "SaveWhereStats: " + id, null);
 			NonIcalStats estats = GetNonIcalStats(NonIcalType.eventful, id, calinfo, settings);
 			NonIcalStats ustats = GetNonIcalStats(NonIcalType.upcoming, id, calinfo, settings);
 			NonIcalStats ebstats = GetNonIcalStats(NonIcalType.eventbrite, id, calinfo, settings);
@@ -799,7 +817,7 @@ namespace WorkerRole
 		public static void SaveWhatStats(FeedRegistry fr, Calinfo calinfo)
 		{
 			var id = calinfo.id;
-			logger.LogMsg("status", "SaveWhatStats: " + id, null);
+			GenUtils.LogMsg("status", "SaveWhatStats: " + id, null);
 			Dictionary<string, IcalStats> istats = GetIcalStats(id);
 			var sb_report = new StringBuilder();
 			sb_report.Append(MakeTableHeader());
@@ -822,7 +840,7 @@ namespace WorkerRole
 
 		public static void SaveRegionStats(string region)
 		{
-			logger.LogMsg("status", "SaveRegionStats: " + region, null);
+			GenUtils.LogMsg("status", "SaveRegionStats: " + region, null);
 			var ids = Utils.GetIdsForRegion(region);
 			var region_report = new StringBuilder();
 
@@ -949,14 +967,14 @@ Future events {0}
 			}
 			catch (Exception ex)
 			{
-				logger.LogMsg("exception", feedurl + "," + istats[feedurl].source + " :  stats not ready", ex.Message);
+				GenUtils.LogMsg("exception", feedurl + "," + istats[feedurl].source + " :  stats not ready", ex.Message);
 			}
 		}
 
 		public static void MergeIcs(Calinfo calinfo)
 		{
 			var id = calinfo.id;
-			logger.LogMsg("status", "MergeIcs: " + id, null);
+			GenUtils.LogMsg("status", "MergeIcs: " + id, null);
 			List<string> suffixes = new List<string>() { "ical" };
 			if (calinfo.hub_enum == HubType.where)
 				foreach (NonIcalType type in Enum.GetValues(typeof(CalendarAggregator.NonIcalType)))
@@ -991,7 +1009,7 @@ Future events {0}
 			}
 			catch (Exception e)
 			{
-				logger.LogMsg("exception", "MergeIcs: " + id, e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "MergeIcs: " + id, e.Message + e.StackTrace);
 			}
 		}
 
@@ -1013,7 +1031,7 @@ Future events {0}
 			}
 			catch (Exception e)
 			{
-				logger.LogMsg("exception", "GetEventAndVenueStats: " + id + " " + name, e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "GetEventAndVenueStats: " + id + " " + name, e.Message + e.StackTrace);
 			}
 			return stats;
 		}
@@ -1046,14 +1064,14 @@ Future events {0}
 		*/
 		public static void MonitorAdmin(object o, ElapsedEventArgs args)
 		{
-			logger.LogMsg("status", "MonitorAdmin", null);
+			GenUtils.LogMsg("status", "MonitorAdmin", null);
 			try
 			{
 				PythonUtils.RunIronPython(local_storage_path, CalendarAggregator.Configurator.monitor_script_url, new List<string>() { "", "", "" });
 			}
 			catch (Exception e)
 			{
-				logger.LogMsg("exception", "MonitorAdmin", e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "MonitorAdmin", e.Message + e.StackTrace);
 			}
 		}
 
@@ -1085,7 +1103,7 @@ Future events {0}
 
 		public static void TestRunnerAdmin(object o, ElapsedEventArgs args)
 		{
-			logger.LogMsg("status", "TestRunnerAdmin", null);
+			GenUtils.LogMsg("status", "TestRunnerAdmin", null);
 			var calinfo = new Calinfo(ElmcityUtils.Configurator.azure_compute_account);
 			try
 			{
@@ -1101,7 +1119,7 @@ Future events {0}
 			}
 			catch (Exception e)
 			{
-				logger.LogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
 			}
 		}
 
@@ -1110,13 +1128,13 @@ Future events {0}
 		{
 			try
 			{
-				logger.LogMsg("status", "IronPythonAdmin", null);
+				GenUtils.LogMsg("status", "IronPythonAdmin", null);
 				PythonUtils.RunIronPython(local_storage_path, CalendarAggregator.Configurator.iron_python_admin_script_url, new List<string>() { "", "", "" });
 
 			}
 			catch (Exception ex)
 			{
-				logger.LogMsg("exception", "IronPythonAdmin", ex.Message + ex.StackTrace);
+				GenUtils.LogMsg("exception", "IronPythonAdmin", ex.Message + ex.StackTrace);
 			}
 		}
 
