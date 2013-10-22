@@ -21,6 +21,7 @@ using System.Web.Mvc;
 using ElmcityUtils;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
+using System.Web.Caching;
 
 namespace CalendarAggregator
 {
@@ -78,6 +79,7 @@ namespace CalendarAggregator
 			this.cache = null;
 			this.ResetCounters();
 			this.es_getter = new EventStoreGetter(GetEventStoreWithCaching);
+
 			try
 			{
 				this.id = id;
@@ -103,11 +105,10 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.PriorityLogMsg("exception", "CalendarRenderer: cannot fetch template", e.InnerException.Message);
+					GenUtils.PriorityLogMsg("exception", "CalendarRenderer: cannot fetch template", e.Message);
 					throw (e);
 				}
 
-				//  this.ical_sources = Collector.GetIcalSources(this.id);
 			}
 			catch (Exception e)
 			{
@@ -324,26 +325,9 @@ namespace CalendarAggregator
 
 			args["AdvanceToAnHourAgo"] = true;
 
-			string town = null;
-			if (args.ContainsKey("town"))
-				town = (string)args["town"];
-
-			List<Dictionary<string,object>> regions = null;
-			if (args.ContainsKey("regions"))
-				regions = (List<Dictionary<string,object>>)args["regions"];
-
-			if (town != null && town != "all")  // will town added to view yield no events?
-			{
-				string tmp_view = Utils.AddItemToTagString(view, town.ToLower());
-				if (ViewFilter(tmp_view, eventstore.events).Count == 0)             // if so, set town to all
-				{
-					town = "all";
-					args["town"] = town;
-				}
-			}
-
-			if ( ViewFilter(view, eventstore.events).Count == 0)  // will view yield no events?
-				view = "";                                        // if so remove it
+			string hub = null;
+			if (args.ContainsKey("hub"))
+				hub = (string)args["hub"];
 
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
@@ -359,14 +343,14 @@ namespace CalendarAggregator
 
 			if (args.ContainsKey("taglist") && (bool)args["taglist"] == true)
 			{
-				if (Utils.IsRegion(id, regions) == true && String.IsNullOrEmpty(town) == false )          
-					html = this.InsertRegionTagAndTownSelectors(html, view, town, eventsonly: false);
+				if (this.calinfo.hub_enum == HubType.region && String.IsNullOrEmpty(hub) == false)          
+					html = this.InsertRegionTagAndHubSelectors(html, eventstore, view, hub, eventsonly: false);
 				else
-					html = this.InsertTagSelector(html, view, eventsonly: false);
+					html = this.InsertTagSelector(html, eventstore, view, eventsonly: false);
 			}
 
 			html = html.Replace("__VIEW__", view);     // propagate these to client so if changed here it can react
-			html = html.Replace("__TOWN__", town);
+			html = html.Replace("__HUB__", hub);
 
 
 			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
@@ -546,7 +530,7 @@ namespace CalendarAggregator
 			var html = this.template_html.Replace("__EVENTS__", builder.ToString());
 
 			if (args.ContainsKey("taglist") && (bool) args["taglist"] == true )
-				html = this.InsertTagSelector(html, view, eventsonly: true);
+				html = this.InsertTagSelector(html, eventstore, view, eventsonly: true);
 
 			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
 
@@ -707,20 +691,18 @@ namespace CalendarAggregator
 			eventstore.events = eventstore.events.FindAll(evt => evt.dtstart >= dtnow);
 		}
 
-		public string InsertTagSelector(string html, string view, bool eventsonly)
+		public string InsertTagSelector(string html, ZonelessEventStore es, string view, bool eventsonly)
 		{
-			var list_of_dict = Utils.GetTagsAndCountsForHubAsListDict(this.id);
+			MaybeBuildTagStructures(es); // transitional until new generation of objects is fully established
+
 			var tags = new List<string>();
 			var counts = new Dictionary<string,string>();
-			MakeTagsAndCounts(list_of_dict, tags, counts, is_region: false);
 
 			var sb = new StringBuilder();
-			sb.Append("<select style=\"margin-bottom:10px; margin-top:10px;\" id=\"tag_select\" onchange=\"show_view()\">\n");
-			if (view == null)
-				sb.Append("<option selected>all</option>\n");
-			else
-				sb.Append("<option>all</option>\n");
-			AddTagOptions(view, tags, counts, sb, squigglies: true);
+			sb.Append("<select class=\"tag_list\" id=\"tag_select\" onchange=\"show_view()\">\n");
+			if (String.IsNullOrEmpty(view))
+				view = "all";
+			AddTagOptions(view, es, es.non_hub_tags, es.non_hubs_and_counts, sb, squigglies: true);
 			sb.Append("</select>\n");
 
 			if (eventsonly)
@@ -737,92 +719,165 @@ namespace CalendarAggregator
 			return html;
 		}
 
-		public string InsertRegionTagAndTownSelectors(string html, string view, string town, bool eventsonly)
+		private void MaybeBuildTagStructures(ZonelessEventStore es)  // transitional until new zoneless objects fully deployed
 		{
-			var tag_source = !String.IsNullOrEmpty(town) && town != "all" ? town : this.id;
-			var region_list_of_dict = Utils.GetTagsAndCountsForHubAsListDict(tag_source);
-			var region_tags = new List<string>();
-			var region_counts = new Dictionary<string, string>();
-			MakeTagsAndCounts(region_list_of_dict, region_tags, region_counts, is_region: true);
+			if (es.non_hub_tags == null) 
+			{
+				es.category_hubs = new Dictionary<string, Dictionary<string, int>>();
+				es.hubs_and_counts = new Dictionary<string, int>();
+				es.hub_tags = new List<string>();
+				es.non_hubs_and_counts = new Dictionary<string, int>();
+				es.non_hub_tags = new List<string>();
+				es.hub_name_map = new Dictionary<string, List<string>>();
+
+				Utils.BuildTagStructures(es, this.calinfo);
+
+				var base_key = Utils.MakeBaseZonelessUrl(this.id);
+
+				if (this.cache[base_key] != null)
+				{
+					var cached_es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromBytes((byte[])this.cache[base_key]);
+					if (cached_es.non_hub_tags == null)
+					{
+						var bytes = ObjectUtils.SerializeObject(es);
+						var logger = new CacheItemRemovedCallback(AspNetCache.LogRemovedItemToAzure);
+						var expiration_hours = ElmcityUtils.Configurator.cache_sliding_expiration.Hours;
+						var sliding_expiration = new TimeSpan(expiration_hours, 0, 0);
+						cache.Insert(base_key, bytes, null, Cache.NoAbsoluteExpiration, sliding_expiration, CacheItemPriority.Normal, logger);
+					}
+				}
+			}
+		}
+
+		public string InsertRegionTagAndHubSelectors(string html, ZonelessEventStore es, string view, string hub, bool eventsonly)
+		{
+			MaybeBuildTagStructures(es); // transitional until new generation of objects is fully established
+
+			if ( String.IsNullOrEmpty(view) ) 
+				view = "all";
+			
+			if ( String.IsNullOrEmpty(hub) )
+				hub = "all";
+
+			int use_case;
+
+			if		(view == "all" && hub == "all")	use_case = 1;
+			else if (view != "all" && hub == "all")	use_case = 2;
+			else if (view != "all" && hub != "all")	use_case = 3;
+			else if (view == "all" && hub != "all")	use_case = 4;
+			else throw new Exception("RegionAndHubSelectorsImpossible");
 
 			var sb_tags = new StringBuilder();
-			sb_tags.Append("<select style=\"margin-bottom:10px; margin-top:10px;\" id=\"tag_select\" onchange=\"show_view()\">\n");
-			if (view == null)
-				sb_tags.Append("<option selected>all</option>\n");
-			else
-				sb_tags.Append("<option>all</option>\n");
-			AddTagOptions(view, region_tags, region_counts, sb_tags, squigglies: false);
-			sb_tags.Append("</select>\n");
+			sb_tags.Append("<select class=\"tag_list\" id=\"tag_select\" onchange=\"show_view()\">\n");
 
-			var town_ids = Utils.GetIdsForRegion(this.id);
-			town_ids.Sort();
+			var sb_hubs = new StringBuilder();
+			sb_hubs.Append("<select class=\"tag_list\" id=\"hub_select\" onchange=\"show_view()\">\n");
 
-			var sb_towns = new StringBuilder();
-			sb_towns.Append("<select style=\"margin-bottom:10px; margin-top:10px;\" id=\"town_select\" onchange=\"show_view()\">\n");
-			if (town == null)
-				sb_towns.Append("<option selected>all</option>\n");
-			else
-				sb_towns.Append("<option>all</option>\n");
-			foreach (var town_id in town_ids)
+			switch (use_case)
 			{
-				var option = "<option value=\"" + town_id + "\">" + town_id +  "</option>\n";
-				if (town_id == town)
-					option = option.Replace("<option ", "<option selected ");
-				sb_towns.Append(option);
+				case 1:
+					// view: all
+					// hub: all
+					// tag: show all nonhub tags for region plus all       all selected
+					// hub: show all hubs in region plus all              all selected
+					AddTagOptions(view, es,  es.non_hub_tags, es.non_hubs_and_counts, sb_tags, false);
+					AddTagOptions(hub, es, es.hub_tags, es.hubs_and_counts, sb_hubs, false);
+					break;
+				case 2:
+					// view: music
+					// hub: all
+					// tag: show all nonhub tags for region plus all     music selected
+					// hub: show only hubs with music events plus all    all selected       
+					AddTagOptions(view, es, es.non_hub_tags, es.non_hubs_and_counts, sb_tags, false);
+					var hubs_for_view = es.category_hubs[view].Keys.ToList();
+					hubs_for_view.Sort();
+					AddTagOptions(hub, es, hubs_for_view, es.category_hubs[view], sb_hubs, false);
+					break;
+				case 3:
+					// view: music
+					// hub: BrattleboroVT
+					// tag: show all tags for BrattleboroVT plus all    music selected
+					// hub: show only BrattleboroVT plus all           BrattleboroVT selected
+					var es_unfiltered = this.es_getter(this.cache);                          // want all tags for hub as options even if view is filtered
+					es_unfiltered.events = ViewFilter(hub.ToLower(), es_unfiltered.events);  // so take the unfiltered es and filter by hub name (as lowercase tag)
+					OptionsForSelectedHub(view, hub, sb_tags, sb_hubs, es_unfiltered);
+					break;
+				case 4:
+					// view: all
+					// hub: BrattleboroVT
+					// tag: show all tags for BrattleboroVT plus all     all selected
+					// hub: show only BrattleboroVT plus all            BrattleboroVT selected
+					OptionsForSelectedHub(view, hub, sb_tags, sb_hubs, es);
+					break;
 			}
-			sb_towns.Append("</select>\n");
+
+			sb_tags.Append("</select>");
+			sb_hubs.Append("</select>");
 
 			if (eventsonly)
 			{
-				html = html.Replace("<!-- begin events -->", "<!-- begin events -->\n" + sb_tags.ToString()); // insert tags at top of event list
+				html = html.Replace("<!-- begin events -->", "<!-- begin events -->\n" + sb_tags.ToString() + sb_hubs.ToString() ); // insert tags at top of event list
 			}
 			else
 			{
 				html = html.Replace("__TAGS__", sb_tags.ToString());
-				html = html.Replace("__TOWNS__", sb_towns.ToString());   
+				html = html.Replace("__HUBS__", sb_hubs.ToString());   
 			}
 			return html;
 		}
 
-		private void AddTagOptions(string view, List<string> tags, Dictionary<string, string> counts, StringBuilder sb, bool squigglies)
+		private void OptionsForSelectedHub(string view, string hub, StringBuilder sb_tags, StringBuilder sb_hubs, ZonelessEventStore es)
 		{
-			foreach (var tag in tags)
+			var tags_and_counts = Utils.MakeTagsAndCounts(hub, es, Utils.TagAndCountType.nonhub, es.hub_tags);
+			var tags = tags_and_counts.Keys.Select(k => k.ToString()).ToList();
+			tags.Sort();
+			AddTagOptions(view, es, tags, tags_and_counts, sb_tags, false);
+			var hub_as_tag = hub.ToLower();
+			AddTagOptions(hub_as_tag, es, new List<string>() { hub_as_tag }, es.hubs_and_counts, sb_hubs, false);
+		}
+
+		private void AddTagOptions(string selector, ZonelessEventStore es, List<string> tags, Dictionary<string, int> counts, StringBuilder sb, bool squigglies)
+		{
+			var _tags = tags.CloneObject();
+			_tags.Insert(0, "all");
+			foreach (var tag in _tags)
 			{
 				if (tag.Contains("{") && squigglies == false)
 					continue;
-				var option = MakeTagOption(view, counts, tag);
+				var option = MakeTagOption(selector, es, counts, tag);
 				sb.Append(option);
 			}
 		}
 
-		private void MakeTagsAndCounts(List<Dictionary<string, string>> list_of_dict, List<string> tags, Dictionary<string, string> counts, bool is_region)
+		private string MakeTagOption(string selector, ZonelessEventStore es, Dictionary<string, int> counts, string tag)
 		{
-			List<string> town_tags = new List<string>();
-			if (is_region)
-			{
-				town_tags = Utils.GetIdsForRegion(this.id);
-				town_tags = town_tags.Select(x => x.ToLower()).ToList();
-			}
+			string maybe_replaced_tag_label = tag;              // newkentva -> New Kent
+			if (es.hub_name_map.ContainsKey(tag))
+				maybe_replaced_tag_label = es.hub_name_map[tag][1];  // "norfolkva"		: [ "NorfolkVa" , "Norfolk"], -> Norfolk is the readable name
 
-			foreach (var dict in list_of_dict)
-			{
-				var tag = dict.Keys.First();
-				if (is_region && town_tags.Contains(tag))
-					continue;
-				tags.Add(tag);
-				counts[tag] = dict[tag];
-			}
-			var cmp = StringComparer.OrdinalIgnoreCase;
-			tags.Sort(cmp);
-		}
+			string maybe_truncated_tag_label = maybe_replaced_tag_label;
+			if (maybe_truncated_tag_label.Length > Configurator.max_tag_chars)
+				maybe_truncated_tag_label = maybe_truncated_tag_label.Substring(0, Configurator.max_tag_chars) + "&#8230;";
 
-		private string MakeTagOption(string view, Dictionary<string, string> counts, string tag)
-		{
-			string maybe_truncated_tag = tag;
-			if (tag.Length > Configurator.max_tag_chars)
-				maybe_truncated_tag = tag.Substring(0, Configurator.max_tag_chars) + "&#8230;";
-			var option = "<option value=\"" + tag + "\">" + maybe_truncated_tag + " (" + counts[tag] + ")" + "</option>\n";
-			if (tag == view)
+			string option_value;
+			
+			if ( tag == "all") 
+				option_value = "all";
+			else if ( es.hub_name_map.ContainsKey(tag) )
+				option_value = es.hub_name_map[tag][0];                // -> NorfolkVA is the effective hub name
+			else
+				option_value = tag;
+
+			var option = "<option value=\"" + option_value + "\">" + maybe_truncated_tag_label;     
+
+			/* idle the count for now
+			 * 
+			if (tag != "all" && counts.ContainsKey(tag) )
+				option += " (" + counts[tag] + ")";
+			 */
+
+			option += "</option>\n";
+			if (tag == selector)
 				option = option.Replace("<option ", "<option selected ");
 			return option;
 		}
@@ -1341,14 +1396,14 @@ namespace CalendarAggregator
 			// which gets from cache if it can, else fetches uri and loads cache
 			if (args.ContainsKey("AdvanceToAnHourAgo") && (bool)args["AdvanceToAnHourAgo"] == true)
 				AdvanceToAnHourAgo(es);
-			if (args.ContainsKey("town") && String.IsNullOrEmpty((string)args["town"]) == false)
+			if (args.ContainsKey("hub") && String.IsNullOrEmpty((string)args["hub"]) == false)
 			{
-				var town = (string)args["town"];
-				town = town.ToLower();
-				if ( String.IsNullOrEmpty(view) && ! String.IsNullOrEmpty(town) && town != "all" )         // town, no view
-					view = town;
-				else if ( ! String.IsNullOrEmpty(view) && ! String.IsNullOrEmpty(town) && town != "all" )  // town plus view
-					view = view + "," + town.ToLower();
+				var hub = (string)args["hub"];
+				hub = hub.ToLower();
+				if ( String.IsNullOrEmpty(view) && ! String.IsNullOrEmpty(hub) && hub != "all" )         // hub, no view
+					view = hub;
+				else if ( ! String.IsNullOrEmpty(view) && ! String.IsNullOrEmpty(hub) && hub != "all" )  // hub plus view
+					view = view + "," + hub.ToLower();
 			}
 
 			es.events = Filter(view, count, from, to, es); // apply all filters
