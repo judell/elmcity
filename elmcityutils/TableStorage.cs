@@ -540,18 +540,35 @@ namespace ElmcityUtils
 			return new TableStorageListDictResponse(last_http_response, list_dict_obj);
 		}
 
-		public TableStorageStringResponse QueryAllEntitiesAsODataFeed(string table, string query)
+		public string QueryAllEntitiesAsODataFeed(string table, string query)
 		{
+			var preamble = string.Format(@"<?xml version=""1.0"" encoding=""utf-8"" standalone=""yes""?>
+<feed xml:base=""http://elmcity.table.core.windows.net/"" xmlns:d=""http://schemas.microsoft.com/ado/2007/08/dataservices"" xmlns:m=""http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"" xmlns=""http://www.w3.org/2005/Atom"">
+  <title type=""text"">{0}</title>
+  <id>http://elmcity.table.core.windows.net/monitor</id>
+  <updated>2013-10-15T22:09:53Z</updated>
+  <link rel=""self"" title=""{0}"" href=""{0}"" />",
+            String.Format("{0}/{1}", Configurator.azure_tablehost, table),
+			table);
 			var sb = new StringBuilder();
+			sb.Append(preamble);
 			HttpResponse last_http_response = default(HttpResponse);
 
 			foreach (HttpResponse http_response in QueryAll(table, query))
 			{
 				last_http_response = http_response;
-				sb.Append(http_response.DataAsString());
+				var xml = new XmlDocument();
+				xml.LoadXml(http_response.DataAsString());
+				var nsmgr = new XmlNamespaceManager(xml.NameTable);
+				nsmgr.AddNamespace("atom", StorageUtils.atom_namespace.ToString());
+				XmlNodeList entries = xml.SelectNodes("//atom:entry", nsmgr);
+				foreach (XmlNode entry in entries)
+					sb.Append(entry.OuterXml);
 			}
 
-			return new TableStorageStringResponse(last_http_response, sb.ToString());
+			sb.Append("</feed>");
+
+			return sb.ToString();
 		}
 
 		private IEnumerable<HttpResponse> QueryAll(string table, string query)

@@ -192,8 +192,7 @@ namespace ElmcityUtils
 		{
 			if (ts.ExistsEntity(test_table, test_query) == false)
 				CreateEntityIsSuccessful();
-			var ts_response = ts.QueryAllEntitiesAsODataFeed(test_table, test_query);
-			var feed_xml = ts_response.http_response.DataAsString();
+			var feed_xml = ts.QueryAllEntitiesAsODataFeed(test_table, test_query);
 			var xdoc = XmlUtils.XdocFromXmlBytes(System.Text.Encoding.UTF8.GetBytes(feed_xml));
 			var entries = from entry in xdoc.Descendants(StorageUtils.atom_namespace + "entry") select entry;
 			Assert.AreEqual(1, entries.Count());
