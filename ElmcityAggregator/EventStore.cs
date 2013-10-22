@@ -244,6 +244,19 @@ namespace CalendarAggregator
 			}
 		}
 
+		public static void Finalize(Calinfo calinfo, ZonelessEventStore es_zoneless)
+		{
+			es_zoneless.events = EventStore.UniqueByTitleAndStart(calinfo.id, es_zoneless.events, save_tag_sources: true); // deduplicate
+
+			es_zoneless.ExcludePastEvents(); // the EventCollector should already have done this, but in case not...
+
+			es_zoneless.SortEventList();     // order by dtstart
+
+			Utils.BuildTagStructures(es_zoneless, calinfo);  // build structures used to generate tag picklists
+
+			es_zoneless.Serialize();
+		}
+
 		public static void CombineZonedEventStoresToZonelessEventStore(string id, Dictionary<string, string> settings)
 		{
 			var bs = BlobStorage.MakeDefaultBlobStorage();
@@ -280,18 +293,7 @@ namespace CalendarAggregator
 					es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.lat, evt.lon, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories, evt.description, evt.location);
 				}
 
-			UniqueFilterSortSerialize(id, es_zoneless);
-		}
-
-		public static void UniqueFilterSortSerialize(string id, ZonelessEventStore es_zoneless)
-		{
-			es_zoneless.events = EventStore.UniqueByTitleAndStart(id, es_zoneless.events, save_tag_sources:true); // deduplicate
-
-			es_zoneless.ExcludePastEvents(); // the EventCollector should already have done this, but in case not...
-
-			es_zoneless.SortEventList();     // order by dtstart
-
-			es_zoneless.Serialize();
+			Finalize(calinfo, es_zoneless);
 		}
 
 		public static bool SimilarButNonIdenticalUrls(ZonelessEvent evt1, ZonelessEvent evt2, int min_length)
@@ -432,7 +434,7 @@ namespace CalendarAggregator
 			var es_zoneless = new ZonelessEventStore(calinfo);
 			foreach (var evt in es_zoned.events)
 				es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.lat, evt.lon, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories, evt.description, evt.location);
-			EventStore.UniqueFilterSortSerialize(id, es_zoneless);
+			EventStore.Finalize(calinfo, es_zoneless);
 			return es_zoneless;
 		}
 	}
@@ -479,6 +481,16 @@ namespace CalendarAggregator
 		public Dictionary<string, List<ZonelessEvent>> event_dict = new Dictionary<string, List<ZonelessEvent>>();
 
 		public List<string> datekeys = new List<string>();
+
+		public Dictionary<string, Dictionary<string, int>> category_hubs = new Dictionary<string, Dictionary<string, int>>(); // map categories to regional hubs offering them
+
+		public Dictionary<string, int> hubs_and_counts = new Dictionary<string, int>();   // tags denoting hubs belonging to a region, plus associated event counts
+		public List<string> hub_tags = new List<string>();                                // just those tags
+
+		public Dictionary<string, int> non_hubs_and_counts = new Dictionary<string, int>(); // tags denoting categories, plus associated counts
+		public List<string> non_hub_tags = new List<string>();								// just those tags
+
+		public Dictionary<string, List<string>> hub_name_map; // optional (but important) for regional hubs, ex: for HR { "norfolkva"		: [ "NorfolkVa" , "Norfolk"],
 
 		public ZonelessEventStore(Calinfo calinfo)
 			: base(calinfo)
