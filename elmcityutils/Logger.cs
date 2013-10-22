@@ -78,6 +78,10 @@ namespace ElmcityUtils
 					if (this.loglevel > this.level_info)
 						return;
 					break;
+				case "status":
+					if (this.loglevel > this.level_status)
+						return;
+					break;
 				case "warning":
 					if (this.loglevel > this.level_warning)
 						return;
