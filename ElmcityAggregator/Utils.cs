@@ -2212,6 +2212,7 @@ END:VCALENDAR",
 
 			Parallel.ForEach(source: ids, body: (id) =>
 			{
+				var es = ObjectUtils.GetTypedObj<ZonelessEventStore>(id, id + ".zoneless.obj");
 				var hubtags = Utils.GetTagsForHub(id);
 				foreach (var tag in hubtags)
 					tags_by_hub.AddOrAppendDictOfListT(tag, id);
@@ -2262,6 +2263,7 @@ END:VCALENDAR",
 			return html.ToString();
 		}
 
+		/*
 		public static List<Dictionary<string, string>> GetTagsAndCountsForHubAsListDict(string id)
 		{
 			try
@@ -2276,43 +2278,176 @@ END:VCALENDAR",
 				GenUtils.PriorityLogMsg("exception", "GetTagsForHubAsListDict: " + id, e.Message + e.StackTrace);
 				return new List<Dictionary<string, string>>();
 			}
+		}*/
+
+		public enum TagAndCountType { hub, nonhub }
+
+		public static Dictionary<string, int> MakeTagsAndCounts(string id, ZonelessEventStore es, TagAndCountType tag_and_count_type, List<string> hubs)
+		{
+			try
+			{
+				var is_region = Utils.IsRegion(id);
+				
+				Dictionary<string,int> all_tags_and_counts = GetTagsAndCountsForHub(es, id, tag_and_count_type, hubs);
+   
+				var tags_and_counts = new Dictionary<string, int>();
+
+				foreach (var tag_and_count in all_tags_and_counts)
+				{
+					var key = tag_and_count.Key;
+
+					if (string.IsNullOrEmpty(key))
+						continue;
+
+					switch (tag_and_count_type)
+					{
+						case TagAndCountType.hub:
+							if ( is_region && hubs.Contains(key) )
+								tags_and_counts[key] = tag_and_count.Value;
+							break;
+						case TagAndCountType.nonhub:
+							if ( is_region && ! hubs.Contains(key) || ! is_region )
+								tags_and_counts[key] = tag_and_count.Value;
+							break;
+						default:
+							GenUtils.PriorityLogMsg("warning", "MakeTagsAndCounts", "unexpected TagAndCountType");
+							break;
+					}
+				}
+				return tags_and_counts;
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "MakeTagsAndCounts: " + id + ", " + tag_and_count_type.ToString(), e.Message);
+				throw new Exception("MakeTagsAndCounts");
+			}
 		}
 
-		public enum TagAndCountType { town, nontown }
-
-		public static Dictionary<string, string> MakeTagsAndCounts(string id, TagAndCountType tag_and_count_type)
+		public static Dictionary<string,int> GetTagsAndCountsForHub(ZonelessEventStore es, string id, TagAndCountType tag_and_count_type, List<string> hubs)
 		{
-			var is_region = Utils.IsRegion(id);
-			var all_tags_and_counts = GetTagsAndCountsForHubAsListDict(id);
-			var tags_and_counts = new Dictionary<string, string>();
-			List<string> towns = new List<string>();
-			if (is_region)
+			try
 			{
-				towns = GetIdsForRegion(id);
-				towns = towns.Select(x => x.ToLower()).ToList();
+				var tag_counts = new Dictionary<string, int>();
+				foreach (var evt in es.events)
+				{
+					if (string.IsNullOrEmpty(evt.categories))
+						continue;
+					var tagstring = evt.categories;
+					var list = Utils.GetTagListFromTagString(tagstring);
+					foreach (var tag in list)
+					{
+						if (tag_and_count_type == TagAndCountType.hub) // looking for hub names
+						{
+							if (hubs.Contains(tag))
+								tag_counts.IncrementOrAdd(tag);
+						}
+						else                                           // looking for non-hub names
+							if (!hubs.Contains(tag))
+								tag_counts.IncrementOrAdd(tag);
+					}
+						
+				}
+				return tag_counts;
 			}
-			foreach (var tag_and_count in all_tags_and_counts)
+			catch (Exception e)
 			{
-				var key = tag_and_count.Keys.First();
-				if (tag_and_count_type == TagAndCountType.town)
-				{
-					if (towns.Contains(key))
-						tags_and_counts[key] = tag_and_count[key];
-				}
-				else
-				{
-					if (!towns.Contains(key))
-						tags_and_counts[key] = tag_and_count[key];
-				}
+				GenUtils.PriorityLogMsg("exception", "GetTagsAndCountsForHub: " + id, e.Message + e.StackTrace);
+				throw new Exception("GetTagsAndCountsForHub");
 			}
-			return tags_and_counts;
+		}
+
+		public static List<string> GetTagsForHub(ZonelessEventStore es, string id, TagAndCountType tag_and_count_type, List<string> hubs)
+		{
+			if (es == null)
+				es = ObjectUtils.GetTypedObj<ZonelessEventStore>(id, id + ".zoneless.obj");
+			var tag_counts = GetTagsAndCountsForHub(es, id, tag_and_count_type, hubs);
+			var tags = tag_counts.Keys.ToList();
+			tags.Sort();
+			return tags;
 		}
 
 		public static List<string> GetTagsForHub(string id)
 		{
-			var list_of_dict = GetTagsAndCountsForHubAsListDict(id);
+			var list_of_dict = GetTagsAndCountsForHubFromJson(id);
 			var list = list_of_dict.Select(x => x.Keys.First()).ToList();
 			return list;
+		}
+
+		public static List<Dictionary<string, string>> GetTagsAndCountsForHubFromJson(string id)
+		{			try
+			{
+				var uri = BlobStorage.MakeAzureBlobUri(id, Configurator.tags_json, false);
+				var json = HttpUtils.FetchUrl(uri).DataAsString();
+				var list_of_dict = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(json);
+				return list_of_dict;
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "GetTagsForHubFromJson: " + id, e.Message + e.StackTrace);
+				return new List<Dictionary<string, string>>();
+			}
+		}
+
+		public static void BuildTagStructures(ZonelessEventStore es, Calinfo calinfo)
+		{
+			try // category_hubs maps categories to the set of regional hubs offering those categories
+			{
+				if (calinfo.hub_enum == HubType.region)
+					es.category_hubs = Utils.MakeCategoryHubs(es, calinfo.id);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "BuildTagStructures: cannot make category_hubs for " + calinfo.id, e.Message);
+				throw (e);
+			}
+
+			try // non_hubs_and_counts has category names and counts, hub_tags has just those categories
+			{
+				if (calinfo.hub_enum == HubType.region)
+					es.hub_tags = Utils.GetIdsForRegion(es.id).Select(x => x.ToLower()).ToList();
+				else
+					es.hub_tags = new List<string>();
+				es.non_hubs_and_counts = Utils.MakeTagsAndCounts(es.id, es, Utils.TagAndCountType.nonhub, es.hub_tags);
+				es.non_hub_tags = es.non_hubs_and_counts.Keys.ToList();
+				es.non_hub_tags.Sort(String.CompareOrdinal);
+
+				if (calinfo.hub_enum == HubType.region) // hubs_and_counts has child hub names and counts, non_hub_tags has just those hub names
+				{
+					es.hubs_and_counts = Utils.MakeTagsAndCounts(es.id, es, Utils.TagAndCountType.hub, es.hub_tags);
+					es.hub_tags = es.hubs_and_counts.Keys.ToList();
+					es.hub_tags.Sort(String.CompareOrdinal);
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "BuildTagStructures: cannot make tags and counts for region", e.Message);
+				throw (e);
+			}
+
+			try
+			{
+				if (calinfo.hub_enum == HubType.region)
+				{
+					var uri = BlobStorage.MakeAzureBlobUri(calinfo.id, calinfo.id + ".namemap.json");   // used to rewrite hub names in the picklist
+					var r = HttpUtils.FetchUrl(uri);
+					if (r.status == System.Net.HttpStatusCode.OK)
+					{
+						var json = r.DataAsString();
+						es.hub_name_map = JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(json);
+					}
+				}
+				else
+				{
+					es.hub_name_map = new Dictionary<string, List<string>>();
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "BuildTagStructures: cannot acquire hub name map for region", e.Message);
+				throw (e);
+			}
+
+
 		}
 
 		#endregion
@@ -2716,11 +2851,11 @@ END:VCALENDAR",
 				id);
 		}
 
-		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl, int days, bool bare_events, string town)
+		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl, int days, bool bare_events, string hub)
 		{
 			var viewkey = string.Format("/services/{0}/{1}?view={2}&count={3}&from={4}&to={5}&days={6}", id, type, view, count, from, to, days);
 			if (type == "html")
-				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template + "&jsurl=" + jsurl + "&bare_events=" + bare_events + "&town=" + town;
+				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template + "&jsurl=" + jsurl + "&bare_events=" + bare_events + "&hub=" + hub;
 			return viewkey;
 		}
 
@@ -3945,34 +4080,46 @@ END:VTIMEZONE");
 			return String.Join(",", list);
 		}
 
-		public static Dictionary<string, List<string>> MakeCategoryTowns(string id)
+		public static Dictionary<string, Dictionary<string,int>> MakeCategoryHubs(string id)
 		{
 			var es = ObjectUtils.GetTypedObj<ZonelessEventStore>(id, id + ".zoneless.obj");
-			return MakeCategoryTowns(es, id);
+			return MakeCategoryHubs(es, id);
 		}
 
-		public static Dictionary<string, List<string>> MakeCategoryTowns(ZonelessEventStore es, string id)
+		public static Dictionary<string, Dictionary<string,int>> MakeCategoryHubs(ZonelessEventStore es, string id)
 		{
 
 			var events = es.events;
-			var towns = Utils.GetIdsForRegion(id);
-			towns = towns.Select(t => t.ToLower()).ToList();
-			var categories = Utils.GetTagsForHub(id);
-			categories = categories.FindAll(c => towns.Contains(c) == false); // exclude town names
+			var hubs = Utils.GetIdsForRegion(id);
+			hubs = hubs.Select(t => t.ToLower()).ToList();
+			var categories = Utils.GetTagsForHub(es, id, TagAndCountType.nonhub, hubs);
+			//categories = categories.FindAll(c => hubs.Contains(c) == false); // exclude hub names
 			categories = categories.FindAll(c => c.Contains("{") == false);   // exclude secondary categories
-			var category_towns = new Dictionary<string, List<string>>();
+			var category_hubs = new Dictionary<string, Dictionary<string, int>>();
 			foreach (var category in categories)
 			{
-				foreach (var town in towns)
+				if (String.IsNullOrEmpty(category))
+					continue;
+				foreach (var hub in hubs)
 				{
-					var has_town_category = events.FindAll(e => e.categories.Contains(town));
-					var has_town_and_category = has_town_category.FindAll(e => e.categories.Contains(category));
-					if (has_town_and_category.Count > 0)
-						category_towns.AddOrAppendDictOfListT(category, town);
+					var has_hub_category = events.FindAll(e => e.categories.Contains(hub));
+					var has_hub_and_category = has_hub_category.FindAll(e => e.categories.Split(',').Contains(category) == true );
+					if (has_hub_and_category.Count > 0)
+					{
+						if ( category_hubs.ContainsKey(category) )
+						{
+							category_hubs[category][hub] = has_hub_and_category.Count;
+						}
+						else
+						{
+							category_hubs[category] = new Dictionary<string, int>() { { hub, has_hub_and_category.Count } };
+						}
+
+					}
 				}
 			}
-			bs.SerializeObjectToAzureBlob(category_towns, id, "category_towns.obj");
-			return category_towns;
+			bs.SerializeObjectToAzureBlob(category_hubs, id, "category_hubs.obj");
+			return category_hubs;
 		}
 
 		#endregion
