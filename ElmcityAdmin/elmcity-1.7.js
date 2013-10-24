@@ -269,6 +269,9 @@ $j(document).ready(function(){
   var view = gup('view');
 
   is_view = view != '';
+
+  if ( gup('hubtitle').startsWith('n') )
+      $j('.hubtitle').remove();
     
   is_eventsonly = gup('eventsonly').startsWith('y');
 
