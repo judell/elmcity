@@ -572,8 +572,44 @@ namespace CalendarAggregator
 			this.event_dict = dict;
 		}
 
+		/*
+		public bool CompareTagStructures(ZonelessEventStore other)
+		{
+			if (other.category_hubs == null || other.non_hubs_and_counts == null || other.hubs_and_counts == null)
+				return false;
 
-	}
+			List<string> keys1;
+			List<string> keys2;
+
+			if (this.category_hubs.Count == other.category_hubs.Count)
+			{
+				keys1 = this.category_hubs.Keys.ToList();
+				keys1.Sort();
+				keys2 = other.category_hubs.Keys.ToList();
+				keys2.Sort();
+				if ( keys1.SequenceEqual(keys2) == false )
+					return false;
+			}
+
+			if (this.non_hubs_and_counts.Count == other.non_hubs_and_counts.Count)
+			{
+				keys1 = this.non_hub_tags;
+				keys2 = other.non_hub_tags;
+				if ( keys1.SequenceEqual(keys2) == false )
+					return false;
+			}
+
+			if (this.hubs_and_counts.Count == other.hubs_and_counts.Count)
+			{
+				keys1 = this.hub_tags;
+				keys2 = other.hub_tags;
+				if (keys1.SequenceEqual(keys2) == false)
+					return false;
+			}
+
+			return true;
+		}*/
+	} 
 
 	[Serializable]
 	public class DateTimeWithZone
