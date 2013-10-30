@@ -326,7 +326,8 @@ namespace CalendarAggregator
 							var setting = "use_ics_cached_objects";
 							if (changed == false && Utils.CachedFeedObjExists(id, feedurl) && settings[setting].StartsWith("y") )
 							{
-								//GenUtils.LogMsg("info", "CollectIcal: using cached obj for " + feedurl,  null); // the test UnchangedFeedUsesCachedObj checks for this entry
+								if ( feedurl.Contains("hillside.ics" ) )
+									GenUtils.LogMsg("status", "CollectIcal: using cached obj for " + feedurl,  null); // the test UnchangedFeedUsesCachedObj checks for this entry
 								AddEventsFromCachedIcalFeedObj(es, feedurl);  // get events for the feedurl from the cached obj
 								TransferCachedResults(this.id, results_dict, feedurl); // and result for this feedurl from the cached results
 								TransferCachedStats(this.id, fr, feedurl); // and stats for this feedurl from cached stats
