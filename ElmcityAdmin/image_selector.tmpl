@@ -1,0 +1,221 @@
+<html>
+<head>
+<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
+<style>
+body { font-family: verdana }
+</style>
+</head>
+<body>
+
+<h1>Image search for __ID__ (type: __TYPE__)</h1>
+
+<form id="ImageSelector">
+
+__BODY__
+
+</form>
+
+<input style="font-size:xx-large" type="button" value="show selections" onclick="show_selections()">
+
+<div id="selections"></div>
+
+<div id="json"></div>
+
+<input style="font-size:xx-large" type="button" value="post selections" onclick="post_selections()">
+
+
+
+<script>
+
+$('.override').keypress(function(event) {
+    if (event.keyCode == 13) {
+        url_specified(event.currentTarget.name);
+        event.preventDefault();
+        alert('You specified ' + event.currentTarget.value + '. When you have made all your choices please use the POST SELECTIONS button below to submit them.');
+    }
+});
+
+
+var host = gup('host') != '' ? gup('host') : 'elmcity.cloudapp.net';
+
+function update_selections() {
+  var url = 'http://' + host + '/get_blob?id=' + '__ID__' + '&path=' + '__TYPE__' + '_images.json';
+
+  var completion_result = $.ajax({
+  url: url,
+  type: 'GET',
+  async: false,
+  complete: function(xhr, status) {
+     var json = xhr.responseText;
+     var current_selections = JSON.parse(json);
+     for ( key in current_selections) {
+            var img_url = current_selections[key];
+            $($('.current_selection[name="' + key + '"]')[0].parentNode).find('img').attr('src',img_url);
+            $($('.current_selection[name="' + key + '"]')[0]).attr('value', img_url);
+     }
+   }
+  });
+
+}
+
+
+function show_selections() {
+
+$('#selections').empty();
+
+var dict = get_radio_selections();
+
+dict = get_input_box_selections(dict);
+
+var list = new Array();
+for ( key in dict )
+  list.push(key);
+
+list.sort();
+
+for ( i = 0; i < list.length; i++ ) {
+  var key = list[i];
+  $('#selections').append('<p><img style="width:100px;margin-top:50px;margin-right:30px" src="' + dict[key] + '">' + key + ', ' + dict[key] + '</p>');
+  }
+}
+
+function get_radio_selections() {
+var radio_selections = $('input:checked', '#ImageSelector');
+
+var o = new Object()
+
+for ( var i = 0; i < radio_selections.length; i++ ) {
+  var selection = radio_selections[i];
+  o[selection.name] = selection.value;
+  }
+
+return o;
+}
+
+function get_input_box_selections(o) {
+var overrides = $('.override');
+for ( var i = 0; i < overrides.length; i++ ) {
+  var override = overrides[i];
+  if ( override.value != "" )
+    o[override.name] = override.value;
+  }
+
+return o;
+}
+
+
+function highlight_selection(id,name) {
+$('img').css('border-style','none');
+$('#' + id + ' img').css('border-style','solid');
+var override = $('.override[name="' + name + '"]');
+override[0].value = '';
+var override_image = $('.override_image[name="' + name + '"]');
+override_image.attr('src','');
+override_image.css('display','none');
+$('#selections').empty();
+}
+
+function url_specified(name) {
+//$('input:checked[name="{bldg. event}"').attr('checked',false)
+//var selected_radio = $('.current_selection[name="' + name + '"]');
+var selected_radio = $('input:checked[name="' + name + '"');
+selected_radio.prop('checked', false);
+var override = $('.override[name="' + name + '"]');
+var img_url = override[0].value;
+var override_image = $('.override_image[name="' + name + '"]');
+override_image.attr('src', img_url);
+override_image.css('display','inline');
+$('#selections').empty();
+}
+
+function post_selections() {
+
+  try 
+  {
+
+  var dict = get_radio_selections();
+
+  dict = get_input_box_selections(dict);
+
+  var json = JSON.stringify(dict);
+
+  var url = 'http://' + host + '/put_image_selections?id=__ID__&type=__TYPE__';
+
+  var completion_result = $.ajax({
+  url: url,
+  data: 'json=' + encodeURIComponent(json),
+  type: 'POST',
+  async: false,
+  complete: function(xhr, status) {
+     var reply = xhr.responseText;
+     if ( status != 'success' || reply != 'OK' )
+        {
+        alert('update failed, status ' + status + ' ' + reply);
+        }
+     else
+        {
+        alert ('Update successful. Changes will be reflected here soon.');
+        }
+     }
+   });
+
+  }
+
+  catch (error)  { alert (error); }
+
+  location.href = location.href;
+}
+
+function gup( name )
+  {  
+  name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");  
+  var regexS = "[\\?&]"+name+"=([^&#]*)";  
+  var regex = new RegExp( regexS );  
+  var results = regex.exec( window.location.href );   
+  if( results == null )    
+    return "";  
+  else    
+    return results[1].replace(/%20/,' ');
+  }
+
+$( document ).ready(function() {
+try {
+  update_selections();
+  }
+catch (e) {
+  console.log(e.message);
+  }
+});
+
+</script>
+
+
+
+
+
+<pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre>
+
+
+</body>
+</html>

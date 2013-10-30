@@ -30,6 +30,30 @@ using DDay.iCal;
 
 namespace WebRole
 {
+	public class BinaryResult : ActionResult
+	{
+		private byte[] _bytes;
+		private string _contentType;
+
+		public BinaryResult(byte[] bytes, string contentType)
+		{
+			_bytes = bytes;
+			_contentType = contentType;
+		}
+
+		public override void ExecuteResult(ControllerContext context)
+		{
+			context.HttpContext.Response.Clear();
+			context.HttpContext.Response.ContentType = _contentType;
+
+			if (_bytes != null)
+			{
+				context.HttpContext.Response.BinaryWrite(_bytes);
+			}
+		}
+	}
+
+
     public class HomeController : ElmcityController
     {
         BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
@@ -211,18 +235,21 @@ if unsure please check http://{1}/{2}/stats",
             }
         }
 
-		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
-		public ActionResult get_blob(string id, string path)
+		//[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult get_blob(string id, string path, string mode)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
 			var uri = BlobStorage.MakeAzureBlobUri(id, path);
 			var r = HttpUtils.FetchUrl(uri);
-			var content = r.DataAsString();
 			var content_type = r.headers["Content-Type"];
 			this.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
-			return Content(content, content_type);
+			if ( mode != null && mode.StartsWith("b") )
+				return new BinaryResult(r.bytes, content_type);
+			else
+				return Content(r.DataAsString(), content_type);
 		}
+
 
         [OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
         public ActionResult get_css_theme(string theme_name, string mobile, string mobile_long, string ua)
@@ -857,6 +884,36 @@ if unsure please check http://{1}/{2}/stats",
             var page = CalendarAggregator.Utils.GetMetaHistory(a_name, b_name, id, flavor);
             return Content(page, "text/html");
         }
+
+		public ActionResult put_image_selections(string id, string type, string json)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			GenUtils.LogMsg("status", String.Format("put_blob {0}, {1}", id, type), null);
+
+			var auth_mode = this.Authenticated(id);
+			string result = "";
+
+			auth_mode = "not null"; // remove this later!
+
+			if (auth_mode != null)
+			{
+				try
+				{
+					Utils.UpdateSourceOrCategoryImagesForId(id, type, json);
+					result = "OK";
+				}
+				catch (Exception e)
+				{
+					result = "Error: " + e.Message;
+				}
+			}
+			else
+			{
+				result = AuthFailMessage(id);
+			}
+
+			return Content(result, "text/plain");
+		}
 
         public ActionResult put_json_metadata(string id, string json)
         {
