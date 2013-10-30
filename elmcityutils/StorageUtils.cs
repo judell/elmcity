@@ -84,7 +84,9 @@ namespace ElmcityUtils
 					break;
 			}
 
-			string_to_sign += "/" + azure_storage_account + path;
+			//string_to_sign += "/" + azure_storage_account + path;
+
+			string_to_sign += "/" + azure_storage_account + Uri.EscapeUriString(path);
 
 			//if (query_string != null && query_string.StartsWith("?comp"))
 			//	string_to_sign += query_string;
