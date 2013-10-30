@@ -574,7 +574,7 @@ namespace CalendarAggregator
 			var include_text = feedurl + "," + "using cached obj";
 			var log_text = Utils.GetRecentLogEntries("log", null, 5, include_text, null);
 			Assert.That(log_text.Contains("using cached obj for " + feedurl));
-		}
+		} 
 
 		[Test]
 		public void ChangedFeedUpdatesCachedObj()
