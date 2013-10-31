@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2536";
+        public static string version = "2539";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -145,7 +145,7 @@ namespace WebRole
 
         private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
 
-        public static Logger logger = new Logger();
+		public static Logger logger = new Logger();
 
         public static string pagetitle = "the Elm City project";
 
@@ -164,12 +164,17 @@ namespace WebRole
 
         public ElmcityApp()
         {
-            GenUtils.LogMsg("info", String.Format("ElmcityApp {0} {1} {2} {3}", procname, procid, domain_name, thread_id), null);
+            GenUtils.LogMsg("status", String.Format("ElmcityApp constructor {0} {1} {2} {3}", procname, procid, domain_name, thread_id), null);
         }
+
+		~ElmcityApp()
+		{
+			GenUtils.LogMsg("status", String.Format("ElmcityApp destructor {0} {1} {2} {3}", procname, procid, domain_name, thread_id), null);
+		}
 
         public static void RegisterRoutes(RouteCollection routes, WebRoleData wrd)
         {
-            GenUtils.LogMsg("info", "RegisterRoutes", "ready_ids: " + wrd.ready_ids.Count());
+            GenUtils.LogMsg("status", "RegisterRoutes", "ready_ids: " + wrd.ready_ids.Count());
 
             #region HomeController
 
@@ -258,7 +263,7 @@ namespace WebRole
 				"get_blob",
 				"get_blob",
 				new { controller = "Home", action = "get_blob" }
-			); 
+			);
 
 			routes.MapRoute(
 				"get_form_post_ical_url",
@@ -481,6 +486,12 @@ namespace WebRole
                 new { id = wrd.str_ready_ids, type = "html|rss|ics|xml|json" }
                 );
 
+			routes.MapRoute(
+				"put_image_selections",
+				"put_image_selections",
+				new { controller = "Home", action = "put_image_selections" }
+			);
+
             routes.MapRoute(
                 "put_json_metadata",
                 "services/{id}/put_json_metadata",
@@ -648,7 +659,7 @@ namespace WebRole
 
             #endregion
 
-            GenUtils.LogMsg("info", routes.Count() + " routes", null);
+            GenUtils.LogMsg("status", routes.Count() + " routes", null);
 
         }
 
@@ -667,8 +678,6 @@ namespace WebRole
 			Utils.ScheduleTimer(MakeTablesAndCharts, minutes: CalendarAggregator.Configurator.web_make_tables_and_charts_interval_minutes, name: "MakeTablesAndCharts", startnow: false);
             
 			ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
-
-
        }
 
         // encapsulate _reload with the signature needed by Utils.ScheduleTimer
@@ -679,7 +688,7 @@ namespace WebRole
 
         public static void _ReloadSettingsAndRoutes()
         {
-            GenUtils.LogMsg("info", "webrole _ReloadRoutes", null);
+            GenUtils.LogMsg("status", "webrole _ReloadRoutes", null);
 
             bool new_routes = false;
 
@@ -699,7 +708,7 @@ namespace WebRole
 				var themes = Utils.GetThemesDict();
 				if (ObjectUtils.DictOfDictStrEqualsDictOfDictStr(themes, ElmcityController.themes) == false)
 				{
-					GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes", "reloading themes");
+					GenUtils.LogMsg("status", "_ReloadSettingsAndRoutes", "reloading themes");
 					lock (ElmcityController.themes)
 					{
 						ElmcityController.themes = themes;
@@ -712,6 +721,11 @@ namespace WebRole
 				GenUtils.PriorityLogMsg("exception", msg, e2.Message);
 			}
 
+			//debugging = true;
+
+			//if ( debugging ) // stop here
+				//return;
+		
             try
             {
                 var new_wrd = WebRoleData.GetWrd();
@@ -724,7 +738,7 @@ namespace WebRole
                 if (new_wrd.ready_ids.Count != ElmcityApp.wrd.ready_ids.Count)  // did # of hubs change? either on initial load or subsequently
                 {
                     new_routes = true;                                       // force rebuild of route map
-                    GenUtils.LogMsg("info", "Reload: found a new hub", null);
+                    GenUtils.LogMsg("status", "Reload: found a new hub", null);
 					WebRoleData.SaveTimestampedWrd(ElmcityApp.wrd);
                     lock (ElmcityApp.wrd)
                     {
@@ -740,7 +754,7 @@ namespace WebRole
 					{
 						if (! Utils.RenderersAreEqual(cached_renderer, current_renderer, except_keys: new List<string>() { "timestamp" }) )
 						{
-							GenUtils.LogMsg("info", "Reload: new renderer for " + id, null);
+							GenUtils.LogMsg("status", "Reload: new renderer for " + id, null);
 							lock (ElmcityApp.wrd)
 							{
 								ElmcityApp.wrd.renderers[id] = current_renderer;                  // update the renderer
@@ -771,7 +785,7 @@ namespace WebRole
 				var route_count = existing_routes.Count;
                 try
                 {
-					GenUtils.LogMsg("info", "_ReloadSettingsAndRoutes: registering " + route_count + " routes", null);
+					GenUtils.LogMsg("status", "_ReloadSettingsAndRoutes: registering " + route_count + " routes", null);
 
                     lock (RouteTable.Routes)
                     {
@@ -829,7 +843,7 @@ namespace WebRole
 
         public static void MakeTablesAndCharts(Object o, ElapsedEventArgs e)
         {
-            GenUtils.LogMsg("info", "MakeTablesAndCharts", null);
+            GenUtils.LogMsg("status", "MakeTablesAndCharts", null);
             try
             {
                 PythonUtils.RunIronPython(WebRole.local_storage_path, CalendarAggregator.Configurator.charts_and_tables_script_url, new List<string>() { "", "", "" });
