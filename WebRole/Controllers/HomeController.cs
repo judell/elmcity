@@ -893,8 +893,6 @@ if unsure please check http://{1}/{2}/stats",
 			var auth_mode = this.Authenticated(id);
 			string result = "";
 
-			auth_mode = "not null"; // remove this later!
-
 			if (auth_mode != null)
 			{
 				try
