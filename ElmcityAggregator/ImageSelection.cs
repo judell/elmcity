@@ -54,6 +54,7 @@ public class ImageSelection
 		feeds = feeds.FindAll(x => x["feedurl"].ToString().Contains("eventful.com") == false);
 		feeds = feeds.OrderBy(x => x["source"].ToString()).ToList();
 		sources = feeds.Select(x => x["source"].ToString()).ToList();
+		sources = sources.Select(x => x.Replace("\n", "")).ToList();
 		sources.Sort();
 		var current_selections = GetCurrentImageSelections(id, sources, "source");
 		GetSearchImages(source_image_results, sources, location, 30);
