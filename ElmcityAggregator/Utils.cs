@@ -4358,7 +4358,16 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 				{
 					try
 					{
-						var image_data = HttpUtils.FetchUrl(found_url).bytes;
+						byte[] image_data;
+						if (found_url.StartsWith("data:"))
+						{
+							var s = Regex.Replace(found_url, "data:[^,]+,", "");
+							image_data = System.Convert.FromBase64String(s);
+						}
+						else
+						{
+							image_data = HttpUtils.FetchUrl(found_url).bytes;
+						}
 						var thumbnail_data = ImageSelection.ResizeImageFromByteArray(140, image_data);
 						bs.PutBlob(id, blob_name, thumbnail_data, "image/jpeg");
 						translated_image_dict[key] = persistent_url;
