@@ -149,11 +149,16 @@ function post_selections() {
   complete: function(xhr, status) {
      if ( status != 'success' || xhr.responseText != 'OK' )
         {
-        alert('Update failed: ' + reply);
+        alert('Update failed: ' + xhr.responseText);
         }
      else
         {
-        alert ('Update transmitted. Please wait for notification that it was processed successfully.');
+        if ( xhr.responseText.contains('Not authenticated') == false )
+          {
+          alert ('Update transmitted. Please wait for notification that it was processed successfully.');
+          window.setInterval(function(){check_result()},3000);
+
+          }
         }
      }
    });
@@ -162,7 +167,6 @@ function post_selections() {
 
   catch (error)  { alert (error); }
 
-  window.setInterval(function(){check_result()},3000);
 
 }
 
@@ -211,34 +215,16 @@ catch (e) {
   }
 });
 
+String.prototype.contains = function (str){
+    return this.indexOf(str) != -1;
+};
+
+
 </script>
 
 
 
-
-
-<pre>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</pre>
+<div style="margin-top:300px"></div>
 
 
 </body>
