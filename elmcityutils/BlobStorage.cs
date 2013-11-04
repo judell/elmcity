@@ -233,6 +233,34 @@ namespace ElmcityUtils
 			return (response.status == HttpStatusCode.OK);
 		}
 
+		public BlobStorageResponse PutBlobWithLease(string container, string blobname, Hashtable headers, byte[] data, string content_type)
+		{
+			try
+			{
+				if (BlobStorage.ExistsBlob(container, blobname))
+				{
+					var r = this.RetryAcquireLease(container, blobname);
+					if (r.status == HttpStatusCode.Created)
+						headers.Add("x-ms-lease-id", r.headers["x-ms-lease-id"]);
+					else
+						GenUtils.PriorityLogMsg("warning", "PutBlobWithLease: Did not acquire lease for: ", container + ", " + blobname);
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "PutBlobWithLease", e.Message + e.StackTrace);
+			}
+
+			return this.PutBlob(container, blobname, headers, data, content_type);
+		}
+
+		public BlobStorageResponse PutBlobWithLease(string container, string blobname, Hashtable headers, string utf_string, string content_type)
+		{
+			var data = Encoding.UTF8.GetBytes(utf_string);
+			return this.PutBlobWithLease(container, blobname, headers, data, content_type);
+		}
+
+
 		public BlobStorageResponse PutBlob(string containername, string blobname, Hashtable headers, byte[] data, string content_type)
 		{
 			headers.Add("x-ms-blob-type", "BlockBlob");
@@ -346,26 +374,8 @@ namespace ElmcityUtils
 		public BlobStorageResponse SerializeObjectToAzureBlob(object o, string container, string blobname)
 		{
 			var headers = new Hashtable();
-
-			try
-			{
-				if (BlobStorage.ExistsBlob(container, blobname))
-				{
-					var r = this.RetryAcquireLease(container, blobname);
-					if (r.status == HttpStatusCode.Created)
-						headers.Add("x-ms-lease-id", r.headers["x-ms-lease-id"]);
-					else
-						GenUtils.PriorityLogMsg("warning", "SerializeObjectToAzureBlob: Did not acquire lease for: ", container + ", " + blobname);
-				}
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "SerializeObjectToAzureBlob", e.Message + e.StackTrace);
-			}
-			
-			container = LegalizeContainerName(container);
 			var bytes = ObjectUtils.SerializeObject(o);
-			return this.PutBlob(container, blobname, headers, bytes, "");
+			return this.PutBlobWithLease(container, blobname, headers, bytes, "application/octet-stream");
 		}
 
 		public static object DeserializeObjectFromUri(Uri uri)
