@@ -69,6 +69,7 @@ public class ImageSelection
 		Random rnd = new Random();
 		sb.Append(RenderCategoryOrSourceImages(type, image_results, current_selections, rnd));
 		var html = template.Replace("__ID__", id);
+		html = html.Replace("__HOST__", ElmcityUtils.Configurator.appdomain);
 		html = html.Replace("__TYPE__", type);
 		html = html.Replace("__BODY__", sb.ToString());
 		//File.WriteAllText(@"c:\users\jon\dev\" + type + "_images_" + id + ".html", html);
@@ -152,14 +153,17 @@ public class ImageSelection
 		{
 			try
 			{
-				sb.AppendLine(string.Format("<p style=\"font-size:xx-large\">images for {0} {1}</p>", type, item));
+				var rand = rnd.Next(1000000).ToString();
 
-				RenderCurrentSourceOrCategoryImage(current_selections, sb, item, rnd);
+				sb.AppendLine(string.Format("<p class=\"{0}\" style=\"font-size:xx-large\">images for {1} {2}</p>", rand, type, item));
+
+				RenderCurrentSourceOrCategoryImage(current_selections, sb, item, rand);
 
 				var results = image_results[item];
+
 				foreach (var result in results)
 				{
-					sb.Append(RenderImageResult(item, rnd, result));
+					sb.Append(RenderImageResult(item, rand, result));
 				}
 			}
 			catch (Exception e)
@@ -181,9 +185,8 @@ then specify your own image URL: <input style=""width:50%"" class=""override"" n
 		return sb.ToString();
 	}
 
-	private static void RenderCurrentSourceOrCategoryImage(Dictionary<string, string> current_selections, StringBuilder sb, string selector, Random rnd)
+	private static void RenderCurrentSourceOrCategoryImage(Dictionary<string, string> current_selections, StringBuilder sb, string selector, String rand)
 	{
-		var rand = rnd.Next(1000000).ToString();
 		string img_url;
 
 		if (current_selections.ContainsKey(selector))
@@ -194,7 +197,7 @@ then specify your own image URL: <input style=""width:50%"" class=""override"" n
 		sb.AppendLine(string.Format(@"
 <p> current image 
 <div id=""{2}"">
-<input class=""current_selection"" onclick=""highlight_selection({2},'{1}')"" style=""white-space:nowrap"" checked type=""radio"" name=""{1}"" value=""{0}"">
+<input class=""current_selection {2}"" onclick=""highlight_selection({2},'{1}')"" style=""white-space:nowrap"" checked type=""radio"" name=""{1}"" value=""{0}"">
 <img style=""vertical-align:middle"" src=""{0}"">
 </div>
 </p>",
@@ -205,13 +208,12 @@ then specify your own image URL: <input style=""width:50%"" class=""override"" n
 			);
 	}
 
-	private static string RenderImageResult(string label, Random rnd, Dictionary<string, string> result)
+	private static string RenderImageResult(string label, String rand, Dictionary<string, string> result)
 	{
 		try
 		{
-			var rand = rnd.Next(1000000).ToString();
 			var rendering = string.Format(@"
-<span style=""white-space:nowrap"" class=""image_result"" id=""{0}"">
+<span style=""white-space:nowrap"" class=""image_result"" class=""{0}"">
 <input onclick=""highlight_selection({0},'{2}')"" type=""radio"" name=""{2}"" value=""{1}"">
 <img style=""width:140px;margin:20px;vertical-align:middle"" src=""{1}"">
 </span>
