@@ -36,7 +36,7 @@ $('.override').keypress(function(event) {
 });
 
 
-var host = gup('host') != '' ? gup('host') : 'elmcity.cloudapp.net';
+var host = gup('host') != '' ? gup('host') : '__HOST__';
 
 function update_selections() {
   var url = 'http://' + host + '/get_blob?id=' + '__ID__' + '&path=' + '__TYPE__' + '_images.json';
@@ -147,14 +147,13 @@ function post_selections() {
   type: 'POST',
   async: false,
   complete: function(xhr, status) {
-     var reply = xhr.responseText;
-     if ( status != 'success' || reply != 'OK' )
+     if ( status != 'success' || xhr.responseText != 'OK' )
         {
-        alert('update failed, status ' + status + ' ' + reply);
+        alert('Update failed: ' + reply);
         }
      else
         {
-        alert ('Update successful. Changes will be reflected here soon.');
+        alert ('Update transmitted. Please wait for notification that it was processed successfully.');
         }
      }
    });
@@ -163,7 +162,32 @@ function post_selections() {
 
   catch (error)  { alert (error); }
 
-  location.href = location.href;
+  window.setInterval(function(){check_result()},3000);
+
+}
+
+function check_result() {
+
+  var url = 'http://' + host + '/get_blob?id=' + '__ID__' + '&path=' + 'ImageUpdateInProgress';
+
+  var completion_result = $.ajax({
+  url: url,
+  type: 'GET',
+  async: false,
+  complete: function(xhr, status) {
+     var reply = xhr.responseText;
+     if ( reply != 'NotFound' )
+        {
+        console.log('still working on update');
+        }
+     else
+        {
+        alert('OK, your update was processed successfully, page will reload.');
+        location.href = location.href;
+        }
+     }
+   });
+
 }
 
 function gup( name )
