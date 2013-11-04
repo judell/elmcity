@@ -775,7 +775,7 @@ try {
          message = cat;
          href_html = ' ';
          }
-      cat_images += '<a title="' + message + '"' + href_html + '><img alt="' + cat + '" style="float:left;margin:8px;width:100px" src="' + img_url + '"></a>';
+      cat_images += '<a title="' + message + '"' + href_html + '><img alt="' + cat + '" style="float:left;margin:8px;width:100px;border-style:solid;border-width:thin;border-color:slategray" src="' + img_url + '"></a>';
       }
     if ( i > 2 ) 
        break;
