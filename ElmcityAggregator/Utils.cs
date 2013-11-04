@@ -4337,14 +4337,14 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 				throw (e);
 			}
 
-			System.Threading.Tasks.Task.Factory.StartNew(() =>
-			{
-				PersistImages(id, type, image_dict);
-			});
+			PersistImages(id, type, image_dict);
 		}
 
 		public static void PersistImages(string id, string type, Dictionary<string, string> image_dict)
 		{
+			var blobname = "ImageUpdateInProgress";
+			bs.PutBlobWithLease(id, blobname, new System.Collections.Hashtable(), "", "text/plain");
+
 			var translated_image_dict = new ConcurrentDictionary<string, string>();
 
 			Parallel.ForEach(source: image_dict.Keys, body: (key) =>
@@ -4381,6 +4381,7 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 				GenUtils.LogMsg("warning", "PersistImages: updating json for " + id + " type ", e.Message + e.StackTrace);
 			}
 
+			bs.DeleteBlob(id, blobname);
 		}
 
 		#endregion
