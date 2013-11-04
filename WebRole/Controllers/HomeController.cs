@@ -236,7 +236,7 @@ if unsure please check http://{1}/{2}/stats",
         }
 
 		//[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
-		public ActionResult get_blob(string id, string path, string mode)
+		public ActionResult get_blob(string id, string path)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
 
@@ -244,10 +244,17 @@ if unsure please check http://{1}/{2}/stats",
 			var r = HttpUtils.FetchUrl(uri);
 			var content_type = r.headers["Content-Type"];
 			this.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
-			if ( mode != null && mode.StartsWith("b") )
-				return new BinaryResult(r.bytes, content_type);
+
+			string content = "";
+
+			if (r.status != HttpStatusCode.OK)
+				content = r.status.ToString();
+			/* else if ( mode != null && mode.StartsWith("b") )
+				return new BinaryResult(r.bytes, content_type); */
 			else
-				return Content(r.DataAsString(), content_type);
+				content = r.DataAsString();
+
+			return Content(content, content_type);
 		}
 
 
@@ -897,7 +904,12 @@ if unsure please check http://{1}/{2}/stats",
 			{
 				try
 				{
-					Utils.UpdateSourceOrCategoryImagesForId(id, type, json);
+					System.Threading.Tasks.Task.Factory.StartNew(() =>
+					{
+						Utils.UpdateSourceOrCategoryImagesForId(id, type, json);
+
+					});
+		
 					result = "OK";
 				}
 				catch (Exception e)
