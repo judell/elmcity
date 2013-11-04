@@ -1144,6 +1144,7 @@ namespace CalendarAggregator
 			var list = evt.Categories.ToList(); // start with categories on the iCal event
 			char[] squigglies = { '{', '}' };
 			list = list.Select(x => x.Trim(squigglies)).ToList();  // remove their squigglies if present because if {{ this }} happens it's weird
+			list = list.Select(x => x.Replace("'","")).ToList();    // remove apostrophes which complicate image selection
 
 			try
 			{
