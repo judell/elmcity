@@ -686,6 +686,21 @@ namespace ElmcityUtils
 			return re.Replace(text, " ");
 		}
 
+		public static string EscapeValueForCsv(this string text)
+		{
+			try
+			{
+				text = text.Replace("\"", "\"\"");
+				text = text.Replace("\n", "\\n");
+				return text;
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("warning", "EscapeValueForCsv", e.Message);
+				return "";
+			}
+		}
+
 	}
 
     #endregion
