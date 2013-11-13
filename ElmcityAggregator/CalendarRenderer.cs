@@ -41,6 +41,9 @@ namespace CalendarAggregator
 		public string default_js_url;
 		public string test_js_url;
 
+		public Dictionary<string, string> category_images;
+		public Dictionary<string, string> source_images;
+
 		// data might be available in cache,
 		// this interface abstracts the cache so its logic can be tested
 		public ICache cache
@@ -51,7 +54,7 @@ namespace CalendarAggregator
 		private ICache _cache;
 
 		// points to a method for rendering individual events in various formats
-		private delegate string EventRenderer(ZonelessEvent evt, Calinfo calinfo, Dictionary<string,object> args);
+		public delegate string EventRenderer(ZonelessEvent evt, Calinfo calinfo, Dictionary<string,object> args);
 
 		// points to a method for rendering views of events in various formats
 		public delegate string ViewRenderer(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args);
@@ -79,6 +82,8 @@ namespace CalendarAggregator
 			this.cache = null;
 			this.ResetCounters();
 			this.es_getter = new EventStoreGetter(GetEventStoreWithCaching);
+			this.category_images = new Dictionary<string, string>();
+			this.source_images = new Dictionary<string, string>();
 
 			try
 			{
@@ -109,12 +114,53 @@ namespace CalendarAggregator
 					throw (e);
 				}
 
+				try
+				{
+					GetImages("category");
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "CalendarRenderer: loading category images", e.Message);
+					throw (e);
+				}
+
+				try
+				{
+					GetImages("source");
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "CalendarRenderer: loading source images", e.Message);
+					throw (e);
+				}
+
 			}
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "CalenderRenderer.CalendarRenderer: " + id, e.Message + e.StackTrace);
 			}
 
+		}
+
+		private void GetImages(string image_type)
+		{
+			var images_uri = BlobStorage.MakeAzureBlobUri(this.id, image_type + "_images.json");
+			var r = HttpUtils.FetchUrl(images_uri);
+			if (r.status == System.Net.HttpStatusCode.OK)
+			{
+				var json = r.DataAsString();
+				switch (image_type)
+				{
+					case "category":
+						this.category_images = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+						break;
+					case "source":
+						this.source_images = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+						break;
+					default:
+						break;
+				}
+			}
 		}
 
 		#region xml
@@ -186,26 +232,32 @@ namespace CalendarAggregator
 		#region text
 
 		// render an eventstore as xml, optionally limited by view and/or count
-		public string RenderText(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
+		public string RenderText(ZonelessEventStore eventstore, EventRenderer event_renderer, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
 		{
+			if (args == null)
+				args = new Dictionary<string, object>();
+
 			eventstore = GetEventStore(eventstore, view, count, from, to, args);
 
 			var text = new StringBuilder();
 
-			var event_renderer = new EventRenderer(RenderEvtAsText);
-
 			var eventstring = new StringBuilder();
 
 			foreach (var evt in eventstore.events)
-				AppendEvent(eventstring, event_renderer, evt, new Dictionary<string, object>());
+				AppendEvent(eventstring, event_renderer, evt, args);
 
 			text.Append(eventstring.ToString());
 
 			return text.ToString();
 		}
 
+		public string RenderText(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
+		{
+			return RenderText(eventstore, new EventRenderer(RenderEvtAsText), view, count, from, to, args);
+		}
+
 		// render a single event as text
-		private string RenderEvtAsText(ZonelessEvent evt, Calinfo calinfo, Dictionary<string, object> args)
+		public string RenderEvtAsText(ZonelessEvent evt, Calinfo calinfo, Dictionary<string, object> args)
 		{
 			var text = new StringBuilder();
 
@@ -221,6 +273,45 @@ namespace CalendarAggregator
 			text.AppendLine();
 
 			return text.ToString();
+		}
+
+		public string RenderEvtKeeneSentinel(ZonelessEvent evt, Calinfo calinfo, Dictionary<string, object> args)
+		{
+			// "uuid","title","start_day","stop_day","start_time","stop_time","timezone","description","sections","flags","author_name",
+			// "author_email","priority","cost","website","venue_uuid","venue_name","venue_address","venue_city","venue_state","venue_zip",
+			// "venue_country","contact_name","contact_phone","contact_email","published"
+
+			// 5853e0ae-8821-11e2-bb06-001a4bcf887a,"Club Night",2013-11-14,2013-11-14,22:00:00,,America/New_York,
+			// "with DJs Ajax, Genesis and Slark",calendar/musicanddance,,,,,,http://www.mccues.com,,McCueâ€™s,"12 Emerald St.",Keene,NH,03431,"United States of America",,352-2110,,yes
+
+			var template = (string) args["text_render_template"];
+			var empty_fields = (List<string>) args["text_render_empty_fields"];
+
+			var line = template;
+			foreach (var empty_field in empty_fields)
+				line = line.Replace(empty_field, String.Empty);
+
+			var date_fmt = "yyyy-MM-dd";
+			var time_fmt = "hh:mm:ss";
+			line = line.Replace("__title__", evt.title.EscapeValueForCsv());
+			line = line.Replace("__start_day__", evt.dtstart.ToString(date_fmt));
+			line = line.Replace("__start_time__", evt.dtstart.ToString(time_fmt));
+			if (evt.dtend != DateTime.MinValue)
+			{
+				line = line.Replace("__stop_day__", evt.dtstart.ToString(date_fmt));
+				line = line.Replace("__stop_time__", evt.dtstart.ToString(time_fmt));
+			}
+			else
+			{
+				line = line.Replace("__stop_day__", "");
+				line = line.Replace("__stop_time__", "");
+			}
+			line = line.Replace("__timezone__", calinfo.tzinfo.DisplayName.EscapeValueForCsv());
+			line = line.Replace("__description__", evt.description.EscapeValueForCsv());
+			line = line.Replace("__website__", evt.url);
+			line = line.Replace("__sections__", evt.categories);
+
+			return line + "\n";
 		}
 
 		#endregion
@@ -264,12 +355,28 @@ namespace CalendarAggregator
 		{
 			var es = this.es_getter(this.cache);
 			var evt = es.events.Find(e => e.title == title && e.dtstart == DateTime.Parse(dtstart));
-			var description = evt.description.Replace("'", "\\'").Replace("\n", "<br>").Replace("\r", "");
+			var description = MassageDescription(evt);
+			return String.Format(jsonp + "('" + description + "')") ;
+		}
+
+		public string DescriptionFromUid(int uid, string jsonp)
+		{
+			var es = this.es_getter(this.cache);
+			var evt = es.events.Find(e => e.uid == uid);
+			var description = MassageDescription(evt);
+			return String.Format(jsonp + "('" + description + "')");
+		}
+
+		private static string MassageDescription(ZonelessEvent evt)
+		{
+			string description = "";
+			if (!String.IsNullOrEmpty(evt.description) )
+				description = evt.description.Replace("'", "\\'").Replace("\n", "<br>").Replace("\r", "");
 			string location = "";
 			if (!String.IsNullOrEmpty(evt.location))
 				location = String.Format("<br>{0}", evt.location.Replace("'", "\\'")).Replace("\n", "<br>").Replace("\r", "");
-			description = ( "<span class=\"desc\">" + location + "<br><br>" + description + "</span>").UrlsToLinks();
-			return String.Format(jsonp + "('" + description + "')") ;
+			description = ("<span class=\"desc\">" + location + "<br><br>" + description + "</span>").UrlsToLinks();
+			return description;
 		}
 
 		public string RenderFeedAsJson(string source, string view)  
@@ -380,6 +487,19 @@ namespace CalendarAggregator
 			html = RenderBadges(html);
 
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
+
+			try
+			{
+				if (this.category_images.Count > 0)
+					html = html.Replace("__CATEGORY_IMAGES__", "category_images = " + JsonConvert.SerializeObject(this.category_images) + ";\n");
+
+				if (this.source_images.Count > 0)
+					html = html.Replace("__SOURCE_IMAGES__", "source_images = " + JsonConvert.SerializeObject(this.source_images) + ";\n");
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "RenderHtml: category+source images", e.Message);
+			}
 
 			html = html.Replace("__METADATA__", day_anchors);
 
@@ -1102,6 +1222,7 @@ namespace CalendarAggregator
 			var html = string.Format(
 @"<a name=""{0}""></a>
 <div id=""{0}"" class=""bl {10} {12}"" {13} xmlns:v=""http://rdf.data-vocabulary.org/#"" typeof=""v:Event"" >
+<span style=""display:none"" class=""uid"">{15}</span>
 <span class=""md"">{14}</span> 
 <span class=""st"" property=""v:startDate"" content=""{1}"">{2}</span>
 <span href=""{3}"" rel=""v:url""></span>
@@ -1126,7 +1247,8 @@ namespace CalendarAggregator
 			more,                                                   // 11
 			source_key,                                             // 12
 		    visibility,                                             // 13
-            month_day												// 14                              
+            month_day,												// 14 
+            evt.uid													// 15
 			);
 
 			this.event_counter += 1;
