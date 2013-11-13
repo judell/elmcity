@@ -185,6 +185,7 @@ namespace CalendarAggregator
 		public Dictionary<string,string> urls_and_sources { get; set; } 
 		//public List<List<string>> list_of_urls_and_sources { get; set; }
 		public string original_categories;
+		public int? uid;  // nullable only for transitional reasons
 
 		public ZonelessEvent(string title, string url, string source, bool allday, string lat, string lon, string categories,
 			DateTime dtstart, DateTime dtend, string description, string location) :
@@ -253,6 +254,13 @@ namespace CalendarAggregator
 			es_zoneless.SortEventList();     // order by dtstart
 
 			Utils.BuildTagStructures(es_zoneless, calinfo);  // build structures used to generate tag picklists
+
+			int uid = 0;
+			foreach (var evt in es_zoneless.events)
+			{
+				evt.uid = uid;
+				uid++;
+			}
 
 			es_zoneless.Serialize();
 		}
