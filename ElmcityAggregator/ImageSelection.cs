@@ -358,4 +358,13 @@ then specify your own image URL: <input style=""width:50%"" class=""override"" n
 		return byteArray;
 	}
 
+	private static void BuildCategoriesForRegionSourcesForHubs(string region, string where)
+	{
+		ImageSelection.BuildCategoryImagesForHub(region);
+		foreach (var id in Utils.GetIdsForRegion(region))
+		{
+			ImageSelection.BuildSourceImagesForHub(id, where);
+		}
+	}
+
 }
