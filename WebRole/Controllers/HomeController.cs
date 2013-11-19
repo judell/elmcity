@@ -208,6 +208,22 @@ namespace WebRole
             return Content(description, "application/json");
         }
 
+		public ActionResult description_from_uid(string id, string uid, string jsonp)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var description = "";
+			try
+			{
+				var cr = ElmcityApp.wrd.renderers[id];
+				description = cr.DescriptionFromUid(Convert.ToInt32(uid), jsonp);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "description_from_uid", e.Message + e.StackTrace);
+			}
+			return Content(description, "application/json");
+		}
+
         public ActionResult feed2json(string id, string source, string view, string jsonp)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
@@ -857,7 +873,7 @@ if unsure please check http://{1}/{2}/stats",
             es_zoneless.ExcludePastEvents();
             es_zoneless.SortEventList();
             var cr = new CalendarRenderer(id);
-            r.Content = cr.RenderHtmlEventsOnly(es_zoneless, null, 0, DateTime.MinValue, DateTime.MinValue, new Dictionary<string, object>() { { "announce_time_of_day", false }, { "add_to_cal", false }, { "inline_descriptions", true }, {"taglist",false } } );
+            r.Content = cr.RenderHtmlEventsOnly(es_zoneless, null, 0, DateTime.MinValue, DateTime.MinValue, null, new Dictionary<string, object>() { { "announce_time_of_day", false }, { "add_to_cal", false }, { "inline_descriptions", true }, {"taglist",false } } );
             return r;
         }
 
