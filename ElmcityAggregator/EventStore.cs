@@ -580,6 +580,13 @@ namespace CalendarAggregator
 			this.event_dict = dict;
 		}
 
+		public void AdvanceToAnHourAgo(Calinfo calinfo)
+		{
+			var now_in_tz = Utils.NowInTz(calinfo.tzinfo);         // advance to an hour ago
+			var dtnow = now_in_tz.LocalTime - TimeSpan.FromHours(1);
+			this.events = this.events.FindAll(evt => evt.dtstart >= dtnow);
+		}
+
 		/*
 		public bool CompareTagStructures(ZonelessEventStore other)
 		{
