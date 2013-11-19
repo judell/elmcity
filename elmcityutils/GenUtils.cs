@@ -475,7 +475,7 @@ namespace ElmcityUtils
 
 		public static string FindCalProps(string property, string text)
 		{
-			var mc = Regex.Matches(text, property + ":[^\r\n]+", RegexOptions.Singleline);
+			var mc = Regex.Matches(text, property + "[:;][^\r\n]+", RegexOptions.Singleline);
 			var sb = new StringBuilder();
 			foreach (var m in mc)
 				sb.AppendLine(m.ToString());
