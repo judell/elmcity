@@ -43,7 +43,7 @@ namespace WebRole
 		#region events
 
 		//[OutputCache(Duration = ... // output cache not used here, iis cache is managed directly
-		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist, string tags, string template, string jsurl, string days, string bare_events, string hub)
+		public ActionResult GetEvents(string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist, string tags, string template, string jsurl, string days, string bare_events, string hub, string source)
 		{
 			if (id == "a2cal")
 				id = "AnnArborChronicle";
@@ -57,7 +57,7 @@ namespace WebRole
 			try
 			{
 				var cr = ElmcityApp.wrd.renderers[id];
-				r = new EventsResult(this, cr, id, type, view, jsonp, count, from, to, eventsonly, mobile, test, raw, raw_sentinel, style, theme, taglist, tags, template, jsurl, days, bare_events, hub);
+				r = new EventsResult(this, cr, id, type, view, jsonp, count, from, to, eventsonly, mobile, test, raw, raw_sentinel, style, theme, taglist, tags, template, jsurl, days, bare_events, hub, source);
 			}
 			catch (Exception e)
 			{
@@ -94,12 +94,13 @@ namespace WebRole
 			int days;
 			bool bare_events;
 			string hub;
+			string source;
 
 			CalendarRenderer.ViewRenderer renderer = null;
 			string response_body = null;
 			byte[] response_bytes = new byte[0];
 
-			public EventsResult(ElmcityController controller, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist, string tags, string template, string jsurl, string days, string bare_events, string hub)
+			public EventsResult(ElmcityController controller, CalendarRenderer cr, string id, string type, string view, string jsonp, string count, string from, string to, string eventsonly, string mobile, string test, string raw, string raw_sentinel, string style, string theme, string taglist, string tags, string template, string jsurl, string days, string bare_events, string hub, string source)
 			{
 				this.controller = controller;
 				this.cr = cr;
@@ -124,6 +125,7 @@ namespace WebRole
 				this.jsurl = jsurl;
 				this.bare_events = String.IsNullOrEmpty(bare_events) ? false : bare_events.ToLower().StartsWith("y");
 				this.hub = hub;
+				this.source = source;
 
 				int _count = 0;
 				try
@@ -203,7 +205,7 @@ namespace WebRole
 
 				var render_args = new Dictionary<string, object>();
 
-				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: this.eventsonly, mobile: this.mobile, test: this.test, raw: this.raw, style: this.style, theme: this.theme, taglist: this.taglist, tags: this.tags, template: this.template, jsurl: this.jsurl, days: this.days, bare_events: this.bare_events, hub: this.hub);
+				var view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: this.eventsonly, mobile: this.mobile, test: this.test, raw: this.raw, style: this.style, theme: this.theme, taglist: this.taglist, tags: this.tags, template: this.template, jsurl: this.jsurl, days: this.days, bare_events: this.bare_events, hub: this.hub, source: this.source);
 
 				switch (this.type)
 				{
@@ -249,11 +251,11 @@ namespace WebRole
 						}
 						
 						// update for mobile detection
-						view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: this.eventsonly, mobile: this.mobile, test: this.test, raw: this.raw, style: this.style, theme: this.theme, taglist: this.taglist, tags: this.tags, template: this.template, jsurl: this.jsurl, days: this.days, bare_events: this.bare_events, hub: this.hub);
+						view_key = Utils.MakeViewKey(this.id, this.type, this.view, this.count.ToString(), from_str, to_str, eventsonly: this.eventsonly, mobile: this.mobile, test: this.test, raw: this.raw, style: this.style, theme: this.theme, taglist: this.taglist, tags: this.tags, template: this.template, jsurl: this.jsurl, days: this.days, bare_events: this.bare_events, hub: this.hub, source:this.source);
 
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), render_args);
 
-						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, render_args);
+						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, this.source, render_args);
 						
 						// let ajax pull events into pages directly
 						this.controller.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
@@ -269,7 +271,7 @@ namespace WebRole
 					case "xml":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderXml);
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
-						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, null);
+						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, this.source, null);
 						new ContentResult
 						{
 							ContentType = "text/xml",
@@ -282,7 +284,7 @@ namespace WebRole
 						if (count == 0) count = CalendarAggregator.Configurator.rss_default_items;
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderRss);
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
-						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, null);
+						this.response_body = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, this.source, null);
 
 						new ContentResult
 						{
@@ -295,7 +297,7 @@ namespace WebRole
 					case "json":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderJson);
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
-						string jcontent = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, null);
+						string jcontent = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, this.source, null);
 						if (this.jsonp != null)
 							jcontent = this.jsonp + "(" + jcontent + ")";
 						new ContentResult
@@ -309,7 +311,7 @@ namespace WebRole
 					case "text":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderText);
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
-						string tcontent = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, null);
+						string tcontent = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, this.source, null);
 						new ContentResult
 						{
 							ContentEncoding = UTF8,
@@ -355,7 +357,7 @@ namespace WebRole
 					case "ics":
 						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderIcs);
 						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
-						string ics_text = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, null);
+						string ics_text = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, this.source, null);
 						new ContentResult
 						{
 							ContentType = "text/calendar",
@@ -441,7 +443,7 @@ namespace WebRole
 
 				if (this.cr.cache[view_key] == null)
 				{
-					var view_str = this.cr.RenderDynamicViewWithoutCaching(this.controller.ControllerContext, view_renderer, this.view, this.count, this.from, this.to, render_args);
+					var view_str = this.cr.RenderDynamicViewWithoutCaching(this.controller.ControllerContext, view_renderer, this.view, this.count, this.from, this.to, this.source, render_args);
 					byte[] view_bytes = Encoding.UTF8.GetBytes(view_str);
 					var cache = new AspNetCache(this.controller.HttpContext.Cache);
 					this.controller.InsertIntoCache(cache, view_bytes, dependency, view_key);
