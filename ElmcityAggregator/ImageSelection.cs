@@ -163,6 +163,7 @@ public class ImageSelection
 
 				foreach (var result in results)
 				{
+					rand = rnd.Next(1000000).ToString();
 					sb.Append(RenderImageResult(item, rand, result));
 				}
 			}
@@ -213,7 +214,7 @@ then specify your own image URL: <input style=""width:50%"" class=""override"" n
 		try
 		{
 			var rendering = string.Format(@"
-<span style=""white-space:nowrap"" class=""image_result"" class=""{0}"">
+<span style=""white-space:nowrap"" class=""{0}"">
 <input onclick=""highlight_selection({0},'{2}')"" type=""radio"" name=""{2}"" value=""{1}"">
 <img style=""width:140px;margin:20px;vertical-align:middle"" src=""{1}"">
 </span>
