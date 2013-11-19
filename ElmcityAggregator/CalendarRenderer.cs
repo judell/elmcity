@@ -57,7 +57,7 @@ namespace CalendarAggregator
 		public delegate string EventRenderer(ZonelessEvent evt, Calinfo calinfo, Dictionary<string,object> args);
 
 		// points to a method for rendering views of events in various formats
-		public delegate string ViewRenderer(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args);
+		public delegate string ViewRenderer(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args);
 
 		// points to a method for retrieving a pickled event store
 		// normally used with caching: es_getter = new EventStoreGetter(GetEventStoreWithCaching);
@@ -167,23 +167,23 @@ namespace CalendarAggregator
 
 		public string RenderXml()
 		{
-			return RenderXml(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderXml(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
 		public string RenderXml(string view)
 		{
-			return RenderXml(eventstore: null, view: view, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderXml(eventstore: null, view: view, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
 		public string RenderXml(int count)
 		{
-			return RenderXml(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderXml(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
 		// render an eventstore as xml, optionally limited by view and/or count
-		public string RenderXml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
+		public string RenderXml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args)
 		{
-			eventstore = GetEventStore(eventstore, view, count, from, to, args);
+			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 
 			var xml = new StringBuilder();
 			xml.Append("<events>\n");
@@ -232,12 +232,12 @@ namespace CalendarAggregator
 		#region text
 
 		// render an eventstore as xml, optionally limited by view and/or count
-		public string RenderText(ZonelessEventStore eventstore, EventRenderer event_renderer, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
+		public string RenderText(ZonelessEventStore eventstore, EventRenderer event_renderer, string view, int count, DateTime from, DateTime to, string source, Dictionary<string, object> args)
 		{
 			if (args == null)
 				args = new Dictionary<string, object>();
 
-			eventstore = GetEventStore(eventstore, view, count, from, to, args);
+			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 
 			var text = new StringBuilder();
 
@@ -251,9 +251,9 @@ namespace CalendarAggregator
 			return text.ToString();
 		}
 
-		public string RenderText(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
+		public string RenderText(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string, object> args)
 		{
-			return RenderText(eventstore, new EventRenderer(RenderEvtAsText), view, count, from, to, args);
+			return RenderText(eventstore, new EventRenderer(RenderEvtAsText), view, count, from, to, source, args);
 		}
 
 		// render a single event as text
@@ -320,22 +320,22 @@ namespace CalendarAggregator
 
 		public string RenderJson()
 		{
-			return RenderJson(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderJson(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source: null, args:null);
 		}
 
 		public string RenderJson(string view)
 		{
-			return RenderJson(eventstore: null, view: view, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderJson(eventstore: null, view: view, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
 		public string RenderJson(int count)
 		{
-			return RenderJson(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderJson(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
-		public string RenderJson(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
+		public string RenderJson(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string, object> args)
 		{
-			eventstore = GetEventStore(eventstore, view, count, from, to, args);
+			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 			for (var i = 0; i < eventstore.events.Count; i++)
 			{
 				var evt = eventstore.events[i];
@@ -374,8 +374,8 @@ namespace CalendarAggregator
 				description = evt.description.Replace("'", "\\'").Replace("\n", "<br>").Replace("\r", "");
 			string location = "";
 			if (!String.IsNullOrEmpty(evt.location))
-				location = String.Format("<br>{0}", evt.location.Replace("'", "\\'")).Replace("\n", "<br>").Replace("\r", "");
-			description = ("<span class=\"desc\">" + location + "<br><br>" + description + "</span>").UrlsToLinks();
+				location = String.Format("<br><b>Location</b>: {0}", evt.location.Replace("'", "\\'")).Replace("\n", "<br>").Replace("\r", "");
+			description = ("<span class=\"desc\">" + location + "<br><br><b>Description</b>: " + description + "</span>").UrlsToLinks();
 			return description;
 		}
 
@@ -405,15 +405,15 @@ namespace CalendarAggregator
 
 		public string RenderHtml()
 		{
-			return RenderHtml(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderHtml(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
 		public string RenderHtml(ZonelessEventStore es)
 		{
-			return RenderHtml(eventstore: es, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderHtml(eventstore: es, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
-		public string RenderHtml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
+		public string RenderHtml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string, object> args)
 		{
 			if (args == null)
 				args = new Dictionary<string, object>();
@@ -436,7 +436,7 @@ namespace CalendarAggregator
 			if (args.ContainsKey("hub"))
 				hub = (string)args["hub"];
 
-			eventstore = GetEventStore(eventstore, view, count, from, to, args);
+			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 
 			MaybeUseAlternateTemplate(args);
 
@@ -492,9 +492,13 @@ namespace CalendarAggregator
 			{
 				if (this.category_images.Count > 0)
 					html = html.Replace("__CATEGORY_IMAGES__", "category_images = " + JsonConvert.SerializeObject(this.category_images) + ";\n");
+				else
+					html = html.Replace("__CATEGORY_IMAGES__", "");
 
 				if (this.source_images.Count > 0)
 					html = html.Replace("__SOURCE_IMAGES__", "source_images = " + JsonConvert.SerializeObject(this.source_images) + ";\n");
+				else
+					html = html.Replace("__SOURCE_IMAGES__", "");
 			}
 			catch (Exception e)
 			{
@@ -509,9 +513,9 @@ namespace CalendarAggregator
 		private List<string> GetDayAnchors(ZonelessEventStore es, string view)
 		{
 			if (es == null)  // if no eventstore passed in (e.g., for testing)
-				es = this.es_getter(this.cache); 
+				es = this.es_getter(this.cache);
 
-			this.AdvanceToAnHourAgo(es);
+			es.AdvanceToAnHourAgo(this.calinfo);
 
 			var filtered_events = ViewFilter(view, es.events);
 			
@@ -633,13 +637,13 @@ namespace CalendarAggregator
 			return theme_dict.Keys.Count == 1 && theme_dict.Keys.ToList()[0] == "default";
 		}
 
-		public string RenderHtmlEventsOnly(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
+		public string RenderHtmlEventsOnly(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args)
 		{
 			args["AdvanceToAnHourAgo"] = true;
 
 			var day_anchors = GetDayAnchorsAsJson(eventstore, view);
 
-			eventstore = GetEventStore(eventstore, view, count, from, to, args);
+			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 
 			var builder = new StringBuilder();
 
@@ -685,16 +689,16 @@ namespace CalendarAggregator
 			return announce_time_of_day;
 		}
 
-		public string RenderHtmlForMobile(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
+		public string RenderHtmlForMobile(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args)
 		{
 			//GenUtils.LogMsg("info", "RenderForMobile", JsonConvert.SerializeObject(args));
 			this.ResetCounters();
 
-			eventstore = GetEventStore(eventstore, view, count, from, to, args);
+			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 			count = (int) args["mobile_event_count"];                        // maybe apply further reduction
 			eventstore.events = eventstore.events.Take(count).ToList();
 
-			var html = RenderHtmlEventsOnly(eventstore, view, count, from, to, args);
+			var html = RenderHtmlEventsOnly(eventstore, view, count, from, to, source, args);
 
 			string mobile_long = "";
 			string ua = "";
@@ -802,13 +806,6 @@ namespace CalendarAggregator
 				GenUtils.LogMsg("exception", "UseTestTemplate", e.Message + e.StackTrace);
 				return;
 			}
-		}
-
-		private void AdvanceToAnHourAgo(ZonelessEventStore eventstore)
-		{
-			var now_in_tz = Utils.NowInTz(this.calinfo.tzinfo);         // advance to an hour ago
-			var dtnow = now_in_tz.LocalTime - TimeSpan.FromHours(1);
-			eventstore.events = eventstore.events.FindAll(evt => evt.dtstart >= dtnow);
 		}
 
 		public string InsertTagSelector(string html, ZonelessEventStore es, string view, bool eventsonly)
@@ -1352,22 +1349,22 @@ namespace CalendarAggregator
 
 		public string RenderIcs()
 		{
-			return RenderIcs(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderIcs(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
 		public string RenderIcs(string view)
 		{
-			return RenderIcs(eventstore: null, view: view, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderIcs(eventstore: null, view: view, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
 		public string RenderIcs(int count)
 		{
-			return RenderIcs(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			return RenderIcs(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
-		public string RenderIcs(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
+		public string RenderIcs(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args)
 		{
-			eventstore = GetEventStore(eventstore, view, count, from, to, args);
+			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 			var ical = new DDay.iCal.iCalendar();
 			Collector.AddTimezoneToDDayICal(ical, this.calinfo.tzinfo);
 			var tzid = this.calinfo.tzinfo.Id;
@@ -1439,24 +1436,24 @@ namespace CalendarAggregator
 
 		public string RenderRss()
 		{
-			return RenderRss(eventstore: null, view: null, count: Configurator.rss_default_items, from: DateTime.MinValue, to: DateTime.MinValue, args: null);
+			return RenderRss(eventstore: null, view: null, count: Configurator.rss_default_items, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args: null);
 		}
 
 		public string RenderRss(int count)
 		{
-			return RenderRss(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue, args: null);
+			return RenderRss(eventstore: null, view: null, count: count, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args: null);
 		}
 
 		public string RenderRss(string view)
 		{
-			return RenderRss(eventstore: null, view: view, count: Configurator.rss_default_items, from: DateTime.MinValue, to: DateTime.MinValue, args: null);
+			return RenderRss(eventstore: null, view: view, count: Configurator.rss_default_items, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args: null);
 		}
 
-		public string RenderRss(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
+		public string RenderRss(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args)
 		{
 			try
 			{
-				eventstore = GetEventStore(eventstore, view, count, from, to, args);
+				eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 				var query = string.Format("view={0}&count={1}", view, count);
 				return Utils.RssFeedFromEventStore(this.id, query, eventstore);
 			}
@@ -1519,7 +1516,7 @@ namespace CalendarAggregator
 
 		#endregion
 
-		private ZonelessEventStore GetEventStore(ZonelessEventStore es, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
+		private ZonelessEventStore GetEventStore(ZonelessEventStore es, string view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args)
 		{
 			if (args == null)
 				args = new Dictionary<string, object>();
@@ -1534,7 +1531,7 @@ namespace CalendarAggregator
 			MaybeBuildTagStructures(es); // transitional until new generation of objects is fully established
 
 			if (args.ContainsKey("AdvanceToAnHourAgo") && (bool)args["AdvanceToAnHourAgo"] == true)
-				AdvanceToAnHourAgo(es);
+				es.AdvanceToAnHourAgo(this.calinfo);
 			if (args.ContainsKey("hub") && String.IsNullOrEmpty((string)args["hub"]) == false)
 			{
 				var hub = (string)args["hub"];
@@ -1545,24 +1542,24 @@ namespace CalendarAggregator
 					view = view + "," + hub.ToLower();
 			}
 
-			es.events = Filter(view, count, from, to, es); // apply all filters
+			es.events = Filter(view, count, from, to, source, es); // apply all filters
 
 			return es;
 		}
 
 		private ZonelessEventStore GetEventStore(ZonelessEventStore es, string view, Dictionary<string, object> args)
 		{
-			return GetEventStore(es, view, 0, DateTime.MinValue, DateTime.MinValue, args);
+			return GetEventStore(es, view, 0, DateTime.MinValue, DateTime.MinValue, null, args);
 		}
 
 		private ZonelessEventStore GetEventStore(ZonelessEventStore es, int count, Dictionary<string,object> args)
 		{
-			return GetEventStore(es, null, count, DateTime.MinValue, DateTime.MinValue, args);
+			return GetEventStore(es, null, count, DateTime.MinValue, DateTime.MinValue, null, args);
 		}
 
 		private ZonelessEventStore GetEventStore(ZonelessEventStore es, DateTime from, DateTime to, Dictionary<string, object> args)
 		{
-			return GetEventStore(es, null, 0, from, to, args);
+			return GetEventStore(es, null, 0, from, to, null, args);
 		}
 
 		public ZonelessEventStore GetEventStoreRoundedUpToLastFullDay(int max, ZonelessEventStore es, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
@@ -1643,9 +1640,12 @@ namespace CalendarAggregator
 		}
 
 		// possibly filter an event list by view or count
-		public List<ZonelessEvent> Filter(string view, int count, DateTime from, DateTime to, ZonelessEventStore es)
+		public List<ZonelessEvent> Filter(string view, int count, DateTime from, DateTime to, string source, ZonelessEventStore es)
 		{
 			var events = es.events;
+
+			if (!String.IsNullOrEmpty(source))
+				events = SourceFilter(source, events);  
 
 			if (!String.IsNullOrEmpty(view))
 				events = ViewFilter(view, events);                        
@@ -1724,6 +1724,21 @@ namespace CalendarAggregator
 			return filtered_events;
 		}
 
+		private static List<ZonelessEvent> SourceFilter(string source, List<ZonelessEvent> events)
+		{
+			var filtered_events = new List<ZonelessEvent>();
+			try
+			{
+				filtered_events = events.FindAll(evt => evt.source == source); 
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "SourceFilter", e.Message + e.StackTrace);
+			}
+
+			return filtered_events;
+		}
+
 
 		// the CalendarRenderer object uses this to get the pickled object that contains an eventstore,
 		// from the CalendarRender's cache if available, else fetching bytes
@@ -1742,7 +1757,7 @@ namespace CalendarAggregator
 		}
 
 		// used in WebRole for views built from pickled objects that are cached
-		public string RenderDynamicViewWithCaching(ControllerContext context, string view_key, ViewRenderer view_renderer, string view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
+		public string RenderDynamicViewWithCaching(ControllerContext context, string view_key, ViewRenderer view_renderer, string view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args)
 		{
 			try
 			{
@@ -1752,7 +1767,7 @@ namespace CalendarAggregator
 				if (view_is_cached)
 					view_data = (byte[])cache[view_key];
 				else
-					view_data = Encoding.UTF8.GetBytes(view_renderer(eventstore: null, view: view, count: count, from: from, to: to, args: args));
+					view_data = Encoding.UTF8.GetBytes(view_renderer(eventstore: null, view: view, count: count, from: from, to: to, source:source, args: args));
 
 				response_body = CacheUtils.MaybeSuppressResponseBodyForView(context, view_data);
 				return Encoding.UTF8.GetString(response_body);
@@ -1760,14 +1775,14 @@ namespace CalendarAggregator
 			catch (Exception e)
 			{
 				GenUtils.PriorityLogMsg("exception", "RenderDynamicViewWithCaching: " + view_key, e.Message + e.StackTrace);
-				return RenderDynamicViewWithoutCaching(context, view_renderer, view, count, from, to, args: args);
+				return RenderDynamicViewWithoutCaching(context, view_renderer, view, count, from, to, source, args: args);
 			}
 		}
 
-		public string RenderDynamicViewWithoutCaching(ControllerContext context, ViewRenderer view_renderer, String view, int count, DateTime from, DateTime to, Dictionary<string,object> args)
+		public string RenderDynamicViewWithoutCaching(ControllerContext context, ViewRenderer view_renderer, String view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args)
 		{
 			ZonelessEventStore es = GetEventStoreWithCaching(this.cache);
-			return view_renderer(es, view, count, from, to, args);
+			return view_renderer(es, view, count, from, to, source, args);
 		}
 
 		private void ResetCounters()
