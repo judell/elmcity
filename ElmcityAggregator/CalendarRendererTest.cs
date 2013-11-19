@@ -55,7 +55,7 @@ namespace CalendarAggregator
 		{
 			var filterable = this.CreateFilterable(calinfo);
 			GenUtils.LogMsg("status", "ViewFilterReturnsOneEvent before", ShowEventStore(filterable.events));
-			var events = cr.Filter("music", 0, DateTime.MinValue, DateTime.MinValue, filterable);
+			var events = cr.Filter("music", 0, DateTime.MinValue, DateTime.MinValue, null, filterable);
 			GenUtils.LogMsg("status", "ViewFilterReturnsOneEvent after", ShowEventStore(events));
 			Assert.That(events.Count == 1);
 			Assert.That(events.First().title == "e5");
@@ -65,7 +65,7 @@ namespace CalendarAggregator
 		public void ViewFilterHandlesNullViewAndNullishDateTimes()
 		{
 			var filterable = this.CreateFilterable(calinfo);
-			var events = cr.Filter(null, 0, DateTime.MinValue, DateTime.MinValue, filterable);
+			var events = cr.Filter(null, 0, DateTime.MinValue, DateTime.MinValue, null, filterable);
 			Assert.That(events.Count == filterable.events.Count());
 		}
 
@@ -73,7 +73,7 @@ namespace CalendarAggregator
 		public void TimeFilterReturnsNov4And5()
 		{
 			var filterable = this.CreateFilterable(calinfo);
-			var events = cr.Filter(null, 0, DateTime.Parse("2013-11-04T00:00"), DateTime.Parse("2013-11-06T00:00"), filterable);
+			var events = cr.Filter(null, 0, DateTime.Parse("2013-11-04T00:00"), DateTime.Parse("2013-11-06T00:00"), null, filterable);
 			Assert.That(events.Count == 2);
 			var titles = events.Select(x => x.title).ToList();
 			titles.Sort();
@@ -84,11 +84,36 @@ namespace CalendarAggregator
 		public void CountFilterReturns2()
 		{
 			var filterable = this.CreateFilterable(calinfo);
-			var events = cr.Filter(null, 2, DateTime.MinValue, DateTime.MinValue, filterable);
+			var events = cr.Filter(null, 2, DateTime.MinValue, DateTime.MinValue, null, filterable);
 			Assert.That(events.Count == 2);
 			var titles = events.Select(x => x.title).ToList();
 			titles.Sort();
 			Assert.That(titles.SequenceEqual(new List<string>() { "e1", "e2" }));
+		}
+
+		[Test]
+		public void SourceFilterReturns2()
+		{
+			var filterable = this.CreateFilterable(calinfo);
+			var events = cr.Filter(null, 2, DateTime.MinValue, DateTime.MinValue, "s1", filterable);
+			Assert.That(events.Count == 2);
+			var titles = events.Select(x => x.title).ToList();
+			titles.Sort();
+			Assert.That(titles.SequenceEqual(new List<string>() { "e1", "e2" }));
+		}
+
+		[Test]
+		public void SourceFilterReturns2AfterSpecifiedTime()
+		{
+			var filterable = this.CreateFilterable(calinfo);
+			var dtstart = DateTime.Parse("2013/11/03 8 AM");
+			var dtend = DateTime.Parse("2013/11/10 8 AM");
+			dtstart += TimeSpan.FromMinutes(1);
+			var events = cr.Filter(null, 2, dtstart, dtend, "s2", filterable);
+			Assert.That(events.Count == 2);
+			var titles = events.Select(x => x.title).ToList();
+			titles.Sort();
+			Assert.That(titles.SequenceEqual(new List<string>() { "e4", "e5" }));
 		}
 
 		[Test]
@@ -105,7 +130,7 @@ namespace CalendarAggregator
 		public void RenderedHtmlViewMatchesExpectedCount()
 		{
 			var es_count = es.events.Count;
-			var html = cr.RenderHtml(this.es, EventStoreTest.test_category, 0, from: DateTime.MinValue, to: DateTime.MinValue, args:null);
+			var html = cr.RenderHtml(this.es, EventStoreTest.test_category, 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 			var html_count = GenUtils.RegexCountSubstrings(html, event_html_header);
 			Assert.AreEqual(1, html_count);
 		}
@@ -212,11 +237,11 @@ namespace CalendarAggregator
 		private ZonelessEventStore CreateFilterable(Calinfo calinfo)
 		{
         var filterable = new ZonelessEventStore(calinfo);
-		filterable.AddEvent("e1", "", "", null, null, DateTime.Parse("2013/11/01 8 AM"), DateTime.MinValue, false, null, null, null);
-		filterable.AddEvent("e2", "", "", null, null, DateTime.Parse("2013/11/02 8 AM"), DateTime.MinValue, false, null, null, null);
-		filterable.AddEvent("e3", "", "", null, null, DateTime.Parse("2013/11/03 8 AM"), DateTime.MinValue, false, null, null, null);
-		filterable.AddEvent("e4", "", "", null, null, DateTime.Parse("2013/11/04 8 AM"), DateTime.MinValue, false, null, null, null);
-		filterable.AddEvent("e5", "", "", null, null, DateTime.Parse("2013/11/05 8 AM"), DateTime.MinValue, false, "music", null, null);
+		filterable.AddEvent("e1", "", "s1", null, null, DateTime.Parse("2013/11/01 8 AM"), DateTime.MinValue, false, null, null, null);
+		filterable.AddEvent("e2", "", "s1", null, null, DateTime.Parse("2013/11/02 8 AM"), DateTime.MinValue, false, null, null, null);
+		filterable.AddEvent("e3", "", "s2", null, null, DateTime.Parse("2013/11/03 8 AM"), DateTime.MinValue, false, null, null, null);
+		filterable.AddEvent("e4", "", "s2", null, null, DateTime.Parse("2013/11/04 8 AM"), DateTime.MinValue, false, null, null, null);
+		filterable.AddEvent("e5", "", "s2", null, null, DateTime.Parse("2013/11/05 8 AM"), DateTime.MinValue, false, "music", null, null);
 		Assert.That(filterable.events.Count == 5);
 		return filterable;
 		}
