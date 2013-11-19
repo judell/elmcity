@@ -106,7 +106,7 @@ return o;
 
 function highlight_selection(id,name) {
 $('img').css('border-style','none');
-$('#' + id + ' img').css('border-style','solid');
+$('span[class="' + id + '"] img, div[id="' + id + '"] img').css('border-style','solid');
 var override = $('.override[name="' + name + '"]');
 override[0].value = '';
 var override_image = $('.override_image[name="' + name + '"]');
