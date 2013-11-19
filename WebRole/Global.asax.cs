@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2539";
+        public static string version = "2544";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -202,6 +202,13 @@ namespace WebRole
                 new { controller = "Home", action = "description_from_title_and_dtstart" },
                 new { id = wrd.str_ready_ids }
                 );
+
+			routes.MapRoute(
+				"description_from_uid",
+				"{id}/description_from_uid",
+				new { controller = "Home", action = "description_from_uid" },
+				new { id = wrd.str_ready_ids }
+				);
 
             routes.MapRoute(
                 "DiscardMisfoldedDescriptionsAndBogusCategoriesThenAddEasternVTIMEZONE",
@@ -720,11 +727,6 @@ namespace WebRole
 				var msg = "_ReloadSettingsAndRoutes: themes";
 				GenUtils.PriorityLogMsg("exception", msg, e2.Message);
 			}
-
-			//debugging = true;
-
-			//if ( debugging ) // stop here
-				//return;
 		
             try
             {
@@ -748,6 +750,9 @@ namespace WebRole
 
 				foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's renderer change?
 				{
+					if (id != "SeacoastNH")   // remove this!
+						return;
+
 					var cached_renderer = ElmcityApp.wrd.renderers[id];
 					var current_renderer = Utils.AcquireRenderer(id);
 					if (cached_renderer.timestamp != current_renderer.timestamp) // timestamp changed
