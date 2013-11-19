@@ -750,9 +750,6 @@ namespace WebRole
 
 				foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's renderer change?
 				{
-					if (id != "SeacoastNH")   // remove this!
-						return;
-
 					var cached_renderer = ElmcityApp.wrd.renderers[id];
 					var current_renderer = Utils.AcquireRenderer(id);
 					if (cached_renderer.timestamp != current_renderer.timestamp) // timestamp changed
