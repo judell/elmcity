@@ -1212,7 +1212,8 @@ namespace CalendarAggregator
 					location = event_dict["location"].Value<string>();
 				}
 				catch { }
-				var evt = Collector.MakeTmpEvt(calinfo, dtstart: dtstart_with_zone, dtend: DateTimeWithZone.MinValue(calinfo.tzinfo), title: name, url: url, location: location, description: location, lat: slat, lon: slon, allday: false);
+				var description = "See " + url + " for details";
+				var evt = Collector.MakeTmpEvt(calinfo, dtstart: dtstart_with_zone, dtend: DateTimeWithZone.MinValue(calinfo.tzinfo), title: name, url: url, location: location, description: description, lat: slat, lon: slon, allday: false);
 				Collector.AddEventToDDayIcal(ical, evt);
 			}
 
