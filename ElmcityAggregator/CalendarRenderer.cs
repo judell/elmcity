@@ -374,8 +374,8 @@ namespace CalendarAggregator
 				description = evt.description.Replace("'", "\\'").Replace("\n", "<br>").Replace("\r", "");
 			string location = "";
 			if (!String.IsNullOrEmpty(evt.location))
-				location = String.Format("<br><b>Location</b>: {0}", evt.location.Replace("'", "\\'")).Replace("\n", "<br>").Replace("\r", "");
-			description = ("<span class=\"desc\">" + location + "<br><br><b>Description</b>: " + description + "</span>").UrlsToLinks();
+				location = String.Format("<p><b>Location</b>: {0}</p>", evt.location.Replace("'", "\\'")).Replace("\n", " ").Replace("\r", "");
+			description = ("<span class=\"desc\">" + location + "<p><b>Description</b>: " + description + "</p></span>").UrlsToLinks();
 			return description;
 		}
 
@@ -488,6 +488,15 @@ namespace CalendarAggregator
 
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
 
+			html = InsertImageJson(html);
+
+			html = html.Replace("__METADATA__", day_anchors);
+
+			return html;
+		}
+
+		private string InsertImageJson(string html)
+		{
 			try
 			{
 				if (this.category_images.Count > 0)
@@ -504,9 +513,6 @@ namespace CalendarAggregator
 			{
 				GenUtils.LogMsg("exception", "RenderHtml: category+source images", e.Message);
 			}
-
-			html = html.Replace("__METADATA__", day_anchors);
-
 			return html;
 		}
 
@@ -670,6 +676,8 @@ namespace CalendarAggregator
 			html = html.Replace("__GENERATED__", System.DateTime.UtcNow.ToString());
 
 			html = html.Replace("__METADATA__", day_anchors);
+
+			html = InsertImageJson(html);
 
 			html = Utils.RemoveCommentSection(html, "SIDEBAR");
 			html = Utils.RemoveCommentSection(html, "JQUERY_UI_CSS");
