@@ -33,16 +33,23 @@ namespace CalendarAggregator
 	{
 		private string id;
 
+		public bool is_region;
+
 		public Calinfo calinfo;
 		
 		public string template_html;
 		public string default_template_html;
 
 		public string default_js_url;
-		public string test_js_url;
 
 		public Dictionary<string, string> category_images;
 		public Dictionary<string, string> source_images;
+
+		//public List<String> default_arg_keys = new List<string>();
+		
+		public string default_args_json;
+
+		public Dictionary<string,object> default_args;  
 
 		// data might be available in cache,
 		// this interface abstracts the cache so its logic can be tested
@@ -84,6 +91,7 @@ namespace CalendarAggregator
 			this.es_getter = new EventStoreGetter(GetEventStoreWithCaching);
 			this.category_images = new Dictionary<string, string>();
 			this.source_images = new Dictionary<string, string>();
+			this.is_region = Utils.IsRegion(id);
 
 			try
 			{
@@ -91,15 +99,31 @@ namespace CalendarAggregator
 
 				try
 				{
+					var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
+					if (metadict.ContainsKey("args"))
+					{
+						this.default_args_json = metadict["args"];
+						this.default_args = JsonConvert.DeserializeObject<Dictionary<string, object>>(this.default_args_json);
+					}
+					else
+					{
+						this.default_args = new Dictionary<string, object>();
+					}
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("exception", "CalendarRenderer: acquiring args", e.Message);
+				}
+
+				try
+				{
 					var settings = GenUtils.GetSettingsFromAzureTable();
 					this.default_js_url =	BlobStorage.MakeAzureBlobUri("admin", settings["elmcity_js"]).ToString();
-					this.test_js_url =		BlobStorage.MakeAzureBlobUri("admin", settings["elmcity_js_test"]).ToString();
 					settings = null;
 				}
 				catch (Exception e)
 				{
 					this.default_js_url =	BlobStorage.MakeAzureBlobUri("admin", "elmcity-1.7.js").ToString();
-					this.test_js_url =		BlobStorage.MakeAzureBlobUri("admin", "elmcity-1.7-test.js").ToString();
 					GenUtils.LogMsg("exception", "CalendarRenderer: setting js urls", e.Message);
 				}
 
@@ -374,8 +398,8 @@ namespace CalendarAggregator
 				description = evt.description.Replace("'", "\\'").Replace("\n", "<br>").Replace("\r", "");
 			string location = "";
 			if (!String.IsNullOrEmpty(evt.location))
-				location = String.Format("<p><b>Location</b>: {0}</p>", evt.location.Replace("'", "\\'")).Replace("\n", " ").Replace("\r", "");
-			description = ("<span class=\"desc\">" + location + "<p><b>Description</b>: " + description + "</p></span>").UrlsToLinks();
+				location = String.Format(@"<p class=""elmcity_info_para""><b>Location</b>: {0}</p>", evt.location.Replace("'", "\\'")).Replace("\n", " ").Replace("\r", "");
+			description = ("<span class=\"desc\">" + location + @"<p class=""elmcity_info_para""><b>Description</b>: " + description + "</p></span>").UrlsToLinks();
 			return description;
 		}
 
@@ -433,8 +457,19 @@ namespace CalendarAggregator
 			args["AdvanceToAnHourAgo"] = true;
 
 			string hub = null;
-			if (args.ContainsKey("hub"))
+
+			try
+			{
+				if (this.default_args.ContainsKey("hub"))			 // look for hub default
+					hub = (string)default_args["hub"];
+			}
+			catch (Exception e)
+			{
+			}
+
+			if (args.ContainsKey("hub") && !String.IsNullOrEmpty((string)args["hub"]))   // look for url override
 				hub = (string)args["hub"];
+
 
 			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 
@@ -468,6 +503,8 @@ namespace CalendarAggregator
 			html = html.Replace("__CSSURL__", css_url);
 
 			html = HandleJsUrl(html, args);
+
+			html = HandleDefaultArgs(html);
 
 			//html = html.Replace("__TITLE__", this.calinfo.title);
 			html = html.Replace("__TITLE__", MakeTitle(view));
@@ -558,32 +595,41 @@ namespace CalendarAggregator
 
 		private string HandleJsUrl(string html, Dictionary<string,object> args)
 		{
-			var test = args.ContainsKey("test") && (bool)args["test"];
-
-			var jsurl = args.ContainsKey("jsurl") ? (string)args["jsurl"] : null;
-
-			if (this.default_js_url == null)                                                              // only until new renderers deployed
+			if (this.default_js_url == null)                                                            
 				this.default_js_url = "http://elmcity.blob.core.windows.net/admin/elmcity-1.7.js";
 
-			if ( this.test_js_url == null )
-				this.test_js_url = "http://elmcity.blob.core.windows.net/admin/elmcity-1.7-test.js";
+			string jsurl_param_value = null;
 
-			var test_js = this.test_js_url;
-			var default_js = this.default_js_url;
-
-			if (jsurl != null)  // override defaults if jsurl on url-line
+			try
 			{
-				var js = BlobStorage.MakeAzureBlobUri("admin", (string)args["jsurl"]).ToString(); ;
-				test_js = js;
-				default_js = js;
+				if (this.default_args.ContainsKey("jsurl"))                   // look for hub default
+					jsurl_param_value = (string)this.default_args["jsurl"];
+			}
+			catch (Exception e)
+			{
 			}
 
-			if (test)
-				html = html.Replace("__JSURL__", test_js);
-			else
-				html = html.Replace("__JSURL__", default_js);
+			if ( args.ContainsKey("jsurl") && (string)args["jsurl"] != null )  // look for override
+				jsurl_param_value = (string)args["jsurl"];
+
+
+			if (jsurl_param_value != null)  // override defaults if jsurl on url-line
+			{
+				var jsurl = BlobStorage.MakeAzureBlobUri("admin", jsurl_param_value).ToString(); 
+				this.default_js_url = jsurl;
+			}
+
+			html = html.Replace("__JSURL__", this.default_js_url);
 
 			return html;
+		}
+
+		private string HandleDefaultArgs(string html)
+		{
+			if (this.default_args_json == null)
+				return html.Replace("__DEFAULT_ARGS__", "");
+			else
+				return html.Replace("__DEFAULT_ARGS__", "default_args = " + this.default_args_json + ";\n");
 		}
 
 		public string MakeTitle(string view)
@@ -783,7 +829,10 @@ namespace CalendarAggregator
 
 				string template = null;
 
-				if (args.Keys.Contains("template") )
+				if (this.default_args.ContainsKey("template"))			 // look for hub default
+					template = (string)default_args["template"];
+
+				if (args.Keys.Contains("template") && ! String.IsNullOrEmpty((string)args["template"]) )    // look for url override
 					template = (string) args["template"];
 
 				if ( ! String.IsNullOrEmpty(template) )
