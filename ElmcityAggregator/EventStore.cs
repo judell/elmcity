@@ -262,6 +262,8 @@ namespace CalendarAggregator
 				uid++;
 			}
 
+			es_zoneless.when_finalized = DateTime.UtcNow;
+
 			es_zoneless.Serialize();
 		}
 
@@ -500,6 +502,12 @@ namespace CalendarAggregator
 
 		public Dictionary<string, List<string>> hub_name_map; // optional (but important) for regional hubs, ex: for HR { "norfolkva"		: [ "NorfolkVa" , "Norfolk"],
 
+		public List<string> days = new List<string>();
+
+		public Dictionary<string, int> days_and_counts = new Dictionary<string, int>();
+
+		public DateTime when_finalized;
+
 		public ZonelessEventStore(Calinfo calinfo)
 			: base(calinfo)
 		{
@@ -578,6 +586,17 @@ namespace CalendarAggregator
 			}
 
 			this.event_dict = dict;
+		}
+
+		public void PopulateDaysAndCounts()
+		{
+			this.GroupEventsByDatekey();
+			var keys = this.event_dict.Keys.ToList();
+			keys.Sort();
+			this.days = keys;
+			foreach (var datekey in keys)
+				this.days_and_counts[datekey] = this.event_dict[datekey].Count;
+			this.event_dict = null;
 		}
 
 		public void AdvanceToAnHourAgo(Calinfo calinfo)
