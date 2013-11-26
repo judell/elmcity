@@ -429,32 +429,22 @@ namespace CalendarAggregator
 
 		public string RenderHtml()
 		{
-			return RenderHtml(eventstore: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
+			return RenderHtml(es: null, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
 		public string RenderHtml(ZonelessEventStore es)
 		{
-			return RenderHtml(eventstore: es, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
+			return RenderHtml(es: es, view: null, count: 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 		}
 
-		public string RenderHtml(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string, object> args)
+		public string RenderHtml(ZonelessEventStore es, string view, int count, DateTime from, DateTime to, string source, Dictionary<string, object> args)
 		{
 			if (args == null)
 				args = new Dictionary<string, object>();
 
 			this.ResetCounters();
 
-			string day_anchors = "";
-			try
-			{
-				day_anchors = GetDayAnchorsAsJson(eventstore, view);
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "GetDayAnchors", e.Message + e.StackTrace);
-			}
-
-			args["AdvanceToAnHourAgo"] = true;
+			args["advance_to_an_hour_ago"] = true;
 
 			string hub = null;
 
@@ -465,30 +455,31 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
+				GenUtils.PriorityLogMsg("exception", "RenderHtml: no default_args?", e.Message);
 			}
 
-			if (args.ContainsKey("hub") && !String.IsNullOrEmpty((string)args["hub"]))   // look for url override
+			if (args.HasNonEmptyOrNullStringValue("hub"))   // look for url override
 				hub = (string)args["hub"];
 
-
-			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
+			es = GetEventStore(es, view, count, from, to, source, args);
 
 			MaybeUseAlternateTemplate(args);
 
 			var builder = new StringBuilder();
-			RenderEventsAsHtml(eventstore, builder, args);
 
-			if (args.ContainsKey("bare_events") && (bool)args["bare_events"] == true)
+			RenderEventsAsHtml(es, builder, args);
+
+			if (args.HasValue("bare_events", true)) 
 				return builder.ToString();
 
 			var html = this.template_html.Replace("__EVENTS__", builder.ToString());
 
-			if (args.ContainsKey("taglist") && (bool)args["taglist"] == true)
+			if (args.HasValue("taglist",true))
 			{
 				if (this.calinfo.hub_enum == HubType.region && String.IsNullOrEmpty(hub) == false)
-					html = this.InsertRegionTagAndHubSelectors(html, eventstore, view, hub, eventsonly: false);
+					html = this.InsertRegionTagAndHubSelectors(html, es, view, hub, eventsonly: false);
 				else
-					html = this.InsertTagSelector(html, eventstore, view, eventsonly: false);
+					html = this.InsertTagSelector(html, es, view, eventsonly: false);
 			}
 
 			html = html.Replace("__VIEW__", view);     // propagate these to client so if changed here it can react
@@ -527,9 +518,30 @@ namespace CalendarAggregator
 
 			html = InsertImageJson(html);
 
-			html = html.Replace("__METADATA__", day_anchors);
+			string json_metadata = AssembleMetadata(es);
+			html = html.Replace("__METADATA__", json_metadata);
 
 			return html;
+		}
+
+		private static string AssembleMetadata(ZonelessEventStore es)
+		{
+			string json_metadata = "";
+			try
+			{
+				var m = new Dictionary<string, object>();
+				m["count"] = es.events.Count;
+				m["days"] = es.days;
+				m["days_and_counts"] = es.days_and_counts;
+				m["finalized"] = es.when_finalized;
+				m["rendered"] = DateTime.UtcNow;
+				json_metadata = JsonConvert.SerializeObject(m);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "serializing days_and_counts", e.Message + e.StackTrace);
+			}
+			return json_metadata;
 		}
 
 		private string InsertImageJson(string html)
@@ -607,6 +619,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
+				GenUtils.PriorityLogMsg("exception", "RenderHtml: no default_args?", e.Message);
 			}
 
 			if ( args.ContainsKey("jsurl") && (string)args["jsurl"] != null )  // look for override
@@ -691,7 +704,7 @@ namespace CalendarAggregator
 
 		public string RenderHtmlEventsOnly(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args)
 		{
-			args["AdvanceToAnHourAgo"] = true;
+			args["advance_to_an_hour_ago"] = true;
 
 			var day_anchors = GetDayAnchorsAsJson(eventstore, view);
 
@@ -735,13 +748,6 @@ namespace CalendarAggregator
 			return html;
 		}
 
-		private static bool get_announce_time_of_day(Dictionary<string, object> args)
-		{
-			var announce_time_of_day = true;
-			if (args.ContainsKey("announce_time_of_day") && (bool)args["announce_time_of_day"] == false)
-				announce_time_of_day = false;
-			return announce_time_of_day;
-		}
 
 		public string RenderHtmlForMobile(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string,object> args)
 		{
@@ -1066,9 +1072,9 @@ namespace CalendarAggregator
 
 			args["hub_tags"] = es.hub_tags;  // so the event renderer can exclude these
 
-			bool bare_events = args.ContainsKey("bare_events") && (bool)args["bare_events"] == true;
+			bool bare_events = args.HasValue("bare_events", true);
 
-			bool mobile = args.ContainsKey("mobile") && (bool)args["mobile"] == true;
+			//bool mobile = args.ContainsKey("mobile") && (bool)args["mobile"] == true;
 
 			var event_renderer = new EventRenderer(RenderEvtAsHtml);
 			var year_month_anchors = new List<string>(); // e.g. ym201201
@@ -1080,7 +1086,8 @@ namespace CalendarAggregator
 			string last_source_key = null;
 			string current_date_key = null;
 
-			var announce_time_of_day = get_announce_time_of_day(args);
+			var announce_time_of_day = args.HasValue("announce_time_of_day", true) && ! args.HasValue("bare_events",true);
+
 			BuildSourcesDict(es, announce_time_of_day, sources_dict);
 
 			foreach (ZonelessEvent evt in es.events)
@@ -1104,7 +1111,7 @@ namespace CalendarAggregator
 					sequence_at_zero = true;
 				}
 
-				if (announce_time_of_day && mobile == false && bare_events == false) // skip time-of-day markers in mobile view
+				if (announce_time_of_day) 
 				{
 					var time_of_day = Utils.ClassifyTime(evt.dtstart);
 
@@ -1218,26 +1225,30 @@ namespace CalendarAggregator
 
 			string label;
 
+			/*
 			if (args.ContainsKey("bare_events") && (bool)args["bare_events"] == true) // injecting, need to decorate the id
 				label = "e_" + month_day.Replace("/", "_") + "_" + this.event_counter.ToString();
 			else
 				label = "e" + this.event_counter.ToString();
+			 */
+
+			label = "e" + evt.uid;
 
 			String description = ( String.IsNullOrEmpty(evt.description) || evt.description.Length < 10 ) ? "" : evt.description.UrlsToLinks();
 			string show_desc = ( ! String.IsNullOrEmpty(description) ) ? String.Format(@"<span class=""sd""><a title=""show description ({0} chars)"" href=""javascript:show_desc('{1}')"">...</a></span>", description.Length, label) : "";
 
-			if (args.ContainsKey("inline_descriptions") && (bool)args["inline_descriptions"] == true) // for view_calendar
+			if ( args.HasValue("inline_descriptions",true) ) // for view_calendar
 			{
 				var location = string.IsNullOrEmpty(evt.location) ? "" : String.Format("{0}<br/><br/>", evt.location);
 				show_desc = String.Format(@"<div style=""text-indent:0""><p>{0}</div>", location + description);
 			}
 
-			if (args.ContainsKey("show_desc") && (bool)args["show_desc"] == false)  // in case need to suppress, not used yet
+			if ( args.HasValue("show_desc", false) ) // in case need to suppress, not used yet
 				show_desc = "";
 
 			string add_to_cal = String.Format(@"<span class=""atc""><a title=""add to calendar"" href=""javascript:add_to_cal('{0}')"">+</a></span>", label);
 
-			if (args.ContainsKey("add_to_cal") && (bool)args["add_to_cal"] == false) // for view_calendar
+			if ( args.HasValue("add_to_cal",false) ) // for view_calendar
 				add_to_cal = "";
 
 			string visibility = "";
@@ -1587,9 +1598,11 @@ namespace CalendarAggregator
 
 			MaybeBuildTagStructures(es); // transitional until new generation of objects is fully established
 
-			if (args.ContainsKey("AdvanceToAnHourAgo") && (bool)args["AdvanceToAnHourAgo"] == true)
+			if (args.HasValue("advance_to_an_hour_ago", true) && ! args.HasValue("bare_events", true))
 				es.AdvanceToAnHourAgo(this.calinfo);
-			if (args.ContainsKey("hub") && String.IsNullOrEmpty((string)args["hub"]) == false)
+
+			//if (args.ContainsKey("hub") && String.IsNullOrEmpty((string)args["hub"]) == false)
+			if ( args.HasNonEmptyOrNullStringValue("hub") )
 			{
 				var hub = (string)args["hub"];
 				hub = hub.ToLower();
@@ -1599,7 +1612,11 @@ namespace CalendarAggregator
 					view = view + "," + hub.ToLower();
 			}
 
+			var original_count = es.events.Count();
 			es.events = Filter(view, count, from, to, source, es); // apply all filters
+			var filtered_count = es.events.Count();
+			if ( filtered_count != original_count && ! args.HasValue("bare_events", true) )
+				es.PopulateDaysAndCounts();
 
 			return es;
 		}
@@ -1619,6 +1636,7 @@ namespace CalendarAggregator
 			return GetEventStore(es, null, 0, from, to, null, args);
 		}
 
+		/*
 		public ZonelessEventStore GetEventStoreRoundedUpToLastFullDay(int max, ZonelessEventStore es, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
 		{
 			if (args == null)
@@ -1650,6 +1668,7 @@ namespace CalendarAggregator
 			}
 			return rounded_list;
 		}
+		 */  
 
 		// take a string representation of a set of events, in some format
 		// take a per-event renderer for that format
@@ -1771,7 +1790,7 @@ namespace CalendarAggregator
 			var filtered_events = new List<ZonelessEvent>();
 			try
 			{
-				filtered_events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart <= to);  // reduce to time window
+				filtered_events = events.FindAll(evt => evt.dtstart >= from && evt.dtstart < to);  // reduce to time window
 			}
 			catch (Exception e)
 			{
