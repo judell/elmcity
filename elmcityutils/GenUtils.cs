@@ -626,6 +626,40 @@ namespace ElmcityUtils
 			dict[key] = 1;
 		}
 
+		public static bool HasValue<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue value)
+		{
+			if (dict.ContainsKey(key) && dict[key].Equals(value))
+				return true;
+			else
+				return false;
+		}
+
+		public static bool HasNonEmptyOrNullStringValue<TKey,TValue>(this IDictionary<TKey, TValue> dict, TKey key)
+		{
+			if ( ! dict.ContainsKey(key) || ! (dict[key] is String) )
+				return false;
+
+			var value = dict[key] as String;
+
+			if ( ! String.IsNullOrEmpty( value ) )
+				return true;
+			else
+				return false;
+		}
+
+		public static bool HasNonZeroIntValue<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key)
+		{
+			if (!dict.ContainsKey(key) || !(dict[key] is int))
+				return false;
+
+			var value = Convert.ToInt32(dict[key]);
+
+			if (value != 0 )
+				return true;
+			else
+				return false;
+		}
+
 	}
 
 	public static class ObjectExtensions
