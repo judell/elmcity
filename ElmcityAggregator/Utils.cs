@@ -2852,11 +2852,11 @@ END:VCALENDAR",
 				id);
 		}
 
-		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl, int days, bool bare_events, string hub, string source)
+		public static string MakeViewKey(string id, string type, string view, string count, string from, string to, bool eventsonly, bool mobile, bool test, bool raw, string style, string theme, bool taglist, bool tags, string template, string jsurl, int days, bool bare_events, string hub, string source, string first)
 		{
 			var viewkey = string.Format("/services/{0}/{1}?view={2}&count={3}&from={4}&to={5}&days={6}&source={7}", id, type, view, count, from, to, days, source);
 			if (type == "html")
-				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template + "&jsurl=" + jsurl + "&bare_events=" + bare_events + "&hub=" + hub;
+				viewkey += "&eventsonly=" + eventsonly + "&mobile=" + mobile + "&test=" + test + "&raw=" + raw + "&style=" + style + "&theme=" + theme + "&taglist=" + taglist + "&tags=" + tags + "&template=" + template + "&jsurl=" + jsurl + "&bare_events=" + bare_events + "&hub=" + hub + "&first=" + first;
 			return viewkey;
 		}
 
@@ -4042,6 +4042,21 @@ END:VTIMEZONE");
 
 		public static Dictionary<string, string> ConvertDaysIntoFromTo(int days, Calinfo calinfo)
 		{
+			var now = Utils.NowInTz(calinfo.tzinfo);
+			var from_date = new DateTime(now.LocalTime.Year, now.LocalTime.Month, now.LocalTime.Day);
+			var to_date = from_date.AddDays(days);
+			var fmt = "{0:yyyy-MM-ddTHH:mm}";
+			var from_str = string.Format(fmt, from_date);
+			var to_str = string.Format(fmt, to_date);
+			var dict = new Dictionary<string, string>();
+			dict.Add("from", from_str);
+			dict.Add("to", to_str);
+			return dict;
+		}
+
+		/*
+		public static Dictionary<string, string> ConvertDaysIntoFromTo(int days, Calinfo calinfo)
+		{
 			int nearest_minute = 15;
 			var now_in_tz = Utils.DateTimeSecsToZero(Utils.NowInTz(calinfo.tzinfo).LocalTime);
 			var from_in_tz = now_in_tz - TimeSpan.FromHours(1); // catch events that started less than an hour ago
@@ -4055,7 +4070,7 @@ END:VTIMEZONE");
 			dict.Add("from", from_str);
 			dict.Add("to", to_str);
 			return dict;
-		}
+		}*/
 
 		public static string RemoveItemFromTagString(string tagstring, string tag)
 		{
@@ -4120,7 +4135,7 @@ END:VTIMEZONE");
 				}
 			}
 			//bs.SerializeObjectToAzureBlob(category_hubs, id, "category_hubs.obj");
-			return category_hubs;
+		return category_hubs;
 		}
 
 		#endregion
