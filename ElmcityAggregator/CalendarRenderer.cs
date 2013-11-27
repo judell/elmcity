@@ -534,6 +534,7 @@ namespace CalendarAggregator
 				m["days"] = es.days;
 				m["days_and_counts"] = es.days_and_counts;
 				m["finalized"] = es.when_finalized;
+				m["last_day_with_events"] = es.last_day;
 				m["rendered"] = DateTime.UtcNow;
 				json_metadata = JsonConvert.SerializeObject(m);
 			}
@@ -1612,11 +1613,21 @@ namespace CalendarAggregator
 					view = view + "," + hub.ToLower();
 			}
 
+			if ( es.last_day == null )
+				es.RememberLastDay();
+
+			if ( es.days_and_counts != null )
+			{
+			if (es.days_and_counts.Count == 0)
+				es.PopulateDaysAndCounts();
+			}
+
+			if ( args.HasValue("bare_events", true) )
+				count = 0;
+
 			var original_count = es.events.Count();
 			es.events = Filter(view, count, from, to, source, es); // apply all filters
 			var filtered_count = es.events.Count();
-			if ( filtered_count != original_count && ! args.HasValue("bare_events", true) )
-				es.PopulateDaysAndCounts();
 
 			return es;
 		}
