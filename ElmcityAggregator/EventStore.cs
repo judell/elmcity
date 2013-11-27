@@ -262,6 +262,10 @@ namespace CalendarAggregator
 				uid++;
 			}
 
+			es_zoneless.RememberLastDay();
+
+			es_zoneless.PopulateDaysAndCounts();
+
 			es_zoneless.when_finalized = DateTime.UtcNow;
 
 			es_zoneless.Serialize();
@@ -506,6 +510,8 @@ namespace CalendarAggregator
 
 		public Dictionary<string, int> days_and_counts = new Dictionary<string, int>();
 
+		public string last_day;
+
 		public DateTime when_finalized;
 
 		public ZonelessEventStore(Calinfo calinfo)
@@ -586,6 +592,12 @@ namespace CalendarAggregator
 			}
 
 			this.event_dict = dict;
+		}
+
+		public void RememberLastDay()
+		{
+			var last_event = this.events.Last();
+			this.last_day = last_event.dtstart.ToString("yyyy-MM-dd");
 		}
 
 		public void PopulateDaysAndCounts()
