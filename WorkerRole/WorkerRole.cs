@@ -505,8 +505,12 @@ namespace WorkerRole
 
 		public static void ProcessRegion(string region)
 		{
-			var calinfo = Utils.AcquireCalinfo(region);
+			if ( ! Utils.IsRegion (region) )
+				throw new Exception(String.Format("ProcessRegion called erroneously for {0}", region));
+
 			GenUtils.LogMsg("status", "worker starting on region tasks for " + region, null);
+
+			var calinfo = Utils.AcquireCalinfo(region);
 
 			try
 			{
@@ -555,6 +559,9 @@ namespace WorkerRole
 
 		public static void FinalizeHub(string id)
 		{
+			if (Utils.IsRegion(id))
+				throw new Exception(String.Format("FinalizeHub called erroneously for {0}", id));
+
 			GenUtils.LogMsg("status", "worker finalizing hub: " + id, null);
 
 			Utils.UpdateFeedCountForId(id);
