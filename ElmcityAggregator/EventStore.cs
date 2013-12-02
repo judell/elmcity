@@ -245,32 +245,6 @@ namespace CalendarAggregator
 			}
 		}
 
-		public static void Finalize(Calinfo calinfo, ZonelessEventStore es_zoneless)
-		{
-			es_zoneless.events = EventStore.UniqueByTitleAndStart(calinfo.id, es_zoneless.events, save_tag_sources: true); // deduplicate
-
-			es_zoneless.ExcludePastEvents(); // the EventCollector should already have done this, but in case not...
-
-			es_zoneless.SortEventList();     // order by dtstart
-
-			Utils.BuildTagStructures(es_zoneless, calinfo);  // build structures used to generate tag picklists
-
-			int uid = 0;
-			foreach (var evt in es_zoneless.events)
-			{
-				evt.uid = uid;
-				uid++;
-			}
-
-			es_zoneless.RememberLastDay();
-
-			es_zoneless.PopulateDaysAndCounts();
-
-			es_zoneless.when_finalized = DateTime.UtcNow;
-
-			es_zoneless.Serialize();
-		}
-
 		public static void CombineZonedEventStoresToZonelessEventStore(string id, Dictionary<string, string> settings)
 		{
 			var bs = BlobStorage.MakeDefaultBlobStorage();
@@ -307,7 +281,7 @@ namespace CalendarAggregator
 					es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.lat, evt.lon, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories, evt.description, evt.location);
 				}
 
-			Finalize(calinfo, es_zoneless);
+			ZonelessEventStore.Finalize(calinfo, es_zoneless);
 		}
 
 		public static bool SimilarButNonIdenticalUrls(ZonelessEvent evt1, ZonelessEvent evt2, int min_length)
@@ -448,7 +422,7 @@ namespace CalendarAggregator
 			var es_zoneless = new ZonelessEventStore(calinfo);
 			foreach (var evt in es_zoned.events)
 				es_zoneless.AddEvent(evt.title, evt.url, evt.source, evt.lat, evt.lon, evt.dtstart.LocalTime, evt.dtend.LocalTime, evt.allday, evt.categories, evt.description, evt.location);
-			EventStore.Finalize(calinfo, es_zoneless);
+			ZonelessEventStore.Finalize(calinfo, es_zoneless);
 			return es_zoneless;
 		}
 	}
@@ -592,6 +566,53 @@ namespace CalendarAggregator
 			}
 
 			this.event_dict = dict;
+		}
+
+		public static void Finalize(Calinfo calinfo, ZonelessEventStore es_zoneless)
+		{
+			es_zoneless.events = EventStore.UniqueByTitleAndStart(calinfo.id, es_zoneless.events, save_tag_sources: true); // deduplicate
+
+			es_zoneless.ExcludePastEvents(); // the EventCollector should already have done this, but in case not...
+
+			es_zoneless.SortEventList();     // order by dtstart
+
+			Utils.BuildTagStructures(es_zoneless, calinfo);  // build structures used to generate tag picklists
+
+			int uid = 0;
+			foreach (var evt in es_zoneless.events)
+			{
+				evt.uid = uid;
+				uid++;
+			}
+
+			es_zoneless.RememberLastDay();
+
+			es_zoneless.PopulateDaysAndCounts();
+
+			es_zoneless.when_finalized = DateTime.UtcNow;
+
+			es_zoneless.Serialize();
+		}
+
+		public static int CountDays(List<ZonelessEvent> events, int max)
+		{
+			if (events.Count == 0)
+				return 0;
+
+			var first = events.First();
+			var first_dt = first.dtstart;
+			DateTime last_dt;
+			if (events.Count < max)
+				last_dt = events.Last().dtstart;
+			else
+				last_dt = events[max].dtstart;
+
+			var diff = last_dt - first_dt;
+
+			if (diff.Days == 0)
+				return 1;
+			else
+				return diff.Days;
 		}
 
 		public void RememberLastDay()
