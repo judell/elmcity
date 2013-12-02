@@ -1,5 +1,4 @@
-//var host = 'http://elmcity.cloudapp.net/';
-var host = 'http://localhost:8080/';
+var host = 'http://elmcity.cloudapp.net/';
 var blobhost = 'http://elmcity.blob.core.windows.net/';
 var anchor_names = [];
 var today = new Date();
@@ -20,6 +19,7 @@ var default_args = {};
 var $j = jQuery.noConflict();
 
 var redirected_hubs = [ 'AnnArborChronicle'];
+var redirected_hubs_dict = { 'AnnArborChronicle':'events.annarborchronicle.com' };
 
 var category_images = {};
 var source_images = {};
@@ -177,7 +177,7 @@ function find_current_name()
     if ( typeof ret == 'undefined' )
       ret = anchors[0].name;
     }
-  catch (e)
+ catch (e)
     {
      console.log("find_current_name: " + e.message);
     }
@@ -235,6 +235,8 @@ function setup_datepicker()
 
 
 $j(document).ready(function(){
+
+  $j('.ttl a').removeAttr('target');
 
   var elmcity_id = get_elmcity_id();
 
@@ -360,10 +362,13 @@ $j(document).ready(function(){
 
   if ( is_sidebar )   {
 
+    show_category_image_under_picker();
+
     setup_datepicker(); 
 
   if ( ! show_images ) 
     return;
+
 
   if ( $j.keys(category_images).length == 0 )
      return;
@@ -531,8 +536,8 @@ function make_path(view)
   if ( gup('count') != '')
     path = add_href_arg(path,'count',gup('count') );
 
-//  if ( gup('mobile') != '')
-//    path = add_href_arg(path,'mobile',gup('mobile') );
+  if ( gup('hubtitle') != '')
+    path = add_href_arg(path,'hubtitle',gup('hubtitle') );
 
   if ( gup('eventsonly') != '')
     path = add_href_arg(path,'eventsonly',gup('eventsonly') );
@@ -544,7 +549,7 @@ function make_path(view)
     path = add_href_arg(path,'jsurl',gup('jsurl') );
 
   if ( gup('hub') != '') 
-    path = add_href_arg(path,'hub', gup('hub') );
+    path = add_href_arg(path,'hub', get_selected_hub() );
 
    try
      {
@@ -715,13 +720,19 @@ var current_source;
 
 function active_description(description) {
 
+var template = '<div id="__ID___desc" style="overflow:hidden;text-indent:0;border-style:solid;border-width:thin;padding:8px;margin:8px">__CLOSER__ __IMAGES__ <div style="clear:both"><hr width="100%"><span class="desc">__LOCATION_AND_DESCRIPTION__</span>__MAP__<div>__UPCOMING__</div>__SOURCE__</div></div>';
+
 if ( $j('#' + current_id + '_desc').length > 0 )
   return;
+
+template = template.replace('__ID__', current_id);
 
 var orig_length = description.length;
 
 description = description.replace(/<br>\s+/g, '<br>')
 description = description.replace(/(<br>)\1+/g, '<br><br>')
+
+template = template.replace('__LOCATION_AND_DESCRIPTION__',description);
 
 quoted_id = '\'' + current_id + '\'';
 
@@ -780,7 +791,7 @@ catch (e) {
   }
 
 if ( show_images && ( source_image != '' || category_images != '' ) ) {
-  description = '<div>' + source_image + cat_images + '</div><hr width="100%">' + description;
+  template = template.replace('__IMAGES__', source_image + cat_images);
   }
 
 //s.match( /(\d+-\d+-)(\d+)(T\d+:\d+)/ )
@@ -804,20 +815,20 @@ try {
     if ( ! hide_maps )
       map_opener = '';
 
-    description = description + map_opener + iframe;
+    template = template.replace('__MAP__', map_opener + iframe);
     }
+  else
+    template = template.replace('__MAP__', '');
   }
 catch (e) {
   console.log(e.message);
   }
 
-//if ( orig_length == 0 )
-//  description = "none provided in source calendar";
-
 // build the closer
 
 var x = '<span style="font-size:larger;float:right;"><a title="hide description" href="javascript:hide_desc(' + quoted_id + ')"> [X] </a> </span>';
 
+template = template.replace('__CLOSER__', x);
 
 // acquire upcoming events from source
 
@@ -827,12 +838,13 @@ var from_dt = get_dtstart(current_id);
 
 var to_dt = '3000-01-01T00:00'; // just a date far in future, the count arg will trim the results
 
-var url = host + elmcity_id + '/json?source=' + current_source + '&from=' + from_dt + '&to=' + to_dt + '&count=4';
-
-
 if ( $j('#' + current_id + ' .src').text() != '' ) {  // skip if coalesced
 
-description += '<p style="display:none" id="' + current_id + '_upcoming"></p>';
+template = template.replace('__UPCOMING__', '<p style="display:none" id="' + current_id + '_upcoming"></p>');
+
+var redirected_host = get_redirected_host();
+
+var url= redirected_host + '/json?source=' + current_source + '&from=' + from_dt + '&to=' + to_dt + '&count=4';
 
 try {
 $j.ajax({
@@ -856,6 +868,8 @@ catch (e) {
   console.log('cannot get upcoming events' + e.message);
   }
 }
+else
+  template = template.replace('__UPCOMING__','');
 
 // build link to source calendar
 
@@ -863,18 +877,21 @@ var url = $j('#' + current_id + ' span[rel="v:url"]').attr('href');
 var src = $j('#' + current_id + ' span[property="v:description"]').text()
 var link = '<p style="font-size:larger"><a target="origin" title="visit the source calendar in a new window or tab" href="' + url + '">visit the source calendar</a></p>';
 
-description = description + '<hr width="100%">';
-description = description + link;
-
-// combine the pieces
-
-var s = '<div style="overflow:hidden;text-indent:0;border-style:solid;border-width:thin;padding:8px;margin:8px" id="' + current_id + '_desc' + '">' + x + '<div>' + description + '</div></div>';
-
-// s = s.replace('<br><br>','<br>'); 
+template = template.replace('__SOURCE__',link);
 
 elt = $j('#' + current_id);
 
-elt.append(s);
+elt.append(template);
+}
+
+function get_redirected_host() {
+var elmcity_id = get_elmcity_id();
+var redirected_host = host;
+if ( redirected_hubs.indexOf(elmcity_id) != -1 )
+  redirected_host = 'http://' + redirected_hubs_dict[elmcity_id] + '/';
+else
+  redirected_host = host + elmcity_id;
+return redirected_host;
 }
 
 function reveal_map(id) {
@@ -897,9 +914,9 @@ function show_upcoming_html(id, obj) {
     if ( upcoming_location != '' ) {
        upcoming_html += ', ' + upcoming_location;
        }
-    upcoming_html += '</li>';
+    upcoming_html += '</p>';
     }
-  upcoming_html += '</ul></div>';
+  upcoming_html += '</div>';
   upcoming.html(upcoming_html);
   upcoming.css('display','block');
 }
@@ -921,14 +938,7 @@ function show_more(id)
   }
 
 
-function show_desc(id) {
-//  var href = add_href_arg(location.href, 'show_desc', id);
-//  location.href = href; 
-  _show_desc(id);
-}
-
-
-function _show_desc(id)
+function show_desc(id)
 {
 quoted_id = '\'' + id + '\'';
 
@@ -970,7 +980,7 @@ function get_summary(id)
 
 function get_uid(id)
   {
-  return $j('#' + id + ' span[class="uid"').text()
+  return $j('#' + id + ' .uid').text();
   }
 
 function get_dtstart(id)
@@ -980,7 +990,7 @@ function get_dtstart(id)
 
 function get_md(id)
   {
-  return $j('#' + id + ' span[class="md"').text()
+  return $j('#' + id + ' .md').text();
   }
 
 function get_st(id)
@@ -1099,3 +1109,22 @@ function load_source_images(id)
 
 
 
+function show_category_image_under_picker() {
+
+  if ( $j.keys(category_images).length == 0 )
+     return;
+
+  if ( ! show_images ) 
+    return;
+
+  var view = gup('view');
+
+  if ( typeof(category_images[view]) != 'undefined' && category_images[view] != blobhost + 'admin/NoCurrentImage.jpg' ) 
+    {
+    var href = location.href;
+    $j('#category_image')[0].innerHTML = '<img style="width:140px;border-width:thin;border-style:solid" src="' + category_images[view] + '">'; 
+    }                
+  else
+    $j('#category_image')[0].innerHTML = '';
+
+}
