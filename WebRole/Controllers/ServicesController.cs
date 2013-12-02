@@ -164,8 +164,8 @@ namespace WebRole
 						{
 							var calinfo = ElmcityApp.wrd.renderers[this.id].calinfo;
 							var from_to = Utils.ConvertDaysIntoFromTo(this.days, calinfo);
-							this.from = Utils.DateTimeFromISO8601DateStr(from_to["from"], DateTimeKind.Local);
-							this.to = Utils.DateTimeFromISO8601DateStr(from_to["to"], DateTimeKind.Local);
+							this.from = (DateTime)from_to["from_date"];
+							this.to = (DateTime) from_to["to_date"];
 						}
 					}
 					catch (Exception e)
