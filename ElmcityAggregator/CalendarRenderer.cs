@@ -1618,7 +1618,7 @@ namespace CalendarAggregator
 
 			if ( es.days_and_counts != null )
 			{
-			if (es.days_and_counts.Count == 0)
+			if ( es.days_and_counts.Count == 0 || ! String.IsNullOrEmpty(view) )
 				es.PopulateDaysAndCounts();
 			}
 
@@ -1647,39 +1647,7 @@ namespace CalendarAggregator
 			return GetEventStore(es, null, 0, from, to, null, args);
 		}
 
-		/*
-		public ZonelessEventStore GetEventStoreRoundedUpToLastFullDay(int max, ZonelessEventStore es, string view, int count, DateTime from, DateTime to, Dictionary<string, object> args)
-		{
-			if (args == null)
-				args = new Dictionary<string, object>();
 
-			if (es == null) 
-				es = this.es_getter(this.cache);
-
-			if ( es.events.Count <= max )
-				return GetEventStore(es, from, to, args);
-
-			var rounded_list = MakeRoundedList(max, es);
-
-			es.events = rounded_list;
-
-			return es;
-		}
-
-		public static List<ZonelessEvent> MakeRoundedList(int max, ZonelessEventStore es)
-		{
-			var rounded_list = new List<ZonelessEvent>();
-
-			foreach (var datekey in es.event_dict.Keys)
-			{
-				var sublist = es.event_dict[datekey];
-				rounded_list.AddRange(sublist);
-				if (rounded_list.Count > max)
-					break;
-			}
-			return rounded_list;
-		}
-		 */  
 
 		// take a string representation of a set of events, in some format
 		// take a per-event renderer for that format
@@ -1729,7 +1697,7 @@ namespace CalendarAggregator
 		// possibly filter an event list by view or count
 		public List<ZonelessEvent> Filter(string view, int count, DateTime from, DateTime to, string source, ZonelessEventStore es)
 		{
-			var events = es.events;
+			var events = es.events.CloneObject();
 
 			if (!String.IsNullOrEmpty(source))
 				events = SourceFilter(source, events);  
@@ -1741,9 +1709,16 @@ namespace CalendarAggregator
 				events = TimeFilter(from, to, events);                    
 
 			if (count != 0)
-				events = CountFilter(count, events);                     
-		
-			return events;
+				events = CountFilter(count, events);
+
+			var days = ZonelessEventStore.CountDays(events, 500);
+			var from_to = new Dictionary<string,object>();
+			if (from == DateTime.MinValue)
+				from_to = Utils.ConvertDaysIntoFromTo(days, this.calinfo);
+			else
+				from_to = Utils.ConvertDaysIntoFromTo(from, days, this.calinfo);
+
+			return TimeFilter((DateTime)from_to["from_date"], (DateTime)from_to["to_date"], events);
 		}
 
 		private static List<ZonelessEvent> ViewFilter(string view, List<ZonelessEvent> events)
