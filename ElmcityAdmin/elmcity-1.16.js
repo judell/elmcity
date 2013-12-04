@@ -17,6 +17,9 @@ var show_images = true;
 var hide_maps = true;
 var top_method = 0; // for use in position_sidebar
 var default_args = {};
+var last_available_day = null;
+var can_load_events;
+var metadata;
 
 var $j = jQuery.noConflict();
 
@@ -212,13 +215,14 @@ function setup_datepicker()
 //  console.log("setup_datepicker");
 
   prep_day_anchors_and_last_day();
+
+  var last_
   
   $j('#datepicker').datepicker({  
             onSelect: function(dateText, inst) { goDay(dateText); },
             onChangeMonthYear: function(year, month, inst) { goMonth(year, month); },
             minDate: today,
-//            maxDate: last_day,
-            maxDate: null,
+            maxDate: last_available_day,
             hideIfNoPrevNext: true,
             beforeShowDay: maybeShowDay
         });
@@ -329,11 +333,24 @@ function ready()
   if ( gup('sourcestyle') != '' )
     apply_json_css('.src', 'sourcestyle');
 
-  remember_or_forget_days();
+//  remember_or_forget_days();
 
   adjust_openers();
 
+  show_category_image_under_picker();
+
+  try {
+    metadata = JSON.parse($j('#elmcity_metadata').text());
+    last_available_day = new Date (metadata["last_available_day"]);
+    last_available_day.addDays(1);
+    can_load_events = metadata["days"].filter( function(x) { return anchor_names.indexOf(x) == -1 } )
+  }
+  catch (e) {
+    console.log('cannot process metadata');
+    }
+
   if ( is_sidebar ) 
+
     setup_datepicker(); 
 
 }
@@ -372,29 +389,43 @@ function getDateStr(date) {
   return "d" + year + month + day;
 }
 
-function hasEvents(date_str) {
-return $j.inArray(date_str, anchor_names) == -1 ? false : true;
+function hasLoadedEvents(date_str) {
+  return $j.inArray(date_str, anchor_names) == -1 ? false : true;
+}
+
+function canLoadEvents(date_str) {
+  return $j.inArray(date_str, can_load_events) == -1 ? false : true;
 }
 
 function maybeShowDay(date) {
   var date_str = getDateStr(date);
-  var has_events = hasEvents(date_str);
   var style;
   var d = new Date();
-  if (date < new Date(d.getFullYear(), d.getMonth(), d.getDate()))
+  var today = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var has_loaded_events = hasLoadedEvents(date_str);
+  var can_load_events = canLoadEvents(date_str);
+  var tooltip = '';
+  if (   
+       date < today || 
+       ( last_available_day != null && date > last_available_day ) ||
+       ( ! hasLoadedEvents(date_str) && ! canLoadEvents(date_str) )
+      )
     style = "ui-state-disabled"; 
-  else if ( has_events && is_today(date) ) {
-    style = 'cal_day is_today has_events';
+  else if ( has_loaded_events && is_today(date) ) {
+    style = 'cal_day is_today has_loaded_events';
     }
   else {
-     if ( has_events ) 
-       style = 'cal_day has_events';
-     else
-       style = 'cal_day can_load_events';     
-    }
+     var tooltip_date_str = date.toDateString();
+     if ( has_loaded_events ) {
+       style = 'cal_day has_loaded_events';
+       tooltip = "go to " + tooltip_date_str 
+       }
+     else if ( can_load_events) {
+       style = 'cal_day can_load_events'; 
+       tooltip = "load events for " + tooltip_date_str;
+       }
+     }
 
-  var tooltip_date_str = date.toDateString();
-  var tooltip = has_events ? "go to " + tooltip_date_str : "load events for " + tooltip_date_str;
   return [true, style, tooltip];
   }
 
@@ -403,12 +434,15 @@ function apply_datepicker_styles() {
 
   $j('.cal_day a').css('font-weight','bold').css('color','darkgreen');
   $j('.is_today a').css('text-decoration','underline');
-  $j('.has_events a').css('color','darkgreen').css('font-weight:bold');
+  $j('.has_loaded_events a').css('color','darkgreen').css('font-weight:bold');
   $j('.can_load_events a').css('font-style','italic').css('color','black').css('font-weight','normal');
   $j('.ui-datepicker-current-day a').css('border-color','darkgreen').css('border-width','thin');
 
   $j('td .cal_day a').removeClass('ui-state-default');
   $j('td .cal_day a').removeClass('ui-state-active');
+
+  $j('td.ui-state-disabled').removeAttr('onclick');
+  $j('td.ui-state-disabled a').removeAttr('href');
 }
 
 function is_today(date) {
@@ -423,8 +457,8 @@ function goDay(date_text)
   var month = parsed['month'];
   var day = parsed['day'];
   var date_str = 'd' + year + month + day;
-  var has_events = hasEvents(date_str);
-  if (!has_events)
+  var has_loaded_events = hasLoadedEvents(date_str);
+  if (!has_loaded_events)
      load_events_for_date(year, month, day); 
   else
      scrollToElement(date_str);
@@ -519,8 +553,8 @@ function make_path(view)
   if ( gup('count') != '')
     path = add_href_arg(path,'count',gup('count') );
 
-//  if ( gup('mobile') != '')
-//    path = add_href_arg(path,'mobile',gup('mobile') );
+  if ( gup('hubtitle') != '')
+    path = add_href_arg(path,'hubtitle',gup('hubtitle') );
 
   if ( gup('eventsonly') != '')
     path = add_href_arg(path,'eventsonly',gup('eventsonly') );
@@ -533,21 +567,6 @@ function make_path(view)
 
   if ( gup('hub') != '') 
     path = add_href_arg(path,'hub', get_selected_hub() );
-
-   try
-     {
-     var days_cookie_name = make_cookie_name_from_view(view);
-     var days_cookie_value = $j.cookie(days_cookie_name);
-     if ( typeof(days_cookie_value)!='undefined'  )
-       {
-       var days = days_cookie_value;
-       path = add_href_arg( path, 'days', days );
-       }
-     }
-   catch (e)
-     {
-     console.log(e.message);
-     }   
 
   return path;
   }
@@ -999,53 +1018,6 @@ $j.extend({
         return a;
       }
    });
-
-function remember_or_forget_days()
-  {
-  var view = gup('view');
-  var days = gup('days');
-
-  if ( days != '' )
-    remember_days(view, days);
-  else
-    forget_days(view);
-  }
-
-function remember_days(view, days)
-  {
-  try
-    {
-    var cookie_name = make_cookie_name_from_view(view);
-    $j.cookie(cookie_name, days);
-    }
-  catch (e)
-    {
-    console.log(e.message);
-    }
-  }
-
-function forget_days(view)
-  {
-  try
-    {
-    var cookie_name = make_cookie_name_from_view(view);
-    $j.removeCookie(cookie_name);
-    }
-  catch (e)
-    {
-    console.log(e.message);
-    }
-  }
-
-function make_cookie_name_from_view(view)
-  {
-  if ( view == 'all' )
-     view = '';
-  view = view.replace(',' , '_');       
-  view = view.replace('-' , '_minus_'); 
-  var cookie_name = 'elmcity_' + view + '_days';
-  return cookie_name; 
-  }
 
 function load_category_images(id)
 {
