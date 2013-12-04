@@ -608,6 +608,7 @@ namespace CalendarAggregator
 
 		public void RememberFirstAndLastAvailableDays(List<ZonelessEvent> events)
 		{
+			if (events.Count == 0) return;
 			var first_event = events.First();
 			this.first_available_day = first_event.dtstart.ToString("yyyy-MM-dd");
 			var last_event = events.Last();
