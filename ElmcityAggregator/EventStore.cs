@@ -480,11 +480,13 @@ namespace CalendarAggregator
 
 		public Dictionary<string, List<string>> hub_name_map; // optional (but important) for regional hubs, ex: for HR { "norfolkva"		: [ "NorfolkVa" , "Norfolk"],
 
-		public List<string> days = new List<string>();
+		public List<string> days;
+		public Dictionary<string, int> days_and_counts;
 
-		public Dictionary<string, int> days_and_counts = new Dictionary<string, int>();
-
-		public string last_day;
+		public string first_available_day;
+		public string last_available_day;
+		
+		//public string last_cached_day;
 
 		public DateTime when_finalized;
 
@@ -584,11 +586,11 @@ namespace CalendarAggregator
 				evt.uid = uid;
 				uid++;
 			}
-
-			es_zoneless.RememberLastDay();
-
-			es_zoneless.PopulateDaysAndCounts();
-
+														
+			
+			es_zoneless.PopulateDaysAndCounts();	// do this here for a) renderer efficiency, b) renderer simplification  
+													// (it only updates these structures for category views)	
+											
 			es_zoneless.when_finalized = DateTime.UtcNow;
 
 			es_zoneless.Serialize();
@@ -609,16 +611,15 @@ namespace CalendarAggregator
 
 			var diff = last_dt - first_dt;
 
-			if (diff.Days == 0)
-				return 1;
-			else
-				return diff.Days;
+			return diff.Days + 1;
 		}
 
-		public void RememberLastDay()
+		public void RememberFirstAndLastAvailableDays(List<ZonelessEvent> events)
 		{
-			var last_event = this.events.Last();
-			this.last_day = last_event.dtstart.ToString("yyyy-MM-dd");
+			var first_event = events.First();
+			this.first_available_day = first_event.dtstart.ToString("yyyy-MM-dd");
+			var last_event = events.Last();
+			this.last_available_day = last_event.dtstart.ToString("yyyy-MM-dd");
 		}
 
 		public void PopulateDaysAndCounts()
@@ -627,6 +628,7 @@ namespace CalendarAggregator
 			var keys = this.event_dict.Keys.ToList();
 			keys.Sort();
 			this.days = keys;
+			this.days_and_counts = new Dictionary<string, int>();
 			foreach (var datekey in keys)
 				this.days_and_counts[datekey] = this.event_dict[datekey].Count;
 			this.event_dict = null;
