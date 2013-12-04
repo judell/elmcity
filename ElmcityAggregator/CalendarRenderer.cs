@@ -82,6 +82,8 @@ namespace CalendarAggregator
 
 		public DateTime timestamp;
 
+		public int max_events;
+
 		public CalendarRenderer(string id)
 		{
 			this.timestamp = DateTime.UtcNow;
@@ -92,6 +94,8 @@ namespace CalendarAggregator
 			this.category_images = new Dictionary<string, string>();
 			this.source_images = new Dictionary<string, string>();
 			this.is_region = Utils.IsRegion(id);
+			this.default_js_url = "http://elmcity.blob.core.windows.net/admin/elmcity-1.7.js";
+			this.max_events = 500;
 
 			try
 			{
@@ -113,18 +117,6 @@ namespace CalendarAggregator
 				catch (Exception e)
 				{
 					GenUtils.LogMsg("exception", "CalendarRenderer: acquiring args", e.Message);
-				}
-
-				try
-				{
-					var settings = GenUtils.GetSettingsFromAzureTable();
-					this.default_js_url =	BlobStorage.MakeAzureBlobUri("admin", settings["elmcity_js"]).ToString();
-					settings = null;
-				}
-				catch (Exception e)
-				{
-					this.default_js_url =	BlobStorage.MakeAzureBlobUri("admin", "elmcity-1.7.js").ToString();
-					GenUtils.LogMsg("exception", "CalendarRenderer: setting js urls", e.Message);
 				}
 
 				try
@@ -156,6 +148,24 @@ namespace CalendarAggregator
 				{
 					GenUtils.PriorityLogMsg("exception", "CalendarRenderer: loading source images", e.Message);
 					throw (e);
+				}
+
+				var settings = GenUtils.GetSettingsFromAzureTable();
+				try
+				{
+					this.max_events = Convert.ToInt32(settings["max_html_events_default"]);  // start with service-wide setting
+
+					if (this.default_args.ContainsKey("max_events"))			 // look for hub setting
+						this.max_events = Convert.ToInt32( default_args["max_events"] );
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "CalendarRenderer: setting max events", e.Message);
+					throw (e);
+				}
+				finally
+				{
+					settings = null;
 				}
 
 			}
@@ -461,6 +471,8 @@ namespace CalendarAggregator
 			if (args.HasNonEmptyOrNullStringValue("hub"))   // look for url override
 				hub = (string)args["hub"];
 
+			args["html_renderer"] = true;
+
 			es = GetEventStore(es, view, count, from, to, source, args);
 
 			MaybeUseAlternateTemplate(args);
@@ -534,7 +546,9 @@ namespace CalendarAggregator
 				m["days"] = es.days;
 				m["days_and_counts"] = es.days_and_counts;
 				m["finalized"] = es.when_finalized;
-				m["last_day_with_events"] = es.last_day;
+				m["first_available_day"] = es.first_available_day;
+				m["last_available_day"] = es.last_available_day;
+				//m["last_cached_day"] = es.last_cached_day;
 				m["rendered"] = DateTime.UtcNow;
 				json_metadata = JsonConvert.SerializeObject(m);
 			}
@@ -608,9 +622,6 @@ namespace CalendarAggregator
 
 		private string HandleJsUrl(string html, Dictionary<string,object> args)
 		{
-			if (this.default_js_url == null)                                                            
-				this.default_js_url = "http://elmcity.blob.core.windows.net/admin/elmcity-1.7.js";
-
 			string jsurl_param_value = null;
 
 			try
@@ -1597,39 +1608,47 @@ namespace CalendarAggregator
 			// then it will use HttpUtils.RetrieveBlobFromServerCacheOrUri
 			// which gets from cache if it can, else fetches uri and loads cache
 
-			MaybeBuildTagStructures(es); // transitional until new generation of objects is fully established
+			var is_html_renderer = args.HasValue("html_renderer", true);
+			var bare_events = args.HasValue("bare_events", true);
+			var is_view = !String.IsNullOrEmpty(view);
 
-			if (args.HasValue("advance_to_an_hour_ago", true) && ! args.HasValue("bare_events", true))
+			if (is_html_renderer)
+			{
+				MaybeBuildTagStructures(es); // transitional until new generation of objects is fully established
+				if (bare_events)
+					count = 0;
+			}
+
+			if (args.HasValue("advance_to_an_hour_ago", true) && ! bare_events)
 				es.AdvanceToAnHourAgo(this.calinfo);
 
+			view = MaybeAddHubTagToView(view, args);
+
+			var original_count = es.events.Count();
+			es.events = Filter(view, count, from, to, source, es, args); // apply all filters
+
+			if (is_view)                         
+			{
+				if (es.days_and_counts != null)  // this check needed only until new generation of objects is established
+					es.PopulateDaysAndCounts();  // mainly for html renderer but could be useful to  non-html renderers as well
+			}
+
+			return es;
+		}
+
+		private static string MaybeAddHubTagToView(string view, Dictionary<string, object> args)
+		{
 			//if (args.ContainsKey("hub") && String.IsNullOrEmpty((string)args["hub"]) == false)
-			if ( args.HasNonEmptyOrNullStringValue("hub") )
+			if (args.HasNonEmptyOrNullStringValue("hub"))
 			{
 				var hub = (string)args["hub"];
 				hub = hub.ToLower();
-				if ( String.IsNullOrEmpty(view) && ! String.IsNullOrEmpty(hub) && hub != "all" )         // hub, no view
+				if (String.IsNullOrEmpty(view) && !String.IsNullOrEmpty(hub) && hub != "all")         // hub, no view
 					view = hub;
-				else if ( ! String.IsNullOrEmpty(view) && ! String.IsNullOrEmpty(hub) && hub != "all" )  // hub plus view
+				else if (!String.IsNullOrEmpty(view) && !String.IsNullOrEmpty(hub) && hub != "all")  // hub plus view
 					view = view + "," + hub.ToLower();
 			}
-
-			if ( es.last_day == null )
-				es.RememberLastDay();
-
-			if ( es.days_and_counts != null )
-			{
-			if ( es.days_and_counts.Count == 0 || ! String.IsNullOrEmpty(view) )
-				es.PopulateDaysAndCounts();
-			}
-
-			if ( args.HasValue("bare_events", true) )
-				count = 0;
-
-			var original_count = es.events.Count();
-			es.events = Filter(view, count, from, to, source, es); // apply all filters
-			var filtered_count = es.events.Count();
-
-			return es;
+			return view;
 		}
 
 		private ZonelessEventStore GetEventStore(ZonelessEventStore es, string view, Dictionary<string, object> args)
@@ -1646,8 +1665,6 @@ namespace CalendarAggregator
 		{
 			return GetEventStore(es, null, 0, from, to, null, args);
 		}
-
-
 
 		// take a string representation of a set of events, in some format
 		// take a per-event renderer for that format
@@ -1695,30 +1712,54 @@ namespace CalendarAggregator
 		}
 
 		// possibly filter an event list by view or count
-		public List<ZonelessEvent> Filter(string view, int count, DateTime from, DateTime to, string source, ZonelessEventStore es)
+		public List<ZonelessEvent> Filter(string view, int count, DateTime from, DateTime to, string source, ZonelessEventStore es, Dictionary<string,object> args)
 		{
 			var events = es.events.CloneObject();
+
+			var bare_events = args.HasValue("bare_events", true);
+			var is_html_renderer = args.HasValue("html_renderer", true);
 
 			if (!String.IsNullOrEmpty(source))
 				events = SourceFilter(source, events);  
 
 			if (!String.IsNullOrEmpty(view))
-				events = ViewFilter(view, events);                        
+				events = ViewFilter(view, events);
 
 			if (from != DateTime.MinValue && to != DateTime.MinValue)
-				events = TimeFilter(from, to, events);                    
+				events = TimeFilter(from, to, events);
 
-			if (count != 0)
+			if (! bare_events)									// bracket the available range before (maybe) reducing to count
+				es.RememberFirstAndLastAvailableDays(events);   // not required for non-html renderers but no reason to exclude them    
+                                                 
+			if (count != 0)                                      // includes case where bare_events is true
 				events = CountFilter(count, events);
 
-			var days = ZonelessEventStore.CountDays(events, 500);
-			var from_to = new Dictionary<string,object>();
-			if (from == DateTime.MinValue)
-				from_to = Utils.ConvertDaysIntoFromTo(days, this.calinfo);
-			else
-				from_to = Utils.ConvertDaysIntoFromTo(from, days, this.calinfo);
+			if ( ! is_html_renderer )   // do nothing else for non-html views
+				return events;
+			else                                   // post-process result set to yield ~500 day-aligned events
+			{
+				var from_to = new Dictionary<string, DateTime>();
 
-			return TimeFilter((DateTime)from_to["from_date"], (DateTime)from_to["to_date"], events);
+				if (bare_events)
+					from_to = HandleBareEvents(from);
+				else
+					from_to = HandleClothedEvents(events);
+
+				return TimeFilter((DateTime)from_to["from_date"], (DateTime)from_to["to_date"], events);
+			}
+		}
+
+		private Dictionary<string,DateTime> HandleBareEvents(DateTime from)
+		{
+			int days = 1;
+			return Utils.ConvertDaysIntoFromTo(from, days, this.calinfo);
+		}
+
+		private Dictionary<string, DateTime> HandleClothedEvents(List<ZonelessEvent> events)
+		{
+			int days = ZonelessEventStore.CountDays(events, this.max_events);
+			var from = events.First().dtstart;
+			return Utils.ConvertDaysIntoFromTo(from, days + 1, this.calinfo);
 		}
 
 		private static List<ZonelessEvent> ViewFilter(string view, List<ZonelessEvent> events)
