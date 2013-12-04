@@ -55,7 +55,7 @@ namespace CalendarAggregator
 		{
 			var filterable = this.CreateFilterable(calinfo);
 			GenUtils.LogMsg("status", "ViewFilterReturnsOneEvent before", ShowEventStore(filterable.events));
-			var events = cr.Filter("music", 0, DateTime.MinValue, DateTime.MinValue, null, filterable);
+			var events = cr.Filter("music", 0, DateTime.MinValue, DateTime.MinValue, null, filterable, new Dictionary<string,object>());
 			GenUtils.LogMsg("status", "ViewFilterReturnsOneEvent after", ShowEventStore(events));
 			Assert.That(events.Count == 1);
 			Assert.That(events.First().title == "e5");
@@ -65,7 +65,7 @@ namespace CalendarAggregator
 		public void ViewFilterHandlesNullViewAndNullishDateTimes()
 		{
 			var filterable = this.CreateFilterable(calinfo);
-			var events = cr.Filter(null, 0, DateTime.MinValue, DateTime.MinValue, null, filterable);
+			var events = cr.Filter(null, 0, DateTime.MinValue, DateTime.MinValue, null, filterable, new Dictionary<string,object>());
 			Assert.That(events.Count == filterable.events.Count());
 		}
 
@@ -73,7 +73,7 @@ namespace CalendarAggregator
 		public void TimeFilterReturnsNov4And5()
 		{
 			var filterable = this.CreateFilterable(calinfo);
-			var events = cr.Filter(null, 0, DateTime.Parse("2013-11-04T00:00"), DateTime.Parse("2013-11-06T00:00"), null, filterable);
+			var events = cr.Filter(null, 0, DateTime.Parse("2013-11-04T00:00"), DateTime.Parse("2013-11-06T00:00"), null, filterable, new Dictionary<string,object>());
 			Assert.That(events.Count == 2);
 			var titles = events.Select(x => x.title).ToList();
 			titles.Sort();
@@ -84,7 +84,7 @@ namespace CalendarAggregator
 		public void CountFilterReturns2()
 		{
 			var filterable = this.CreateFilterable(calinfo);
-			var events = cr.Filter(null, 2, DateTime.MinValue, DateTime.MinValue, null, filterable);
+			var events = cr.Filter(null, 2, DateTime.MinValue, DateTime.MinValue, null, filterable, new Dictionary<string,object>());
 			Assert.That(events.Count == 2);
 			var titles = events.Select(x => x.title).ToList();
 			titles.Sort();
@@ -95,7 +95,7 @@ namespace CalendarAggregator
 		public void SourceFilterReturns2()
 		{
 			var filterable = this.CreateFilterable(calinfo);
-			var events = cr.Filter(null, 2, DateTime.MinValue, DateTime.MinValue, "s1", filterable);
+			var events = cr.Filter(null, 2, DateTime.MinValue, DateTime.MinValue, "s1", filterable, new Dictionary<string,object>());
 			Assert.That(events.Count == 2);
 			var titles = events.Select(x => x.title).ToList();
 			titles.Sort();
@@ -109,7 +109,7 @@ namespace CalendarAggregator
 			var dtstart = DateTime.Parse("2013/11/03 8 AM");
 			var dtend = DateTime.Parse("2013/11/10 8 AM");
 			dtstart += TimeSpan.FromMinutes(1);
-			var events = cr.Filter(null, 2, dtstart, dtend, "s2", filterable);
+			var events = cr.Filter(null, 2, dtstart, dtend, "s2", filterable, new Dictionary<string,object>());
 			Assert.That(events.Count == 2);
 			var titles = events.Select(x => x.title).ToList();
 			titles.Sort();
