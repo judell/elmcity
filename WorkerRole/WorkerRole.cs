@@ -535,7 +535,7 @@ namespace WorkerRole
 
 				Utils.UpdateFeedCountForId(region);
 
-				EventStore.Finalize(calinfo, es_region);
+				ZonelessEventStore.Finalize(calinfo, es_region);
 
 				CacheUtils.MarkBaseCacheEntryForRemoval(Utils.MakeBaseZonelessUrl(region), Convert.ToInt32(settings["webrole_instance_count"]));
 
