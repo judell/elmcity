@@ -4041,21 +4041,21 @@ END:VTIMEZONE");
 		}
 
 
-		public static Dictionary<string,object> ConvertDaysIntoFromTo(DateTime start, int days, Calinfo calinfo)
+		public static Dictionary<string,DateTime> ConvertDaysIntoFromTo(DateTime start, int days, Calinfo calinfo)
 		{
 			var from_date = new DateTime(start.Year, start.Month, start.Day);
 			var to_date = from_date.AddDays(days);
 			var fmt = "{0:yyyy-MM-ddTHH:mm}";
 			var from_str = string.Format(fmt, from_date);
 			var to_str = string.Format(fmt, to_date);
-			var dict = new Dictionary<string, object>();
+			var dict = new Dictionary<string, DateTime>();
 			dict.Add("from_date", from_date);
 			dict.Add("to_date", to_date);
 			return dict;
 		}
 
 
-		public static Dictionary<string, object> ConvertDaysIntoFromTo(int days, Calinfo calinfo)
+		public static Dictionary<string, DateTime> ConvertDaysIntoFromTo(int days, Calinfo calinfo)
 		{
 		var start = Utils.NowInTz(calinfo.tzinfo).LocalTime;
 		return ConvertDaysIntoFromTo(start, days, calinfo);
