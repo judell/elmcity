@@ -95,7 +95,6 @@ namespace CalendarAggregator
 			this.source_images = new Dictionary<string, string>();
 			this.is_region = Utils.IsRegion(id);
 			this.default_js_url = "http://elmcity.blob.core.windows.net/admin/elmcity-1.7.js";
-			this.max_events = 500;
 			this.default_args = new Dictionary<string, object>();
 
 			try
@@ -162,6 +161,7 @@ namespace CalendarAggregator
 				catch (Exception e)
 				{
 					GenUtils.PriorityLogMsg("exception", "CalendarRenderer: setting max events", e.Message);
+					this.max_events = 1000;
 					throw (e);
 				}
 				finally
@@ -1746,7 +1746,10 @@ namespace CalendarAggregator
 				else
 					from_to = HandleClothedEvents(events);
 
-				return TimeFilter((DateTime)from_to["from_date"], (DateTime)from_to["to_date"], events);
+				if (from_to == null)
+					return events;
+				else
+					return TimeFilter((DateTime)from_to["from_date"], (DateTime)from_to["to_date"], events);
 			}
 		}
 
@@ -1758,6 +1761,8 @@ namespace CalendarAggregator
 
 		private Dictionary<string, DateTime> HandleClothedEvents(List<ZonelessEvent> events)
 		{
+			if (events.Count == 0)
+				return null;
 			int days = ZonelessEventStore.CountDays(events, this.max_events);
 			var from = events.First().dtstart;
 			return Utils.ConvertDaysIntoFromTo(from, days + 1, this.calinfo);
