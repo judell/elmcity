@@ -600,17 +600,9 @@ namespace CalendarAggregator
 		{
 			if (events.Count == 0)
 				return 0;
-
-			var first = events.First();
-			var first_dt = first.dtstart;
-			DateTime last_dt;
-			if (events.Count < max)
-				last_dt = events.Last().dtstart;
-			else
-				last_dt = events[max].dtstart;
-
-			var diff = last_dt - first_dt;
-
+			var first = events.First().dtstart;
+			var last = events.Last().dtstart;
+			var diff = last - first;
 			return diff.Days + 1;
 		}
 
