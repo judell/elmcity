@@ -460,7 +460,7 @@ namespace CalendarAggregator
 
 			try
 			{
-				if (this.default_args.ContainsKey("hub"))			 // look for hub default
+				if (this.default_args != null && this.default_args.ContainsKey("hub"))			 // look for hub default
 					hub = (string)default_args["hub"];
 			}
 			catch (Exception e)
