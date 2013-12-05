@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ElmcityUtils;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace CalendarAggregator
@@ -186,6 +187,7 @@ namespace CalendarAggregator
 		//public List<List<string>> list_of_urls_and_sources { get; set; }
 		public string original_categories;
 		public int? uid;  // nullable only for transitional reasons
+		public string hash; 
 
 		public ZonelessEvent(string title, string url, string source, bool allday, string lat, string lon, string categories,
 			DateTime dtstart, DateTime dtend, string description, string location) :
@@ -580,14 +582,16 @@ namespace CalendarAggregator
 
 			Utils.BuildTagStructures(es_zoneless, calinfo);  // build structures used to generate tag picklists
 
-			int uid = 0;
+			var i = 0;
 			foreach (var evt in es_zoneless.events)
 			{
-				evt.uid = uid;
-				uid++;
+				var str = evt.dtstart.ToString() + evt.title.ToString() + evt.source.ToString() + evt.url;
+				var hash = HttpUtils.GetMd5Hash(Encoding.UTF8.GetBytes(str));
+				evt.uid = i;
+				i++;
+				evt.hash = hash;
 			}
 														
-			
 			es_zoneless.PopulateDaysAndCounts();	// do this here for a) renderer efficiency, b) renderer simplification  
 													// (it only updates these structures for category views)	
 											
@@ -600,8 +604,15 @@ namespace CalendarAggregator
 		{
 			if (events.Count == 0)
 				return 0;
+
 			var first = events.First().dtstart;
-			var last = events.Last().dtstart;
+
+			DateTime last;					   // events.Count is governed by the service-wide setting "max_html_event_count"
+			if ( max < events.Count )          // max is a per-hub setting that can further constrain the initial load
+				last = events[max].dtend;      // if max < events.Count it overrides and we use a non-Last event
+			else
+				last = events.Last().dtstart;  // otherwise use Last
+
 			var diff = last - first;
 			return diff.Days + 1;
 		}
