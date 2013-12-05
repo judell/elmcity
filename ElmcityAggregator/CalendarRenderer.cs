@@ -402,6 +402,14 @@ namespace CalendarAggregator
 			return String.Format(jsonp + "('" + description + "')");
 		}
 
+		public string DescriptionFromHash(string hash, string jsonp)
+		{
+			var es = this.es_getter(this.cache);
+			var evt = es.events.Find(e => e.hash == hash);
+			var description = MassageDescription(evt);
+			return String.Format(jsonp + "('" + description + "')");
+		}
+
 		private static string MassageDescription(ZonelessEvent evt)
 		{
 			string description = "";
@@ -1236,19 +1244,11 @@ namespace CalendarAggregator
 				categories = string.Format(@" <span class=""cat"">{0}</span>", string.Join(", ", catlist_links.ToArray()));
 			}
 
-			string label;
-
-			/*
-			if (args.ContainsKey("bare_events") && (bool)args["bare_events"] == true) // injecting, need to decorate the id
-				label = "e_" + month_day.Replace("/", "_") + "_" + this.event_counter.ToString();
-			else
-				label = "e" + this.event_counter.ToString();
-			 */
-
-			label = "e" + evt.uid;
-
 			String description = ( String.IsNullOrEmpty(evt.description) || evt.description.Length < 10 ) ? "" : evt.description.UrlsToLinks();
-			string show_desc = ( ! String.IsNullOrEmpty(description) ) ? String.Format(@"<span class=""sd""><a title=""show description ({0} chars)"" href=""javascript:show_desc('{1}')"">...</a></span>", description.Length, label) : "";
+
+			string dom_id = "e" + evt.uid;
+
+			string show_desc = ( ! String.IsNullOrEmpty(description) ) ? String.Format(@"<span class=""sd""><a title=""show description"" href=""javascript:show_desc('{0}')"">...</a></span>", dom_id) : "";
 
 			if ( args.HasValue("inline_descriptions",true) ) // for view_calendar
 			{
@@ -1259,7 +1259,7 @@ namespace CalendarAggregator
 			if ( args.HasValue("show_desc", false) ) // in case need to suppress, not used yet
 				show_desc = "";
 
-			string add_to_cal = String.Format(@"<span class=""atc""><a title=""add to calendar"" href=""javascript:add_to_cal('{0}')"">+</a></span>", label);
+			string add_to_cal = String.Format(@"<span class=""atc""><a title=""add to calendar"" href=""javascript:add_to_cal('{0}')"">+</a></span>", dom_id);
 
 			if ( args.HasValue("add_to_cal",false) ) // for view_calendar
 				add_to_cal = "";
@@ -1267,14 +1267,13 @@ namespace CalendarAggregator
 			string visibility = "";
 			string more = "";
 			string source_key = "";
-			string source_attr = "";
+			//string source_attr = "";  // not needed, 
 			int sequence_count = 1;
 			int sequence_position = 1;
 			string show_more_call;
 
 			if (evt.urls_and_sources.Count == 1)
 			{
-				source_attr = MakeSourceAttr(evt); 
 				sequence_count = (int)args["sequence_count"];
 				source_key = (string)args["source_key"];
 				sequence_position = (int)args["sequence_position"];
@@ -1298,9 +1297,9 @@ namespace CalendarAggregator
 			}
 
 			var html = string.Format(
-@"<a name=""{0}""></a>
-<div id=""{0}"" class=""bl {10} {12}"" {13} xmlns:v=""http://rdf.data-vocabulary.org/#"" typeof=""v:Event"" >
+@"<div id=""{0}"" class=""bl {12}"" {13} xmlns:v=""http://rdf.data-vocabulary.org/#"" typeof=""v:Event"" >
 <span style=""display:none"" class=""uid"">{15}</span>
+<span style=""display:none"" class=""hash"">{16}</span>
 <span class=""md"">{14}</span> 
 <span class=""st"" property=""v:startDate"" content=""{1}"">{2}</span>
 <span href=""{3}"" rel=""v:url""></span>
@@ -1311,22 +1310,23 @@ namespace CalendarAggregator
 {9}
 {11}
 </div>",
-			label,                                                  // 0
+			dom_id,                                                 // 0
 			String.Format("{0:yyyy-MM-ddTHH:mm}", evt.dtstart),     // 1
 			dtstart,                                                // 2
 			evt.url,                                                // 3
 			MakeTitleForRDFa(evt),                                  // 4
-			evt.urls_and_sources.Keys.Count == 1 ? evt.source : "", // 5    suppress source if multiple
+			evt.urls_and_sources.Keys.Count == 1 ? evt.source : "", // 5 suppress source if multiple
 			categories,                                             // 6
 			MakeGeoForRDFa(evt),                                    // 7
 			show_desc,                                              // 8
 			add_to_cal,                                             // 9
-			source_attr,                                            // 10
+			"",														// 10 was source_attr, not needed  
 			more,                                                   // 11
 			source_key,                                             // 12
 		    visibility,                                             // 13
             month_day,												// 14 
-            evt.uid													// 15
+            evt.uid,												// 15
+			evt.hash												// 16
 			);
 
 			this.event_counter += 1;
