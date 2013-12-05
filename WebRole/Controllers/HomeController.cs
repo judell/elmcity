@@ -224,6 +224,23 @@ namespace WebRole
 			return Content(description, "application/json");
 		}
 
+
+		public ActionResult description_from_hash(string id, string hash, string jsonp)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			var description = "";
+			try
+			{
+				var cr = ElmcityApp.wrd.renderers[id];
+				description = cr.DescriptionFromHash(hash, jsonp);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "description_from_hash", e.Message + e.StackTrace);
+			}
+			return Content(description, "application/json");
+		}
+
         public ActionResult feed2json(string id, string source, string view, string jsonp)
         {
             ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
