@@ -675,6 +675,12 @@ namespace ElmcityUtils
 			else
 				return null;
 		}
+
+		public static bool HasProperty(this object o, string name)
+		{
+			var type = o.GetType();
+			return type.GetMembers().ToList().Exists(x => x.Name == name);
+		}
 	}
 
 	public static class StringExtensions
