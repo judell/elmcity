@@ -1,5 +1,4 @@
 var host = 'http://elmcity.cloudapp.net/';
-var host = 'http://localhost:8080/';
 var blobhost = 'http://elmcity.blob.core.windows.net/';
 var anchor_names = [];
 var today = new Date();
@@ -948,11 +947,17 @@ $j('#' + id + ' .sd').css('display','none');
 $j('#' + id + ' .atc').css('display','none');
 
 
-var uid = get_uid(id);
-
 var elmcity_id = get_elmcity_id();
 
-var url = host + elmcity_id + '/description_from_uid?uid=' + uid + '&jsonp=active_description';
+var uid = get_uid(id);
+var hash = get_hash(id);
+
+var url;
+
+if ( hash == '' )
+  url = host + elmcity_id + '/description_from_uid?uid=' + uid + '&jsonp=active_description';
+else
+  url = host + elmcity_id + '/description_from_hash?hash=' + hash + '&jsonp=active_description';
 
 current_id = id;
 current_source = get_source(id);
@@ -983,6 +988,11 @@ function get_summary(id)
 function get_uid(id)
   {
   return $j('#' + id + ' .uid').text();
+  }
+
+function get_hash(id)
+  {
+  return $j('#' + id + ' .hash').text();
   }
 
 function get_dtstart(id)
@@ -1074,7 +1084,6 @@ function load_events_for_date (year, month, day) {
         per_date_events_url = add_href_arg(per_date_events_url, 'to', next_date_year + '-' + next_date_month + '-' + next_date_day + 'T00:00');
         per_date_events_url = add_href_arg(per_date_events_url, 'bare_events', 'y');
         per_date_events_url = add_href_arg(per_date_events_url, 'tags', 'hide');
-        per_date_events_url = remove_href_arg(per_date_events_url, 'tags', 'hide');
         per_date_events_url = remove_href_arg(per_date_events_url, 'days');
 
         $j('#datepicker').append('<p style="font-size:larger" id="loading-date">loading...</p>')
@@ -1094,6 +1103,9 @@ function load_events_for_date (year, month, day) {
             adjust_openers();
             scrollToElement('d' + year + month + day);
             $j('#loading-date').remove();
+            if ( gup('tags').startsWith('hide') ) // keep them invisibly for use with image display
+               $j('.cat').css('display','none');
+
         });
     }
 
