@@ -181,6 +181,12 @@ namespace CalendarAggregator
 		{
 			var images_uri = BlobStorage.MakeAzureBlobUri(this.id, image_type + "_images.json");
 			var r = HttpUtils.FetchUrl(images_uri);
+			if (r.status != System.Net.HttpStatusCode.OK)
+			{
+				images_uri = BlobStorage.MakeAzureBlobUri("admin", image_type + "_images.json");
+				r = HttpUtils.FetchUrl(images_uri);
+			}
+
 			if (r.status == System.Net.HttpStatusCode.OK)
 			{
 				var json = r.DataAsString();
