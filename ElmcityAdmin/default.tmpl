@@ -9,17 +9,17 @@
 <link type="text/css" rel="stylesheet" href="__CSSURL__"/>
 
 <!-- JQUERY_UI_CSS -->
-<link type="text/css" href="http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/themes/smoothness/jquery-ui.css" rel="stylesheet" />
+<link type="text/css" href="http://ajax.aspnetcdn.com/ajax/jquery.ui/1.10.3/themes/smoothness/jquery-ui.css" rel="stylesheet" />
 <!-- /JQUERY_UI_CSS -->
 
-<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.2.min.js'></script>
+<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jQuery/jquery-2.0.3.min.js'></script>
 
 <script type='text/javascript' src='http://elmcity.blob.core.windows.net/admin/jquery.cookie.js'></script>
 
 <script type='text/javascript' src='http://elmcity.blob.core.windows.net/admin/extensions.js'></script>
 
 <!-- JQUERY_UI -->
-<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.20/jquery-ui.min.js'></script>
+<script type='text/javascript' src='http://ajax.aspnetcdn.com/ajax/jquery.ui/1.10.3/jquery-ui.min.js'></script>
 <!-- /JQUERY_UI -->
 
 <!-- JSURL -->
@@ -108,12 +108,18 @@ width:65%;
 .ed { width:44% }
 }
 
-
 </style>
 
 </head>
 
 <body>
+
+<div id="image_json">
+<script>
+__CATEGORY_IMAGES__
+__SOURCE_IMAGES__
+</script>
+</div>
 
 <div id="body">
 
@@ -135,6 +141,7 @@ width:65%;
 </p>
 <!-- /TAGS -->
 
+<div id="category_image"></div>
 
 <p class="sidebar" style="font-style:italic;margin-top:20px;margin-bottom:12px">sources</p>
 
@@ -216,6 +223,10 @@ __GENERATED__
 <div id="elmcity_metadata" style="display:none">
 __METADATA__
 </div> 
+
+<script>
+__DEFAULT_ARGS__
+</script>
 
 </body>
 </html>
