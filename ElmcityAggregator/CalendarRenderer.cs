@@ -94,7 +94,7 @@ namespace CalendarAggregator
 			this.category_images = new Dictionary<string, string>();
 			this.source_images = new Dictionary<string, string>();
 			this.is_region = Utils.IsRegion(id);
-			this.default_js_url = "http://elmcity.blob.core.windows.net/admin/elmcity-1.7.js";
+			this.default_js_url = "http://elmcity.blob.core.windows.net/admin/elmcity-1.17.js";
 			this.default_args = new Dictionary<string, object>();
 
 			try
