@@ -316,6 +316,7 @@ namespace CalendarAggregator
 
 			var settings = GenUtils.GetSettingsFromAzureTable();
 			var options = new ParallelOptions();
+
 			Parallel.ForEach(source: bing_results, parallelOptions: options, body: (result) =>
 			//foreach (var result in bing_results)
 			{
@@ -332,13 +333,12 @@ namespace CalendarAggregator
 					else
 						seen_ids.Add(fb_id);
 
+					string slat = null;
+					string slon = null;
+					var ical = new DDay.iCal.iCalendar();
 					var facebook_access_token = settings["facebook_access_token"]; // todo: merge with code in collector
-					// https://graph.facebook.com/https://graph.facebook.com/142525312427391/events?access_token=...
-					var graph_uri_template = "https://graph.facebook.com/{0}/events?access_token={1}";
-					var graph_uri = new Uri(string.Format(graph_uri_template, fb_id, facebook_access_token));
-					var json = HttpUtils.FetchUrl(graph_uri).DataAsString();
-					var j_obj = (JObject)JsonConvert.DeserializeObject(json);
-					var events = Utils.UnpackFacebookEventsFromJson(j_obj);
+					var j_obj = Utils.GetFacebookEventsAsJsonObject(fb_id, facebook_access_token);
+					var events = Utils.iCalendarizeJsonObjectFromFacebook(j_obj, calinfo, ical, slat, slon);
 
 					if (events.Count == 0)  // no calendar on this page
 						return;
@@ -402,13 +402,13 @@ namespace CalendarAggregator
 			return taggable_sources;
 		}
 
-		private static bool FacebookPageHasFutureEvents(List<FacebookEvent> events, Calinfo calinfo)
+		private static bool FacebookPageHasFutureEvents(List<DDay.iCal.Event> events, Calinfo calinfo)
 		{
 			try
 			{
-				foreach (FacebookEvent evt in events)
+				foreach (DDay.iCal.Event evt in events)
 				{
-					if (Utils.IsCurrentOrFutureDateTime(evt.dt, calinfo.tzinfo))
+					if (Utils.IsCurrentOrFutureDateTime(evt.Start.Date, calinfo.tzinfo))
 						return true;
 				}
 			}
