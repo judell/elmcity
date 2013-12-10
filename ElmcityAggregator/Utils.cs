@@ -1161,12 +1161,7 @@ namespace CalendarAggregator
 		{
 			var facebook_access_token = settings["facebook_access_token"];
 
-			// https://graph.facebook.com/https://graph.facebook.com/142525312427391/events?access_token=...
-			var graph_uri_template = "https://graph.facebook.com/{0}/events?access_token={1}";
-			var graph_uri = new Uri(string.Format(graph_uri_template, fb_id, facebook_access_token));
-			var json = HttpUtils.FetchUrl(graph_uri).DataAsString();
-			var j_obj = (JObject)JsonConvert.DeserializeObject(json);
-			var count = j_obj["data"].Count();
+			var j_obj = GetFacebookEventsAsJsonObject(fb_id, facebook_access_token);
 
 			var calinfo = Utils.AcquireCalinfo(elmcity_id);
 			var tzinfo = calinfo.tzinfo;
@@ -1190,6 +1185,17 @@ namespace CalendarAggregator
 			{
 				GenUtils.LogMsg("warning", "IcsFromFbPage: " + fb_id, "cannot get lat/lon: " + e.Message);
 			}
+
+			iCalendarizeJsonObjectFromFacebook(j_obj, calinfo, ical, slat, slon);
+
+			var ical_serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer(ical);
+			var ics_text = ical_serializer.SerializeToString(ical);
+			return ics_text;
+		}
+
+		public static List<DDay.iCal.Event> iCalendarizeJsonObjectFromFacebook(JObject j_obj, Calinfo calinfo, iCalendar ical, string slat, string slon)
+		{
+			var events = new List<DDay.iCal.Event>();
 
 			foreach (JObject event_dict in j_obj["data"])
 			{
@@ -1215,11 +1221,21 @@ namespace CalendarAggregator
 				var description = "See " + url + " for details";
 				var evt = Collector.MakeTmpEvt(calinfo, dtstart: dtstart_with_zone, dtend: DateTimeWithZone.MinValue(calinfo.tzinfo), title: name, url: url, location: location, description: description, lat: slat, lon: slon, allday: false);
 				Collector.AddEventToDDayIcal(ical, evt);
+				events.Add(evt);
 			}
 
-			var ical_serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer(ical);
-			var ics_text = ical_serializer.SerializeToString(ical);
-			return ics_text;
+			return events;
+		}
+
+		public static JObject GetFacebookEventsAsJsonObject(string fb_id, string facebook_access_token)
+		{
+			// https://graph.facebook.com/https://graph.facebook.com/142525312427391/events?access_token=...
+			var graph_uri_template = "https://graph.facebook.com/{0}/events?access_token={1}";
+			var graph_uri = new Uri(string.Format(graph_uri_template, fb_id, facebook_access_token));
+			var json = HttpUtils.FetchUrl(graph_uri).DataAsString();
+			var j_obj = (JObject)JsonConvert.DeserializeObject(json);
+			var count = j_obj["data"].Count();
+			return j_obj;
 		}
 
 		public static string IcsFromLastFmVenue(string elmcity_id, string venue_id, Dictionary<string, string> settings)
