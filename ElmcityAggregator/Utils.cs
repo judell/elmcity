@@ -3104,9 +3104,10 @@ td {{ text-align: center }}
 			}
 			return sb.ToString();
 		}
-
+		
 		public static string FixMiswrappedComponent(string calendar_text, string component)
 		{
+			calendar_text = Regex.Replace(calendar_text, @"\r\n|\n\r|\n|\r", "\r\n");
 			var lines = calendar_text.Split('\n');
 			var sb = new StringBuilder();
 			bool in_component = false;
