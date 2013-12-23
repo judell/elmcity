@@ -249,7 +249,8 @@ namespace CalendarAggregator
 
 			Parallel.ForEach(source: results, body: (venue) =>
 			{
-				if (venue.city_name != calinfo.City)
+				//if (venue.city_name != calinfo.City)
+				if ( ! calinfo.City.Contains(venue.city_name) )
 					return;
 				if (venue.count < min_per_venue)
 					return;
