@@ -432,13 +432,15 @@ namespace CalendarAggregator
 
 		public static string[] FindCityOrTownAndStateAbbrev(string where)
 		{
+			where = where.Replace(",", " "); // normalize to no-comma format
+			where = where.Trim();
 			var city_or_town = "";
 			var state_abbrev = "";
-			var groups = GenUtils.RegexFindGroups(where, @"([^\s,]+)([\s,]+)([^\s]+)");
+			var groups = GenUtils.RegexFindGroups(where, @"(.+)\s+(\w+$)");
 			if (groups.Count > 1)
 			{
-				city_or_town = groups[1].ToLower();
-				state_abbrev = groups[3].ToLower();
+				city_or_town = groups[1].ToLower().Trim();
+				state_abbrev = groups[2].ToLower().Trim();
 			}
 			return new string[] { city_or_town, state_abbrev };
 		}
@@ -615,20 +617,16 @@ namespace CalendarAggregator
 
 		public static string[] LookupLatLon(string bing_api_key, string where, string user_location)
 		{
-			var url = string.Format("http://dev.virtualearth.net/REST/v1/Locations?key={0}&query={1}&userLocation={2}", bing_api_key, where, user_location);
 
 			string lat = null;
 			string lon = null;
 
 			try
 			{
-				var json = HttpUtils.FetchUrl(new Uri(url)).DataAsString();
-				json = json.Replace("__type", "type"); // http://stackoverflow.com/questions/2005534/json-serialization-deserialization-mismatch-asp-net
-				var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-				var dict = (Dictionary<string, object>)serializer.DeserializeObject(json);
+				var dyn = CallBingGeocoder(bing_api_key, where, user_location);
 
-				lat = ((Object[])((Dictionary<string, object>)((Dictionary<string, object>)(((Object[])((Dictionary<string, object>)(((Object[])dict["resourceSets"])[0]))["resources"])[0]))["point"])["coordinates"])[0].ToString();
-				lon = ((Object[])((Dictionary<string, object>)((Dictionary<string, object>)(((Object[])((Dictionary<string, object>)(((Object[])dict["resourceSets"])[0]))["resources"])[0]))["point"])["coordinates"])[1].ToString();
+				lat = dyn.resourceSets[0].resources[0].point.coordinates[0].Value.ToString();
+				lon = dyn.resourceSets[0].resources[0].point.coordinates[1].Value.ToString();
 			}
 
 			catch (Exception e)
@@ -637,6 +635,33 @@ namespace CalendarAggregator
 			}
 
 			return new string[] { lat, lon };
+		}
+
+		private static dynamic CallBingGeocoder(string bing_api_key, string where, string user_location)
+		{
+			var url = string.Format("http://dev.virtualearth.net/REST/v1/Locations?key={0}&query={1}&userLocation={2}", bing_api_key, where, user_location);
+			var json = HttpUtils.FetchUrl(new Uri(url)).DataAsString();
+			json = json.Replace("__type", "type"); // http://stackoverflow.com/questions/2005534/json-serialization-deserialization-mismatch-asp-net
+			dynamic dyn = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+			return dyn;
+		}
+
+		public static string LookupCountry(string bing_api_key, string where)
+		{
+			string country = null;
+
+			try
+			{
+				dynamic dyn = CallBingGeocoder(bing_api_key, where, "");
+				country = dyn.resourceSets[0].resources[0].address.countryRegion.Value;
+			}
+
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "LookupLatLon (country)", e.Message + e.StackTrace);
+			}
+
+			return country;
 		}
 
 		public static void UpdateLatLonToAzureForId(string id, string lat, string lon)
@@ -1979,6 +2004,7 @@ END:VCALENDAR",
 <tr>
 <td><b>region</b></td>
 <td><b>feeds</b></td>
+<td><b>events</b></td>
 <td><b>hubs</b></td>
 </tr>");
 
@@ -1987,6 +2013,7 @@ END:VCALENDAR",
 <td>{0}</td>
 <td align=""right"">{1}</td>
 <td>{2}</td>
+<td>{3}</td>
 </tr>";
 
 			foreach (var id in region_ids)
@@ -1994,12 +2021,14 @@ END:VCALENDAR",
 				var calinfo = Utils.AcquireCalinfo(id);
 				if (Convert.ToInt32(calinfo.feed_count) == 0)
 					continue;
+				var events = GetEventCountForRegion(id);
 				var hubs = Utils.GetIdsForRegion(id);
 				hubs = hubs.Select(x => String.Format(@"<a href=""http://{0}/{1}"">{1}</a>", ElmcityUtils.Configurator.appdomain, x)).ToList();
 				var hub_str = String.Join(", ", hubs.ToArray());
 				var row = string.Format(row_template,
 					String.Format(@"<a title=""view hub"" href=""http://{0}/{1}"">{1}</a>", ElmcityUtils.Configurator.appdomain, id),
 					String.Format(@"<a title=""view sources"" href=""http://{0}/{1}/stats"">{2}</a>", ElmcityUtils.Configurator.appdomain, id, calinfo.feed_count),
+					events,
 					hub_str
 					);
 				summary.Append(row);
@@ -2032,8 +2061,7 @@ END:VCALENDAR",
 				var calinfo = Utils.AcquireCalinfo(id);
 				if (Convert.ToInt32(calinfo.feed_count) == 0)
 					continue;
-				var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
-				var events = metadict.ContainsKey("events") ? metadict["events"] : "";
+				var events = GetEventCountForId(id);
 				var row = string.Format(row_template,
 					String.Format(@"<a title=""view hub"" href=""http://{0}/{1}"">{1}</a>", ElmcityUtils.Configurator.appdomain, id),
 					calinfo.where.ToLower(),
@@ -2045,6 +2073,26 @@ END:VCALENDAR",
 			summary.Append("</table></body></html>");
 
 			bs.PutBlob("admin", "where_summary.html", summary.ToString(), "text/html");
+		}
+
+		private static string GetEventCountForId(string id)
+		{
+			var metadict = Metadata.LoadMetadataForIdFromAzureTable(id);
+			var events = metadict.ContainsKey("events") ? metadict["events"] : "";
+			return events;
+		}
+
+		private static string GetEventCountForRegion(string region)
+		{
+			var ids = Utils.GetIdsForRegion(region);
+			var events = 0;
+			foreach (var id in ids)
+			{
+				var count = GetEventCountForId(id);
+				if (count != "")
+					events += Convert.ToInt32(count);
+			}
+			return events.ToString();
 		}
 
 		public static string GetWhatSummary()
@@ -2062,21 +2110,26 @@ END:VCALENDAR",
 			summary.Append(@"
 <tr>
 <td align=""center""><b>id</b></td>
+<td>feeds</td>
+<td>events</td>
 </tr>");
 			var row_template = @"
 <tr>
 <td>{0}</td>
+<td>{1}</td>
+<td>{2}</td>
 </tr>";
 			foreach (var id in wrd.what_ids)
 			{
-				var row = String.Format(row_template,
-					String.Format(@"<a title=""view hub"" href=""http://{0}/{1}"">{0}</a>", ElmcityUtils.Configurator.appdomain, id)
-					);
+				var hub = String.Format(@"<a title=""view hub"" href=""http://{0}/{1}"">{1}</a>", ElmcityUtils.Configurator.appdomain, id);
+				var calinfo = Utils.AcquireCalinfo(id);
+				var events = GetEventCountForId(id);
+				var row = string.Format(row_template, hub, calinfo.feed_count, events);
 				summary.Append(row);
 			}
 			summary.Append("</table>");
 
-			bs.PutBlob("admin", "what_summary.html", summary.ToString());
+			bs.PutBlob("admin", "what_summary.html", summary.ToString(), "text/html");
 		}
 
 		/* idle for now
