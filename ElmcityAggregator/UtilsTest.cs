@@ -224,9 +224,27 @@ import System
 
 		#endregion population
 
-		#region events
+		#region citystate
 
-		#endregion events
+		[Test]
+		public void FindsNewportNewsVA() // where: Newport News, VA
+		{
+			var calinfo = Utils.AcquireCalinfo("NewportNewsVA");
+			var citystate = Utils.FindCityOrTownAndStateAbbrev(calinfo.where);
+			Assert.That(citystate[0] == "newport news");
+			Assert.That(citystate[1] == "va");
+		}
+
+		[Test]
+		public void FindsSantaCruzCA() // where: Santa Cruz CA
+		{
+			var calinfo = Utils.AcquireCalinfo("SantaCruzCA");
+			var citystate = Utils.FindCityOrTownAndStateAbbrev(calinfo.where);
+			Assert.That(citystate[0] == "santa cruz");
+			Assert.That(citystate[1] == "ca");
+		}
+
+		#endregion citystate
 
 		#region auth
 
