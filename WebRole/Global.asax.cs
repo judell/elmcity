@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2544";
+        public static string version = "2551";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -161,7 +161,7 @@ namespace WebRole
         public static string get_events_param_types = "html|xml|json|ics|rss|text|tags_json|stats|tags_html|jswidget|today_as_html";
 
 		public static bool debugging = false;
-
+				
         public ElmcityApp()
         {
             GenUtils.LogMsg("status", String.Format("ElmcityApp constructor {0} {1} {2} {3}", procname, procid, domain_name, thread_id), null);
@@ -207,6 +207,13 @@ namespace WebRole
 				"description_from_uid",
 				"{id}/description_from_uid",
 				new { controller = "Home", action = "description_from_uid" },
+				new { id = wrd.str_ready_ids }
+				);
+
+			routes.MapRoute(
+				"description_from_hash",
+				"{id}/description_from_hash",
+				new { controller = "Home", action = "description_from_hash" },
 				new { id = wrd.str_ready_ids }
 				);
 
@@ -454,6 +461,12 @@ namespace WebRole
 				"ics_via_form_post",
 				new { controller = "Home", action = "ics_via_form_post" }
 			);
+
+			routes.MapRoute(
+				"ics_from_nasa_iss_tracking_rss",
+				"ics_from_nasa_iss_tracking_rss",
+				new { controller = "Home", action = "ics_from_nasa_iss_tracking_rss" }
+				);
 
             routes.MapRoute(
                 "keep_only_vevents",
@@ -727,7 +740,7 @@ namespace WebRole
 				var msg = "_ReloadSettingsAndRoutes: themes";
 				GenUtils.PriorityLogMsg("exception", msg, e2.Message);
 			}
-		
+
             try
             {
                 var new_wrd = WebRoleData.GetWrd();
@@ -747,11 +760,12 @@ namespace WebRole
                         ElmcityApp.wrd = new_wrd;                               // update WebRoleData (todo: rewarm caches affected)
                     }
                 }
-
+		
 				foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's renderer change?
 				{
 					var cached_renderer = ElmcityApp.wrd.renderers[id];
 					var current_renderer = Utils.AcquireRenderer(id);
+
 					if (cached_renderer.timestamp != current_renderer.timestamp) // timestamp changed
 					{
 						if (! Utils.RenderersAreEqual(cached_renderer, current_renderer, except_keys: new List<string>() { "timestamp" }) )
