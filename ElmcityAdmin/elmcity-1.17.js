@@ -43,6 +43,10 @@ function get_top_elt_top() {
 
 function position_sidebar(top_element)
   {
+
+  if ( is_eventsonly ) 
+    return;
+
   var top_elt_top = get_top_elt_top();
 
   var top = top_elt_top < 0 ? 0 : top_elt_top;
@@ -803,6 +807,9 @@ catch (e) {
 if ( show_images && ( source_image != '' || category_images != '' ) ) {
   template = template.replace('__IMAGES__', source_image + cat_images);
   }
+else {
+  template = template.replace('__IMAGES__','');
+  }
 
 //s.match( /(\d+-\d+-)(\d+)(T\d+:\d+)/ )
 //["2013-10-07T19:00", "2013-10-", "07", "T19:00"]
@@ -1130,6 +1137,9 @@ function find_insertion_anchor (year, month, day) {
 
 
 function adjust_openers() {
+
+  if ( is_eventsonly )
+    return;
 
   $j('.ttl a').removeAttr('target');
 
