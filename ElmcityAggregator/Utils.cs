@@ -1701,6 +1701,70 @@ END:VCALENDAR",
 			return serializer.SerializeToString(ical);
 		}
 
+		public static string IcsFromNasaIssTrackingRss(string tzname, string country, string state_region, string city)
+		{
+			var ical = new DDay.iCal.iCalendar();
+
+			var xml_url = "http://spotthestation.nasa.gov/sightings/xml_files/[COUNTRY]_[STATE]_[CITY].xml";
+			xml_url = xml_url.Replace("[COUNTRY]", country).Replace("[STATE]", state_region).Replace("[CITY]", city);
+
+			var html_url = "http://spotthestation.nasa.gov/sightings/view.cfm?country=United_States&region=New_Hampshire&city=Keene";
+			html_url = html_url.Replace("[COUNTRY]", country).Replace("[STATE]", state_region).Replace("[CITY]", city);
+
+			try
+			{
+				var xmlbytes = HttpUtils.FetchUrl(xml_url).bytes;
+				var xdoc = XmlUtils.XdocFromXmlBytes(xmlbytes);
+
+				IEnumerable<XElement> descriptions_query = from d in xdoc.Descendants("description") select d;
+				var description_xelements = descriptions_query.ToList();
+				description_xelements.RemoveAt(0);
+				var descriptions = description_xelements.Select(d => d.Value).ToList();
+
+				var datetimes = descriptions.Select(s => ParseNasaIssTrackingDateTime(s)).ToList();
+
+				IEnumerable<XElement> titles_query = from t in xdoc.Descendants("title") select t;
+				var title_xelements = titles_query.ToList();
+				title_xelements.RemoveAt(0);
+				var titles = title_xelements.Select(d => d.Value).ToList();
+
+				var tzinfo = Utils.TzinfoFromName(tzname);
+
+				for (var i = 0; i < descriptions.Count(); i++)
+				{
+					var dtstart_with_zone = new DateTimeWithZone(datetimes[i], tzinfo);
+					var title = titles[i];
+					var description = descriptions[i];
+					var evt = Collector.MakeTmpEvt(tzinfo, dtstart_with_zone, DateTimeWithZone.MinValue(tzinfo), title, url: html_url, location: null, description: description, lat: null, lon: null, allday: false);
+					evt.Categories.Add("astronomy");
+					Collector.AddEventToDDayIcal(ical, evt);
+				}
+
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "IcsFromNasaIssTrackingRss", e.Message);
+			}
+			var serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer();
+			return serializer.SerializeToString(ical);
+		}
+
+		private static DateTime ParseNasaIssTrackingDateTime(string text)
+		{
+			try
+			{
+				var re = @"Date: ([^<]+)<br/>\s+Time: ([^<]+)";
+				var m = Regex.Match(text, re);
+				var date = m.Groups[1].ToString();
+				var time = m.Groups[2].ToString();
+				return DateTime.Parse(date + time);
+			}
+			catch 
+			{
+				return DateTime.MinValue;
+			}
+		}
+
 		#endregion
 
 		#region metadata

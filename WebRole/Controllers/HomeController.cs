@@ -621,6 +621,24 @@ if unsure please check http://{1}/{2}/stats",
 		}
 
 		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
+		public ActionResult ics_from_nasa_iss_tracking_rss(string elmcity_id, string country, string state_region, string city)
+		{
+			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
+			string ics = "";
+			try
+			{
+				var calinfo = Utils.AcquireCalinfo(elmcity_id);
+				var tzname = calinfo.tzname;
+				ics = Utils.IcsFromNasaIssTrackingRss(tzname, country, state_region, city);
+			}
+			catch (Exception e)
+			{
+				GenUtils.LogMsg("exception", "IcsFromNasaIssTrackingRss", e.Message + e.StackTrace);
+			}
+			return Content(ics, "text/calendar");
+		}
+
+		[OutputCache(Duration = CalendarAggregator.Configurator.services_output_cache_duration_seconds, VaryByParam = "*")]
 		public ActionResult ics_to_json(string feedurl, string tzname, string days)
 		{
 			ElmcityApp.logger.LogHttpRequest(this.ControllerContext);
