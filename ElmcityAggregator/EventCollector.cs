@@ -810,6 +810,10 @@ namespace CalendarAggregator
 			if (calinfo != null && calinfo.use_x_wr_timezone)   // null if called from ViewCalendar
 				feedtext = Utils.Handle_X_WR_TIMEZONE(feedtext);
 
+			// helios workaround
+			if ( feedurl.Contains("berkeleyside.com") )
+				feedtext = feedtext.Replace("�", " ");
+
 			feedtext = Utils.AdjustCategories(feedtext); // for now, this only removes unwanted backslashes
 			feedtext = Utils.RemoveComponent(feedtext, "UID");           // don't need these
 			feedtext = Utils.RemoveComponent(feedtext, "DTSTAMP");
