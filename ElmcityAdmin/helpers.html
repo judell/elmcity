@@ -44,6 +44,22 @@ function ec_id()
 alert("Your Elm City ID is the ID of your hub. For example: BostonMA, CTNEXT, seattleopencalendar");
 }
 
+function get_nasa_iss_ical_url()
+{
+var nasa_elmcity_id = $('#nasa_id').val();
+var nasa_country = $('#nasa_country').val();
+var nasa_state_region = $('#nasa_state_region').val();
+var nasa_city = $('#nasa_city').val();
+
+var ical_url = 'http://elmcity.cloudapp.net/ics_from_nasa_iss_tracking_rss' +
+                '?elmcity_id=' + nasa_elmcity_id +
+                '&amp;country=' + nasa_country + 
+                '&amp;state_region=' + nasa_state_region + 
+                '&amp;city=' + nasa_city;
+$('#nasa_url').html(ical_url);
+}
+
+
 function get_form_post_ical_url()
 {
 var fp_feed_url = $('#fp_feed_url').val();
@@ -415,6 +431,56 @@ This helper accepts the URL of an EventBrite event page and an <a href="javascri
 
 
 </table>
+
+<a name="nasa_iss"></a>
+
+<h2>NASA Space Station Tracker</h2>
+
+<p>
+On NASA's <a href="http://spotthestation.nasa.gov/sightings/index.cfm">Spot the Station</a> page you can find the schedule for upcoming sightings of the space station in your location. There is only an RSS feed, not an iCalendar feed, but you can construct an iCalendar feed here. Find your closest city on the NASA page, it will produce an URL like this:
+</p>
+
+<p>
+http://spotthestation.nasa.gov/sightings/view.cfm?country=<b>United_States</b>&amp;region=<b>New_Hampshire</b>&city=<b>Dublin</b>
+</p>
+
+<p>
+Transfer the values for country, region, and city (exactly as shown in the generated URL) to this form.
+</p>
+
+<table>
+
+<tr>
+<td style="text-align:right"><a href="javascript:ec_id()">Elm City ID</a>: </td>
+<td><input style="width:1.5in" id="nasa_id" value="DublinNH"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">Country: </td>
+<td><input style="width:1.5in" id="nasa_country" value="United_States"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">State or Region: </td>
+<td><input style="width:1.5in" id="nasa_state_region" value="New_Hampshire"></td>
+</tr>
+
+<tr>
+<td style="text-align:right">City: </td>
+<td><input style="width:1.5in" id="nasa_city" value="Dublin"></td>
+</tr>
+
+
+<tr>
+<td><input type="submit" value="get ical url" onclick="get_nasa_iss_ical_url()"></td>
+<td></td>
+</tr>
+
+
+</table>
+
+<p id="nasa_url"></p>
+
 
 <a name="form_post"></a>
 
