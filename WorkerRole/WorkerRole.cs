@@ -546,6 +546,8 @@ namespace WorkerRole
 
 				SaveRegionStats(region);
 
+				ImageSelection.BuildCategoryImagesForHub(region);
+
 				Utils.SaveQuickStatsForRegion(region);
 			}
 			catch (Exception e)
@@ -599,15 +601,14 @@ namespace WorkerRole
 			if (calinfo.hub_enum == CalendarAggregator.HubType.what)
 				SaveWhatStats(fr, calinfo);
 
-			if (calinfo.hub_enum == CalendarAggregator.HubType.region)
-				SaveRegionStats(id);
-
 			//if (!Utils.IsRegion(id))
 			//	MergeIcs(calinfo);
 			// else  
 			// todo: create MergeRegionIcs
 
 			Utils.VisualizeTagSources(id);
+
+			ImageSelection.BuildCategoryImagesForHub(id);
 
 			GenUtils.LogMsg("status", "worker done finalizing hub " + id, null);
 		}
