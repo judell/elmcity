@@ -334,6 +334,18 @@ namespace WebRole
 						}.ExecuteResult(context);
 						break;
 
+					case "csv":
+						this.renderer = new CalendarRenderer.ViewRenderer(cr.RenderCsv);
+						MaybeCacheView(view_key, this.renderer, new ElmcityCacheDependency(base_key), null);
+						string csv = cr.RenderDynamicViewWithCaching(context, view_key, this.renderer, this.view, this.count, this.from, this.to, this.source, null);
+						new ContentResult
+						{
+							ContentEncoding = UTF8,
+							ContentType = "text/plain",
+							Content = csv
+						}.ExecuteResult(context);
+						break;
+
 					case "tags_json":
 						string tjcontent = cr.RenderTagCloudAsJson();
 						if (this.jsonp != null)
