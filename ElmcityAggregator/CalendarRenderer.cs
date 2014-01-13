@@ -272,7 +272,7 @@ namespace CalendarAggregator
 
 		#region text
 
-		// render an eventstore as xml, optionally limited by view and/or count
+		// render an eventstore as text, optionally limited by view and/or count
 		public string RenderText(ZonelessEventStore eventstore, EventRenderer event_renderer, string view, int count, DateTime from, DateTime to, string source, Dictionary<string, object> args)
 		{
 			if (args == null)
@@ -316,21 +316,17 @@ namespace CalendarAggregator
 			return text.ToString();
 		}
 
-		public string RenderEvtKeeneSentinel(ZonelessEvent evt, Calinfo calinfo, Dictionary<string, object> args)
+		public string RenderCsv(ZonelessEventStore eventstore, string view, int count, DateTime from, DateTime to, string source, Dictionary<string, object> args)
 		{
-			// "uuid","title","start_day","stop_day","start_time","stop_time","timezone","description","sections","flags","author_name",
-			// "author_email","priority","cost","website","venue_uuid","venue_name","venue_address","venue_city","venue_state","venue_zip",
-			// "venue_country","contact_name","contact_phone","contact_email","published"
+			if (args == null) args = new Dictionary<string, object>();
+			args["csv_fields_template"] = @"""__uid__"",""__title__"",""__start_day__"",""__stop_day__"",""__start_time__"",""__stop_time__"",""__description__"",""__location__"",""__url__"",""__categories__""";
+			var schema = args["csv_fields_template"].ToString().Replace("__", "") + "\n";
+			return schema + RenderText(eventstore, new EventRenderer(RenderEvtAsCsv), view, count, from, to, source, args);
+		}
 
-			// 5853e0ae-8821-11e2-bb06-001a4bcf887a,"Club Night",2013-11-14,2013-11-14,22:00:00,,America/New_York,
-			// "with DJs Ajax, Genesis and Slark",calendar/musicanddance,,,,,,http://www.mccues.com,,McCueâ€™s,"12 Emerald St.",Keene,NH,03431,"United States of America",,352-2110,,yes
-
-			var template = (string) args["text_render_template"];
-			var empty_fields = (List<string>) args["text_render_empty_fields"];
-
-			var line = template;
-			foreach (var empty_field in empty_fields)
-				line = line.Replace(empty_field, String.Empty);
+		public string RenderEvtAsCsv(ZonelessEvent evt, Calinfo calinfo, Dictionary<string, object> args)
+		{
+			var line = (string) args["csv_fields_template"];
 
 			var date_fmt = "yyyy-MM-dd";
 			var time_fmt = "hh:mm:ss";
@@ -347,10 +343,11 @@ namespace CalendarAggregator
 				line = line.Replace("__stop_day__", "");
 				line = line.Replace("__stop_time__", "");
 			}
-			line = line.Replace("__timezone__", calinfo.tzinfo.DisplayName.EscapeValueForCsv());
+			line = line.Replace("__uid__", evt.hash);
 			line = line.Replace("__description__", evt.description.EscapeValueForCsv());
-			line = line.Replace("__website__", evt.url);
-			line = line.Replace("__sections__", evt.categories);
+			line = line.Replace("__location__", evt.location.EscapeValueForCsv());
+			line = line.Replace("__url__", evt.url.ToString().EscapeValueForCsv());
+			line = line.Replace("__categories__", evt.categories.EscapeValueForCsv());
 
 			return line + "\n";
 		}
@@ -1054,7 +1051,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.LogMsg("AddTagOptions", String.Format("selector: {0}, id: {1}, tag {2}", selector, es.id, tag), e.Message);
+					GenUtils.PriorityLogMsg("exception", String.Format("AddTagOptions, selector: {0}, id: {1}, tag {2}", selector, es.id, tag), e.Message);
 				}
 			}
 		}
