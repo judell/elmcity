@@ -46,8 +46,8 @@ namespace CalendarAggregator
 		private ZonelessEvent in_evt0_zoneless = new ZonelessEvent("title0", "http://elmcity.info", "source", false, test_lat, test_lon, test_category, now, DateTime.MinValue, test_description, test_location);
 		private ZonelessEvent in_evt1_zoneless = new ZonelessEvent("title1", "http://elmcity.info", "source", false, test_lat, test_lon, null, now, DateTime.MinValue, test_description, test_location);
 
-		static private int expected_year = 9999;
-		static private int expected_hour = 9;
+		static private int expected_year = 2020;
+		static private int expected_hour = 1;
 		//static iCalDateTime idt = new DateTime(expected_year, 1, 1, expected_hour, 1, 1);
 
 		static private DateTime dt1 = new DateTime(expected_year, 1, 1, expected_hour, 1, 1);
@@ -90,7 +90,8 @@ namespace CalendarAggregator
 			var evt2 = es.events.Find(e => e.title == title2);
 			evt2.urls_and_sources = new Dictionary<string, string>() { { "http://bar", source2 } };
 
-			es.Serialize();
+			var response = es.Serialize();
+			Assert.AreEqual(HttpStatusCode.Created, response.HttpResponse.status);
 
 			var es2 = new ZonelessEventStore(calinfo).Deserialize();
 
@@ -124,7 +125,6 @@ namespace CalendarAggregator
 			zoned.AddEvent(in_evt1_zoned.title, in_evt1_zoned.url, in_evt1_zoned.source, in_evt1_zoned.dtstart, in_evt1_zoned.dtend, test_lat, test_lon, in_evt1_zoned.allday, test_category, test_description, test_location);
 			Assert.AreEqual(2, zoned.events.Count);
 			var response = bs.SerializeObjectToAzureBlob(zoned, test_container, zoned.objfile);
-			//Console.WriteLine(response.HttpResponse.DataAsString());
 			Assert.AreEqual(HttpStatusCode.Created, response.HttpResponse.status);
 		}
 
@@ -150,7 +150,8 @@ namespace CalendarAggregator
 			es.AddEvent(title:title1, url:"http://foo", source:source1, dtstart:dt1_with_zone, dtend:min_with_zone, allday:false, lat:test_lat, lon:test_lon, categories:test_category, description:test_description, location: test_location);
 			es.AddEvent(title:title2, url:"http://bar", source:source2, dtstart:dt2_with_zone, dtend:min_with_zone, lat:test_lat, lon:test_lon, allday:false, categories:test_category, description:test_description, location: test_location);
 
-			bs.SerializeObjectToAzureBlob(es, test_container, es.objfile);
+			var response = bs.SerializeObjectToAzureBlob(es, test_container, es.objfile);
+			Assert.AreEqual(HttpStatusCode.Created, response.HttpResponse.status);
 
 			var uri = BlobStorage.MakeAzureBlobUri(test_container, es.objfile,false);
 			var es2 = (ZonedEventStore)BlobStorage.DeserializeObjectFromUri(uri);

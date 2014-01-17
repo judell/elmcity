@@ -123,13 +123,13 @@ namespace CalendarAggregator
 			var html = cr.RenderHtml(this.es);
 			var html_count = GenUtils.RegexCountSubstrings(html, this.event_html_header);
 			Assert.AreEqual(es_count, html_count);
-			Assert.AreEqual(2, html_count);
 		}
 
 		[Test]
 		public void RenderedHtmlViewMatchesExpectedCount()
 		{
 			var es_count = es.events.Count;
+			Assert.AreEqual(2, es_count);
 			var html = cr.RenderHtml(this.es, EventStoreTest.test_category, 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 			var html_count = GenUtils.RegexCountSubstrings(html, event_html_header);
 			Assert.AreEqual(1, html_count);
@@ -139,26 +139,24 @@ namespace CalendarAggregator
 		public void RenderedXmlEventCountMatchesStoredEventCount()
 		{
 			var es_count = es.events.Count;
-			var xml = cr.RenderXml(count: 0);
+			var xml = cr.RenderXml();
 			var xdoc = XmlUtils.XdocFromXmlBytes(Encoding.UTF8.GetBytes(xml));
 
 			var xml_events = from evt in xdoc.Descendants("event")
 							 select new { evt };
 
 			Assert.AreEqual(es_count, xml_events.Count());
-			Assert.AreEqual(2, xml_events.Count());
 		}
 
 		[Test]
 		public void RenderedJsonEventCountMatchesStoredEventCount()
 		{
 			var es_count = es.events.Count;
-			var json = cr.RenderJson(0);
+			var json = cr.RenderJson();
 			//var events = JsonConvert.DeserializeObject<List<ZonelessEvent>>(json);
 			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
 			var events = (object[])serializer.DeserializeObject(json);
 			Assert.AreEqual(es_count, events.ToList().Count());
-			Assert.AreEqual(2, events.ToList().Count());
 		}
 
 		[Test]
