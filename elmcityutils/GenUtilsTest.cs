@@ -40,18 +40,10 @@ namespace ElmcityUtils
 			return false;
 		}
 
-		private bool CompletedIfIntIsOdd(int i, object o)
-		{
-			return i % 2 != 0;
-		}
-
-		private bool CompletedIfIntEndsWithZero(int i, object o)
+		private bool CompletedIfSeven(int i, object o)
 		{
 			retries++;
-			if (retries == 1)
-				return false;
-			String s = Convert.ToString(i);
-			return s.EndsWith("0");
+			return retries == 7;
 		}
 
 		private int Twice(int i)
@@ -60,17 +52,14 @@ namespace ElmcityUtils
 			return i * 2;
 		}
 
-		private int RandomEvenNumber()
-		{
-			retries++;
-			var ticks_as_str = Convert.ToString(System.DateTime.Now.Ticks);
-			var seed_string = ticks_as_str.Substring(ticks_as_str.Length - 4, 4);
-			var random = new Random(Convert.ToInt32(seed_string));
-			var i = random.Next();
+		private static int RandomEvenNumber()
+        {
+            Random random = new Random();
+            int i = random.Next(0,1000);
 			while (i % 2 != 0)
 				i = random.Next();
 			return i;
-		}
+        }
 
 		private int ExceptionIfOdd(int i)
 		{
@@ -101,7 +90,7 @@ namespace ElmcityUtils
 		{
 			retries = 0;
 			var completed_delegate =
-				new GenUtils.Actions.CompletedDelegate<int, object>(CompletedIfIntEndsWithZero);
+				new GenUtils.Actions.CompletedDelegate<int, object>(CompletedIfSeven);
 			var r = GenUtils.Actions.Retry<int>(
 				delegate() { return RandomEvenNumber(); },
 				completed_delegate,
@@ -109,8 +98,7 @@ namespace ElmcityUtils
 				wait_secs: 0,
 				max_tries: 10000,
 				timeout_secs: TimeSpan.FromSeconds(10000));
-			Assert.That(Convert.ToString(r).EndsWith("0"));
-			Assert.That(retries > 1);
+			Assert.That(retries == 7);
 		}
 
 		[Test]
