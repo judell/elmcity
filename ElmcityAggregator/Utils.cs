@@ -459,7 +459,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.PriorityLogMsg("warning", id + " FindPop", e.Message + e.StackTrace);
+					GenUtils.LogMsg("warning", id + " FindPop", e.Message + e.StackTrace);
 				}
 			}
 
@@ -471,7 +471,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.PriorityLogMsg("warning", id + " FindPop / LookupUsPop", e.Message + e.StackTrace);
+					GenUtils.LogMsg("warning", id + " FindPop / LookupUsPop", e.Message + e.StackTrace);
 				}
 			}
 
@@ -483,7 +483,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.PriorityLogMsg("warning", id + " FindPop / LookupNonUsPop", e.Message + e.StackTrace);
+					GenUtils.LogMsg("warning", id + " FindPop / LookupNonUsPop", e.Message + e.StackTrace);
 				}
 			}
 
@@ -509,7 +509,7 @@ namespace CalendarAggregator
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "lookup_non_us_pop", e.Message);
+				GenUtils.LogMsg("exception", "lookup_non_us_pop", e.Message);
 			}
 			return pop;
 		}
@@ -536,7 +536,7 @@ namespace CalendarAggregator
 			}
 			catch (AggregatedException ae)
 			{
-				GenUtils.PriorityLogMsg("exception", "lookup_us_pop", ae.Message);
+				GenUtils.LogMsg("exception", "lookup_us_pop", ae.Message);
 				/*
 				List<Exception> innerExceptionsList =
 					(List<Exception>)ae.Data["InnerExceptionsList"];
@@ -833,6 +833,14 @@ namespace CalendarAggregator
 			var s = String.Format("{0} {1} {2} {3} {4}",
 				   ticks, str_timestamp, dict["type"], dict["message"], dict["data"]);
 			return s;
+		}
+
+		public static void SaveMonitorXml(int hours)
+		{
+			var dt = System.DateTime.UtcNow - System.TimeSpan.FromHours(hours);
+			var filter = String.Format("$filter=PartitionKey+eq+'monitor'+and+RowKey+gt+'{0}'", dt.Ticks);
+			var xml = ts.QueryAllEntitiesAsODataFeed("monitor", filter);
+			bs.PutBlob("admin", "monitor.xml", xml, "text/xml");
 		}
 
 		#endregion
@@ -1230,7 +1238,10 @@ namespace CalendarAggregator
 				DateTime dt;
 				try
 				{
-					UnpackFacebookEventFromJson(event_dict, out id, out name, out dt, out location);
+					string timezone;
+					UnpackFacebookEventFromJson(event_dict, out id, out name, out dt, out location, out timezone);
+					// if ( ! String.IsNullOrEmpty(timezone) )  // fb use of timezone still unclear/inconsistent
+					dt = AdjustFacebookDt(dt, calinfo.tzinfo);
 				}
 				catch
 				{
@@ -1330,7 +1341,9 @@ namespace CalendarAggregator
 
 					DateTime dtend = DateTime.MinValue;
 					if (dict.ContainsKey("dtend"))
+					{
 						dtend = (DateTime)dict["dtend"];
+					}
 					dtend_with_zone = new DateTimeWithZone(dtend, tzinfo);
 
 					var title = (string)dict["title"];
@@ -1371,6 +1384,27 @@ namespace CalendarAggregator
 			return ics_text;
 		}
 
+		private static DateTime AdjustFacebookDt(DateTime dt, TimeZoneInfo tzinfo)
+		{
+			// times are now apparently relative to the difference between America/New_York and GMT!
+
+			var eastern_tzinfo = Utils.TzinfoFromName("eastern");
+			var eastern_offset = eastern_tzinfo.GetUtcOffset(dt);
+
+			//var eastern_rules = eastern_tzinfo.GetAdjustmentRules();
+			//var eastern_delta = eastern_rules[0].DaylightDelta;
+
+			var event_offset = tzinfo.GetUtcOffset(dt);
+			
+			//var event_rules = tzinfo.GetAdjustmentRules();
+			//var event_delta = event_rules[0].DaylightDelta;
+
+			var diff = event_offset - eastern_offset;
+
+			return dt + diff;
+
+		}
+
 		public static List<FacebookEvent> UnpackFacebookEventsFromJson(JObject fb_json)
 		{
 			var fb_events = new List<FacebookEvent>();
@@ -1379,21 +1413,24 @@ namespace CalendarAggregator
 				string id;
 				string name;
 				string location;
+				string timezone;
 				DateTime dt;
-				UnpackFacebookEventFromJson(event_dict, out id, out name, out dt, out location);
+				UnpackFacebookEventFromJson(event_dict, out id, out name, out dt, out location, out timezone);
 				fb_events.Add(new FacebookEvent(name, location, dt, id));
 			}
 			return fb_events;
 		}
 
-		public static void UnpackFacebookEventFromJson(JToken event_dict, out string id, out string name, out DateTime dt, out string location)
+		public static void UnpackFacebookEventFromJson(JToken event_dict, out string id, out string name, out DateTime dt, out string location, out string timezone)
 		{
 			id = event_dict["id"].Value<string>();
 			name = event_dict["name"].Value<string>();
 			try { location = event_dict["location"].Value<string>(); }
 			catch { location = ""; }
-			var _dt = event_dict["start_time"].Value<DateTime>(); // this is gmt apparently
-			dt = _dt - TimeSpan.FromHours(Configurator.facebook_mystery_offset_hours);
+			try { timezone = event_dict["timezone"].Value<string>(); }
+			catch { timezone = ""; }
+			dt = event_dict["start_time"].Value<DateTime>(); 
+			//dt = _dt - TimeSpan.FromHours(Configurator.facebook_mystery_offset_hours);
 		}
 
 		private static string MakeEmptyEventBriteCal()
