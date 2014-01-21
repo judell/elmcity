@@ -1065,7 +1065,7 @@ Future events {0}
 
 		/*
 		 # runs blobroot/monitor.py
-		 # pull 24 hours of diagnostics from odata feed into a file
+		 # pull 48 hours of diagnostics from odata feed into a file
 		 # run logparser queries against the file
 		 # output charts (gifs) and/or tables (htmls) to charts container in azure storage
 		 # calls blobroot/dashboard.py to update pages that include charts and tables  
@@ -1182,42 +1182,3 @@ Future events {0}
 	}
 }
 
-/*
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net;
-using System.Threading;
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.Diagnostics;
-using Microsoft.WindowsAzure.ServiceRuntime;
-using Microsoft.WindowsAzure.StorageClient;
-using ElmcityUtils;
-
-namespace WorkerRole
-{
-    public class WorkerRole : RoleEntryPoint
-    {
-        public override void Run()
-        {
-
-            while (true)
-            {
-                Thread.Sleep(10000);
-                GenUtils.LogMsg("DEBUG", "WorkerRole: Run", "MVC4");
-           
-            }
-        }
-
-        public override bool OnStart()
-        {
-            GenUtils.LogMsg("DEBUG", "WorkerRole: OnStart", "MVC4");
-            // Set the maximum number of concurrent connections 
-            ServicePointManager.DefaultConnectionLimit = 12;
-
-            return base.OnStart();
-        }
-    }
-}
-*/
