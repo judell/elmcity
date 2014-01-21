@@ -121,6 +121,8 @@ namespace ElmcityUtils
 		const string NextPartitionKeyHeaderName = "x-ms-continuation-NextPartitionKey";
 		const string NextRowKeyHeaderName = "x-ms-continuation-NextRowKey";
 
+		const string NextTableName = "x-ms-continuation-NextTableName";
+
 		static private XNamespace odata_namespace = "http://schemas.microsoft.com/ado/2007/08/dataservices";
 		static private XNamespace odata_metadata_namespace = "http://schemas.microsoft.com/ado/2007/08/dataservices/metadata";
 
@@ -135,6 +137,8 @@ namespace ElmcityUtils
 		private string azure_table_host;
 		private string azure_b64_secret;
 		private string scheme;
+
+		public string no_continuation = "none";
 
 		public TableStorage(string azure_storage_name, string azure_table_host, string azure_b64_secret, string scheme)
 		{
@@ -318,14 +322,18 @@ namespace ElmcityUtils
 		public TableStorageListDictResponse ListTables()
 		{
 			var request_path = "Tables()";
-			var http_response = DoTableStoreRequest(request_path, query_string: null, method: "GET", headers: new Hashtable(), data: null);
+			var http_response = DoTableStoreRequest(request_path, query_string: "timeout=30", method: "GET", headers: new Hashtable(), data: null);
 			if (http_response.status == HttpStatusCode.ServiceUnavailable)
 				throw new Exception("TableServiceUnavailable");
-			else
+			if (http_response.headers.ContainsKey(TableStorage.NextTableName))
 			{
-				var response = GetTsDicts(http_response);
-				return new TableStorageListDictResponse(http_response, response);
+				var next_table = http_response.headers[TableStorage.NextTableName];
+				var query_string = "NextTableName=" + next_table;
+				http_response = DoTableStoreRequest(request_path, query_string: query_string, method: "GET", headers: new Hashtable(), data: null);
 			}
+
+			var response = GetTsDicts(http_response);
+			return new TableStorageListDictResponse(http_response, response);
 		}
 
 		public TableStorageIntResponse CountTables()
@@ -575,7 +583,6 @@ namespace ElmcityUtils
 		{
 			string next_pk = null;
 			string next_rk = null;
-			const string no_continuation = "none";
 			var adjusted_query = "";
 			HttpResponse http_response;
 
