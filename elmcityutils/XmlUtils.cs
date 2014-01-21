@@ -34,7 +34,7 @@ namespace ElmcityUtils
 			}
 			catch (Exception e)
 			{
-				GenUtils.PriorityLogMsg("exception", "XmlDocumentFromHttpResponse", e.Message + e.StackTrace);
+				GenUtils.LogMsg("exception", "XmlDocumentFromHttpResponse", e.Message + e.StackTrace);
 			}
 			return doc;
 		}
