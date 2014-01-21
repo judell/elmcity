@@ -71,8 +71,7 @@ namespace ElmcityUtils
 			}
 			return monitor;
 		}
-
-
+		
 		public void StartMonitor()
 		{
 			GenUtils.LogMsg("status", "StartMonitor", "starting");
@@ -413,6 +412,8 @@ namespace ElmcityUtils
 		}
 	}
 
+	/*
+
 	public static class IIS_FailedRequestLogs
 	{
 
@@ -623,5 +624,6 @@ namespace ElmcityUtils
 
 		}
 	}
+	 */
 
 }
