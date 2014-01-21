@@ -36,18 +36,44 @@ namespace CalendarAggregator
 		static string view_etag = HttpUtils.GetMd5Hash(view_contents);
 		static Uri cached_base_uri = new Uri(Utils.MakeBaseZonelessUrl(Configurator.testid));
 
-
+		private int es_count;
 
 		public CalendarRendererTest()
 		{
 			this.cr = new CalendarRenderer(Configurator.testid);
 			this.cr.cache = new MockCache();
-			var est = new EventStoreTest();
-			est.SerializeAndDeserializeZonelessEventStoreYieldsExpectedEvents();
-			Utils.Wait(3);
+
+			var title1 = "e1";
+			var title2 = "e2";
+
+			var source1 = "s1";
+			var source2 = "s2";
+
+			var expected_year = 2020;
+			var expected_hour = 1;
+
+			var dt1 = new DateTime(expected_year, 1, 1, expected_hour, 1, 1);
+			var dt2 = new DateTime(expected_year, 2, 2, expected_hour, 2, 2);
+
+			var min = DateTime.MinValue;
+
+			var test_category = "test_category";
+			var test_description = "test_description";
+			var test_location = "test_location";
+	
+			var es = new ZonelessEventStore(calinfo);
+
+			es.AddEvent(title: title1, url: "http://foo", source: source1, lat: null, lon: null, dtstart: dt1, dtend: min, allday: false, categories: test_category, description: test_description, location: test_location);
+
+			var evt1 = es.events.Find(e => e.title == title1);
+			evt1.urls_and_sources = new Dictionary<string, string>() { { "http://foo", source1 } };
+
+			es.AddEvent(title: title2, url: "http://bar", source: source2, lat: null, lon: null, dtstart: dt2, dtend: min, allday: false, categories: null, description: test_description, location: test_location);
+
 			this.es = new ZonelessEventStore(calinfo);
 			var uri = BlobStorage.MakeAzureBlobUri(EventStoreTest.test_container, this.es.objfile,false);
 			this.es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
+			this.es_count = this.es.events.Count();
 		}
 
 		[Test]
@@ -119,17 +145,14 @@ namespace CalendarAggregator
 		[Test]
 		public void RenderedHtmlEventCountMatchesStoredEventCount()
 		{
-			var es_count = this.es.events.Count;
 			var html = cr.RenderHtml(this.es);
 			var html_count = GenUtils.RegexCountSubstrings(html, this.event_html_header);
-			Assert.AreEqual(es_count, html_count);
+			Assert.AreEqual(this.es_count, html_count);
 		}
 
 		[Test]
 		public void RenderedHtmlViewMatchesExpectedCount()
 		{
-			var es_count = es.events.Count;
-			Assert.AreEqual(2, es_count);
 			var html = cr.RenderHtml(this.es, EventStoreTest.test_category, 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 			var html_count = GenUtils.RegexCountSubstrings(html, event_html_header);
 			Assert.AreEqual(1, html_count);
@@ -138,7 +161,6 @@ namespace CalendarAggregator
 		[Test]
 		public void RenderedXmlEventCountMatchesStoredEventCount()
 		{
-			var es_count = es.events.Count;
 			var xml = cr.RenderXml();
 			var xdoc = XmlUtils.XdocFromXmlBytes(Encoding.UTF8.GetBytes(xml));
 
@@ -151,7 +173,6 @@ namespace CalendarAggregator
 		[Test]
 		public void RenderedJsonEventCountMatchesStoredEventCount()
 		{
-			var es_count = es.events.Count;
 			var json = cr.RenderJson();
 			//var events = JsonConvert.DeserializeObject<List<ZonelessEvent>>(json);
 			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
