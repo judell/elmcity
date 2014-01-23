@@ -61,19 +61,20 @@ namespace CalendarAggregator
 			var test_description = "test_description";
 			var test_location = "test_location";
 	
-			var es = new ZonelessEventStore(calinfo);
+			this.es = new ZonelessEventStore(calinfo);
 
 			es.AddEvent(title: title1, url: "http://foo", source: source1, lat: null, lon: null, dtstart: dt1, dtend: min, allday: false, categories: test_category, description: test_description, location: test_location);
-
 			var evt1 = es.events.Find(e => e.title == title1);
 			evt1.urls_and_sources = new Dictionary<string, string>() { { "http://foo", source1 } };
 
 			es.AddEvent(title: title2, url: "http://bar", source: source2, lat: null, lon: null, dtstart: dt2, dtend: min, allday: false, categories: null, description: test_description, location: test_location);
+			var evt2 = es.events.Find(e => e.title == title2);
+			evt2.urls_and_sources = new Dictionary<string, string>() { { "http://foo", source1 } };
 
-			this.es = new ZonelessEventStore(calinfo);
-			var uri = BlobStorage.MakeAzureBlobUri(EventStoreTest.test_container, this.es.objfile,false);
-			this.es = (ZonelessEventStore)BlobStorage.DeserializeObjectFromUri(uri);
 			this.es_count = this.es.events.Count();
+
+			Assert.AreEqual(2, this.es_count);
+
 		}
 
 		[Test]
