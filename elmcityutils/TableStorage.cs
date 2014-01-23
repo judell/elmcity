@@ -15,6 +15,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -151,23 +153,18 @@ namespace ElmcityUtils
 
 		public static TableStorage MakeDefaultTableStorage()
 		{
+			var key = Configurator.GetStorageKey();
 			return new TableStorage(Configurator.azure_storage_account,
 				Configurator.azure_storage_account + "." + Configurator.azure_table_domain,
-				Configurator.azure_b64_secret, scheme: "http");
-		}
-
-		public static TableStorage MakeTableStorage(string storage_account, string table_domain, string b64_secret)
-		{
-			return new TableStorage(storage_account,
-				storage_account + "." + table_domain,
-				b64_secret, scheme: "http");
+				key, scheme: "http");
 		}
 
 		public static TableStorage MakeSecureTableStorage()
 		{
+			var key =  Configurator.GetStorageKey();
 			return new TableStorage(Configurator.azure_storage_account,
 				 Configurator.azure_storage_account + "." + Configurator.azure_table_domain,
-				Configurator.azure_b64_secret, scheme: "https");
+				key, scheme: "https");
 		}
 
 		// merge partial set of values into existing record
