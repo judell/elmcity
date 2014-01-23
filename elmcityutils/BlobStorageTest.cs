@@ -26,7 +26,7 @@ namespace ElmcityUtils
 	public class BlobStorageTest
 	{
 		private const string containername = "AAATestContainer"; // should become aaatestcontainer
-		private const string blobname = "AAATestBlob";
+		//private const string blobname = "AAATestBlob";
 		private static byte[] blobcontent = Encoding.UTF8.GetBytes("AAATestContent");
 		private static Hashtable blobmeta;
 		private static BlobStorage bs = BlobStorage.MakeDefaultBlobStorage();
@@ -65,16 +65,17 @@ namespace ElmcityUtils
 		[Test]
 		public void PutBlobYieldsHttpCreated()
 		{
-			bs.DeleteBlob(containername, blobname);
+			var blobname = CreateBlob();
 			blobmeta = new Hashtable();
 			var bs_response = bs.PutBlob(containername, blobname, blobmeta, blobcontent, null);
 			Assert.AreEqual(HttpStatusCode.Created, bs_response.HttpResponse.status);
+			bs.DeleteBlob(containername, blobname);
 		}
 
 		[Test]
 		public void PutBlobCreatesExpectedMetadata()
 		{
-			bs.DeleteBlob(containername, blobname);
+			var blobname = CreateBlob();
 			blobmeta = new Hashtable();
 			blobmeta.Add(BlobStorage.PREFIX_METADATA + "metakey", "metavalue");
 			string content_type = "text/random";
@@ -86,22 +87,26 @@ namespace ElmcityUtils
 			Assert.AreEqual(blobcontent, response.bytes);
 			Assert.AreEqual("text/random", response.headers["Content-Type"]);
 			Assert.AreEqual("metavalue", response.headers[BlobStorage.PREFIX_METADATA + "metakey"]);
+			bs.DeleteBlob(containername, blobname);
 		}
+
 
 		[Test]
 		public void DeleteExistingBlobReturnsHttpAccepted()
 		{
 			CreateNewPublicContainerIsSuccessful();
 			blobmeta = new Hashtable();
+			var blobname = MakeBlobName();
 			bs.PutBlob(containername, blobname, blobmeta, blobcontent, "");
 			var bs_response = bs.DeleteBlob(containername, blobname);
 			Assert.AreEqual(HttpStatusCode.Accepted, bs_response.HttpResponse.status);
+			bs.DeleteBlob(containername, blobname);
 		}
 
 		[Test]
 		public void DeleteNonExistingBlobReturnsHttpNotFound()
 		{
-			bs.DeleteBlob(containername, blobname);
+			var blobname = MakeBlobName();
 			var bs_response = bs.DeleteBlob(containername, blobname);
 			Assert.AreEqual(HttpStatusCode.NotFound, bs_response.HttpResponse.status);
 		}
@@ -109,11 +114,12 @@ namespace ElmcityUtils
 		[Test]
 		public void ExistsExistingBlobIsTrue()
 		{
-			bs.CreateContainer(containername, true, new Hashtable());
+			var blobname = CreateBlob();
 			blobmeta = new Hashtable();
 			bs.PutBlob(containername, blobname, blobmeta, blobcontent, "");
 			HttpUtils.Wait(delay);
 			Assert.That(BlobStorage.ExistsBlob(containername, blobname) == true);
+			bs.DeleteBlob(containername, blobname);
 		}
 
 		[Test]
@@ -135,30 +141,46 @@ namespace ElmcityUtils
 		[Test]
 		public void AcquireLeaseReturnsHttpStatusCreated()
 		{
-			HttpUtils.Wait(100);
+			var blobname = CreateBlob();
 			var r = bs.AcquireLease(containername, blobname);
 			Assert.AreEqual(HttpStatusCode.Created, r.status);
+			bs.DeleteBlob(containername, blobname);
 		}
 
 		[Test]
 		public void AcquireLeaseFailsWithConflict()
 		{
-			HttpUtils.Wait(100);
+			var blobname = CreateBlob();
 			var r = bs.AcquireLease(containername, blobname);
 			Assert.AreEqual(HttpStatusCode.Created, r.status);
 			HttpUtils.Wait(1);
 			r = bs.AcquireLease(containername, blobname);
 			Assert.AreEqual(HttpStatusCode.Conflict, r.status);
+			bs.DeleteBlob(containername, blobname);
+		}
+
+		private string CreateBlob()
+		{
+			bs.CreateContainer(containername, true, new Hashtable());
+			var blobname = MakeBlobName();
+			bs.PutBlob(containername, blobname, blobcontent);
+			return blobname;
 		}
 
 		[Test]
 		public void RetryLeaseReturnsStatusCreated()
 		{
-			HttpUtils.Wait(60);
+			var blobname = CreateBlob();
 			var r = bs.AcquireLease(containername, blobname);
 			Assert.AreEqual(HttpStatusCode.Created, r.status);
 			r = bs.RetryAcquireLease(containername, blobname);
 			Assert.AreEqual(HttpStatusCode.Created, r.status);
+			bs.DeleteBlob(containername, blobname);
+		}
+
+		private string MakeBlobName()
+		{
+			return DateTime.Now.Ticks.ToString();
 		}
 
 	}
