@@ -15,6 +15,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Configuration;
 using System.IO;
 using System.Net;
 using System.Runtime.Serialization;
@@ -72,9 +74,10 @@ namespace ElmcityUtils
 
 		public static BlobStorage MakeDefaultBlobStorage()
 		{
+			var	key = Configurator.GetStorageKey();
 			return new BlobStorage(Configurator.azure_storage_account,
 				  Configurator.azure_storage_account + "." + Configurator.azure_blob_domain,
-				  Configurator.azure_b64_secret);
+				  key);
 		}
 
 		public static BlobStorageResponse WriteToAzureBlob(BlobStorage bs, string containername, string blobname, string content_type, byte[] bytes)
