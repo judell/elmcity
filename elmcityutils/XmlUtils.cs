@@ -23,10 +23,9 @@ namespace ElmcityUtils
 {
 	public static class XmlUtils
 	{
-
-		public static XmlDocument XmlDocumentFromHttpResponse(HttpResponse response)
+		public static XmlDocument XmlDocumentFromXmlBytes(byte[] xml_bytes)
 		{
-			var sr = new MemoryStream(response.bytes);
+			var sr = new MemoryStream(xml_bytes);
 			XmlDocument doc = new XmlDocument();
 			try
 			{
@@ -37,6 +36,11 @@ namespace ElmcityUtils
 				GenUtils.LogMsg("exception", "XmlDocumentFromHttpResponse", e.Message + e.StackTrace);
 			}
 			return doc;
+		}
+
+		public static XmlDocument XmlDocumentFromHttpResponse(HttpResponse response)
+		{
+			return XmlDocumentFromXmlBytes(response.bytes);
 		}
 
 		public static XDocument XdocFromXmlBytes(byte[] xml)
