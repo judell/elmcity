@@ -192,11 +192,10 @@ namespace ElmcityUtils
 
 		public static HttpResponse DoCertifiedServiceManagementRequest(byte[] cert, HttpWebRequest request, byte[] data)
 		{
-			X509Certificate2 x509 = new X509Certificate2();
-			x509.Import(cert);
+			X509Certificate2 x509 = new X509Certificate2(cert);
 			request.ClientCertificates.Add(x509);
-			request.Headers.Add("x-ms-version", "2009-10-01");
-			request.ContentType = "text/xml";
+			request.Headers.Add("x-ms-version", "2010-10-28");
+			request.ContentType = "application/xml";
 			return DoHttpWebRequest(request, data);
 		}
 
