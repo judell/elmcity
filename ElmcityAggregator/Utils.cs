@@ -2233,62 +2233,6 @@ END:VCALENDAR",
 			bs.PutBlob("admin", "what_summary.html", summary.ToString(), "text/html");
 		}
 
-		/* idle for now
-		public static void MakeFeaturedHubs()
-		{
-			var tmpl_uri = BlobStorage.MakeAzureBlobUri("admin", "featured.tmpl");
-			var tmpl = HttpUtils.FetchUrl(tmpl_uri).DataAsString();
-			tmpl = tmpl.Replace("\r", "");
-			var rows = tmpl.Split('\n');
-			foreach (var row in rows)
-			{
-				if (row.Length == 0)
-					continue;
-				var fields = row.Split(',');
-				var name = fields[0];
-				var id = fields[1];
-				var tag_count = GetTagCountForId(id);
-				string event_count;
-				string feed_count;
-				var home_url = "/services/" + id + "/html";
-				GetEventAndFeedCountsForId(id, out event_count, out feed_count);
-				var tr = string.Format(@"<tr><td class=""place"">{0}</td><td>{1}</td><td>{2}</td><td>{3}</td></tr>",
-					string.Format(@"<a href=""{0}"">{1}</a>", home_url, name),
-					feed_count,
-					event_count,
-					tag_count);
-				tmpl = tmpl.Replace(row.ToString(), tr);
-			}
-			bs.PutBlob("admin", "featured.html", tmpl);
-		}
-		  
-		public static int GetTagCountForId(string id)
-		{
-			var tags_json_uri = new Uri("http://elmcity.cloudapp.net/services/" + id + "/tags_json");
-			var tags_json_text = HttpUtils.FetchUrl(tags_json_uri).DataAsString();
-			var tags_json = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(tags_json_text);
-			return tags_json.Count;
-		}
-
-		public static void GetEventAndFeedCountsForId(string id, out string event_count, out string feed_count)
-		{
-			var q = string.Format("$filter=PartitionKey eq '{0}' and RowKey eq '{1}'", id, id);
-			var entity = TableStorage.QueryForSingleEntityAsDictStr(ts, "metadata", q);
-			event_count = "0";
-			feed_count = "0";
-			try
-			{
-				event_count = entity["events"];
-				feed_count = entity["feed_count"];
-			}
-			catch (Exception e)
-			{
-				GenUtils.PriorityLogMsg("exception", "GetEventCountForId", e.Message + e.StackTrace);
-			}
-		}
-		  
-		 */
-
 		public static bool IsReady(WebRoleData wrd, string id)
 		{
 			return wrd.ready_ids.Contains(id);
@@ -4364,6 +4308,7 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 			var center = string.Format("new Microsoft.Maps.Location({0},{1})", latlon[0], latlon[1]);
 			html = html.Replace("__CENTER__", center);
 			html = html.Replace("__ZOOM__", zoom);
+			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
 			return html;
 		}
 
@@ -4374,7 +4319,7 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 			Parallel.ForEach(source: ids, body: (hub_or_region) =>
 			//foreach (var hub_or_region in ids)
 			{
-				var r = HttpUtils.FetchUrl("http://elmcity.cloudapp.net/" + hub_or_region + "/xml" + args);
+				var r = HttpUtils.FetchUrl("http://" + ElmcityUtils.Configurator.appdomain + "/" + hub_or_region + "/xml" + args);
 				var doc = XmlUtils.XmlDocumentFromHttpResponse(r);
 				var events = doc.SelectNodes("//event");
 				var infoboxes = new List<Dictionary<string, string>>();
@@ -4541,6 +4486,8 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 
 			var translated_image_dict = new ConcurrentDictionary<string, string>();
 
+			var no_image_data = HttpUtils.FetchUrl(ImageSelection.NoCurrentImageUrl).bytes;
+
 			Parallel.ForEach(source: image_dict.Keys, body: (key) =>
 			//foreach (var key in image_dict.Keys)
 			{
@@ -4563,7 +4510,26 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 							image_data = HttpUtils.FetchUrl(found_url).bytes;
 						}
 						var thumbnail_data = ImageSelection.ResizeImageFromByteArray(140, image_data);
-						bs.PutBlob(id, blob_name, thumbnail_data, "image/jpeg");
+						if (thumbnail_data != null)
+							bs.PutBlob(id, blob_name, thumbnail_data, "image/jpeg");
+						else
+						{
+							GenUtils.LogMsg("warning", "PersistImage: " + found_url, "null thumbnail");
+							var wc = new WebClient();
+							image_data = wc.DownloadData(found_url);
+							thumbnail_data = ImageSelection.ResizeImageFromByteArray(140, image_data);
+							if (thumbnail_data != null)
+							{
+								GenUtils.LogMsg("warning", "PersistImage: " + found_url, "recovered from null thumbnail");
+								bs.PutBlob(id, blob_name, thumbnail_data, "image/jpeg");
+							}
+							else
+							{
+								GenUtils.LogMsg("warning", "PersistImage: " + found_url, "unable to recover from null thumbnail");
+								persistent_url = ImageSelection.NoCurrentImageUrl;
+								bs.PutBlob(id, "NoCurrentImage", no_image_data);
+							}
+						}
 						translated_image_dict[key] = persistent_url;
 					}
 					catch (Exception e)
@@ -4578,6 +4544,7 @@ infoboxLayer.push(new Microsoft.Maps.Infobox(place,
 			{
 				var json = JsonConvert.SerializeObject(translated_image_dict);
 				bs.PutBlob(id, type + "_images.json", json, "application/json");
+				RecreatePickledCalinfoAndRenderer(id);
 			}
 			catch (Exception e)
 			{
