@@ -79,7 +79,7 @@ when <select id="when">
 <script>
 function reload()
   {
-  var url = "http://elmcity.cloudapp.net/" + $('#hub').val() + "/map?days=" + $('#when option:selected').val() + "&where=" + $('#where').val();
+  var url = "http://__APPDOMAIN__/" + $('#hub').val() + "/map?days=" + $('#when option:selected').val() + "&where=" + $('#where').val();
   var view = $('#view option:selected').val()
   if ( view != 'all' )
      url = url + '&view=' + view;

@@ -13,7 +13,7 @@ function view_feed()
 {
 var feedurl =  gup('url');
 var property = $('#property_select').val();
-var url = 'http://elmcity.cloudapp.net/text_from_ics' +
+var url = 'http://__APPDOMAIN__/text_from_ics' +
                 '?url=' +
                 feedurl +
                 '&property=' +
@@ -21,7 +21,6 @@ var url = 'http://elmcity.cloudapp.net/text_from_ics' +
 location.href = url;
 }
 
-// http://elmcity.cloudapp.net/text_from_ics?url=http%3A%2F%2Fwww.christiansburg.org%2Fcommon%2Fmodules%2FiCalendar%2FiCalendar.aspx%3FcatID%3D25%26feed%3Dcalendar&property=
 
 function gup( name )
   {  

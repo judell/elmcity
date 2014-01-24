@@ -57,7 +57,7 @@ __REGION__
 <div class="chunk" id="whatis" style="display:none">
 
 <p>
-The __ID__ hub is part of a project to rethink how community calendars work. The project's home page is <a href="http://elmcity.cloudapp.net.">http://elmcity.cloudapp.net</a>. As the <a href="http://blog.jonudell.net/elmcity-project-faq/#whatis">FAQ</a> explains, the project is a web service that:
+The __ID__ hub is part of a project to rethink how community calendars work. The project's home page is <a href="http://__APPDOMAIN__.">http://__APPDOMAIN__</a>. As the <a href="http://blog.jonudell.net/elmcity-project-faq/#whatis">FAQ</a> explains, the project is a web service that:
 </p>
 
 <ul>
@@ -87,7 +87,7 @@ Anyone may use, link to, or embed the calendar views and data feeds provided by 
 <h4>The default view</h4>
 
 <p>
-The URL for the default view is <a href="http://elmcity.cloudapp.net/__ID__/html">http://elmcity.cloudapp.net/__ID__/html</a>
+The URL for the default view is <a href="http://__APPDOMAIN__/__ID__/html">http://__APPDOMAIN__/__ID__/html</a>
 </p>
 
 <h4>Category views</h4>
@@ -104,7 +104,7 @@ To view the hub by category you can make URLs using any of these tags, like so:
 </p>
 
 <blockquote>
-<p><a id="first_tag_html_href">http://elmcity.cloudapp.net/__ID__/html?view=<span class="first_tag_name">_</span></a></p>
+<p><a id="first_tag_html_href">http://__APPDOMAIN__/__ID__/html?view=<span class="first_tag_name">_</span></a></p>
 </blockquote>
 
 </div> <!-- /htmlviews -->
@@ -129,7 +129,7 @@ Here's an example of an ICS feed for a single category:
 
 <blockquote>
 <p>
-<a id="first_tag_ics_href">http://elmcity.cloudapp.net/__ID__/ics?view=<span class="first_tag_name">_</span></a>
+<a id="first_tag_ics_href">http://__APPDOMAIN__/__ID__/ics?view=<span class="first_tag_name">_</span></a>
 </p>
 </blockquote>
 
@@ -153,7 +153,7 @@ The image at right shows one way to display a calendar view on a blog. In this c
 
 <blockquote>
 <p>
-<a href="http://elmcity.cloudapp.net/MonadnockNH/rss?view=music&count=12">http://elmcity.cloudapp.net/MonadnockNH/rss?view=music&count=12</a>
+<a href="http://__APPDOMAIN__/MonadnockNH/rss?view=music&count=12">http://__APPDOMAIN__/MonadnockNH/rss?view=music&count=12</a>
 </p>
 </blockquote>
 
@@ -170,11 +170,11 @@ While the iCalendar and RSS feeds may be of interest to anyone, two other kinds 
 
 <blockquote>
 <p>
-The XML feed for the whole __ID__ hub: <a href="http://elmcity.cloudapp.net/__ID__/xml">http://elmcity.cloudapp.net/__ID__/xml</a> 
+The XML feed for the whole __ID__ hub: <a href="http://__APPDOMAIN__/__ID__/xml">http://__APPDOMAIN__/__ID__/xml</a> 
 </p>
 
 <p>
-The JSON feed for the <span class="first_tag_name">_</span> view: <a id="first_tag_json_href">http://elmcity.cloudapp.net/__ID__/json?view=<span class="first_tag_name">_</span></a>
+The JSON feed for the <span class="first_tag_name">_</span> view: <a id="first_tag_json_href">http://__APPDOMAIN__/__ID__/json?view=<span class="first_tag_name">_</span></a>
 </p>
 </blockquote>
 
@@ -307,7 +307,7 @@ Here is the default HTML view for the __ID__ hub.
 </p>
 
 <p>
-<iframe seamless="seamless" name="html" src="http://elmcity.cloudapp.net/__ID__/html?template=default.tmpl&theme=default&count=300" style="border-width:thin;border-style:solid;width:100%;height:500px"></iframe>
+<iframe seamless="seamless" name="html" src="http://__APPDOMAIN__/__ID__/html?template=default.tmpl&theme=default&count=300" style="border-width:thin;border-style:solid;width:100%;height:500px"></iframe>
 </p>
 
 
@@ -316,7 +316,7 @@ It can be shown on any website that wants to display the hub's aggregation of ca
 </p>
 
 <p>
-&lt;iframe seamless="seamless" src="http://elmcity.cloudapp.net/__ID__/html?template=default.tmpl&theme=default&count=300" style="border-width:thin;border-style:solid;width:100%;height:500px">&lt;/iframe>
+&lt;iframe seamless="seamless" src="http://__APPDOMAIN__/__ID__/html?template=default.tmpl&theme=default&count=300" style="border-width:thin;border-style:solid;width:100%;height:500px">&lt;/iframe>
 </p>
 
 </div> <!-- /defaulthtml -->
@@ -339,12 +339,12 @@ If you're part of the music scene, or a fan of the scene, you might want to decl
 
 <iframe style="display:block;margin:auto" width="330"
 height="400"
-src="http://elmcity.cloudapp.net/__ID__/html?eventsonly=yes&view=music&taglist=no&tags=no&theme=default&width=350&template=eventsonly.tmpl"
+src="http://__APPDOMAIN__/__ID__/html?eventsonly=yes&view=music&taglist=no&tags=no&theme=default&width=350&template=eventsonly.tmpl"
 style="border-width:thin;border-style:solid">
 </iframe> 
 
 
-<p style="text-align:center" class="joinlabelstyle"> <a class="joinlink" href="http://elmcity.cloudapp.net/welcome?id=__ID__&hubdesc=__ID__&category=music">Join the calendar network for __ID__!</a> </p> 
+<p style="text-align:center" class="joinlabelstyle"> <a class="joinlink" href="http://__APPDOMAIN__/welcome?id=__ID__&hubdesc=__ID__&category=music">Join the calendar network for __ID__!</a> </p> 
 </div>
 
 <p>
@@ -415,7 +415,7 @@ If you're the curator of the __ID__ hub, you gave one the Elm City administrator
 </ol>
 
 <p>
-To log in, visit <a href="http://elmcity.cloudapp.net">http://elmcity.cloudapp.net</a>, go down to the curators' section, and click the twitter, facebook, windows live, or google link. After logging in using one of those mechanisms, the page will refresh and you'll see some new links:
+To log in, visit <a href="http://__APPDOMAIN__">http://__APPDOMAIN__</a>, go down to the curators' section, and click the twitter, facebook, windows live, or google link. After logging in using one of those mechanisms, the page will refresh and you'll see some new links:
 </p>
 
 <blockquote>
@@ -526,7 +526,7 @@ In addition to the above editing tools, you can use a viewer to see your hub set
 
 <blockquote>
 <p>
-<a href="http://elmcity.cloudapp.net/__ID__/metadata">http://elmcity.cloudapp.net/__ID__/metadata</a>
+<a href="http://__APPDOMAIN__/__ID__/metadata">http://__APPDOMAIN__/__ID__/metadata</a>
 </p>
 </blockquote>
 
@@ -548,7 +548,7 @@ The hub periodically gathers events from the iCalendar feeds you've listed. This
 
 <blockquote>
 <p>
-<a href="http://elmcity.cloudapp.net/__ID__/stats">http://elmcity.cloudapp.net/__ID__/stats</a>
+<a href="http://__APPDOMAIN__/__ID__/stats">http://__APPDOMAIN__/__ID__/stats</a>
 </p>
 </blockquote>
 
@@ -572,7 +572,7 @@ If there was a problem with a feed, this report can help identify what went wron
 <div class="_chunk" id="understanding_tags" style="display:none">
 
 <p>
-The <a href="http://elmcity.cloudapp.net/__ID__/html">default HTML view</a> includes a tag viewer that reports all the categories you've defined (and, marked by {} braces, any categories defined by feeds). The tag viewer also counts the number of events assigned to each tag.
+The <a href="http://__APPDOMAIN__/__ID__/html">default HTML view</a> includes a tag viewer that reports all the categories you've defined (and, marked by {} braces, any categories defined by feeds). The tag viewer also counts the number of events assigned to each tag.
 </p>
 
 <p>
@@ -792,51 +792,51 @@ The person who manages this hub is a <i>curator</i>. The people whose calendars 
 <table style="border-spacing:8px;width:100%;display:inline">
 
 <tr>
-<td>This page</td><td>http://elmcity.cloudapp.net/__ID__/about</td>
+<td>This page</td><td>http://__APPDOMAIN__/__ID__/about</td>
 </tr> 
 
 <tr>
-<td>HTML rendering of __ID__</td><td>http://elmcity.cloudapp.net/__ID__/</td>
+<td>HTML rendering of __ID__</td><td>http://__APPDOMAIN__/__ID__/</td>
 </tr>
 
 <tr>
-<td>HTML rendering of __ID__</td><td>http://elmcity.cloudapp.net/__ID__/html (alternate)</td>
+<td>HTML rendering of __ID__</td><td>http://__APPDOMAIN__/__ID__/html (alternate)</td>
 </tr>
 
 <tr>
-<td>__ID__ in JSON format</td><td>http://elmcity.cloudapp.net/__ID__/json</td>
+<td>__ID__ in JSON format</td><td>http://__APPDOMAIN__/__ID__/json</td>
 </tr>
 
 <tr>
-<td>__ID__ in XML format</td><td>http://elmcity.cloudapp.net/__ID__/xml</td>
+<td>__ID__ in XML format</td><td>http://__APPDOMAIN__/__ID__/xml</td>
 </tr>
 
 <tr>
-<td>__ID__ in iCalendar format</td><td>http://elmcity.cloudapp.net/__ID__/ics</td>
+<td>__ID__ in iCalendar format</td><td>http://__APPDOMAIN__/__ID__/ics</td>
 </tr>
 
 <tr>
-<td>__ID__ in RSS format</td><td>http://elmcity.cloudapp.net/__ID__/rss </td>
+<td>__ID__ in RSS format</td><td>http://__APPDOMAIN__/__ID__/rss </td>
 </tr>
 
 <tr>
-<td>HTML rendering of __ID__, in the category <span class="first_tag_name">_</span></td><td>http://elmcity.cloudapp.net/__ID__/html?view=<span class="first_tag_name">_</span></td>
+<td>HTML rendering of __ID__, in the category <span class="first_tag_name">_</span></td><td>http://__APPDOMAIN__/__ID__/html?view=<span class="first_tag_name">_</span></td>
 </tr>
 
 <tr>
-<td>First 20 events for __ID__, in the category <span class="first_tag_name">_</span>, as HTML</td><td>http://elmcity.cloudapp.net/__ID__/html?count=20&amp;view=<span class="first_tag_name">_</span></td>
+<td>First 20 events for __ID__, in the category <span class="first_tag_name">_</span>, as HTML</td><td>http://__APPDOMAIN__/__ID__/html?count=20&amp;view=<span class="first_tag_name">_</span></td>
 </tr>
 
 <tr>
-<td>Next 3 days for __ID__, in the category <span class="first_tag_name">_</span>, as XML</td><td>http://elmcity.cloudapp.net/__ID__/xml/soon?view=<span class="first_tag_name">_</span>&amp;days=3  </td>
+<td>Next 3 days for __ID__, in the category <span class="first_tag_name">_</span>, as XML</td><td>http://__APPDOMAIN__/__ID__/xml/soon?view=<span class="first_tag_name">_</span>&amp;days=3  </td>
 </tr>
 
 <tr>
-<td>Next 12 hours for __ID__, in the category <span class="first_tag_name">_</span>, as JSON</td><td>http://elmcity.cloudapp.net/__ID__/json/soon?view=<span class="first_tag_name">_</span>&amp;hours=12  </td>
+<td>Next 12 hours for __ID__, in the category <span class="first_tag_name">_</span>, as JSON</td><td>http://__APPDOMAIN__/__ID__/json/soon?view=<span class="first_tag_name">_</span>&amp;hours=12  </td>
 </tr>
 
 <tr>
-<td>Up to 20 events for __ID__ from August 28 2012 at 9AM to September 2 2012 at 11PM, in the category <span class="first_tag_name">_</span>, as ICS</td><td>http://elmcity.cloudapp.net/__ID__/ics/?view=<span class="first_tag_name">_</span>&amp;from=2012-08-28T09:00&amp;to=2012-09-02T23:00&amp;count=20</td> 
+<td>Up to 20 events for __ID__ from August 28 2012 at 9AM to September 2 2012 at 11PM, in the category <span class="first_tag_name">_</span>, as ICS</td><td>http://__APPDOMAIN__/__ID__/ics/?view=<span class="first_tag_name">_</span>&amp;from=2012-08-28T09:00&amp;to=2012-09-02T23:00&amp;count=20</td> 
 </tr>
 
 </table>
@@ -853,25 +853,25 @@ The person who manages this hub is a <i>curator</i>. The people whose calendars 
 
 <tr><td colspan="2"><b>Authentication</b></td>
 
-<tr><td>Authenticate with Twitter</td><td>http://elmcity.cloudapp.net/twitter_auth</td></tr>
+<tr><td>Authenticate with Twitter</td><td>http://__APPDOMAIN__/twitter_auth</td></tr>
 
-<tr><td>Authenticate with Facebook</td><td>http://elmcity.cloudapp.net/facebook_auth</td></tr>
+<tr><td>Authenticate with Facebook</td><td>http://__APPDOMAIN__/facebook_auth</td></tr>
 
-<tr><td>Authenticate with Google </td><td>http://elmcity.cloudapp.net/google_auth</td></tr>
+<tr><td>Authenticate with Google </td><td>http://__APPDOMAIN__/google_auth</td></tr>
 
-<tr><td>Authenticate with Microsoft </td><td>http://elmcity.cloudapp.net/live_auth</td></tr>
+<tr><td>Authenticate with Microsoft </td><td>http://__APPDOMAIN__/live_auth</td></tr>
 
 <tr><td colspan="2"><b>Configuration</b></td>
 
-<tr><td>Add/edit/delete feeds (requires authentication)</td><td>http://elmcity.cloudapp.net/services/__ID__/edit?flavor=feeds</td></tr>
+<tr><td>Add/edit/delete feeds (requires authentication)</td><td>http://__APPDOMAIN__/services/__ID__/edit?flavor=feeds</td></tr>
 
-<tr><td>Configure hub (requires authentication)</td><td>http://elmcity.cloudapp.net/services/__ID__/edit?flavor=metadata</td></tr>
+<tr><td>Configure hub (requires authentication)</td><td>http://__APPDOMAIN__/services/__ID__/edit?flavor=metadata</td></tr>
 
-<tr><td>Hub and feed settings and version history</td><td>http://elmcity.cloudapp.net/__ID__/metadata</td></tr>
+<tr><td>Hub and feed settings and version history</td><td>http://__APPDOMAIN__/__ID__/metadata</td></tr>
 
 <tr><td colspan="2"><b>Stats</b></td>
 
-<tr><td>Feed stats</td><td>http://elmcity.cloudapp.net/__ID__/stats</td></tr>
+<tr><td>Feed stats</td><td>http://__APPDOMAIN__/__ID__/stats</td></tr>
 
 <tr><td>Feed processing error report</td><td>http://elmcity.blob.core.windows.net/__LOWERID__/feed_processing_results.json </td></tr>
 
@@ -1087,7 +1087,7 @@ function append_permalinks(h)
 function populate_tags()
   {
   $.ajax({
-        url: 'http://elmcity.cloudapp.net/__ID__/tag_cloud',
+        url: 'http://__APPDOMAIN__/__ID__/tag_cloud',
         complete: function(xhr, status) {
          tags_json = JSON.parse(xhr.responseText);
          _populate_tags();
@@ -1112,9 +1112,9 @@ function _populate_tags()
     }
   $('#curated_tags').text(curated_tags.sort().join(', '));
   var first_tag = curated_tags[0];
-  $('#first_tag_html_href').attr('href', 'http://elmcity.cloudapp.net/__ID__/html?view=' + first_tag);
-  $('#first_tag_ics_href').attr('href', 'http://elmcity.cloudapp.net/__ID__/ics?view=' + first_tag);
-  $('#first_tag_json_href').attr('href', 'http://elmcity.cloudapp.net/__ID__/json?view=' + first_tag);
+  $('#first_tag_html_href').attr('href', 'http://__APPDOMAIN__/__ID__/html?view=' + first_tag);
+  $('#first_tag_ics_href').attr('href', 'http://__APPDOMAIN__/__ID__/ics?view=' + first_tag);
+  $('#first_tag_json_href').attr('href', 'http://__APPDOMAIN__/__ID__/json?view=' + first_tag);
   $('.first_tag_name').text(first_tag);
   }
 
