@@ -290,7 +290,7 @@ namespace CalendarAggregator
 				var name = id_name_city.name;
 				var home_url = "http://www.eventbrite.com/org/" + organizer_id;
 				var escaped_name = Uri.EscapeDataString(name);
-				var ical_url = string.Format("http://elmcity.cloudapp.net/ics_from_eventbrite_organizer?organizer={0}&elmcity_id={1}", escaped_name, calinfo.id);
+				var ical_url = string.Format("http://{0}/ics_from_eventbrite_organizer?organizer={1}&elmcity_id={2}", ElmcityUtils.Configurator.appdomain, escaped_name, calinfo.id);
 				var taggable = new TaggableSource(name, calinfo.id, home_url, ical_url, id_name_city.city);
 				RememberTaggable(name_and_pk, organizer_id, taggable);
 				organizers.Add(taggable);
@@ -353,7 +353,8 @@ namespace CalendarAggregator
 					if ( ! String.IsNullOrEmpty(page) )
 						origin_url = GetFacebookPageOrGroupOriginUrl(page);
 
-					var ical_url = string.Format("http://elmcity.cloudapp.net/ics_from_fb_page?fb_id={0}&elmcity_id={1}",
+					var ical_url = string.Format("http://{0}/ics_from_fb_page?fb_id={1}&elmcity_id={2}",
+							ElmcityUtils.Configurator.appdomain,
 							fb_id,
 							calinfo.id);
 

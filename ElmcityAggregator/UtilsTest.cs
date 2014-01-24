@@ -277,9 +277,9 @@ import System
 		#region facebook
 
 		[Test]
-		public void IcsFromFbPageSucceeds()
+		public void IcsFromFbPageSucceeds()       
 		{
-			var url = "http://elmcity.cloudapp.net/ics_from_fb_page?fb_id=227760757240194&elmcity_id=socialhartford";
+			var url =  string.Format("http://{0}/ics_from_fb_page?fb_id=227760757240194&elmcity_id=socialhartford", ElmcityUtils.Configurator.appdomain);
 			var ical = DDay.iCal.iCalendar.LoadFromUri(new Uri(url));
 			Assert.That(ical.First().GetType() == typeof(DDay.iCal.iCalendar));
 		}

@@ -31,7 +31,8 @@ namespace CalendarAggregator
 		private string event_html_header = "class=\"bl";
 		private static Calinfo calinfo = Utils.AcquireCalinfo(Configurator.testid);
 
-		static Uri view_uri = new Uri("http://elmcity.cloudapp.net/services/elmcity/xml?view=government");
+		private static string url = string.Format("http://{0}/services/elmcity/xml?view=government", ElmcityUtils.Configurator.appdomain);
+		static Uri view_uri = new Uri(url);
 		static byte[] view_contents = HttpUtils.FetchUrl(view_uri).bytes;
 		static string view_etag = HttpUtils.GetMd5Hash(view_contents);
 		static Uri cached_base_uri = new Uri(Utils.MakeBaseZonelessUrl(Configurator.testid));
