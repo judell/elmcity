@@ -1450,6 +1450,7 @@ namespace CalendarAggregator
 		{
 			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 			var ical = new DDay.iCal.iCalendar();
+			ical.AddProperty("X-WR-CALNAME", ElmcityUtils.Configurator.appdomain + " " + view);
 			Collector.AddTimezoneToDDayICal(ical, this.calinfo.tzinfo);
 			var tzid = this.calinfo.tzinfo.Id;
 
