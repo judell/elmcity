@@ -163,7 +163,7 @@ namespace CalendarAggregator
 		[Test]
 		public void RenderedXmlEventCountMatchesStoredEventCount()
 		{
-			var xml = cr.RenderXml();
+			var xml = cr.RenderXml(this.es, null, 0, DateTime.MinValue, DateTime.MinValue, null, new Dictionary<string, object>());
 			var xdoc = XmlUtils.XdocFromXmlBytes(Encoding.UTF8.GetBytes(xml));
 
 			var xml_events = from evt in xdoc.Descendants("event")
@@ -175,39 +175,11 @@ namespace CalendarAggregator
 		[Test]
 		public void RenderedJsonEventCountMatchesStoredEventCount()
 		{
-			var json = cr.RenderJson();
+			var json = cr.RenderJson(this.es, null, 0, DateTime.MinValue, DateTime.MinValue, null, new Dictionary<string, object>());
 			//var events = JsonConvert.DeserializeObject<List<ZonelessEvent>>(json);
 			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
 			var events = (object[])serializer.DeserializeObject(json);
 			Assert.AreEqual(es_count, events.ToList().Count());
-		}
-
-		[Test]
-		public void TagCloudYieldsValidDict()
-		{
-
-			var json = cr.RenderTagCloudAsJson();
-
-			//Console.WriteLine(json);
-
-			JArray objects = (JArray)JsonConvert.DeserializeObject(json);
-
-			var tagcloud = new List<Dictionary<string, int>>();
-
-			foreach (JObject obj in objects)
-			{
-				{
-					var key = obj.Properties().First().Name;
-					var val = obj[key].Value<int>();
-					tagcloud.Add(new Dictionary<string, int>() { { key, val } });
-				}
-			}
-
-			Assert.That(tagcloud.Count > 0);
-
-			var firstdict = tagcloud[0];
-			var firstkey = firstdict.Keys.First();
-			Assert.That(firstdict[firstkey] > 0);
 		}
 
 		[Test]
