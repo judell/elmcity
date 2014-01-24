@@ -155,7 +155,7 @@ function post_selections() {
         {
         if ( xhr.responseText.contains('Not authenticated') == false )
           {
-          alert ('Update transmitted. Please wait for notification that it was processed successfully.');
+          alert ('Update transmitted successfully');
           window.setInterval(function(){check_result()},3000);
 
           }
@@ -186,7 +186,7 @@ function check_result() {
         }
      else
         {
-        alert('OK, your update was processed successfully, page will reload.');
+        alert('Image update processed successfully, page will now reload.');
         location.href = location.href;
         }
      }
