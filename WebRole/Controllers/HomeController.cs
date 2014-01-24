@@ -787,7 +787,8 @@ if unsure please check http://{1}/{2}/stats",
 				content = content.Replace("__HUB__", id);
 				content = content.Replace("__WHERE__", where);
 
-				var tags_json = HttpUtils.FetchUrl("http://elmcity.cloudapp.net/" + id + "/tag_cloud").DataAsString();
+				var url = string.Format("http://{0}/{1}/tag_cloud", ElmcityUtils.Configurator.appdomain, id); 
+				var tags_json = HttpUtils.FetchUrl(url).DataAsString();
 				var list_dict = JsonConvert.DeserializeObject<List<Dictionary<string, int>>>(tags_json);
 				var tags = list_dict.Select(x => x.Keys.First()).ToList();
 				tags.Sort(String.CompareOrdinal);
@@ -845,6 +846,7 @@ if unsure please check http://{1}/{2}/stats",
 					if (!String.IsNullOrEmpty(property))
 						cal_text = GenUtils.FindCalProps(property, cal_text);
 					template_html = template_html.Replace("__DATA__", cal_text);
+					template_html = template_html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
 					cr.Content = template_html;
 				}
 			}
