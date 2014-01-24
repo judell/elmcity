@@ -35,15 +35,14 @@ public class ImageSelection
 
 	public static void BuildCategoryImagesForHub(string id)
 	{
-		var category_image_results = new ConcurrentDictionary<string, List<Dictionary<string, string>>>();
-		var categories = GetNonHubCategories(id);
+		var category_images = GetCategoryImages(id);  // current set of images 
+		var categories = GetNonHubCategories(id);     // categories that could associate to images
 		categories.Sort(StringComparer.Ordinal);
-		var current_selections = GetCurrentImageSelections(id, categories, "category");
-		GetCategoryImages(category_image_results, categories, 20);
-		SaveCategoryOrSourceImages("category", id, current_selections, category_image_results);
+		var current_selections = GetCurrentImageSelections(id, category_images, categories, "category");
+		SaveCategoryOrSourceImages("category", id, current_selections);
 	}
 
-	public static void BuildSourceImagesForHub(string id, string location)
+	public static void BuildSourceImagesForHub(string id)
 	{
 		var ts = TableStorage.MakeDefaultTableStorage();
 		var source_image_results = new ConcurrentDictionary<string, List<Dictionary<string, string>>>();
@@ -56,18 +55,18 @@ public class ImageSelection
 		sources = feeds.Select(x => x["source"].ToString()).ToList();
 		sources = sources.Select(x => x.Replace("\n", "")).ToList();
 		sources.Sort();
-		var current_selections = GetCurrentImageSelections(id, sources, "source");
-		GetSearchImages(source_image_results, sources, location, 30);
-		SaveCategoryOrSourceImages("source", id, current_selections, source_image_results);
+		var source_images = GetSourceImages(id);
+		var current_selections = GetCurrentImageSelections(id, source_images, sources, "source");
+		SaveCategoryOrSourceImages("source", id, current_selections);
 	}
 
-	private static void SaveCategoryOrSourceImages(string type, string id, Dictionary<string, string> current_selections, ConcurrentDictionary<string, List<Dictionary<string, string>>> image_results)
+	private static void SaveCategoryOrSourceImages(string type, string id, Dictionary<string, string> images)
 	{
 		var bs = BlobStorage.MakeDefaultBlobStorage();
 		var template = BlobStorage.GetAzureBlobAsString("admin", "image_selector.tmpl");
 		var sb = new StringBuilder();
 		Random rnd = new Random();
-		sb.Append(RenderCategoryOrSourceImages(type, image_results, current_selections, rnd));
+		sb.Append(RenderCategoryOrSourceImages(type, images, rnd));
 		var html = template.Replace("__ID__", id);
 		html = html.Replace("__HOST__", ElmcityUtils.Configurator.appdomain);
 		html = html.Replace("__TYPE__", type);
@@ -76,36 +75,46 @@ public class ImageSelection
 		bs.PutBlob(id, type + "_images.html", html, "text/html");
 	}
 
-	public static Dictionary<string, string> GetCurrentImageSelections(string id, List<string> items, string type)
+	public static Dictionary<string, string> GetCurrentImageSelections(string id, Dictionary<string,string> images, List<string> items, string type)
+	{
+		var blobname = type + "_images.json";
+
+		var hub_selections = new Dictionary<string, string>();
+		var hub_uri = BlobStorage.MakeAzureBlobUri(id, blobname);  // look for hub images
+		if (BlobStorage.ExistsBlob(id, blobname))
+			hub_selections = GetSelections(hub_uri);
+
+		var global_selections = new Dictionary<string,string>();
+		var global_uri = BlobStorage.MakeAzureBlobUri("admin", blobname); // acquire global images
+		global_selections = GetSelections(global_uri);
+
+		foreach (var item in items)
+		{
+			if (hub_selections.ContainsKey(item) == false)  // nothing selected for category or source 
+				hub_selections[item] = NoCurrentImageUrl;   // force default selection
+
+			if ( hub_selections[item] == NoCurrentImageUrl ) // if unassigned check for global assignment
+			{
+				if ( global_selections.ContainsKey(item) )
+					hub_selections[item] = global_selections[item];
+			}
+		}
+
+		return hub_selections;
+	}
+
+	private static Dictionary<string, string> GetSelections(Uri uri)
 	{
 		var selections = new Dictionary<string, string>();
-		var blobname = type + "_images.json";
-		var uri = BlobStorage.MakeAzureBlobUri(id, blobname);
 		try
 		{
 			var json = HttpUtils.FetchUrl(uri).DataAsString();
 			selections = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
 		}
-		catch { } // might not exist, that's ok
-
-		int more_items = 0;
-
-		foreach (var item in items)
+		catch (Exception e)
 		{
-			if (selections.ContainsKey(item) == false)  // ensure every category or source has a default selection
-			{
-				selections[item] = NoCurrentImageUrl;
-				more_items++;
-			}
+			GenUtils.PriorityLogMsg("exception", "GetCurrentImageSelections", e.Message);
 		}
-
-		if ( more_items > 0 )
-		{
-			GenUtils.LogMsg("status", "GetCurrentImageSelections: " + id + " " + type + " added " + more_items + " more items", null);
-			var bs = BlobStorage.MakeDefaultBlobStorage();
-			bs.PutBlob(id, blobname, JsonConvert.SerializeObject(selections), "application/json");
-		}
-
 		return selections;
 	}
 
@@ -126,6 +135,19 @@ public class ImageSelection
 		return categories;
 	}
 
+	public static Dictionary<string,string> GetCategoryImages(string id)
+	{
+		var renderer = Utils.AcquireRenderer(id);
+		return renderer.category_images;
+	}
+
+	public static Dictionary<string, string> GetSourceImages(string id)
+	{
+		var renderer = Utils.AcquireRenderer(id);
+		return renderer.source_images;
+	}
+
+	/*
 	public static void GetCategoryImages(ConcurrentDictionary<string, List<Dictionary<string, string>>> category_image_results, List<string> categories, int max)
 	{
 		Parallel.ForEach(source: categories, body: (category) =>
@@ -143,8 +165,9 @@ public class ImageSelection
 			search_image_results[source] = BingImageSearch(source.Replace("meetup", "").Replace("eventbrite", "").Replace("facebook", "") + " " + where, max);
 		});
 	}
+	 */
 
-	private static string RenderCategoryOrSourceImages(string type, ConcurrentDictionary<string, List<Dictionary<string, string>>> image_results, Dictionary<string, string> current_selections, Random rnd)
+	/*private static string RenderCategoryOrSourceImages(string type, ConcurrentDictionary<string, List<Dictionary<string, string>>> image_results, Dictionary<string, string> current_selections, Random rnd)
 	{
 		var sb = new StringBuilder();
 		var items = image_results.Keys.ToList();
@@ -174,7 +197,7 @@ public class ImageSelection
 
 			sb.Append(String.Format(@"<div>
 <p>
-or search for more on <a target=""bingsearch"" href=""http://www.bing.com/search?q={0}"">bing</a> or <a target=""googlesearch"" href=""http://google.com/search?q={0}"">google</a>
+or search for more on <a target=""bingsearch"" href=""http://www.bing.com/images/search?qft=%2Bfilterui%3Alicense-L1&q={0}"">bing</a> or <a target=""googlesearch"" href=""http://google.com/search?tbm=isch&safe=active&tbs=sur:f&as_q={0}"">google</a>
 </p>
 <p>
 then specify your own image URL: <input style=""width:50%"" class=""override"" name=""{0}"" onchange=""url_specified('{0}')"" value="""">
@@ -184,7 +207,32 @@ then specify your own image URL: <input style=""width:50%"" class=""override"" n
 
 		}
 		return sb.ToString();
+	}*/
+
+	private static string RenderCategoryOrSourceImages(string type, Dictionary<string, string> current_selections, Random rnd)
+	{
+		var sb = new StringBuilder();
+		var items = current_selections.Keys.ToList();
+		items.Sort(StringComparer.Ordinal);
+		foreach (var item in items)
+		{
+			var rand = rnd.Next(1000000).ToString();
+			sb.AppendLine(string.Format("<p class=\"{0}\" style=\"font-size:xx-large\">images for {1} {2}</p>", rand, type, item));
+			RenderCurrentSourceOrCategoryImage(current_selections, sb, item, rand);
+			sb.Append(String.Format(@"<div>
+<p>
+search for public domain images on <a target=""bingsearch"" href=""http://www.bing.com/images/search?qft=%2Bfilterui%3Alicense-L1&q={0}"">bing</a> or <a target=""googlesearch"" href=""http://google.com/search?tbm=isch&safe=active&tbs=sur:f&as_q={0}"">google</a>
+</p>
+<p>
+then specify your own image URL: <input style=""width:50%"" class=""override"" name=""{0}"" onchange=""url_specified('{1}')"" value="""">
+<img name=""{0}"" class=""override_image"" style=""width:140px;display:none;vertical-align: middle;margin: 20px;"" src="""">
+</p>
+</div>", item, item.Replace("'","\\'")));
+
+		}
+		return sb.ToString();
 	}
+
 
 	private static void RenderCurrentSourceOrCategoryImage(Dictionary<string, string> current_selections, StringBuilder sb, string selector, String rand)
 	{
@@ -198,13 +246,14 @@ then specify your own image URL: <input style=""width:50%"" class=""override"" n
 		sb.AppendLine(string.Format(@"
 <p> current image 
 <div id=""{2}"">
-<input class=""current_selection {2}"" onclick=""highlight_selection({2},'{1}')"" style=""white-space:nowrap"" checked type=""radio"" name=""{1}"" value=""{0}"">
+<input class=""current_selection {2}"" onclick=""highlight_selection({2},'{3}')"" style=""white-space:nowrap"" checked type=""radio"" name=""{1}"" value=""{0}"">
 <img style=""vertical-align:middle"" src=""{0}"">
 </div>
 </p>",
 				img_url,
 				selector,
-				rand
+				rand,
+				selector.Replace("'","\\'")
 				)
 			);
 	}
@@ -364,7 +413,7 @@ then specify your own image URL: <input style=""width:50%"" class=""override"" n
 		ImageSelection.BuildCategoryImagesForHub(region);
 		foreach (var id in Utils.GetIdsForRegion(region))
 		{
-			ImageSelection.BuildSourceImagesForHub(id, where);
+			ImageSelection.BuildSourceImagesForHub(id);
 		}
 	}
 
