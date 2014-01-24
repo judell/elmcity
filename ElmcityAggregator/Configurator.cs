@@ -396,11 +396,11 @@ namespace CalendarAggregator
 		// example: myspace
 		// the curator bookmarks: http://www.myspace.com/lonesomelake, and tags filter=keene
 		// internally it becomes: http://elmcity.cloudapp.net/services=fusecal?url=http://www.myspace.com/lonesomelake&filter=keene&tz_source=eastern&tz_dest=eastern
-		public const string fusecal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/services/fusecal?url={0}&filter={1}&tz_source={2}&tz_dest={3}";
+		public static string fusecal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/services/fusecal?url={0}&filter={1}&tz_source={2}&tz_dest={3}";
 
-		public const string ics_from_xcal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/ics_from_xcal?url={0}&tzname={1}&source={2}";
+		public static string ics_from_xcal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/ics_from_xcal?url={0}&tzname={1}&source={2}";
 
-		public const string ics_from_vcal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/ics_from_vcal?url={0}&tzname={1}&source={2}";
+		public static string ics_from_vcal_service = "http://" + ElmcityUtils.Configurator.appdomain + "/ics_from_vcal?url={0}&tzname={1}&source={2}";
 
 		// the "fusecal" service is written in python, this is the dispatcher that runs the appropriate 
 		// parser for, e.g., myspace or librarything
