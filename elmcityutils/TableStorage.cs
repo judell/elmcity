@@ -151,7 +151,7 @@ namespace ElmcityUtils
 
 		public static TableStorage MakeDefaultTableStorage()
 		{
-			var key = Configurator.GetStorageKey();
+			var key = Configurator.GetSettingValue("storage");
 			return new TableStorage(Configurator.azure_storage_account,
 				Configurator.azure_storage_account + "." + Configurator.azure_table_domain,
 				key, scheme: "http");
@@ -159,7 +159,7 @@ namespace ElmcityUtils
 
 		public static TableStorage MakeSecureTableStorage()
 		{
-			var key =  Configurator.GetStorageKey();
+			var key = Configurator.GetSettingValue("storage");
 			return new TableStorage(Configurator.azure_storage_account,
 				 Configurator.azure_storage_account + "." + Configurator.azure_table_domain,
 				key, scheme: "https");

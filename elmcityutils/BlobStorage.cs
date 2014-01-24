@@ -72,7 +72,7 @@ namespace ElmcityUtils
 
 		public static BlobStorage MakeDefaultBlobStorage()
 		{
-			var	key = Configurator.GetStorageKey();
+			var key = Configurator.GetSettingValue("storage");
 			return new BlobStorage(Configurator.azure_storage_account,
 				  Configurator.azure_storage_account + "." + Configurator.azure_blob_domain,
 				  key);
