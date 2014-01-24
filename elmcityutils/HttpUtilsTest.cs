@@ -34,7 +34,8 @@ namespace ElmcityUtils
 		[Test]
 		public void HttpHeadIsSuccessful()
 		{
-			var r = HttpUtils.HeadFetchUrl(new Uri("http://elmcity.cloudapp.net"));
+			var url = string.Format("http://{0}", ElmcityUtils.Configurator.appdomain);
+			var r = HttpUtils.HeadFetchUrl(new Uri(url));
 			Assert.That(r.bytes.Length == 0);
 			Assert.That(r.headers.ContainsKey("X-AspNetMvc-Version"));
 		}
