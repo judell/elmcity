@@ -136,7 +136,7 @@ namespace WebRole
 
     public class ElmcityApp : HttpApplication
     {
-        public static string version = "2553";
+        public static string version = "2556";
 
         public static string procname = System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         public static int procid = System.Diagnostics.Process.GetCurrentProcess().Id;
@@ -714,7 +714,11 @@ namespace WebRole
 
             try
             {
-                ElmcityController.settings = GenUtils.GetSettingsFromAzureTable();
+				var settings = GenUtils.GetSettingsFromAzureTable();
+				if (settings.Keys.Count == 0)
+					GenUtils.PriorityLogMsg("exception", "ReloadSettings: no settings!", null);
+				else
+					ElmcityController.settings = settings;
             }
             catch (Exception e0)
             {
@@ -762,7 +766,7 @@ namespace WebRole
                         ElmcityApp.wrd = new_wrd;                               // update WebRoleData (todo: rewarm caches affected)
                     }
                 }
-		
+
 				foreach (var id in ElmcityApp.wrd.ready_ids)                  // did any hub's renderer change?
 				{
 					var cached_renderer = ElmcityApp.wrd.renderers[id];
