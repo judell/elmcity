@@ -27,7 +27,6 @@ namespace CalendarAggregator
 	public class CalendarRendererTest
 	{
 		private CalendarRenderer cr;
-		private ZonelessEventStore es;
 		private string event_html_header = "class=\"bl";
 		private static Calinfo calinfo = Utils.AcquireCalinfo(Configurator.testid);
 
@@ -37,13 +36,16 @@ namespace CalendarAggregator
 		static string view_etag = HttpUtils.GetMd5Hash(view_contents);
 		static Uri cached_base_uri = new Uri(Utils.MakeBaseZonelessUrl(Configurator.testid));
 
-		private int es_count;
-
 		public CalendarRendererTest()
 		{
 			this.cr = new CalendarRenderer(Configurator.testid);
 			this.cr.cache = new MockCache();
 
+
+		}
+
+		private ZonelessEventStore MakeNewEventStore()
+		{
 			var title1 = "e1";
 			var title2 = "e2";
 
@@ -61,8 +63,7 @@ namespace CalendarAggregator
 			var test_category = "test_category";
 			var test_description = "test_description";
 			var test_location = "test_location";
-	
-			this.es = new ZonelessEventStore(calinfo);
+			var es = new ZonelessEventStore(calinfo);
 
 			es.AddEvent(title: title1, url: "http://foo", source: source1, lat: null, lon: null, dtstart: dt1, dtend: min, allday: false, categories: test_category, description: test_description, location: test_location);
 			var evt1 = es.events.Find(e => e.title == title1);
@@ -71,11 +72,7 @@ namespace CalendarAggregator
 			es.AddEvent(title: title2, url: "http://bar", source: source2, lat: null, lon: null, dtstart: dt2, dtend: min, allday: false, categories: null, description: test_description, location: test_location);
 			var evt2 = es.events.Find(e => e.title == title2);
 			evt2.urls_and_sources = new Dictionary<string, string>() { { "http://foo", source1 } };
-
-			this.es_count = this.es.events.Count();
-
-			Assert.AreEqual(2, this.es_count);
-
+			return es;
 		}
 
 		[Test]
@@ -147,15 +144,17 @@ namespace CalendarAggregator
 		[Test]
 		public void RenderedHtmlEventCountMatchesStoredEventCount()
 		{
-			var html = cr.RenderHtml(this.es);
+			var es = MakeNewEventStore();
+			var html = cr.RenderHtml(es);
 			var html_count = GenUtils.RegexCountSubstrings(html, this.event_html_header);
-			Assert.AreEqual(this.es_count, html_count);
+			Assert.AreEqual(es.events.Count, html_count);
 		}
 
 		[Test]
 		public void RenderedHtmlViewMatchesExpectedCount()
 		{
-			var html = cr.RenderHtml(this.es, EventStoreTest.test_category, 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
+			var es = MakeNewEventStore();
+			var html = cr.RenderHtml(es, EventStoreTest.test_category, 0, from: DateTime.MinValue, to: DateTime.MinValue, source:null, args:null);
 			var html_count = GenUtils.RegexCountSubstrings(html, event_html_header);
 			Assert.AreEqual(1, html_count);
 		}
@@ -163,23 +162,25 @@ namespace CalendarAggregator
 		[Test]
 		public void RenderedXmlEventCountMatchesStoredEventCount()
 		{
-			var xml = cr.RenderXml(this.es, null, 0, DateTime.MinValue, DateTime.MinValue, null, new Dictionary<string, object>());
+			var es = MakeNewEventStore();
+			var xml = cr.RenderXml(es, null, 0, DateTime.MinValue, DateTime.MinValue, null, new Dictionary<string, object>());
 			var xdoc = XmlUtils.XdocFromXmlBytes(Encoding.UTF8.GetBytes(xml));
 
 			var xml_events = from evt in xdoc.Descendants("event")
 							 select new { evt };
 
-			Assert.AreEqual(es_count, xml_events.Count());
+			Assert.AreEqual(es.events.Count, xml_events.Count());
 		}
 
 		[Test]
 		public void RenderedJsonEventCountMatchesStoredEventCount()
 		{
-			var json = cr.RenderJson(this.es, null, 0, DateTime.MinValue, DateTime.MinValue, null, new Dictionary<string, object>());
+			var es = MakeNewEventStore();
+			var json = cr.RenderJson(es, null, 0, DateTime.MinValue, DateTime.MinValue, null, new Dictionary<string, object>());
 			//var events = JsonConvert.DeserializeObject<List<ZonelessEvent>>(json);
 			var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
 			var events = (object[])serializer.DeserializeObject(json);
-			Assert.AreEqual(es_count, events.ToList().Count());
+			Assert.AreEqual(es.events.Count, events.ToList().Count());
 		}
 
 		[Test]
