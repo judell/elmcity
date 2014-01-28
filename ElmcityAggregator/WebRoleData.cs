@@ -82,7 +82,7 @@ namespace CalendarAggregator
 
 			this.region_ids = Metadata.LoadHubIdsFromAzureTableByType(HubType.region);
 			var region_ids_as_str = string.Join(",", this.region_ids.ToArray());
-			GenUtils.LogMsg("info", "region_ids: " + what_ids_as_str, null);
+			GenUtils.LogMsg("info", "region_ids: " + region_ids_as_str, null);
 
 			Dictionary<string, string> ids_and_locations = Metadata.QueryIdsAndLocations();
 
