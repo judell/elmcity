@@ -236,6 +236,7 @@ namespace WebRole
 						render_args["bare_events"] = this.bare_events;
 						render_args["hub"] = this.hub;
 						render_args["first"] = this.first;
+						render_args["eventsonly"] = this.eventsonly;
 
 						if (settings["use_mobile_detection"] == "yes")                      // detect or use declaration
 						{
