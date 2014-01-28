@@ -84,6 +84,8 @@ namespace WorkerRole
 
 		private static Todo todo;
 
+		private static ElmcityUtils.CounterResponse counters = ElmcityUtils.Counters.GetCounters();
+
 		public override bool OnStart()
 		{
 			try
@@ -115,6 +117,7 @@ namespace WorkerRole
 				Utils.ScheduleTimer(MonitorAdmin, minutes: CalendarAggregator.Configurator.worker_gather_monitor_data_interval_minutes, name: "GatherMonitorData", startnow: false);
 
 				monitor = ElmcityUtils.Monitor.TryStartMonitor(CalendarAggregator.Configurator.process_monitor_interval_minutes, CalendarAggregator.Configurator.process_monitor_table);
+
 			}
 			catch (Exception e)
 			{
@@ -157,7 +160,17 @@ namespace WorkerRole
 				{
 					GenUtils.LogMsg("status", "worker waking", null);
 
-					settings = GenUtils.GetSettingsFromAzureTable();
+					if (MemoryIsLow())
+					{
+						GenUtils.PriorityLogMsg("warning", "low memory", null);
+						Sleep();
+					}
+
+					var tmp_settings = GenUtils.GetSettingsFromAzureTable();
+					if (tmp_settings.Count == 0)
+						GenUtils.PriorityLogMsg("exception", "Run -> GetSettings: cannot!", null);
+					else
+						settings = tmp_settings;
 					GenUtils.LogMsg("status", "worker updated " + settings.Count + " settings", null);
 
 					int check_interval_minutes;
@@ -234,6 +247,12 @@ namespace WorkerRole
 					{
 						try
 						{
+							if ( MemoryIsLow() )
+								{
+								AlertLowMemory("icaltasks: " + id);
+								return;
+								}
+
 							Scheduler.UpdateStartTaskForId(id, TaskType.icaltasks);
 							ProcessIcal(id);
 							StopTask(id, TaskType.icaltasks);
@@ -314,7 +333,7 @@ namespace WorkerRole
 						);
 
 					GenUtils.LogMsg("status", "worker sleeping", null);
-					Utils.WaitMinutes(Convert.ToInt32(settings["scheduler_check_interval_minutes"]));
+					Sleep();
 
 				}
 			}
@@ -322,6 +341,32 @@ namespace WorkerRole
 			{
 				GenUtils.PriorityLogMsg("exception", "Worker.Run", e.Message + e.StackTrace);
 			}
+		}
+
+		private static void Sleep()
+		{
+			Utils.WaitMinutes(Convert.ToInt32(settings["scheduler_check_interval_minutes"]));
+		}
+
+		private static bool MemoryIsLow()
+		{
+			try
+			{
+				var counter = counters.counter_objects["mem_available_mbytes"];
+				var mem_available_mbytes = Convert.ToInt32(counter.NextValue());
+				var min = Convert.ToInt32(settings["worker_min_mem"]);
+				return mem_available_mbytes < min;
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "MemoryIsLow", e.Message);
+				return true;
+			}
+		}
+
+		private static void AlertLowMemory(string context)
+		{
+			GenUtils.PriorityLogMsg("warning", "AlertLowMemory", context);
 		}
 
 		public static void MaybeRemakeWebRoleData()
@@ -929,7 +974,7 @@ Future events {0}
 				var feed_column = String.Format(@"<a title=""click to load calendar ics"" href=""{0}"">{1}</a>", feedurl, ical_stats.source);
 				var home_column = String.Format(@"<a title=""click to visit calendar page"" href=""{0}""><img src=""http://elmcity.blob.core.windows.net/admin/home.png""></a>", homeurl);
 				var raw_view_url = string.Format("/text_from_ics?url={0}", Uri.EscapeDataString(feedurl));
-				var html_view_url = string.Format("/view_calendar?feedurl={0}&id={1}", Uri.EscapeDataString(feedurl), id);
+				var html_view_url = string.Format("/{0}?source={1}", id, Uri.EscapeDataString(ical_stats.source));
 				var raw_view_column = string.Format(@"<a title=""click to view raw feed"" href=""{0}""><img src=""http://elmcity.blob.core.windows.net/admin/glasses.png""></a>", raw_view_url);
 				var html_view_column = string.Format(@"<a title=""click to view feed as html"" href=""{0}""><img src=""http://elmcity.blob.core.windows.net/admin/glasses2.png""></a>", html_view_url);
 				var validation_column = String.Format(@"<a title=""click to validate feeed"" href=""{0}""><img src=""http://elmcity.blob.core.windows.net/admin/checkbox.png""></a>", Utils.ValidationUrlFromFeedUrl(redirected_url));
