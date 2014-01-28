@@ -647,6 +647,20 @@ namespace ElmcityUtils
 				return false;
 		}
 
+		public static bool HasStringValueStartingWith<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, string prefix)
+		{
+			if (!dict.ContainsKey(key) || !(dict[key] is String))
+				return false;
+
+			var value = dict[key] as String;
+
+			if (String.IsNullOrEmpty(value))
+				return false;
+			else
+				return value.ToLower().StartsWith(prefix.ToLower());
+				
+		}
+
 		public static bool HasNonZeroIntValue<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key)
 		{
 			if (!dict.ContainsKey(key) || !(dict[key] is int))
