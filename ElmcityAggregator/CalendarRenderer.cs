@@ -84,6 +84,8 @@ namespace CalendarAggregator
 
 		public int max_events;
 
+		private enum TitleType { EventsOnlyCoalesced, EventsOnlyNotCoalesced, NotEventsOnlyCoalesced, NotEventsOnlyNotCoalesced };
+
 		public CalendarRenderer(string id)
 		{
 			this.timestamp = DateTime.UtcNow;
@@ -522,8 +524,8 @@ namespace CalendarAggregator
 			html = HandleDefaultArgs(html);
 
 			//html = html.Replace("__TITLE__", this.calinfo.title);
-			html = html.Replace("__TITLE__", MakeTitle(view));
-			html = html.Replace("__META__", MakeTitle(view) + " calendars happenings schedules");
+			html = html.Replace("__TITLE__", MakeEventTitle(view));
+			html = html.Replace("__META__", MakeEventTitle(view) + " calendars happenings schedules");
 			html = html.Replace("__WIDTH__", this.calinfo.display_width);
 			html = html.Replace("__CONTACT__", this.calinfo.contact);
 			html = html.Replace("__FEEDCOUNT__", this.calinfo.feed_count);
@@ -669,7 +671,7 @@ namespace CalendarAggregator
 				return html.Replace("__DEFAULT_ARGS__", "default_args = " + this.default_args_json + ";\n");
 		}
 
-		public string MakeTitle(string view)
+		public string MakeEventTitle(string view)
 		{
 			var _view = string.IsNullOrEmpty(view) ? " " : " " + view + " ";
 			string _title;
@@ -748,8 +750,8 @@ namespace CalendarAggregator
 			html = html.Replace("__APPDOMAIN__", ElmcityUtils.Configurator.appdomain);
 
 			html = html.Replace("__ID__", this.id);
-			html = html.Replace("__TITLE__", MakeTitle(view));
-			html = html.Replace("__META__", MakeTitle(view) + " calendars happenings schedules");
+			html = html.Replace("__TITLE__", MakeEventTitle(view));
+			html = html.Replace("__META__", MakeEventTitle(view) + " calendars happenings schedules");
 
 			var css_url = GetCssUrl(args);
 			html = html.Replace("__CSSURL__", css_url);
@@ -768,6 +770,8 @@ namespace CalendarAggregator
 			html = Utils.RemoveCommentSection(html, "DATEPICKER");
 			html = Utils.RemoveCommentSection(html, "HUBTITLE");
 			html = Utils.RemoveCommentSection(html, "TAGS");
+
+			html = HandleDefaultArgs(html);
 
 			return html;
 		}
@@ -1051,7 +1055,7 @@ namespace CalendarAggregator
 				}
 				catch (Exception e)
 				{
-					GenUtils.PriorityLogMsg("exception", String.Format("AddTagOptions, selector: {0}, id: {1}, tag {2}", selector, es.id, tag), e.Message);
+					GenUtils.LogMsg("exception", String.Format("AddTagOptions, selector: {0}, id: {1}, tag {2}", selector, es.id, tag), e.Message);
 				}
 			}
 		}
@@ -1251,16 +1255,9 @@ namespace CalendarAggregator
 
 			string dom_id = "e" + evt.uid;
 
-			string show_desc = ( ! String.IsNullOrEmpty(description) ) ? String.Format(@"<span class=""sd""><a title=""show description"" href=""javascript:show_desc('{0}')"">...</a></span>", dom_id) : "";
-
-			if ( args.HasValue("inline_descriptions",true) ) // for view_calendar
-			{
-				var location = string.IsNullOrEmpty(evt.location) ? "" : String.Format("{0}<br/><br/>", evt.location);
-				show_desc = String.Format(@"<div style=""text-indent:0""><p>{0}</div>", location + description);
-			}
-
-			if ( args.HasValue("show_desc", false) ) // in case need to suppress, not used yet
-				show_desc = "";
+			string expander = "";
+			if ( ! String.IsNullOrEmpty(description) && args.HasValue("eventsonly",true) )
+				expander = String.Format(@"<span class=""sd""><a title=""show description"" href=""javascript:show_desc('{0}')"">...</a></span>", dom_id);
 
 			string add_to_cal = String.Format(@"<span class=""atc""><a title=""add to calendar"" href=""javascript:add_to_cal('{0}')"">+</a></span>", dom_id);
 
@@ -1317,11 +1314,11 @@ namespace CalendarAggregator
 			String.Format("{0:yyyy-MM-ddTHH:mm}", evt.dtstart),     // 1
 			dtstart,                                                // 2
 			evt.url,                                                // 3
-			MakeTitleForRDFa(evt),                                  // 4
+			MakeTitleForRDFa(evt, dom_id, args),                    // 4
 			evt.urls_and_sources.Keys.Count == 1 ? evt.source : "", // 5 suppress source if multiple
 			categories,                                             // 6
 			MakeGeoForRDFa(evt),                                    // 7
-			show_desc,                                              // 8
+			expander,                                               // 8
 			add_to_cal,                                             // 9
 			"",														// 10 was source_attr, not needed  
 			more,                                                   // 11
@@ -1364,37 +1361,72 @@ namespace CalendarAggregator
 			return sb.ToString();
 		}
 
-		public static string MakeTitleForRDFa(ZonelessEvent evt)
+		public static string MakeTitleForRDFa(ZonelessEvent evt, string dom_id, Dictionary<string,object> args)
 		{
-			if (evt.urls_and_sources.Keys.Count == 1)
-			{
-				return string.Format("<a target=\"{0}\" property=\"v:summary\" title=\"{1}\" href=\"{2}\">{3}</a>",
-					Configurator.default_html_window_name, 
-					//evt.source,
-					"open event page on source site",
-					evt.url, 
-					evt.title);
-			}
+			var is_eventsonly = args.HasValue("eventsonly", true);
+			var coalesced_links = BuildCoalescedLinks(evt, dom_id);
+			bool is_coalesced = !String.IsNullOrEmpty(coalesced_links);
 
-			if (evt.urls_and_sources.Keys.Count > 1)
+			// case 1: eventsonly, coalesced
+			// <span class="ttl"><a target="elmcity" property="v:summary" title="open event page on source site" href="http://www.harriscenter.org/calendar">Homeschool Program: Biographies of Famous Birds</a></span>
+			//
+			// case 2: eventsonly, not coalesced
+			// <span class="ttl"><span property="v:summary">Crazy Quilters</span> [<a target="elmcity" title="gilsum church" href="http://gilsum.org/church.aspx">&nbsp;1&nbsp;</a><a target="elmcity" title="town of gilsum" href="http://gilsum.org/">&nbsp;2&nbsp;</a>]</span>
+			//
+			// case 3: not eventsonly, coalesced
+			// <span class="ttl"><span property="v:summary"><a href="javascript:show_desc('e3')">Crazy Quilters</a></span> [<a title="gilsum church" href="http://gilsum.org/church.aspx">&nbsp;1&nbsp;</a><a title="town of gilsum" href="http://gilsum.org/">&nbsp;2&nbsp;</a>]</span>
+			//
+			// case 4: not eventsonly, not coalesced
+			// <span class="ttl"><a property="v:summary" title="see details" href='javascript:show_desc("e2")'>Lunchtime Rallies at Central Square</a></span>
+
+
+			//  <span class="ttl"><span property="v:summary">Crazy Quilters</span> [<a target="elmcity" title="gilsum church" href="http://gilsum.org/church.aspx">&nbsp;1&nbsp;</a><a target="elmcity" title="town of gilsum" href="http://gilsum.org/">&nbsp;2&nbsp;</a>]</span>
+			// otherwise this
+			// <span class="ttl"><span property="v:summary"><a href="javascript:show_desc('e3')">Crazy Quilters</a></span> [<a title="gilsum church" href="http://gilsum.org/church.aspx">&nbsp;1&nbsp;</a><a title="town of gilsum" href="http://gilsum.org/">&nbsp;2&nbsp;</a>]</span>
+
+			TitleType title_type;
+
+			if (is_coalesced)
+				title_type = is_eventsonly ? TitleType.EventsOnlyCoalesced : TitleType.NotEventsOnlyCoalesced;
+			else
+				title_type = is_eventsonly ? TitleType.EventsOnlyNotCoalesced : TitleType.NotEventsOnlyNotCoalesced;
+
+			string title;
+
+			if ( title_type == TitleType.EventsOnlyCoalesced )
+				title = string.Format("<span property=\"v:summary\">{0}</span>", evt.title);
+			else
+				title = string.Format("<a target=\"{0}\" property=\"v:summary\" title=\"{1}\" href=\"{2}\">{3}</a>",
+					Configurator.default_html_window_name,
+					is_eventsonly ? "open event page on source site": "see details",
+					is_eventsonly ? evt.url : string.Format("javascript:show_desc('{0}')", dom_id),
+					evt.title);
+
+			if (is_coalesced) 
+				title += coalesced_links;
+
+			return title;
+		}
+
+		private static string BuildCoalescedLinks(ZonelessEvent evt, string dom_id)
+		{
+			if (evt.urls_and_sources.Keys.Count == 1) // nothing to coalesce
+				return "";
+
+			string coalesced_links = " [";
+			int count = 0;
+			foreach (var url in evt.urls_and_sources.Keys)
 			{
-				var evt_title = @"<span property=""v:summary"">" + evt.title + "</span> [";
-				int count = 0;
-				foreach (var url in evt.urls_and_sources.Keys )
-				{
-					var source = evt.urls_and_sources[url];
-					count++;
-					evt_title += string.Format(@"<a target=""{0}"" title=""{1}"" href=""{2}"">&nbsp;{3}&nbsp;</a>",
-						Configurator.default_html_window_name,
-						source,
-						url,
-						count);
-				}
-				evt_title += "]";
-				return evt_title;
+				var source = evt.urls_and_sources[url];
+				count++;
+				coalesced_links += string.Format(@"<a target=""{0}"" title=""{1}"" href=""{2}"">&nbsp;{3}&nbsp;</a>",
+					Configurator.default_html_window_name,
+					source,
+					url,
+					count);
 			}
-			GenUtils.PriorityLogMsg("warning", "MakeTitleForRDFa: no title", null);
-			return "";
+			coalesced_links += "]";
+			return coalesced_links;
 		}
 
 		private string MakeGeoForRDFa(ZonelessEvent evt)
@@ -1450,7 +1482,7 @@ namespace CalendarAggregator
 		{
 			eventstore = GetEventStore(eventstore, view, count, from, to, source, args);
 			var ical = new DDay.iCal.iCalendar();
-			ical.AddProperty("X-WR-CALNAME", ElmcityUtils.Configurator.appdomain + " " + view);
+			ical.AddProperty("X-WR-CALNAME", ElmcityUtils.Configurator.appdomain + "/" + this.calinfo.id + " " + view);
 			Collector.AddTimezoneToDDayICal(ical, this.calinfo.tzinfo);
 			var tzid = this.calinfo.tzinfo.Id;
 
