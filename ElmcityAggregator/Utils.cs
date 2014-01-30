@@ -1219,17 +1219,66 @@ namespace CalendarAggregator
 				GenUtils.LogMsg("warning", "IcsFromFbPage: " + fb_id, "cannot get lat/lon: " + e.Message);
 			}
 
-			iCalendarizeJsonObjectFromFacebook(j_obj, calinfo, ical, slat, slon);
+			iCalendarizeJsonObjectFromFacebook(j_obj, calinfo, ical, slat, slon, settings);
 
 			var ical_serializer = new DDay.iCal.Serialization.iCalendar.iCalendarSerializer(ical);
 			var ics_text = ical_serializer.SerializeToString(ical);
 			return ics_text;
 		}
 
-		public static List<DDay.iCal.Event> iCalendarizeJsonObjectFromFacebook(JObject j_obj, Calinfo calinfo, iCalendar ical, string slat, string slon)
+		public static List<DDay.iCal.Event> iCalendarizeJsonObjectFromFacebook(JObject j_obj, Calinfo calinfo, iCalendar ical, string slat, string slon, Dictionary<string,string> settings)
 		{
 			var events = new List<DDay.iCal.Event>();
 
+			int max_pages;
+			try
+			{
+				max_pages = Convert.ToInt32(settings["max_fb_pages"]);
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "iCalendarizeFromFb: problem with max_fb_pages", e.Message);
+				max_pages = 5;
+			}
+
+			JToken next;
+			List<Dictionary<string, object>> dicts;
+
+			try
+			{
+				next = j_obj["paging"]["next"];
+				dicts = new List<Dictionary<string, object>>();
+			}
+			catch
+			{
+				return events;  // nothing to see here, move on
+			}
+
+			GetiCalEventsFromFbResponse(j_obj, calinfo, ical, slat, slon, events);
+
+			int i = 0;
+			try
+			{
+				while (next != null && i < 10)
+				{
+					j_obj = GetFacebookEventsAsJsonObject(j_obj["paging"]["next"].Value<string>());
+					next = j_obj["paging"]["next"];
+					GetiCalEventsFromFbResponse(j_obj, calinfo, ical, slat, slon, events);
+					i++;
+					HttpUtils.Wait(1);
+				}
+			}
+			catch (Exception e)
+			{
+				GenUtils.PriorityLogMsg("exception", "iCalendarizeJsonObjectFromFacebook", e.Message);
+			}
+
+
+			return events;
+		}
+
+		private static void GetiCalEventsFromFbResponse(JObject j_obj, Calinfo calinfo, iCalendar ical, string slat, string slon, List<DDay.iCal.Event> events)
+		{
 			foreach (JObject event_dict in j_obj["data"])
 			{
 				string id;
@@ -1255,12 +1304,13 @@ namespace CalendarAggregator
 				}
 				catch { }
 				var description = "See " + url + " for details";
-				var evt = Collector.MakeTmpEvt(calinfo, dtstart: dtstart_with_zone, dtend: DateTimeWithZone.MinValue(calinfo.tzinfo), title: name, url: url, location: location, description: description, lat: slat, lon: slon, allday: false);
-				Collector.AddEventToDDayIcal(ical, evt);
-				events.Add(evt);
+				if ( Collector.IsCurrentOrFutureDTStartInTz(dt, calinfo.tzinfo) )
+				{
+					var evt = Collector.MakeTmpEvt(calinfo, dtstart: dtstart_with_zone, dtend: DateTimeWithZone.MinValue(calinfo.tzinfo), title: name, url: url, location: location, description: description, lat: slat, lon: slon, allday: false);
+					Collector.AddEventToDDayIcal(ical, evt);
+					events.Add(evt);
+				}
 			}
-
-			return events;
 		}
 
 		public static JObject GetFacebookEventsAsJsonObject(string fb_id, string facebook_access_token)
@@ -1269,6 +1319,15 @@ namespace CalendarAggregator
 			var graph_uri_template = "https://graph.facebook.com/{0}/events?access_token={1}";
 			var graph_uri = new Uri(string.Format(graph_uri_template, fb_id, facebook_access_token));
 			var json = HttpUtils.FetchUrl(graph_uri).DataAsString();
+			var j_obj = (JObject)JsonConvert.DeserializeObject(json);
+			var count = j_obj["data"].Count();
+			return j_obj;
+		}
+
+
+		public static JObject GetFacebookEventsAsJsonObject(string next_url)
+		{
+			var json = HttpUtils.FetchUrl(next_url).DataAsString();
 			var j_obj = (JObject)JsonConvert.DeserializeObject(json);
 			var count = j_obj["data"].Count();
 			return j_obj;
@@ -1405,10 +1464,26 @@ namespace CalendarAggregator
 
 		}
 
-		public static List<FacebookEvent> UnpackFacebookEventsFromJson(JObject fb_json)
+		public static List<FacebookEvent> UnpackFacebookEventsFromJson(JObject j_obj)
 		{
 			var fb_events = new List<FacebookEvent>();
-			foreach (var event_dict in fb_json["data"])
+			var next = j_obj["paging"]["next"];
+			UnpackFbJObj(j_obj, fb_events);
+			var i = 0;
+			while (next != null && i < 10)
+			{
+				j_obj = Utils.GetFacebookEventsAsJsonObject(j_obj["paging"]["next"].Value<string>());
+				next = j_obj["paging"]["next"];
+				UnpackFbJObj(j_obj, fb_events);
+				i++;
+			}
+
+			return fb_events;
+		}
+
+		private static void UnpackFbJObj(JObject j_obj, List<FacebookEvent> fb_events)
+		{
+			foreach (var event_dict in j_obj["data"])
 			{
 				string id;
 				string name;
@@ -1418,7 +1493,6 @@ namespace CalendarAggregator
 				UnpackFacebookEventFromJson(event_dict, out id, out name, out dt, out location, out timezone);
 				fb_events.Add(new FacebookEvent(name, location, dt, id));
 			}
-			return fb_events;
 		}
 
 		public static void UnpackFacebookEventFromJson(JToken event_dict, out string id, out string name, out DateTime dt, out string location, out string timezone)
@@ -1812,7 +1886,7 @@ END:VCALENDAR",
 		{
 			id = BlobStorage.LegalizeContainerName(id);
 
-			var host = "http://elmcity.blob.core.windows.net";
+			var host = ElmcityUtils.Configurator.azure_blobhost;
 			var path = host + "/" + id + "/";
 
 			string json_a;
@@ -1944,7 +2018,6 @@ END:VCALENDAR",
 
 		public static string GetMetadataChooserHandler(string id, string flavor)
 		{
-			//var script = HttpUtils.FetchUrl(new Uri("http://elmcity.blob.core.windows.net/admin/metadata_chooser_handler.tmpl")).DataAsString();
 			var script = BlobStorage.GetAzureBlobAsString("admin", "metadata_chooser_handler.tmpl", false);
 			script = script.Replace("__FLAVOR__", flavor);
 			script = script.Replace("__ID__", id);
@@ -1953,8 +2026,7 @@ END:VCALENDAR",
 
 		public static void MakeMetadataPage(string id)
 		{
-			var template = new Uri("http://elmcity.blob.core.windows.net/admin/meta_history.html");
-			var page = HttpUtils.FetchUrl(template).DataAsString();
+			var page = BlobStorage.GetAzureBlobAsString("admin", "meta_history.html", false);
 
 			var hub_metadata = Utils.GetHubMetadataAsHtml(id);
 			page = page.Replace("__HUB_METADATA__", hub_metadata);
@@ -3695,7 +3767,7 @@ END:VTIMEZONE");
 				}
 				else if (is_container)
 				{
-					var text = String.Format(@"see member hubs for <a href=""http://elmcity.blob.core.windows.net/{0}/quickstats.html"">details</a>", id.ToLower());
+					var text = String.Format(@"see member hubs for <a href=""{0}/{1}/quickstats.html"">details</a>", ElmcityUtils.Configurator.azure_blobhost, id.ToLower());
 					tbody += string.Format(row_template, text, "");
 				}
 
