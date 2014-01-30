@@ -344,7 +344,7 @@ function ready()
 
 //  remember_or_forget_days();
 
-  adjust_openers();
+//  adjust_openers();
 
   show_category_image_under_picker();
 
@@ -363,6 +363,8 @@ function ready()
     setup_datepicker(); 
     
     position_sidebar();
+
+    $j('a[title="see details"]').removeAttr('target');
 
 }
 
@@ -821,7 +823,7 @@ try {
   if ( typeof (lat) != 'undefined' && typeof(lon) != 'undefined' ) {
     var date = get_md(current_id) + ' ' + get_st2(current_id);
     var title = get_summary(current_id);
-    var map_url = 'http://elmcity.cloudapp.net/get_blob?id=admin&path=map_detail.html?lat=' + lat + '&lon=' + lon + '&title=' + encodeURIComponent(title) + '&date=' + encodeURIComponent(date);
+    var map_url = host + 'get_blob?id=admin&path=map_detail.html?lat=' + lat + '&lon=' + lon + '&title=' + encodeURIComponent(title) + '&date=' + encodeURIComponent(date);
     var map_display = 'none';
     if ( ! hide_maps )
       map_display = "block";
@@ -872,7 +874,7 @@ $j.ajax({
             var upcoming = JSON.parse(xhr.responseText);
             if ( $j.keys(upcoming).length > 0 ) {
                var fn = 'show_upcoming_html("' + current_id + '",' +  xhr.responseText + ')';
-               window.setTimeout(fn, 100);
+               window.setTimeout(fn, 0);
                }
            }
            catch (e) {
@@ -1052,7 +1054,7 @@ function load_category_images(id)
      return;
 
   $j.ajax({
-       url: 'http://elmcity.cloudapp.net/get_blob?id=' + id + '&path=category_images.json',
+       url: host + 'get_blob?id=' + id + '&path=category_images.json',
        cache: false,
 
        complete: function(xhr, status) { 
@@ -1073,7 +1075,7 @@ function load_source_images(id)
      return;
 
   $j.ajax({
-       url: 'http://elmcity.cloudapp.net/get_blob?id=' + id + '&path=source_images.json',
+       url: host + 'get_blob?id=' + id + '&path=source_images.json',
        cache: false,
 
        complete: function(xhr, status) { 
@@ -1116,7 +1118,9 @@ function load_events_for_date (year, month, day) {
               $j('div .events').append(html);
             prep_day_anchors_and_last_day();
             setTimeout('apply_datepicker_styles()',100);
-            adjust_openers();
+
+            // adjust_openers();
+
             scrollToElement('d' + year + month + day);
             $j('#loading-date').remove();
             if ( gup('tags').startsWith('hide') ) // keep them invisibly for use with image display
