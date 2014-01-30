@@ -1396,8 +1396,7 @@ namespace CalendarAggregator
 			if ( title_type == TitleType.EventsOnlyCoalesced )
 				title = string.Format("<span property=\"v:summary\">{0}</span>", evt.title);
 			else
-				title = string.Format("<a target=\"{0}\" property=\"v:summary\" title=\"{1}\" href=\"{2}\">{3}</a>",
-					Configurator.default_html_window_name,
+				title = string.Format("<a property=\"v:summary\" title=\"{0}\" href=\"{1}\">{2}</a>",
 					is_eventsonly ? "open event page on source site": "see details",
 					is_eventsonly ? evt.url : string.Format("javascript:show_desc('{0}')", dom_id),
 					evt.title);
