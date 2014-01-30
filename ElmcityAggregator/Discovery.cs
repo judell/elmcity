@@ -339,7 +339,7 @@ namespace CalendarAggregator
 					var ical = new DDay.iCal.iCalendar();
 					var facebook_access_token = settings["facebook_access_token"]; // todo: merge with code in collector
 					var j_obj = Utils.GetFacebookEventsAsJsonObject(fb_id, facebook_access_token);
-					var events = Utils.iCalendarizeJsonObjectFromFacebook(j_obj, calinfo, ical, slat, slon);
+					var events = Utils.iCalendarizeJsonObjectFromFacebook(j_obj, calinfo, ical, slat, slon, settings);
 
 					if (events.Count == 0)  // no calendar on this page
 						return;
