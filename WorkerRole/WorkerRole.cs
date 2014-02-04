@@ -971,7 +971,7 @@ Future events {0}
 				var html_view_url = string.Format("/{0}?source={1}", id, Uri.EscapeDataString(ical_stats.source));
 				var raw_view_column = string.Format(@"<a title=""click to view raw feed"" href=""{0}""><img src=""{1}""></a>", raw_view_url, ElmcityUtils.Configurator.azure_blobhost + "/admin/glasses.png");
 				var html_view_column = string.Format(@"<a title=""click to view feed as html"" href=""{0}""><img src=""{1}""></a>", html_view_url, ElmcityUtils.Configurator.azure_blobhost + "/admin/glasses2.png");
-				var validation_column = String.Format(@"<a title=""click to validate feeed"" href=""{0}""><img src=""{1}""></a>", Utils.ValidationUrlFromFeedUrl(redirected_url), ElmcityUtils.Configurator.azure_blobhost + "/checkbox.png");
+				var validation_column = String.Format(@"<a title=""click to validate feeed"" href=""{0}""><img src=""{1}""></a>", Utils.ValidationUrlFromFeedUrl(redirected_url), ElmcityUtils.Configurator.azure_blobhost + "/admin/checkbox.png");
 
 				System.Threading.Interlocked.Exchange(ref futurecount, futurecount + istats[feedurl].futurecount);
 
