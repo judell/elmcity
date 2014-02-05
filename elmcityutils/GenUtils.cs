@@ -166,9 +166,11 @@ namespace ElmcityUtils
 			return entity_builder.ToString();
 		}
 
-		static public int RunTests(string dll_name)
+		static public string RunTests(string dll_name)
 		{
 			var tests_failed = 0;
+
+			var results = new StringBuilder();
 
 			try
 			{
@@ -178,8 +180,6 @@ namespace ElmcityUtils
 				var types = a.GetExportedTypes().ToList();
 				var test_classes = types.FindAll(type => type.Name.EndsWith("Test")).ToList();
 				test_classes.Sort((x, y) => x.Name.CompareTo(y.Name));
-
-
 
 				foreach (Type test_class in test_classes)  // e.g. DeliciousTest
 				{
@@ -213,6 +213,9 @@ namespace ElmcityUtils
 							entity["outcome"] = "Fail";
 							entity["reason"] = e.InnerException.Message + e.InnerException.StackTrace;
 							tests_failed += 1;
+							results.AppendLine(row_key);
+							results.AppendLine((string)entity["reason"]);
+							results.AppendLine();
 						}
 
 						var tablename = Configurator.test_results_tablename;
@@ -229,7 +232,7 @@ namespace ElmcityUtils
 				PriorityLogMsg("exception", "RunTests", e.Message + e.StackTrace);
 				tests_failed = 999;
 			}
-			return tests_failed;
+			return tests_failed > 0 ? results.ToString() : "";
 		}
 
 		#region datetime

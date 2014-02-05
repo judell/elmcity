@@ -1154,19 +1154,17 @@ Future events {0}
 			var calinfo = new Calinfo(ElmcityUtils.Configurator.azure_compute_account);
 			try
 			{
-				int failed;
-				failed = GenUtils.RunTests("CalendarAggregator");
-				failed += GenUtils.RunTests("ElmcityUtils");
+				var ca_failed = GenUtils.RunTests("CalendarAggregator");
+				var eu_failed = GenUtils.RunTests("ElmcityUtils");
 				//failed += GenUtils.RunTests("WorkerRole");
 				//failed += GenUtils.RunTests("WebRole");
-				bs.PutBlob("admin", "testrunner", failed.ToString() + " " + System.DateTime.UtcNow.ToString(), "text/plain");
-				if (failed > 0)
-					//TwitterApi.SendTwitterDirectMessage(calinfo.twitter_account, failed + " tests failed");
-					GenUtils.PriorityLogMsg("warning", "TestRunner", failed.ToString() + " tests failed");
+				var clean = (ca_failed == "" && eu_failed == "");
+				var msg = clean ? "clean at " : "failures at ";
+				bs.PutBlob("admin", "testrunner", msg + "\n" + ca_failed + "\n" + eu_failed + "\n" + System.DateTime.UtcNow.ToString(), "text/plain");
 			}
 			catch (Exception e)
 			{
-				GenUtils.LogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
+				GenUtils.PriorityLogMsg("exception", "TestRunnerAdmin", e.Message + e.StackTrace);
 			}
 		}
 
