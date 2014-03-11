@@ -228,7 +228,10 @@ namespace CalendarAggregator
 		public BlobStorageResponse Serialize()
 		{
 			var bs = BlobStorage.MakeDefaultBlobStorage();
-			return bs.SerializeObjectToAzureBlob(this, this.id, this.objfile);
+			var bsr = bs.SerializeObjectToAzureBlobWithoutLease(this, this.id, this.objfile); // because the upload might take longer than 60 secs
+			if (bsr.HttpResponse.status != System.Net.HttpStatusCode.Created)
+				GenUtils.PriorityLogMsg("warning", "serializing zoneless obj for " + this.id, bsr.HttpResponse.status + " " + bsr.HttpResponse.message);
+			return bsr;
 		}
 
 		private static void DeserializeZoned(Uri uri, List<List<ZonedEvent>> lists_of_zoned_events)
