@@ -87,7 +87,7 @@ try:
   log.write('...stopping at UTC %s...\n' % System.DateTime.UtcNow.ToString())
 
 except:
-  GenUtils.PriorityLogMsg('exception', 'startup.py', format_traceback() )    
+  log.write('changing permissions' + format_traceback() )    
 
 log.close()
 
