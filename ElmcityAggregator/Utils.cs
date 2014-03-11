@@ -1285,19 +1285,22 @@ namespace CalendarAggregator
 				string name;
 				string location;
 				DateTime dt;
+				DateTime local;
 				try
 				{
 					string timezone;
 					UnpackFacebookEventFromJson(event_dict, out id, out name, out dt, out location, out timezone);
-					// if ( ! String.IsNullOrEmpty(timezone) )  // fb use of timezone still unclear/inconsistent
-					dt = AdjustFacebookDt(dt, calinfo.tzinfo);
+					var utc = new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, DateTimeKind.Utc);
+					//if ( ! String.IsNullOrEmpty(timezone) )  // fb use of timezone still unclear/inconsistent
+					local = TimeZoneInfo.ConvertTimeFromUtc(utc, calinfo.tzinfo);
+					//dt = AdjustFacebookDt(dt, calinfo.tzinfo);
 				}
 				catch
 				{
 					continue;
 				}
 				var url = string.Format("http://www.facebook.com/events/{0}", id);
-				var dtstart_with_zone = new DateTimeWithZone(dt, calinfo.tzinfo);
+				var dtstart_with_zone = new DateTimeWithZone(local, calinfo.tzinfo);
 				try
 				{
 					location = event_dict["location"].Value<string>();
