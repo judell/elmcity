@@ -364,7 +364,7 @@ function ready()
     
     position_sidebar();
 
-    $j('a[title="see details"]').removeAttr('target');
+//    $j('a[title="see details"]').removeAttr('target');
 
 }
 
