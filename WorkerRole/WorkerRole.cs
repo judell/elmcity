@@ -342,7 +342,7 @@ namespace WorkerRole
 			Utils.WaitMinutes(Convert.ToInt32(settings["scheduler_check_interval_minutes"]));
 		}
 
-		private static bool MemoryIsLow()
+		public static bool MemoryIsLow()
 		{
 			try
 			{
@@ -358,7 +358,7 @@ namespace WorkerRole
 			}
 		}
 
-		private static void AlertLowMemory(string context)
+		public static void AlertLowMemory(string context)
 		{
 			GenUtils.PriorityLogMsg("warning", "AlertLowMemory", context);
 		}
@@ -631,7 +631,7 @@ namespace WorkerRole
 			var fr = new FeedRegistry(id);
 			fr.LoadFeedsFromAzure(FeedLoadOption.all);
 
-			if (calinfo.hub_enum != HubType.region)
+			if (calinfo.hub_enum == HubType.where)
 			{
 				SaveWhereStats(fr, calinfo);
 				Utils.SaveMeetupLocations(calinfo, settings);
@@ -968,7 +968,7 @@ Future events {0}
 				var feed_column = String.Format(@"<a title=""click to load calendar ics"" href=""{0}"">{1}</a>", feedurl, ical_stats.source);
 				var home_column = String.Format(@"<a title=""click to visit calendar page"" href=""{0}""><img src=""{1}/admin/home.png""></a>", homeurl, ElmcityUtils.Configurator.azure_blobhost);
 				var raw_view_url = string.Format("/text_from_ics?url={0}", Uri.EscapeDataString(feedurl));
-				var html_view_url = string.Format("/{0}?source={1}", id, Uri.EscapeDataString(ical_stats.source));
+				var html_view_url = string.Format("/{0}/html?source={1}&template=default.tmpl&theme=default", id, Uri.EscapeDataString(ical_stats.source));
 				var raw_view_column = string.Format(@"<a title=""click to view raw feed"" href=""{0}""><img src=""{1}""></a>", raw_view_url, ElmcityUtils.Configurator.azure_blobhost + "/admin/glasses.png");
 				var html_view_column = string.Format(@"<a title=""click to view feed as html"" href=""{0}""><img src=""{1}""></a>", html_view_url, ElmcityUtils.Configurator.azure_blobhost + "/admin/glasses2.png");
 				var validation_column = String.Format(@"<a title=""click to validate feeed"" href=""{0}""><img src=""{1}""></a>", Utils.ValidationUrlFromFeedUrl(redirected_url), ElmcityUtils.Configurator.azure_blobhost + "/admin/checkbox.png");
