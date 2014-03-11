@@ -132,10 +132,10 @@ namespace CalendarAggregator
 
 		public void LoadTags()
 		{
-            if (this.tags != null)
-                return;
-            else
-                this.tags = new List<string>();
+			if (this.tags != null)
+				return;
+			else
+				this.tags = new List<string>();
 
 			try
 			{
@@ -147,8 +147,8 @@ namespace CalendarAggregator
 				GenUtils.PriorityLogMsg("exception", "new Collector: cannot acquire cat maps: " + this.id, e.Message + e.StackTrace);
 			}
 
-            try
-            {
+			try
+			{
 				foreach (var key in eventful_cat_map.Keys)  // core taxonomy (and this ensures that we search eventful for at least this list)
 					if (this.tags.HasItem(key) == false)
 						this.tags.Add(key);
@@ -178,7 +178,7 @@ namespace CalendarAggregator
 
 				foreach (var tag in Utils.GetTagsFromJson(id_for_tags))
 				{
-					if ( ! tag.StartsWith("{") )        // exclude contributor defined
+					if (!tag.StartsWith("{"))        // exclude contributor defined
 						this.tags.Add(tag);
 				}
 			}
@@ -232,7 +232,7 @@ namespace CalendarAggregator
 			this.LoadIcalPerFeedLocations();
 
 			using (ical_ical)
-			 {
+			{
 				Dictionary<string, string> feeds = fr.feeds;
 				DateTime utc_midnight_in_tz = Utils.MidnightInTz(this.calinfo.tzinfo).UniversalTime;
 
@@ -257,6 +257,17 @@ namespace CalendarAggregator
 					GenUtils.PriorityLogMsg("exception", "hubs_to_skip_date_only_recurrence", e.Message);
 				}
 
+				int backoff_secs = 3;
+
+				try
+				{
+					backoff_secs = Convert.ToInt32(settings["worker_aggregator_backoff_secs"]);
+				}
+				catch (Exception e)
+				{
+					GenUtils.PriorityLogMsg("exception", "worker_aggregator_backoff_secs", e.Message);
+				}
+
 				GenUtils.LogMsg("status", id + " loading " + feedurls.Count() + " feeds", null);
 
 				var results_dict = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
@@ -266,6 +277,7 @@ namespace CalendarAggregator
 					//foreach (var feedurl in feedurls)
 					Parallel.ForEach(source: feedurls, parallelOptions: options, body: (feedurl) =>
 					{
+
 						var tid = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
 						results_dict.TryAdd(feedurl, null);
@@ -275,16 +287,15 @@ namespace CalendarAggregator
 						var eids_and_categories = new Dictionary<string, List<string>>(); // for augmenting eventful ics feeds with categories from corresponding atom feeds
 
 						// http://eventful.com/ical/annarbor/venues/michigan-theater-/V0-001-000827373-5
-						if ( feedurl.StartsWith("http://eventful.com/ical") )
+						if (feedurl.StartsWith("http://eventful.com/ical"))
 						{
-							var atom_url = feedurl.Replace("ical","atom");
+							var atom_url = feedurl.Replace("ical", "atom");
 							eids_and_categories = Utils.CategoriesFromEventfulAtomFeed(atom_url);
 						}
 
 						if (feedurl.Contains("upcoming.yahoo.com"))
 							return;
 
-						iCalendar ical = new DDay.iCal.iCalendar();
 						string source_name = "source_name";
 						List<DDay.iCal.Event> events_to_include = new List<DDay.iCal.Event>();
 						Dictionary<DDay.iCal.Event, RecurrenceType> event_recurrence_types = new Dictionary<DDay.iCal.Event, RecurrenceType>();
@@ -321,13 +332,22 @@ namespace CalendarAggregator
 							catch (Exception e) { GenUtils.LogMsg("exception", "HandleE1", e.Message); return; }
 						}
 
+						iCalendar ical = new DDay.iCal.iCalendar();
+
+						var mem_is_low = WorkerRole.WorkerRole.MemoryIsLow();
+
 						try
 						{
 							var setting = "use_ics_cached_objects";
-							if (changed == false && Utils.CachedFeedObjExists(id, feedurl) && settings[setting].StartsWith("y") )
+							if (mem_is_low && Utils.CachedFeedObjExists(id, feedurl))
 							{
-								if ( feedurl.Contains("hillside.ics" ) )
-									GenUtils.LogMsg("status", "CollectIcal: using cached obj for " + feedurl,  null); // the test UnchangedFeedUsesCachedObj checks for this entry
+								GenUtils.PriorityLogMsg("warning", this.id + " ," + source_name, "mem_is_low, falling back on cached feed object");
+								changed = false; // in a low-memory situation, if feedobj exists, fall back to it even if feed changed
+							}
+							if (changed == false && Utils.CachedFeedObjExists(id, feedurl) && settings[setting].StartsWith("y"))
+							{
+								if (feedurl.Contains("hillside.ics"))
+									GenUtils.LogMsg("status", "CollectIcal: using cached obj for " + feedurl, null); // the test UnchangedFeedUsesCachedObj checks for this entry
 								AddEventsFromCachedIcalFeedObj(es, feedurl);  // get events for the feedurl from the cached obj
 								TransferCachedResults(this.id, results_dict, feedurl); // and result for this feedurl from the cached results
 								TransferCachedStats(this.id, fr, feedurl); // and stats for this feedurl from cached stats
@@ -335,6 +355,12 @@ namespace CalendarAggregator
 							}
 							else
 							{
+								if (mem_is_low)  // don't parse this feed until next time
+								{
+									WorkerRole.WorkerRole.AlertLowMemory("CollectIcal: " + this.id + " skipping " + feedurl);
+									HttpUtils.Wait(backoff_secs);
+									return;
+								}
 								ical = ParseTheFeed(feedtext);
 							}
 						}
@@ -373,6 +399,8 @@ namespace CalendarAggregator
 							catch (Exception e) { GenUtils.LogMsg("exception", "HandleE3", e.Message); return; }
 						}
 
+						ical.Dispose();
+
 						try
 						{
 							uniques = Utils.UniqueByTitleAndStart(events_to_include);
@@ -389,7 +417,7 @@ namespace CalendarAggregator
 
 						try
 						{
-							foreach (var unique in uniques)                     
+							foreach (var unique in uniques)
 							{
 								// MaybeAugmentEventfulCategories(unique, eids_and_categories);
 								// sadly eventful categories can be haphazard so this augmentation has to be suppressed for now
@@ -398,7 +426,7 @@ namespace CalendarAggregator
 								{
 									AddIcalEvent(unique, fr, es, feedurl, source_name); // add to the all-feeds store
 								}
-								
+
 								AddIcalEvent(unique, new FeedRegistry(id), es_feed_cache, feedurl, source_name); // and the per-feed cache
 							}
 						}
@@ -425,7 +453,7 @@ namespace CalendarAggregator
 							}
 							catch (Exception e) { GenUtils.LogMsg("exception", "HandleE6", e.Message); return; }
 						}
-						
+
 						try
 						{
 							Utils.SaveFeedObjToCache(id, feedurl, es_feed_cache);  // cache the per-feed zoned eventstore
@@ -433,13 +461,13 @@ namespace CalendarAggregator
 						catch (Exception e) { GenUtils.LogMsg("exception", "SaveFeedObjToCache: " + this.id + ", " + feedurl, e.Message); return; }
 
 						try { results_dict[feedurl] = "ok: " + source_name; }
-						catch (Exception e) 
-							{ 
-							GenUtils.LogMsg("exception", "update results_dict[feedurl]", e.Message); 
-							return; 
-							}
+						catch (Exception e)
+						{
+							GenUtils.LogMsg("exception", "update results_dict[feedurl]", e.Message);
+							return;
+						}
 
-				});
+					});
 
 				}
 				catch (AggregateException agg_ex)
@@ -464,14 +492,22 @@ namespace CalendarAggregator
 			{
 				ical = (DDay.iCal.iCalendar)iCalendar.LoadFromStream(sr).FirstOrDefault().iCalendar;
 			}
-			catch 
+			catch
 			{
 				GenUtils.LogMsg("warning", "ParseTheFeed", "retrying with low ascii removed");
 				feedtext = RemoveLowAscii(feedtext);
 				sr = new StringReader(feedtext);
-				//feedtext = feedtext.Replace('\xa0', ' ');  // unicode nonbreaking space
-				ical = (DDay.iCal.iCalendar)iCalendar.LoadFromStream(sr).FirstOrDefault().iCalendar;
-				GenUtils.LogMsg("status", "ParseTheFeed", "succeeded with low ascii removed");
+				feedtext = feedtext.Replace('\xa0', ' ');  // unicode nonbreaking space
+				try
+				{
+					ical = (DDay.iCal.iCalendar)iCalendar.LoadFromStream(sr).FirstOrDefault().iCalendar;
+					GenUtils.LogMsg("status", "ParseTheFeed", "succeeded with low ascii removed");
+				}
+				catch (Exception e)
+				{
+					GenUtils.LogMsg("warning", "ParseTheFeed", e.Message);
+					ical = null;
+				}
 			}
 			return ical;
 		}
@@ -637,12 +673,12 @@ namespace CalendarAggregator
 			fr.stats[feedurl].whenchecked = DateTime.Now.ToUniversalTime();
 			per_feed_metadata_cache[feedurl] = Metadata.LoadFeedMetadataFromAzureTableForFeedurlAndId(feedurl, id);
 			Metadata.TryLoadCatmapFromMetadict(per_feed_catmaps, per_feed_metadata_cache[feedurl]);
-			if ( per_feed_catmaps.ContainsKey(feedurl) )
+			if (per_feed_catmaps.ContainsKey(feedurl))
 				foreach (var cat in per_feed_catmaps[feedurl].Values)  // it was a curatorial decision
-					foreach ( var c in cat.Split(',') )                // (could be multiple)
+					foreach (var c in cat.Split(','))                // (could be multiple)
 					{
 						var _c = c.ToLower().Trim();
-						if ( ! this.tags.HasItem(_c) )
+						if (!this.tags.HasItem(_c))
 							this.tags.Add(_c);									// so add to active taxonomy
 					}
 			return source_name;
@@ -713,7 +749,7 @@ namespace CalendarAggregator
 			return copy_of_events_to_include;
 		}
 
-		public static string GetFeedTextFromFeedUrl(FeedRegistry fr, Calinfo calinfo, string source, string feedurl, int wait_secs, int max_retries, TimeSpan timeout_secs, Dictionary<string,string> settings, ref bool changed)
+		public static string GetFeedTextFromFeedUrl(FeedRegistry fr, Calinfo calinfo, string source, string feedurl, int wait_secs, int max_retries, TimeSpan timeout_secs, Dictionary<string, string> settings, ref bool changed)
 		{
 			HttpWebRequest request;
 			try
@@ -749,7 +785,7 @@ namespace CalendarAggregator
 			if (cached_feed_text.Contains("X-QUOTA-THROTTLED"))
 				GenUtils.LogMsg("warning", "GetFeedTextFromFeed", "cached text contains X-QUOTA-THROTTLED");
 
-			if (feedtext != cached_feed_text && feedtext.Contains("X-QUOTA-THROTTLED") == false ) // don't cache if throttled
+			if (feedtext != cached_feed_text && feedtext.Contains("X-QUOTA-THROTTLED") == false) // don't cache if throttled
 			{
 				changed = true;
 				Utils.SaveFeedTextToCache(feedurl, feedtext);
@@ -763,7 +799,7 @@ namespace CalendarAggregator
 			return feedtext;
 		}
 
-		public static string MassageFeedText(Calinfo calinfo, string feedurl, string feedtext, Dictionary<string,string> settings)
+		public static string MassageFeedText(Calinfo calinfo, string feedurl, string feedtext, Dictionary<string, string> settings)
 		{
 			// for example, RRULE:FREQ=MONTHLY;COUNT=-45;BYDAY=2SA occurs in some Google Calendars
 			// unable to find a meaning for this in RFC5445, and DDay.iCal rejects it, so I'm removing it for now
@@ -785,7 +821,7 @@ namespace CalendarAggregator
 			// because of this:
 			// BEGIN:VEVENT
 			// DESCRIPTION            // <- missing colon, iCalcreator 2.4.3 (reported)
-            // DTEND:20120508T160000
+			// DTEND:20120508T160000
 
 			feedtext = Utils.AddColonToBarePropnames(feedtext);
 
@@ -804,14 +840,14 @@ namespace CalendarAggregator
 			//feedtext = Utils.StripTagsFromUnfoldedComponent(feedtext, "DESCRIPTION");
 
 			// workaround https://github.com/dougrday/icalvalid/issues/7 and 8
-			feedtext = Utils.ChangeDateOnlyUntilToDateTime(feedtext); 
+			feedtext = Utils.ChangeDateOnlyUntilToDateTime(feedtext);
 
 			// handle non-standard X_WR_TIMEZONE if usersetting asked
 			if (calinfo != null && calinfo.use_x_wr_timezone)   // null if called from ViewCalendar
 				feedtext = Utils.Handle_X_WR_TIMEZONE(feedtext);
 
 			// helios workaround
-			if ( feedurl.Contains("berkeleyside.com") )
+			if (feedurl.Contains("berkeleyside.com"))
 				feedtext = feedtext.Replace("�", " ");
 
 			feedtext = Utils.AdjustCategories(feedtext); // for now, this only removes unwanted backslashes
@@ -941,7 +977,7 @@ namespace CalendarAggregator
 			var idtend = default(iCalDateTime);
 			DateTime dtend = default(DateTime);
 
-			if (evt.DTEnd != null && evt.DTEnd.Year != 1 )
+			if (evt.DTEnd != null && evt.DTEnd.Year != 1)
 			{
 				dtend = new DateTime(
 					period.EndTime.Year,
@@ -1038,7 +1074,7 @@ namespace CalendarAggregator
 				var evt_tmp = MakeTmpEvt(this.calinfo, dtstart: dtstart, dtend: dtend, title: evt.Summary, url: evt.Url.ToString(), location: evt.Location, description: source, lat: lat, lon: lon, allday: evt.IsAllDay);
 				AddEventToDDayIcal(ical_ical, evt_tmp);
 
-				if ( fr.stats.ContainsKey(feedurl) )   // won't be true when adding to the per-feed obj cache
+				if (fr.stats.ContainsKey(feedurl))   // won't be true when adding to the per-feed obj cache
 					fr.stats[feedurl].loaded++;        // and this will have already been counted by the all-feeds AddIcalEvent
 
 			}
@@ -1089,18 +1125,18 @@ namespace CalendarAggregator
 			if (String.IsNullOrEmpty(lat) || string.IsNullOrEmpty(lon))
 				return;
 
-			if ( evt.GeographicLocation == null )
+			if (evt.GeographicLocation == null)
 				evt.GeographicLocation = new GeographicLocation();
 
 			try
-				{
+			{
 				evt.GeographicLocation.Latitude = Double.Parse(lat);
 				evt.GeographicLocation.Longitude = Double.Parse(lon);
-				}
+			}
 			catch (Exception e)
-				{
+			{
 				GenUtils.LogMsg("warning", "MakeGeo cannot parse " + lat + "," + lon, e.Message);
-				}
+			}
 		}
 
 		// normalize url, description, location, category properties
@@ -1148,7 +1184,7 @@ namespace CalendarAggregator
 			var list = evt.Categories.ToList(); // start with categories on the iCal event
 			char[] squigglies = { '{', '}' };
 			list = list.Select(x => x.Trim(squigglies)).ToList();  // remove their squigglies if present because if {{ this }} happens it's weird
-			list = list.Select(x => x.Replace("'","")).ToList();    // remove apostrophes which complicate image selection
+			list = list.Select(x => x.Replace("'", "")).ToList();    // remove apostrophes which complicate image selection
 
 			try
 			{
@@ -1178,7 +1214,7 @@ namespace CalendarAggregator
 				var l = SplitLowerTrimAndUniqifyCats(cat_string);
 				list = list.Union(l).ToList();
 			}
-			
+
 			// foreach (var cat in evt.Categories)                         // restrict to active taxonomy -- but not for now
 			//	list = list.RemoveUnlessFound(cat.ToLower(), this.tags);
 
@@ -1230,11 +1266,11 @@ namespace CalendarAggregator
 			return "{" + tag + "}";
 		}
 
-		public List<string> MaybeApplyCatmap(List<string> existing_cats, Dictionary<string,string> feed_metadict, string id, string source)
+		public List<string> MaybeApplyCatmap(List<string> existing_cats, Dictionary<string, string> feed_metadict, string id, string source)
 		{
 			if (!feed_metadict.ContainsKey("feedurl"))
 			{
-                GenUtils.LogMsg("warning", "ApplyCatmap: feed_metadict lacks feedurl", id + " " + source);
+				GenUtils.LogMsg("warning", "ApplyCatmap: feed_metadict lacks feedurl", id + " " + source);
 				return existing_cats;
 			}
 
@@ -1243,7 +1279,7 @@ namespace CalendarAggregator
 			if (!per_feed_catmaps.ContainsKey(feedurl))
 				return existing_cats;
 
-			Dictionary<string,string> catmap = per_feed_catmaps[feedurl];
+			Dictionary<string, string> catmap = per_feed_catmaps[feedurl];
 
 			List<string> mapped_cats = LowerTrimAndUniqifyCats(existing_cats);  // initialize with existing 
 
@@ -1252,10 +1288,10 @@ namespace CalendarAggregator
 				if (catmap != null && catmap.ContainsKey(existing_cat))                      // add mapped category (or categories)
 				{
 					var per_existing_item_mapped_cats = SplitLowerTrimAndUniqifyCats(catmap[existing_cat]);  // multiples allowed here too
-					foreach ( var mapped_cat in per_existing_item_mapped_cats )
-						{
-							mapped_cats.Add(mapped_cat);
-						}
+					foreach (var mapped_cat in per_existing_item_mapped_cats)
+					{
+						mapped_cats.Add(mapped_cat);
+					}
 				}
 			}
 			mapped_cats.Sort(String.CompareOrdinal);
@@ -1425,7 +1461,7 @@ namespace CalendarAggregator
 
 				foreach (var tag in this.tags)        // do tagwise search of eventful
 				{
-					if ( eventful_cat_map.Keys.ToList().HasItem(tag) == false )
+					if (eventful_cat_map.Keys.ToList().HasItem(tag) == false)
 						continue;
 
 					var msg = string.Format("{0}: loading eventful events for {1} ", this.id, tag);
@@ -1654,7 +1690,7 @@ namespace CalendarAggregator
 			{
 				var str_result_count = xdoc.Descendants("total_items").FirstOrDefault().Value;
 				int result_count = Convert.ToInt32(str_result_count);
-				page_count = ( result_count / eventbrite_page_size ) + 1;
+				page_count = (result_count / eventbrite_page_size) + 1;
 			}
 			catch
 			{
@@ -1743,8 +1779,8 @@ namespace CalendarAggregator
 			foreach (var cat in cats)  // a list of eventbrite tags
 			{
 				this.eventbrite_tags.Add(cat);      // log it
-				if (this.eventbrite_cat_map.Keys.ToList().HasItem(cat))  
-					mapped_cats.Add(this.eventbrite_cat_map[cat]); 
+				if (this.eventbrite_cat_map.Keys.ToList().HasItem(cat))
+					mapped_cats.Add(this.eventbrite_cat_map[cat]);
 			}
 			return String.Join(",", mapped_cats.ToArray());
 		}
@@ -1972,7 +2008,7 @@ namespace CalendarAggregator
 			return MakeTmpEvt(calinfo, dtstart, dtend, title, url, location, description, lat, lon, allday);
 		}
 
-				private static void IncrementEventCountByVenue(Dictionary<string, int> event_count_by_venue, string venue_name)
+		private static void IncrementEventCountByVenue(Dictionary<string, int> event_count_by_venue, string venue_name)
 		{
 			if (event_count_by_venue.ContainsKey(venue_name))
 				event_count_by_venue[venue_name]++;
@@ -2002,7 +2038,7 @@ namespace CalendarAggregator
 			if (type == SourceType.ical) // NonIcalStats is null in this case, and not used
 			{
 				bsr = fr.SerializeIcalStatsToJson();
-				GenUtils.LogMsg("status", this.id + ": SerializeIcalStatsToJson",  bsr.HttpResponse.status.ToString());
+				GenUtils.LogMsg("status", this.id + ": SerializeIcalStatsToJson", bsr.HttpResponse.status.ToString());
 				tsr = fr.SaveStatsToAzure();
 				GenUtils.LogMsg("status", this.id + ": FeedRegistry.SaveStatsToAzure", tsr.status.ToString());
 			}
@@ -2051,10 +2087,10 @@ namespace CalendarAggregator
 		{
 			if (eids_and_cats.Count == 0)
 				return;
-			
-			if ( evt.Url == null )
+
+			if (evt.Url == null)
 				return;
-			
+
 			try
 			{
 				var eid = evt.Url.ToString().Split('/').Last();
