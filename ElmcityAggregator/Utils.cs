@@ -1597,7 +1597,10 @@ END:VCALENDAR",
 			title = evt.Descendants("title").FirstOrDefault().Value;
 			url = evt.Descendants("url").FirstOrDefault().Value;
 			description = evt.Descendants("description").FirstOrDefault().Value;
-			description = Regex.Replace(description, @"</*[A-Z]+>", "");
+			description = description.StripHtmlTags();
+			description = Collector.RemoveLowAscii(description);
+			description = Collector.RemoveEFBFBD(description);
+			//description = Regex.Replace(description, @"</*[A-Z]+>", "");
 			description = String.Format(@"
 {0}
 

@@ -857,11 +857,17 @@ namespace CalendarAggregator
 			return feedtext;
 		}
 
-		private static string RemoveLowAscii(string feedtext)
+		public static string RemoveLowAscii(string feedtext)
 		{
 			feedtext = Regex.Replace(feedtext, "[\x00-\x09]", "");
 			feedtext = Regex.Replace(feedtext, "[\x0b-\x0c]", "");
 			feedtext = Regex.Replace(feedtext, "[\x0e-\x1f]", "");
+			return feedtext;
+		}
+
+		public static string RemoveEFBFBD(string feedtext)
+		{
+			feedtext = Regex.Replace(feedtext, "�", " ");
 			return feedtext;
 		}
 
