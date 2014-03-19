@@ -894,7 +894,7 @@ else
 
 var url = $j('#' + current_id + ' span[rel="v:url"]').attr('href');
 var src = $j('#' + current_id + ' span[property="v:description"]').text()
-var link = '<p style="font-size:larger"><a target="origin" title="visit the source calendar in a new window or tab" href="' + url + '">visit the source calendar</a></p>';
+var link = '<p style="font-size:larger"><a target="origin" title="visit the source calendar in a new window or tab" href="' + url + '">click for event details</a></p>';
 
 template = template.replace('__SOURCE__',link);
 
