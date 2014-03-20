@@ -272,6 +272,8 @@ namespace CalendarAggregator
 
 				var results_dict = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
 
+				Object in_gc_lock = new Object();
+
 				try
 				{
 					//foreach (var feedurl in feedurls)
@@ -335,6 +337,16 @@ namespace CalendarAggregator
 						iCalendar ical = new DDay.iCal.iCalendar();
 
 						var mem_is_low = WorkerRole.WorkerRole.MemoryIsLow();
+
+						if ( mem_is_low )
+						{
+							lock (in_gc_lock)
+							{
+								GenUtils.PriorityLogMsg("warning", "mem_is_low, forcing gc for " + this.id + " ," + source_name, null);
+								System.GC.Collect();
+								HttpUtils.Wait(backoff_secs);
+							}
+						}
 
 						try
 						{
